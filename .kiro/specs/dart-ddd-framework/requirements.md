@@ -25,6 +25,7 @@ A lightweight Domain-Driven Design (DDD) framework for Dart that provides base c
 2. THE DDD Framework SHALL include a .gitignore file that excludes Dart build artifacts and common IDE files
 3. THE DDD Framework SHALL be packaged as an includable Dart library
 4. THE DDD Framework SHALL provide proper package configuration through pubspec.yaml
+5. THE DDD Framework SHALL be compatible with Dart server applications, Flutter mobile applications, and Flutter web applications
 
 ### Requirement 2
 
@@ -58,8 +59,21 @@ A lightweight Domain-Driven Design (DDD) framework for Dart that provides base c
 1. THE DDD Framework SHALL provide a base Value class for extension by consumers
 2. THE Value class SHALL support DDD value object semantics
 3. THE Value class SHALL be designed for immutability
+4. THE Value class SHALL work across all supported Dart platforms without platform-specific dependencies
 
 ### Requirement 5
+
+**User Story:** As a developer deploying applications across different platforms, I want the DDD framework to work consistently everywhere, so that I can use the same domain logic in server, mobile, and web applications.
+
+#### Acceptance Criteria
+
+1. THE DDD Framework SHALL work on Dart server applications without modification
+2. THE DDD Framework SHALL work in Flutter mobile applications without modification
+3. THE DDD Framework SHALL work in Flutter web applications without modification
+4. THE DDD Framework SHALL avoid platform-specific dependencies that limit cross-platform compatibility
+5. THE DDD Framework SHALL not use reflection or other features unavailable in Flutter web compilation
+
+### Requirement 6
 
 **User Story:** As a developer using this framework, I want comprehensive unit tests, so that I can trust the framework's reliability and understand its expected behavior.
 

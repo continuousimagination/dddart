@@ -4,6 +4,19 @@
 
 The Dart DDD Framework is a lightweight library that provides foundational classes for implementing Domain-Driven Design patterns in Dart applications. The framework focuses on simplicity and follows Dart conventions while providing essential DDD building blocks: Aggregate Roots, Entities, and Value Objects.
 
+### Cross-Platform Compatibility
+
+The framework is designed to work seamlessly across all Dart platforms:
+- **Dart Server**: Full compatibility with server-side Dart applications
+- **Flutter Mobile**: Works in iOS and Android Flutter applications
+- **Flutter Web**: Compatible with Flutter web compilation and runtime
+
+To ensure cross-platform compatibility, the framework:
+- Avoids platform-specific dependencies
+- Does not use reflection (dart:mirrors) which is unavailable in Flutter web
+- Uses only core Dart libraries and well-supported packages
+- Maintains const constructor support for compile-time optimization
+
 ## Architecture
 
 ### Package Structure
@@ -26,8 +39,14 @@ dart_ddd_framework/
 ```
 
 ### Dependencies
-- `uuid`: For GUID generation and UuidValue type (^4.0.0)
+- `uuid`: For GUID generation and UuidValue type (^4.0.0) - Cross-platform compatible
 - `test`: For unit testing (dev dependency)
+
+### Cross-Platform Design Decisions
+- **No dart:mirrors**: Avoided reflection to ensure Flutter web compatibility
+- **Pure Dart implementation**: Uses only core Dart features available on all platforms
+- **Minimal dependencies**: Only essential, cross-platform packages are used
+- **Const constructors**: Maintained throughout for compile-time optimization
 
 ## Components and Interfaces
 
@@ -81,23 +100,47 @@ abstract class AggregateRoot extends Entity {
 
 ### Value Object Base Class
 
-The `Value` class provides a foundation for immutable value objects:
+The `Value` class provides a foundation for immutable value objects with automatic equality behavior:
 
 ```dart
 abstract class Value {
   const Value();
   
-  // Subclasses should override these methods for proper value semantics
+  // Properties that define this value object's identity
+  List<Object?> get props;
+  
+  // Automatic equality implementation based on props
   @override
-  bool operator ==(Object other);
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other.runtimeType != runtimeType) return false;
+    if (other is! Value) return false;
+    
+    final thisProps = props;
+    final otherProps = other.props;
+    
+    if (thisProps.length != otherProps.length) return false;
+    
+    for (int i = 0; i < thisProps.length; i++) {
+      if (thisProps[i] != otherProps[i]) return false;
+    }
+    
+    return true;
+  }
   
   @override
-  int get hashCode;
+  int get hashCode => Object.hashAll(props);
   
   @override
-  String toString();
+  String toString() {
+    final className = runtimeType.toString();
+    final propsString = props.join(', ');
+    return '$className($propsString)';
+  }
 }
 ```
+
+**Cross-Platform Note**: This implementation avoids reflection and works identically across all Dart platforms. Subclasses only need to override the `props` getter to specify which properties define equality.
 
 ## Data Models
 
@@ -163,3 +206,9 @@ abstract class Value {
 - Abstract classes allow for flexible implementation
 - Protected methods for subclass customization
 - Clear separation of concerns between Entity and AggregateRoot
+
+### Cross-Platform Validation
+- All implementations tested to work on Dart VM, Flutter mobile, and Flutter web
+- No platform-specific code paths or conditional compilation
+- Consistent behavior across all supported platforms
+- Future design decisions will maintain cross-platform compatibility as a primary constraint
