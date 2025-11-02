@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Dart DDD Framework is a lightweight library that provides foundational classes for implementing Domain-Driven Design patterns in Dart applications. The framework focuses on simplicity and follows Dart conventions while providing essential DDD building blocks: Aggregate Roots, Entities, and Value Objects.
+DDDart is a lightweight library that provides foundational classes for implementing Domain-Driven Design patterns in Dart applications. The framework focuses on simplicity and follows Dart conventions while providing essential DDD building blocks: Aggregate Roots, Entities, and Value Objects.
 
 ### Cross-Platform Compatibility
 
@@ -21,13 +21,13 @@ To ensure cross-platform compatibility, the framework:
 
 ### Package Structure
 ```
-dart_ddd_framework/
+dddart/
 ├── lib/
 │   ├── src/
 │   │   ├── aggregate_root.dart
 │   │   ├── entity.dart
 │   │   └── value.dart
-│   └── dart_ddd_framework.dart (main export file)
+│   └── dddart.dart (main export file)
 ├── test/
 │   ├── aggregate_root_test.dart
 │   ├── entity_test.dart

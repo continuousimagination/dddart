@@ -1,8 +1,8 @@
-/// A lightweight Domain-Driven Design (DDD) framework for Dart.
+/// DDDart - A lightweight Domain-Driven Design (DDD) framework for Dart.
 ///
 /// This library provides base classes and utilities to help developers
 /// implement DDD principles in their applications.
-library dart_ddd_framework;
+library dddart;
 
 // Export all public classes
 export 'src/aggregate_root.dart';

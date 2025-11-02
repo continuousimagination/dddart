@@ -1,7 +1,7 @@
-name: dart_ddd_framework
+name: dddart
 description: A lightweight Domain-Driven Design (DDD) framework for Dart that provides base classes and utilities to help developers implement DDD principles in their applications.
 version: 0.1.0
-homepage: https://github.com/example/dart_ddd_framework
+homepage: https://github.com/example/dddart
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

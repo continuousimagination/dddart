@@ -1,4 +1,4 @@
-# Dart DDD Framework
+# DDDart
 
 A lightweight Domain-Driven Design (DDD) framework for Dart that provides base classes and utilities to help developers implement DDD principles in their applications.
 
@@ -16,7 +16,7 @@ Add this to your package's `pubspec.yaml` file:
 
 ```yaml
 dependencies:
-  dart_ddd_framework: ^0.1.0
+  dddart: ^0.1.0
 ```
 
 Then run:
@@ -30,7 +30,7 @@ dart pub get
 ### Creating Entities
 
 ```dart
-import 'package:dart_ddd_framework/dart_ddd_framework.dart';
+import 'package:dddart/dddart.dart';
 
 class User extends Entity {
   final String name;
@@ -49,7 +49,7 @@ class User extends Entity {
 ### Creating Aggregate Roots
 
 ```dart
-import 'package:dart_ddd_framework/dart_ddd_framework.dart';
+import 'package:dddart/dddart.dart';
 
 class Order extends AggregateRoot {
   final String customerId;
@@ -68,7 +68,7 @@ class Order extends AggregateRoot {
 ### Creating Value Objects
 
 ```dart
-import 'package:dart_ddd_framework/dart_ddd_framework.dart';
+import 'package:dddart/dddart.dart';
 
 class Money extends Value {
   final double amount;
@@ -77,18 +77,7 @@ class Money extends Value {
   const Money(this.amount, this.currency);
   
   @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is Money &&
-          runtimeType == other.runtimeType &&
-          amount == other.amount &&
-          currency == other.currency;
-          
-  @override
-  int get hashCode => amount.hashCode ^ currency.hashCode;
-  
-  @override
-  String toString() => '$amount $currency';
+  List<Object?> get props => [amount, currency];
 }
 ```
 

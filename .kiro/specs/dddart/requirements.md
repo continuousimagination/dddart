@@ -2,11 +2,11 @@
 
 ## Introduction
 
-A lightweight Domain-Driven Design (DDD) framework for Dart that provides base classes and utilities to help developers implement DDD principles in their applications. The framework includes aggregate roots, entities, value objects, and follows modern Dart conventions for project structure.
+DDDart is a lightweight Domain-Driven Design (DDD) framework for Dart that provides base classes and utilities to help developers implement DDD principles in their applications. The framework includes aggregate roots, entities, value objects, and follows modern Dart conventions for project structure.
 
 ## Glossary
 
-- **DDD Framework**: The Domain-Driven Design framework library being developed
+- **DDDart**: The Domain-Driven Design framework library being developed
 - **Aggregate Root**: A base class that represents the root entity of an aggregate in DDD
 - **Entity**: A base class for domain entities with identity and lifecycle timestamps
 - **Value Object**: A base class for immutable value types in DDD
@@ -21,11 +21,11 @@ A lightweight Domain-Driven Design (DDD) framework for Dart that provides base c
 
 #### Acceptance Criteria
 
-1. THE DDD Framework SHALL follow modern Dart package directory structure conventions
-2. THE DDD Framework SHALL include a .gitignore file that excludes Dart build artifacts and common IDE files
-3. THE DDD Framework SHALL be packaged as an includable Dart library
-4. THE DDD Framework SHALL provide proper package configuration through pubspec.yaml
-5. THE DDD Framework SHALL be compatible with Dart server applications, Flutter mobile applications, and Flutter web applications
+1. DDDart SHALL follow modern Dart package directory structure conventions
+2. DDDart SHALL include a .gitignore file that excludes Dart build artifacts and common IDE files
+3. DDDart SHALL be packaged as an includable Dart library
+4. DDDart SHALL provide proper package configuration through pubspec.yaml
+5. DDDart SHALL be compatible with Dart server applications, Flutter mobile applications, and Flutter web applications
 
 ### Requirement 2
 
@@ -33,8 +33,8 @@ A lightweight Domain-Driven Design (DDD) framework for Dart that provides base c
 
 #### Acceptance Criteria
 
-1. THE DDD Framework SHALL provide a base AggregateRoot class for extension by consumers
-2. THE DDD Framework SHALL provide a base Entity class for extension by consumers
+1. DDDart SHALL provide a base AggregateRoot class for extension by consumers
+2. DDDart SHALL provide a base Entity class for extension by consumers
 3. THE Entity class SHALL include an ID property of GUID type
 4. THE Entity class SHALL include a createdAt timestamp property
 5. THE Entity class SHALL include an updatedAt timestamp property
@@ -48,7 +48,7 @@ A lightweight Domain-Driven Design (DDD) framework for Dart that provides base c
 1. WHEN an Entity is instantiated without an ID, THE Entity SHALL auto-generate a GUID for the ID
 2. WHEN an Entity is instantiated without timestamps, THE Entity SHALL set createdAt and updatedAt to the current date and time
 3. THE Entity constructor SHALL accept optional ID, createdAt, and updatedAt parameters
-4. THE DDD Framework SHALL use a Dart GUID library for ID generation
+4. DDDart SHALL use a Dart GUID library for ID generation
 
 ### Requirement 4
 
@@ -56,7 +56,7 @@ A lightweight Domain-Driven Design (DDD) framework for Dart that provides base c
 
 #### Acceptance Criteria
 
-1. THE DDD Framework SHALL provide a base Value class for extension by consumers
+1. DDDart SHALL provide a base Value class for extension by consumers
 2. THE Value class SHALL support DDD value object semantics
 3. THE Value class SHALL be designed for immutability
 4. THE Value class SHALL work across all supported Dart platforms without platform-specific dependencies
@@ -67,11 +67,11 @@ A lightweight Domain-Driven Design (DDD) framework for Dart that provides base c
 
 #### Acceptance Criteria
 
-1. THE DDD Framework SHALL work on Dart server applications without modification
-2. THE DDD Framework SHALL work in Flutter mobile applications without modification
-3. THE DDD Framework SHALL work in Flutter web applications without modification
-4. THE DDD Framework SHALL avoid platform-specific dependencies that limit cross-platform compatibility
-5. THE DDD Framework SHALL not use reflection or other features unavailable in Flutter web compilation
+1. DDDart SHALL work on Dart server applications without modification
+2. DDDart SHALL work in Flutter mobile applications without modification
+3. DDDart SHALL work in Flutter web applications without modification
+4. DDDart SHALL avoid platform-specific dependencies that limit cross-platform compatibility
+5. DDDart SHALL not use reflection or other features unavailable in Flutter web compilation
 
 ### Requirement 6
 
@@ -79,7 +79,7 @@ A lightweight Domain-Driven Design (DDD) framework for Dart that provides base c
 
 #### Acceptance Criteria
 
-1. THE DDD Framework SHALL include unit tests for all base classes
+1. DDDart SHALL include unit tests for all base classes
 2. THE unit tests SHALL verify ID auto-generation functionality
 3. THE unit tests SHALL verify timestamp auto-generation functionality
 4. THE unit tests SHALL verify constructor parameter handling
