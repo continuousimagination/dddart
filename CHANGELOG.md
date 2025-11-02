@@ -1,0 +1,21 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Added
+- Initial project structure
+- Entity base class with automatic ID and timestamp generation
+- AggregateRoot base class extending Entity
+- Value base class for immutable value objects
+- Comprehensive unit tests for all base classes
+
+## [0.1.0] - 2024-11-01
+
+### Added
+- Initial release of Dart DDD Framework
+- Basic project structure and configuration
