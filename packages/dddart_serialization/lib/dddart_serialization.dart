@@ -10,5 +10,5 @@ library dddart_serialization;
 
 export 'src/serializable_annotation.dart';
 export 'src/serialization_config.dart';
+export 'src/serialization_contracts.dart';
 export 'src/serialization_utils.dart';
-export 'src/serializer.dart';
