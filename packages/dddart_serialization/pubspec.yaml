@@ -1,0 +1,14 @@
+name: dddart_serialization
+description: Serialization framework for DDDart - Domain-Driven Design for Dart
+version: 1.0.0
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  dddart:
+    path: ../dddart
+
+dev_dependencies:
+  test: ^1.24.0
+  lints: ^3.0.0

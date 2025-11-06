@@ -1,14 +1,9 @@
-name: dddart
-description: A lightweight Domain-Driven Design (DDD) framework for Dart that provides base classes and utilities to help developers implement DDD principles in their applications.
+name: dddart_monorepo
+description: Monorepo for DDDart packages - Domain-Driven Design framework for Dart
 version: 0.1.0
-homepage: https://github.com/example/dddart
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
 
-dependencies:
-  uuid: ^4.0.0
-
-dev_dependencies:
-  test: ^1.24.0
-  lints: ^3.0.0
+# This is a monorepo workspace file
+# Individual packages have their own pubspec.yaml files

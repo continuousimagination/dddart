@@ -1,0 +1,14 @@
+targets:
+  $default:
+    builders:
+      dddart_json:json_serializable:
+        enabled: true
+
+builders:
+  json_serializable:
+    import: "package:dddart_json/src/generators/serializable_generator.dart"
+    builder_factories: ["serializableBuilder"]
+    build_extensions: {".dart": [".json_serializable.g.part"]}
+    auto_apply: dependents
+    build_to: cache
+    applies_builders: ["source_gen|combining_builder"]

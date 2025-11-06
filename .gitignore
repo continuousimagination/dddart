@@ -1,26 +1,24 @@
-# Dart build artifacts
+# Dart
 .dart_tool/
 .packages
 build/
 pubspec.lock
 
-# IDE files
+# IDE
 .vscode/
 .idea/
 *.iml
-*.ipr
-*.iws
 
-# OS files
+# OS
 .DS_Store
 Thumbs.db
 
-# Test coverage
+# Generated files
+*.g.dart
+*.freezed.dart
+
+# Coverage
 coverage/
 
-# Documentation
-doc/api/
-
-# Temporary files
-*.tmp
-*.temp
+# Test
+.test_coverage.dart

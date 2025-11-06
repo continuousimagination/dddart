@@ -1,6 +1,7 @@
 import 'package:test/test.dart';
-import 'package:uuid/uuid.dart';
+import 'package:uuid/uuid.dart' as uuid_pkg;
 import '../lib/src/entity.dart';
+import '../lib/src/uuid_value.dart';
 
 // Concrete implementation of Entity for testing
 class TestEntity extends Entity {
@@ -22,7 +23,7 @@ void main() {
       });
 
       test('creates entity with provided ID', () {
-        final providedId = UuidValue.fromString(const Uuid().v4());
+        final providedId = UuidValue.fromString(const uuid_pkg.Uuid().v4());
         final entity = TestEntity(id: providedId);
         
         expect(entity.id, equals(providedId));
@@ -49,7 +50,7 @@ void main() {
       });
 
       test('creates entity with mixed provided and auto-generated parameters', () {
-        final providedId = UuidValue.fromString(const Uuid().v4());
+        final providedId = UuidValue.fromString(const uuid_pkg.Uuid().v4());
         final createdAt = DateTime(2023, 1, 1);
         final beforeCreation = DateTime.now();
         final entity = TestEntity(id: providedId, createdAt: createdAt);
@@ -64,7 +65,7 @@ void main() {
 
     group('equality and hashCode', () {
       test('entities with same ID are equal', () {
-        final id = UuidValue.fromString(const Uuid().v4());
+        final id = UuidValue.fromString(const uuid_pkg.Uuid().v4());
         final entity1 = TestEntity(id: id);
         final entity2 = TestEntity(id: id);
         
@@ -123,7 +124,7 @@ void main() {
       });
 
       test('does not change ID', () {
-        final id = UuidValue.fromString(const Uuid().v4());
+        final id = UuidValue.fromString(const uuid_pkg.Uuid().v4());
         final entity = TestEntity(id: id);
         
         entity.touch();

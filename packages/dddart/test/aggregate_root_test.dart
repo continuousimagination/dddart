@@ -1,7 +1,8 @@
 import 'package:test/test.dart';
-import 'package:uuid/uuid.dart';
+import 'package:uuid/uuid.dart' as uuid_pkg;
 import '../lib/src/aggregate_root.dart';
 import '../lib/src/entity.dart';
+import '../lib/src/uuid_value.dart';
 
 // Concrete implementation of AggregateRoot for testing
 class TestAggregateRoot extends AggregateRoot {
@@ -30,7 +31,7 @@ void main() {
 
     group('constructor parameter delegation', () {
       test('delegates ID parameter to Entity constructor', () {
-        final providedId = UuidValue.fromString(const Uuid().v4());
+        final providedId = UuidValue.fromString(const uuid_pkg.Uuid().v4());
         final aggregateRoot = TestAggregateRoot(id: providedId);
         
         expect(aggregateRoot.id, equals(providedId));
@@ -51,7 +52,7 @@ void main() {
       });
 
       test('delegates all parameters to Entity constructor', () {
-        final providedId = UuidValue.fromString(const Uuid().v4());
+        final providedId = UuidValue.fromString(const uuid_pkg.Uuid().v4());
         final createdAt = DateTime(2023, 1, 1);
         final updatedAt = DateTime(2023, 1, 2);
         final aggregateRoot = TestAggregateRoot(
@@ -81,7 +82,7 @@ void main() {
 
     group('Entity functionality maintenance', () {
       test('maintains Entity equality behavior', () {
-        final id = UuidValue.fromString(const Uuid().v4());
+        final id = UuidValue.fromString(const uuid_pkg.Uuid().v4());
         final aggregateRoot1 = TestAggregateRoot(id: id);
         final aggregateRoot2 = TestAggregateRoot(id: id);
         
@@ -111,7 +112,7 @@ void main() {
       });
 
       test('maintains Entity immutable properties', () {
-        final id = UuidValue.fromString(const Uuid().v4());
+        final id = UuidValue.fromString(const uuid_pkg.Uuid().v4());
         final createdAt = DateTime(2023, 1, 1);
         final aggregateRoot = TestAggregateRoot(id: id, createdAt: createdAt);
         

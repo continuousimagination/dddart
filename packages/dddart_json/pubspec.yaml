@@ -1,0 +1,20 @@
+name: dddart_json
+description: JSON serialization support for DDDart - Domain-Driven Design for Dart
+version: 1.0.0
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  dddart:
+    path: ../dddart
+  dddart_serialization:
+    path: ../dddart_serialization
+  build: ^2.4.0
+  source_gen: ^1.4.0
+  analyzer: ^6.0.0
+
+dev_dependencies:
+  test: ^1.24.0
+  build_runner: ^2.4.0
+  lints: ^3.0.0

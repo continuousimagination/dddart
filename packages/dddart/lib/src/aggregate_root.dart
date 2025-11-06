@@ -1,5 +1,6 @@
-import 'package:uuid/uuid.dart';
+import 'package:uuid/uuid.dart' hide UuidValue;
 import 'entity.dart';
+import 'uuid_value.dart';
 
 /// Base class for aggregate roots in the DDD framework.
 /// 

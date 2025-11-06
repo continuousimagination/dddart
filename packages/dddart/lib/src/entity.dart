@@ -1,4 +1,5 @@
-import 'package:uuid/uuid.dart';
+import 'package:uuid/uuid.dart' hide UuidValue;
+import 'uuid_value.dart';
 
 /// Base class for all domain entities in the DDD framework.
 /// 
