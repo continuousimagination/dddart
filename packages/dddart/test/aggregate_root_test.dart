@@ -1,6 +1,7 @@
 import 'package:test/test.dart';
 import 'package:uuid/uuid.dart' as uuid_pkg;
 import '../lib/src/aggregate_root.dart';
+import '../lib/src/domain_event.dart';
 import '../lib/src/entity.dart';
 import '../lib/src/uuid_value.dart';
 
@@ -11,6 +12,24 @@ class TestAggregateRoot extends AggregateRoot {
     DateTime? createdAt,
     DateTime? updatedAt,
   }) : super(id: id, createdAt: createdAt, updatedAt: updatedAt);
+}
+
+// Test domain event for testing event collection
+class TestDomainEvent extends DomainEvent {
+  final String data;
+
+  TestDomainEvent({
+    required UuidValue aggregateId,
+    required this.data,
+    UuidValue? eventId,
+    DateTime? occurredAt,
+    Map<String, dynamic> context = const {},
+  }) : super(
+          aggregateId: aggregateId,
+          eventId: eventId,
+          occurredAt: occurredAt,
+          context: context,
+        );
 }
 
 void main() {
@@ -124,6 +143,107 @@ void main() {
         final originalUpdatedAt = aggregateRoot.updatedAt;
         aggregateRoot.touch();
         expect(aggregateRoot.updatedAt, isNot(equals(originalUpdatedAt)));
+      });
+    });
+
+    group('event collection', () {
+      test('starts with empty uncommitted events list', () {
+        final aggregateRoot = TestAggregateRoot();
+        
+        expect(aggregateRoot.getUncommittedEvents(), isEmpty);
+      });
+
+      test('raiseEvent adds event to uncommitted events list', () {
+        final aggregateRoot = TestAggregateRoot();
+        final event = TestDomainEvent(
+          aggregateId: aggregateRoot.id,
+          data: 'test data',
+        );
+        
+        aggregateRoot.raiseEvent(event);
+        
+        final uncommittedEvents = aggregateRoot.getUncommittedEvents();
+        expect(uncommittedEvents, hasLength(1));
+        expect(uncommittedEvents.first, equals(event));
+      });
+
+      test('raiseEvent collects multiple events in order', () {
+        final aggregateRoot = TestAggregateRoot();
+        final event1 = TestDomainEvent(
+          aggregateId: aggregateRoot.id,
+          data: 'first event',
+        );
+        final event2 = TestDomainEvent(
+          aggregateId: aggregateRoot.id,
+          data: 'second event',
+        );
+        final event3 = TestDomainEvent(
+          aggregateId: aggregateRoot.id,
+          data: 'third event',
+        );
+        
+        aggregateRoot.raiseEvent(event1);
+        aggregateRoot.raiseEvent(event2);
+        aggregateRoot.raiseEvent(event3);
+        
+        final uncommittedEvents = aggregateRoot.getUncommittedEvents();
+        expect(uncommittedEvents, hasLength(3));
+        expect(uncommittedEvents[0], equals(event1));
+        expect(uncommittedEvents[1], equals(event2));
+        expect(uncommittedEvents[2], equals(event3));
+      });
+
+      test('getUncommittedEvents returns unmodifiable list', () {
+        final aggregateRoot = TestAggregateRoot();
+        final event = TestDomainEvent(
+          aggregateId: aggregateRoot.id,
+          data: 'test data',
+        );
+        
+        aggregateRoot.raiseEvent(event);
+        final uncommittedEvents = aggregateRoot.getUncommittedEvents();
+        
+        expect(() => uncommittedEvents.add(event), throwsUnsupportedError);
+      });
+
+      test('markEventsAsCommitted clears uncommitted events list', () {
+        final aggregateRoot = TestAggregateRoot();
+        final event1 = TestDomainEvent(
+          aggregateId: aggregateRoot.id,
+          data: 'first event',
+        );
+        final event2 = TestDomainEvent(
+          aggregateId: aggregateRoot.id,
+          data: 'second event',
+        );
+        
+        aggregateRoot.raiseEvent(event1);
+        aggregateRoot.raiseEvent(event2);
+        expect(aggregateRoot.getUncommittedEvents(), hasLength(2));
+        
+        aggregateRoot.markEventsAsCommitted();
+        
+        expect(aggregateRoot.getUncommittedEvents(), isEmpty);
+      });
+
+      test('can raise new events after marking as committed', () {
+        final aggregateRoot = TestAggregateRoot();
+        final event1 = TestDomainEvent(
+          aggregateId: aggregateRoot.id,
+          data: 'first event',
+        );
+        final event2 = TestDomainEvent(
+          aggregateId: aggregateRoot.id,
+          data: 'second event',
+        );
+        
+        aggregateRoot.raiseEvent(event1);
+        aggregateRoot.markEventsAsCommitted();
+        aggregateRoot.raiseEvent(event2);
+        
+        final uncommittedEvents = aggregateRoot.getUncommittedEvents();
+        expect(uncommittedEvents, hasLength(1));
+        expect(uncommittedEvents.first, equals(event2));
       });
     });
   });

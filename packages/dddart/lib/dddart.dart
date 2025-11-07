@@ -6,6 +6,8 @@ library dddart;
 
 // Export all public classes
 export 'src/aggregate_root.dart';
+export 'src/domain_event.dart';
 export 'src/entity.dart';
+export 'src/event_bus.dart';
 export 'src/value.dart';
 export 'src/uuid_value.dart';
