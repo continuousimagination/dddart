@@ -7,6 +7,9 @@ Complete API reference for the DDDart domain events system.
 - [DomainEvent](#domainevent)
 - [AggregateRoot](#aggregateroot)
 - [EventBus](#eventbus)
+- [Repository](#repository)
+- [InMemoryRepository](#inmemoryrepository)
+- [RepositoryException](#repositoryexception)
 - [Entity](#entity)
 - [Value](#value)
 - [UuidValue](#uuidvalue)
@@ -597,6 +600,889 @@ class MyService {
 
 ---
 
+## Repository
+
+Base interface for repositories that manage aggregate roots.
+
+### Interface Definition
+
+```dart
+abstract interface class Repository<T extends AggregateRoot> {
+  Future<T> getById(UuidValue id);
+  Future<void> save(T aggregate);
+  Future<void> deleteById(UuidValue id);
+}
+```
+
+### Type Parameters
+
+- `T`: The aggregate root type. Must extend `AggregateRoot`.
+
+### Methods
+
+#### `getById()`
+Retrieves an aggregate root by its ID.
+
+```dart
+Future<T> getById(UuidValue id)
+```
+
+**Parameters:**
+- `id`: The unique identifier of the aggregate to retrieve
+
+**Returns:** A `Future` that completes with the aggregate root
+
+**Throws:**
+- `RepositoryException` with type `notFound` if no aggregate with the given ID exists
+- `RepositoryException` for other failures (connection errors, timeouts, etc.)
+
+**Description:**
+- Asynchronous operation that retrieves an aggregate from storage
+- Throws an exception if the aggregate doesn't exist (no null returns)
+- Rationale: If you have a UUID, you expect it to exist
+
+**Example:**
+```dart
+final userId = UuidValue.fromString('123e4567-e89b-12d3-a456-426614174000');
+
+try {
+  final user = await userRepository.getById(userId);
+  print('Found user: ${user.name}');
+} on RepositoryException catch (e) {
+  if (e.type == RepositoryExceptionType.notFound) {
+    print('User not found');
+  } else {
+    print('Error retrieving user: ${e.message}');
+  }
+}
+```
+
+#### `save()`
+Saves an aggregate root to the repository.
+
+```dart
+Future<void> save(T aggregate)
+```
+
+**Parameters:**
+- `aggregate`: The aggregate root to save
+
+**Returns:** A `Future` that completes when the save operation finishes
+
+**Throws:**
+- `RepositoryException` if the operation fails
+
+**Description:**
+- Performs an upsert operation (insert if new, update if exists)
+- Uses the aggregate's `id` property as the key
+- Asynchronous to support both local and remote storage
+
+**Example:**
+```dart
+final user = User(name: 'John Doe', email: 'john@example.com');
+
+try {
+  await userRepository.save(user);
+  print('User saved successfully');
+} on RepositoryException catch (e) {
+  print('Failed to save user: ${e.message}');
+}
+```
+
+#### `deleteById()`
+Deletes an aggregate root by its ID.
+
+```dart
+Future<void> deleteById(UuidValue id)
+```
+
+**Parameters:**
+- `id`: The unique identifier of the aggregate to delete
+
+**Returns:** A `Future` that completes when the delete operation finishes
+
+**Throws:**
+- `RepositoryException` with type `notFound` if no aggregate with the given ID exists
+- `RepositoryException` for other failures
+
+**Description:**
+- Removes the aggregate from storage
+- Throws an exception if the aggregate doesn't exist
+- Consistent with `getById` behavior (if you have a UUID, it should exist)
+
+**Example:**
+```dart
+final userId = UuidValue.fromString('123e4567-e89b-12d3-a456-426614174000');
+
+try {
+  await userRepository.deleteById(userId);
+  print('User deleted successfully');
+} on RepositoryException catch (e) {
+  if (e.type == RepositoryExceptionType.notFound) {
+    print('User not found');
+  } else {
+    print('Error deleting user: ${e.message}');
+  }
+}
+```
+
+### Usage Examples
+
+#### Basic CRUD Operations
+
+```dart
+import 'package:dddart/dddart.dart';
+
+// Define your aggregate
+class User extends AggregateRoot {
+  final String name;
+  final String email;
+  
+  User({
+    required this.name,
+    required this.email,
+    super.id,
+  });
+}
+
+void main() async {
+  // Create repository
+  final repository = InMemoryRepository<User>();
+  
+  // Create and save
+  final user = User(name: 'John Doe', email: 'john@example.com');
+  await repository.save(user);
+  
+  // Retrieve
+  final retrieved = await repository.getById(user.id);
+  print('Retrieved: ${retrieved.name}');
+  
+  // Update (save again with same ID)
+  final updated = User(
+    name: 'John Smith',
+    email: 'john@example.com',
+    id: user.id,
+  );
+  await repository.save(updated);
+  
+  // Delete
+  await repository.deleteById(user.id);
+}
+```
+
+#### Custom Repository Interface
+
+```dart
+// Define domain-specific repository interface
+abstract interface class UserRepository implements Repository<User> {
+  Future<User?> getByEmail(String email);
+  Future<List<User>> getByFirstName(String firstName);
+  Future<List<User>> getActiveUsers();
+}
+
+// Implement for specific data store
+class MySqlUserRepository implements UserRepository {
+  final MySqlConnection connection;
+  
+  MySqlUserRepository(this.connection);
+  
+  @override
+  Future<User> getById(UuidValue id) async {
+    final result = await connection.query(
+      'SELECT * FROM users WHERE id = ?',
+      [id.uuid],
+    );
+    
+    if (result.isEmpty) {
+      throw RepositoryException(
+        'User with ID $id not found',
+        type: RepositoryExceptionType.notFound,
+      );
+    }
+    
+    return User.fromMap(result.first);
+  }
+  
+  @override
+  Future<void> save(User aggregate) async {
+    await connection.query(
+      '''
+      INSERT INTO users (id, name, email, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE
+        name = VALUES(name),
+        email = VALUES(email),
+        updated_at = VALUES(updated_at)
+      ''',
+      [
+        aggregate.id.uuid,
+        aggregate.name,
+        aggregate.email,
+        aggregate.createdAt,
+        aggregate.updatedAt,
+      ],
+    );
+  }
+  
+  @override
+  Future<void> deleteById(UuidValue id) async {
+    final result = await connection.query(
+      'DELETE FROM users WHERE id = ?',
+      [id.uuid],
+    );
+    
+    if (result.affectedRows == 0) {
+      throw RepositoryException(
+        'User with ID $id not found',
+        type: RepositoryExceptionType.notFound,
+      );
+    }
+  }
+  
+  @override
+  Future<User?> getByEmail(String email) async {
+    final result = await connection.query(
+      'SELECT * FROM users WHERE email = ?',
+      [email],
+    );
+    
+    return result.isEmpty ? null : User.fromMap(result.first);
+  }
+  
+  @override
+  Future<List<User>> getByFirstName(String firstName) async {
+    final result = await connection.query(
+      'SELECT * FROM users WHERE name LIKE ?',
+      ['$firstName%'],
+    );
+    
+    return result.map((row) => User.fromMap(row)).toList();
+  }
+  
+  @override
+  Future<List<User>> getActiveUsers() async {
+    final result = await connection.query(
+      'SELECT * FROM users WHERE status = ?',
+      ['active'],
+    );
+    
+    return result.map((row) => User.fromMap(row)).toList();
+  }
+}
+```
+
+#### Error Handling
+
+```dart
+Future<void> updateUser(UuidValue userId, String newName) async {
+  try {
+    // Retrieve user
+    final user = await userRepository.getById(userId);
+    
+    // Update user
+    final updated = User(
+      name: newName,
+      email: user.email,
+      id: user.id,
+    );
+    
+    // Save changes
+    await userRepository.save(updated);
+    
+    print('User updated successfully');
+  } on RepositoryException catch (e) {
+    switch (e.type) {
+      case RepositoryExceptionType.notFound:
+        print('User not found');
+      case RepositoryExceptionType.connection:
+        print('Database connection error');
+      case RepositoryExceptionType.timeout:
+        print('Operation timed out');
+      default:
+        print('Unexpected error: ${e.message}');
+    }
+  }
+}
+```
+
+#### Integration with Domain Events
+
+```dart
+class Order extends AggregateRoot {
+  final String customerId;
+  final List<OrderItem> items;
+  OrderStatus status;
+  
+  Order._({
+    required this.customerId,
+    required this.items,
+    this.status = OrderStatus.pending,
+    super.id,
+  });
+  
+  factory Order.place({
+    required String customerId,
+    required List<OrderItem> items,
+  }) {
+    final order = Order._(
+      customerId: customerId,
+      items: items,
+    );
+    
+    order.raiseEvent(OrderPlaced(
+      orderId: order.id.uuid,
+      customerId: customerId,
+    ));
+    
+    return order;
+  }
+  
+  void ship(String trackingNumber) {
+    status = OrderStatus.shipped;
+    
+    raiseEvent(OrderShipped(
+      orderId: id.uuid,
+      trackingNumber: trackingNumber,
+    ));
+  }
+}
+
+// Usage with repository and event bus
+Future<void> placeOrder(String customerId, List<OrderItem> items) async {
+  final eventBus = EventBus();
+  final orderRepository = InMemoryRepository<Order>();
+  
+  // Create order (raises OrderPlaced event)
+  final order = Order.place(
+    customerId: customerId,
+    items: items,
+  );
+  
+  // Save to repository
+  await orderRepository.save(order);
+  
+  // Publish domain events
+  for (final event in order.getUncommittedEvents()) {
+    eventBus.publish(event);
+  }
+  
+  // Mark events as committed
+  order.markEventsAsCommitted();
+  
+  print('Order placed: ${order.id.uuid}');
+}
+```
+
+#### Testing with InMemoryRepository
+
+```dart
+void main() {
+  group('UserService', () {
+    late UserRepository repository;
+    late UserService service;
+    
+    setUp(() {
+      repository = InMemoryRepository<User>();
+      service = UserService(repository);
+    });
+    
+    test('creates user successfully', () async {
+      final user = await service.createUser(
+        name: 'John Doe',
+        email: 'john@example.com',
+      );
+      
+      expect(user.name, equals('John Doe'));
+      
+      // Verify it was saved
+      final retrieved = await repository.getById(user.id);
+      expect(retrieved.name, equals('John Doe'));
+    });
+    
+    test('throws when user not found', () async {
+      final nonExistentId = UuidValue.generate();
+      
+      expect(
+        () => repository.getById(nonExistentId),
+        throwsA(isA<RepositoryException>()),
+      );
+    });
+  });
+}
+```
+
+---
+
+## InMemoryRepository
+
+In-memory implementation of the Repository interface for testing purposes.
+
+### Class Definition
+
+```dart
+class InMemoryRepository<T extends AggregateRoot> implements Repository<T> {
+  InMemoryRepository();
+  
+  @override
+  Future<T> getById(UuidValue id);
+  
+  @override
+  Future<void> save(T aggregate);
+  
+  @override
+  Future<void> deleteById(UuidValue id);
+  
+  void clear();
+  List<T> getAll();
+}
+```
+
+### Type Parameters
+
+- `T`: The aggregate root type. Must extend `AggregateRoot`.
+
+### Constructor
+
+```dart
+InMemoryRepository()
+```
+
+Creates a new in-memory repository with empty storage.
+
+### Methods
+
+#### `getById()`
+Retrieves an aggregate from memory by its ID.
+
+```dart
+Future<T> getById(UuidValue id)
+```
+
+**Implementation Details:**
+- Looks up aggregate in internal Map storage
+- Throws `RepositoryException` with type `notFound` if not present
+- Returns immediately (wrapped in Future for interface consistency)
+
+#### `save()`
+Saves an aggregate to memory.
+
+```dart
+Future<void> save(T aggregate)
+```
+
+**Implementation Details:**
+- Stores aggregate in internal Map using its ID as key
+- Performs upsert (overwrites if ID already exists)
+- Returns immediately (wrapped in Future for interface consistency)
+
+#### `deleteById()`
+Removes an aggregate from memory by its ID.
+
+```dart
+Future<void> deleteById(UuidValue id)
+```
+
+**Implementation Details:**
+- Removes aggregate from internal Map
+- Throws `RepositoryException` with type `notFound` if not present
+- Returns immediately (wrapped in Future for interface consistency)
+
+#### `clear()`
+Removes all aggregates from the repository.
+
+```dart
+void clear()
+```
+
+**Description:**
+- Utility method for test cleanup
+- Empties the internal storage Map
+- Not part of the Repository interface
+
+**Example:**
+```dart
+final repository = InMemoryRepository<User>();
+
+// Add some users
+await repository.save(user1);
+await repository.save(user2);
+
+// Clear all
+repository.clear();
+
+// Repository is now empty
+expect(repository.getAll(), isEmpty);
+```
+
+#### `getAll()`
+Returns all aggregates in the repository.
+
+```dart
+List<T> getAll()
+```
+
+**Returns:** An unmodifiable list of all stored aggregates
+
+**Description:**
+- Utility method for testing and debugging
+- Returns unmodifiable list to prevent external modification
+- Not part of the Repository interface
+- Order is not guaranteed
+
+**Example:**
+```dart
+final repository = InMemoryRepository<User>();
+
+await repository.save(user1);
+await repository.save(user2);
+
+final allUsers = repository.getAll();
+expect(allUsers.length, equals(2));
+```
+
+### Usage Examples
+
+#### Basic Testing
+
+```dart
+void main() {
+  test('repository stores and retrieves aggregates', () async {
+    final repository = InMemoryRepository<User>();
+    
+    final user = User(name: 'John Doe', email: 'john@example.com');
+    await repository.save(user);
+    
+    final retrieved = await repository.getById(user.id);
+    expect(retrieved.id, equals(user.id));
+    expect(retrieved.name, equals('John Doe'));
+  });
+  
+  test('repository throws when aggregate not found', () async {
+    final repository = InMemoryRepository<User>();
+    final nonExistentId = UuidValue.generate();
+    
+    expect(
+      () => repository.getById(nonExistentId),
+      throwsA(
+        isA<RepositoryException>()
+          .having((e) => e.type, 'type', RepositoryExceptionType.notFound),
+      ),
+    );
+  });
+}
+```
+
+#### Test Isolation
+
+```dart
+void main() {
+  group('UserService', () {
+    late InMemoryRepository<User> repository;
+    late UserService service;
+    
+    setUp(() {
+      // Fresh repository for each test
+      repository = InMemoryRepository<User>();
+      service = UserService(repository);
+    });
+    
+    tearDown(() {
+      // Clean up (optional, since setUp creates new instance)
+      repository.clear();
+    });
+    
+    test('creates user', () async {
+      final user = await service.createUser('John', 'john@example.com');
+      expect(repository.getAll().length, equals(1));
+    });
+    
+    test('updates user', () async {
+      final user = await service.createUser('John', 'john@example.com');
+      await service.updateUserName(user.id, 'Jane');
+      
+      final updated = await repository.getById(user.id);
+      expect(updated.name, equals('Jane'));
+    });
+  });
+}
+```
+
+#### Multiple Aggregate Types
+
+```dart
+void main() {
+  test('different repositories store different types', () async {
+    final userRepo = InMemoryRepository<User>();
+    final orderRepo = InMemoryRepository<Order>();
+    
+    final user = User(name: 'John', email: 'john@example.com');
+    final order = Order.place(customerId: 'customer-1', items: []);
+    
+    await userRepo.save(user);
+    await orderRepo.save(order);
+    
+    expect(userRepo.getAll().length, equals(1));
+    expect(orderRepo.getAll().length, equals(1));
+    
+    // Type safety enforced
+    final retrievedUser = await userRepo.getById(user.id);
+    expect(retrievedUser, isA<User>());
+  });
+}
+```
+
+### Performance Characteristics
+
+- **getById**: O(1) - HashMap lookup
+- **save**: O(1) - HashMap insert/update
+- **deleteById**: O(1) - HashMap removal
+- **getAll**: O(n) - Iterates all values
+- **clear**: O(n) - Clears HashMap
+- **Memory**: O(n) where n is number of stored aggregates
+
+### Limitations
+
+- **Not thread-safe**: Concurrent access may cause issues
+- **No persistence**: Data lost when process ends
+- **No transactions**: Operations are not atomic
+- **No indexing**: Only lookup by ID is efficient
+- **Memory bound**: Limited by available RAM
+
+**Use Cases:**
+- Unit testing
+- Integration testing
+- Prototyping
+- Examples and demos
+
+**Not Suitable For:**
+- Production applications
+- Large datasets
+- Concurrent access scenarios
+- Data that needs persistence
+
+---
+
+## RepositoryException
+
+Exception thrown when a repository operation fails.
+
+### Class Definition
+
+```dart
+class RepositoryException implements Exception {
+  const RepositoryException(
+    this.message, {
+    this.type = RepositoryExceptionType.unknown,
+    this.cause,
+  });
+  
+  final String message;
+  final RepositoryExceptionType type;
+  final Object? cause;
+  
+  @override
+  String toString();
+}
+```
+
+### Properties
+
+#### `message`
+- **Type:** `String`
+- **Description:** Human-readable error message describing what went wrong
+- **Read-only:** Yes
+
+#### `type`
+- **Type:** `RepositoryExceptionType`
+- **Description:** Classification of the error for programmatic handling
+- **Read-only:** Yes
+- **Default:** `RepositoryExceptionType.unknown`
+
+#### `cause`
+- **Type:** `Object?`
+- **Description:** Optional underlying exception that caused this error
+- **Read-only:** Yes
+- **Default:** `null`
+
+### Constructor
+
+```dart
+const RepositoryException(
+  this.message, {
+  this.type = RepositoryExceptionType.unknown,
+  this.cause,
+})
+```
+
+**Parameters:**
+- `message` (required): Human-readable error description
+- `type` (optional): Error classification. Defaults to `unknown`.
+- `cause` (optional): Underlying exception. Defaults to `null`.
+
+### Methods
+
+#### `toString()`
+Returns a string representation of the exception.
+
+```dart
+String toString()
+```
+
+**Returns:** String in format `RepositoryException: message (type: type)` or `RepositoryException: message (type: type, cause: cause)` if cause is present
+
+**Example:**
+```dart
+final exception = RepositoryException(
+  'User not found',
+  type: RepositoryExceptionType.notFound,
+);
+print(exception.toString());
+// Output: RepositoryException: User not found (type: RepositoryExceptionType.notFound)
+```
+
+### RepositoryExceptionType Enum
+
+```dart
+enum RepositoryExceptionType {
+  notFound,
+  duplicate,
+  constraint,
+  connection,
+  timeout,
+  unknown,
+}
+```
+
+#### Values
+
+- **notFound**: The requested aggregate was not found
+- **duplicate**: A duplicate aggregate already exists (e.g., unique constraint violation)
+- **constraint**: The operation violated a database constraint
+- **connection**: A connection or network error occurred
+- **timeout**: The operation timed out
+- **unknown**: An unknown or unexpected error occurred
+
+### Usage Examples
+
+#### Basic Error Handling
+
+```dart
+try {
+  final user = await userRepository.getById(userId);
+  print('Found user: ${user.name}');
+} on RepositoryException catch (e) {
+  print('Error: ${e.message}');
+  print('Type: ${e.type}');
+}
+```
+
+#### Type-Specific Handling
+
+```dart
+try {
+  await userRepository.save(user);
+} on RepositoryException catch (e) {
+  switch (e.type) {
+    case RepositoryExceptionType.notFound:
+      // Handle not found
+      showError('Item not found');
+    case RepositoryExceptionType.duplicate:
+      // Handle duplicate
+      showError('Item already exists');
+    case RepositoryExceptionType.connection:
+      // Handle connection error
+      showError('Connection failed. Please try again.');
+    case RepositoryExceptionType.timeout:
+      // Handle timeout
+      showError('Operation timed out');
+    case RepositoryExceptionType.constraint:
+      // Handle constraint violation
+      showError('Operation violates data constraints');
+    case RepositoryExceptionType.unknown:
+      // Handle unknown error
+      showError('An unexpected error occurred');
+  }
+}
+```
+
+#### Wrapping Underlying Exceptions
+
+```dart
+class MySqlUserRepository implements UserRepository {
+  @override
+  Future<User> getById(UuidValue id) async {
+    try {
+      final result = await connection.query(
+        'SELECT * FROM users WHERE id = ?',
+        [id.uuid],
+      );
+      
+      if (result.isEmpty) {
+        throw RepositoryException(
+          'User with ID $id not found',
+          type: RepositoryExceptionType.notFound,
+        );
+      }
+      
+      return User.fromMap(result.first);
+    } on MySqlException catch (e) {
+      if (e.errorNumber == 2006) {
+        // MySQL server has gone away
+        throw RepositoryException(
+          'Database connection lost',
+          type: RepositoryExceptionType.connection,
+          cause: e,
+        );
+      }
+      
+      throw RepositoryException(
+        'Failed to retrieve user',
+        type: RepositoryExceptionType.unknown,
+        cause: e,
+      );
+    }
+  }
+}
+```
+
+#### Logging with Cause
+
+```dart
+try {
+  await repository.save(user);
+} on RepositoryException catch (e) {
+  logger.error('Repository operation failed: ${e.message}');
+  
+  if (e.cause != null) {
+    logger.error('Caused by: ${e.cause}');
+    logger.error('Stack trace: ${StackTrace.current}');
+  }
+  
+  rethrow;
+}
+```
+
+#### Custom Exception Messages
+
+```dart
+Future<void> deleteUser(UuidValue userId) async {
+  try {
+    await userRepository.deleteById(userId);
+  } on RepositoryException catch (e) {
+    if (e.type == RepositoryExceptionType.notFound) {
+      throw RepositoryException(
+        'Cannot delete user $userId: user does not exist',
+        type: RepositoryExceptionType.notFound,
+        cause: e,
+      );
+    }
+    rethrow;
+  }
+}
+```
+
+---
+
 ## Entity
 
 Base class for domain entities with identity and lifecycle management.
@@ -873,6 +1759,17 @@ void main() async {
   await Future.delayed(Duration(milliseconds: 100));
   await eventBus.close();
 }
+```
+
+**Output:**
+```
+📦 Order placed: 123e4567-e89b-12d3-a456-426614174000
+   Customer: customer-123
+   Total: $299.99
+🚚 Order shipped: 123e4567-e89b-12d3-a456-426614174000
+   Tracking: TRACK-123456
+
+📊 Customer has 1 order(s)
 ```
 
 ---
