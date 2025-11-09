@@ -1,0 +1,19 @@
+name: dddart_http_example
+description: Example application demonstrating dddart_http CRUD API
+version: 1.0.0
+publish_to: none
+
+environment:
+  sdk: ^3.0.0
+
+dependencies:
+  dddart:
+    path: ../../dddart
+  dddart_serialization:
+    path: ../../dddart_serialization
+  dddart_http:
+    path: ../
+  shelf: ^1.4.0
+
+dev_dependencies:
+  lints: ^3.0.0

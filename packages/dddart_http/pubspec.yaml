@@ -1,0 +1,18 @@
+name: dddart_http
+description: HTTP CRUD API framework for DDDart - Provides RESTful endpoints for aggregate roots
+version: 1.0.0
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  shelf: ^1.4.0
+  shelf_router: ^1.1.0
+  dddart:
+    path: ../dddart
+  dddart_serialization:
+    path: ../dddart_serialization
+
+dev_dependencies:
+  test: ^1.24.0
+  lints: ^3.0.0

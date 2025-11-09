@@ -152,9 +152,52 @@ This feature provides HTTP CRUD API functionality for exposing aggregate roots t
 
 1. THE HTTP_API_System SHALL include an example application that defines an Aggregate_Root with child entities and value objects
 2. THE example application SHALL configure CRUD routes for the Aggregate_Root
-3. THE example application SHALL demonstrate multiple serializers for content negotiation
-4. THE example application SHALL use InMemoryRepository for data persistence
-5. THE example application SHALL demonstrate all CRUD operations (GET by ID, GET collection, POST, PUT, DELETE)
-6. THE example application SHALL demonstrate at least one custom query handler using query parameters
-7. THE example application SHALL demonstrate pagination with skip and take parameters
-8. THE example application SHALL demonstrate custom exception handling
+3. THE example application SHALL use InMemoryRepository for data persistence
+4. THE example application SHALL demonstrate all CRUD operations (GET by ID, GET collection, POST, PUT, DELETE)
+5. THE example application SHALL demonstrate at least two custom query handlers using query parameters
+6. THE example application SHALL demonstrate pagination with skip and take parameters
+7. THE example application SHALL demonstrate custom exception handling with at least two custom exception types
+8. THE example application SHALL seed sample data to enable immediate testing
+9. THE example application SHALL include inline comments explaining key concepts
+
+### Requirement 11
+
+**User Story:** As a developer, I want comprehensive unit tests for HttpServer, so that I can trust the server lifecycle and routing behavior
+
+#### Acceptance Criteria
+
+1. THE HTTP_API_System SHALL include unit tests for HttpServer.registerResource method
+2. THE HTTP_API_System SHALL include unit tests for HttpServer.start method
+3. THE HTTP_API_System SHALL include unit tests for HttpServer.stop method
+4. THE HTTP_API_System SHALL include unit tests verifying routes are created for all CRUD operations
+5. THE HTTP_API_System SHALL include unit tests verifying multiple resources can be registered without conflicts
+6. THE HTTP_API_System SHALL include unit tests for error conditions (starting already-running server, stopping non-running server)
+
+### Requirement 12
+
+**User Story:** As a developer, I want integration tests that verify end-to-end HTTP request/response flows, so that I can trust the complete system works correctly
+
+#### Acceptance Criteria
+
+1. THE HTTP_API_System SHALL include integration tests that start a real HTTP server and make actual HTTP requests
+2. THE HTTP_API_System SHALL include integration tests for complete CRUD lifecycle (create, read, update, delete)
+3. THE HTTP_API_System SHALL include integration tests for query handlers with filtering and pagination
+4. THE HTTP_API_System SHALL include integration tests for content negotiation with multiple serializers
+5. THE HTTP_API_System SHALL include integration tests for error scenarios (404, 400, 415, 406, 409)
+6. THE HTTP_API_System SHALL include integration tests for custom exception handlers
+7. THE HTTP_API_System SHALL include integration tests verifying RFC 7807 error format in actual HTTP responses
+
+### Requirement 13
+
+**User Story:** As a developer, I want CrudResource to handle edge cases gracefully, so that my API is robust and predictable
+
+#### Acceptance Criteria
+
+1. WHEN CrudResource is created with an empty serializers map, THE HTTP_API_System SHALL throw an ArgumentError
+2. WHEN CrudResource is created with a null or empty path, THE HTTP_API_System SHALL throw an ArgumentError
+3. WHEN pagination skip parameter is negative, THE HTTP_API_System SHALL treat it as zero
+4. WHEN pagination take parameter is negative, THE HTTP_API_System SHALL use the defaultTake value
+5. WHEN pagination take parameter is zero, THE HTTP_API_System SHALL return an empty array
+6. WHEN a query handler returns null totalCount, THE HTTP_API_System SHALL omit the X-Total-Count header
+7. WHEN Accept header contains multiple media types with quality values, THE HTTP_API_System SHALL select the highest priority supported type
+8. WHEN Content-Type header contains charset or other parameters, THE HTTP_API_System SHALL extract the media type correctly

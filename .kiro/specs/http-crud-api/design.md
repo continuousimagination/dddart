@@ -735,6 +735,7 @@ Response _handleException(Object error, StackTrace stackTrace) {
    - Test query parameter matching logic
    - Test handler invocation with correct parameters
    - Test error cases (no handler matches, multiple params, etc.)
+   - Test edge cases (empty serializers, null path, negative pagination values)
 
 2. **ErrorMapper Tests**
    - Test each exception type maps to correct status code
@@ -747,29 +748,68 @@ Response _handleException(Object error, StackTrace stackTrace) {
    - Test empty responses (204)
    - Test X-Total-Count header inclusion
 
+4. **HttpServer Tests**
+   - Test resource registration
+   - Test server start/stop lifecycle
+   - Test route creation for all CRUD operations
+   - Test multiple resources can be registered
+   - Test error conditions (double start, stop when not running)
+
 ### Integration Tests
+
+Integration tests use a real HTTP server and make actual HTTP requests using an HTTP client (e.g., `package:http`). These tests verify the complete request/response flow including routing, serialization, error handling, and HTTP protocol compliance.
 
 1. **End-to-End CRUD Tests**
    - Start test server with InMemoryRepository
-   - Perform full CRUD lifecycle via HTTP
+   - Perform full CRUD lifecycle via HTTP client
    - Verify data persistence across requests
+   - Test all HTTP methods (GET, POST, PUT, DELETE)
+   - Verify response status codes and headers
 
 2. **Query Handler Tests**
    - Register custom query handlers
-   - Make requests with various query parameters
+   - Make HTTP requests with various query parameters
    - Verify correct handlers are invoked
+   - Test pagination with query filters
+   - Verify X-Total-Count header in responses
 
-3. **Error Scenario Tests**
+3. **Content Negotiation Tests**
+   - Register multiple serializers (JSON and a test format)
+   - Test POST/PUT with different Content-Type headers
+   - Test GET with different Accept headers
+   - Verify correct serializer is used
+   - Test 415 and 406 error responses
+
+4. **Error Scenario Tests**
    - Test 404 responses for missing resources
    - Test 400 responses for invalid JSON
-   - Test 500 responses for unexpected errors
+   - Test 400 responses for invalid UUID format
+   - Test 400 responses for unsupported query parameters
+   - Test 409 responses for duplicate key violations
+   - Verify all errors follow RFC 7807 format
 
-### Example Application Tests
+5. **Custom Exception Handler Tests**
+   - Register custom exception handlers
+   - Trigger custom exceptions in repository operations
+   - Verify custom handler responses are returned
+   - Test fallback to default error handling
 
-The example application serves as both documentation and an integration test:
-- Defines a complete aggregate root with child entities
+6. **Edge Case Tests**
+   - Test negative pagination values
+   - Test zero take value
+   - Test very large pagination values
+   - Test Accept header with quality values
+   - Test Content-Type with charset parameters
+
+### Example Application
+
+The example application serves as both documentation and a manual integration test:
+- Defines a complete aggregate root with child entities and value objects
 - Configures all CRUD routes
-- Demonstrates custom query handlers
+- Demonstrates multiple custom query handlers
+- Demonstrates custom exception handling
+- Seeds sample data for immediate testing
+- Includes inline comments explaining key concepts
 - Can be run manually for exploratory testing
 
 ## Usage Example
@@ -1051,6 +1091,51 @@ id: 123e4567-...
 ### ID Parsing
 
 IDs are always parsed as UUIDs using `UuidValue.fromString()`. This is consistent with the Repository interface and AggregateRoot base class, which both require UuidValue for IDs.
+
+### Edge Case Handling
+
+The system handles various edge cases to ensure robust and predictable behavior:
+
+#### Configuration Validation
+
+- **Empty serializers map**: Throws `ArgumentError` during CrudResource construction
+- **Null or empty path**: Throws `ArgumentError` during CrudResource construction
+- **Null repository**: Throws `ArgumentError` during CrudResource construction (Dart's required parameter)
+
+#### Pagination Edge Cases
+
+- **Negative skip**: Treated as zero (no items skipped)
+- **Negative take**: Uses defaultTake value instead
+- **Zero take**: Returns empty array with correct X-Total-Count header
+- **Take exceeds maxTake**: Clamped to maxTake value
+- **Very large skip**: Returns empty array if skip exceeds total count
+
+#### Content Negotiation Edge Cases
+
+- **Accept header with quality values**: Parses quality values and selects highest priority supported type
+  - Example: `Accept: application/json;q=0.9, application/yaml;q=1.0` → selects YAML
+- **Content-Type with charset**: Extracts media type correctly
+  - Example: `Content-Type: application/json; charset=utf-8` → uses JSON serializer
+- **Multiple Accept types**: Tries each in order until supported type found
+- **Case-insensitive media types**: Handles `application/JSON` same as `application/json`
+
+#### Query Handler Edge Cases
+
+- **Handler returns null totalCount**: X-Total-Count header is omitted from response
+- **Handler returns empty list**: Returns empty JSON array with totalCount=0
+- **Handler throws exception**: Caught and mapped to appropriate HTTP error response
+
+#### Request Body Edge Cases
+
+- **Empty request body**: Deserialization exception → 400 Bad Request
+- **Malformed JSON**: Deserialization exception → 400 Bad Request
+- **Missing required fields**: Deserialization exception → 400 Bad Request
+- **Extra fields in JSON**: Ignored by deserializer (lenient parsing)
+
+#### UUID Edge Cases
+
+- **Invalid UUID format**: FormatException caught → mapped to 400 Bad Request
+- **Valid UUID but non-existent**: RepositoryException (notFound) → 404 Not Found
 
 ## Future Enhancements
 
