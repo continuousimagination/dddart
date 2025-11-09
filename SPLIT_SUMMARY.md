@@ -59,14 +59,59 @@ Created `packages/dddart_json/example/` with JSON serialization examples:
 - `pubspec.yaml` - Package dependencies
 - `README.md` - Documentation for serialization examples
 
+### 5. Kiro Configuration Split
+
+Created package-specific `.kiro` directories for each package:
+
+#### dddart Package
+- `.kiro/specs/dddart/` - Core DDDart framework specs
+- `.kiro/specs/domain-events-system/` - Domain events implementation specs
+- `.kiro/specs/repository-pattern/` - Repository pattern specs
+- `.kiro/steering/ddd-patterns.md` - DDD patterns and guidelines
+
+#### dddart_http Package
+- `.kiro/specs/http-crud-api/` - HTTP CRUD API specs
+- `.kiro/steering/http-api-patterns.md` - REST API patterns and guidelines
+
+#### dddart_json Package
+- `.kiro/specs/` - (empty, ready for future specs)
+- `.kiro/steering/json-serialization.md` - JSON serialization guidelines
+
+#### dddart_serialization Package
+- `.kiro/specs/dddart-serialization/` - Serialization framework specs
+- `.kiro/steering/serialization-framework.md` - Framework design guidelines
+
+Each package now has its own Kiro configuration that will move with it when split into separate repositories.
+
+### 6. Git Configuration
+
+Created `.gitignore` files for all packages:
+
+- `packages/dddart/.gitignore` - Already existed
+- `packages/dddart_http/.gitignore` - Created
+- `packages/dddart_json/.gitignore` - Created (includes `*.g.dart` for generated files)
+- `packages/dddart_serialization/.gitignore` - Created
+
+All .gitignore files include:
+- Dart build artifacts (.dart_tool/, .packages, build/)
+- IDE files (.vscode/, .idea/, *.iml)
+- OS files (.DS_Store, Thumbs.db)
+- Test coverage (coverage/)
+- Documentation (doc/api/)
+- Temporary files (*.tmp, *.temp)
+
+Note: `dddart_json` additionally ignores `*.g.dart` files since it uses code generation.
+
 ## Files to Delete When Splitting
 
 When you split the monorepo, you should delete these root-level files:
+- `.kiro/` - Now distributed to individual packages
 - `pubspec.yaml` (monorepo workspace file)
 - `pubspec.lock`
 - `README.md` (monorepo README)
 - `.dart_tool/`
-- `example/` (original example directory - now split into packages)
+- `example/` (already moved into packages)
+- `SPLIT_SUMMARY.md` (this file - no longer needed after split)
 
 ## Publishing Order
 

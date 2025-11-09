@@ -1,0 +1,26 @@
+# Dart build artifacts
+.dart_tool/
+.packages
+build/
+pubspec.lock
+
+# IDE files
+.vscode/
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage/
+
+# Documentation
+doc/api/
+
+# Temporary files
+*.tmp
+*.temp
