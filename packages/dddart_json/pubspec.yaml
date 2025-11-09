@@ -10,9 +10,11 @@ environment:
 
 dependencies:
   dddart:
-    path: ../dddart
+    git:
+      url: https://github.com/continuousimagination/dddart.git
   dddart_serialization:
-    path: ../dddart_serialization
+    git:
+      url: https://github.com/continuousimagination/dddart_serialization.git
   build: ^2.4.0
   source_gen: ^1.4.0
   analyzer: ^6.0.0

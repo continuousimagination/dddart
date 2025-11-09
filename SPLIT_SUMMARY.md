@@ -20,15 +20,23 @@ All four `pubspec.yaml` files updated with:
 - Repository: `https://github.com/continuousimagination/[package-name]`
 - Issue tracker: `https://github.com/continuousimagination/[package-name]/issues`
 
-### 3. Dependencies Status
-**Currently using path dependencies** (for monorepo development):
-- `dddart_serialization` depends on `dddart` via `path: ../dddart`
-- `dddart_json` depends on `dddart` and `dddart_serialization` via path
-- `dddart_http` depends on `dddart` and `dddart_serialization` via path
+### 3. Dependencies Updated to Git URLs
+All packages now use git dependencies instead of path dependencies:
+- `dddart_serialization` depends on `dddart` via GitHub
+- `dddart_json` depends on `dddart` and `dddart_serialization` via GitHub
+- `dddart_http` depends on `dddart` and `dddart_serialization` via GitHub
+- All examples also use git dependencies
 
-**After splitting into separate repos**, you'll need to update to version constraints:
-- Change `path: ../dddart` to `dddart: ^0.9.0`
-- Change `path: ../dddart_serialization` to `dddart_serialization: ^0.9.0`
+**Advantages:**
+- No need to publish to pub.dev immediately
+- Works as soon as you push to GitHub
+- Can develop and test across repos
+- No version tags required (uses latest commit)
+
+**To use:**
+1. Push each package to its GitHub repository
+2. Run `dart pub get` in any package
+3. Dart will fetch dependencies from GitHub automatically
 
 ### 4. Examples Split by Package
 
@@ -122,28 +130,51 @@ When publishing to pub.dev, follow this order:
 
 ## Important Notes
 
-### Dependencies During Split
+### Git Dependencies (Current Approach)
 
-**While in monorepo (current state):**
-- All packages use `path:` dependencies to reference each other
-- Examples use `path:` dependencies to reference parent packages
-- This allows everything to work without publishing
+**Current state:**
+- All packages use git dependencies pointing to GitHub repos
+- No tags required - uses latest commit on `main` branch
+- Packages will work immediately after pushing to GitHub
 
-**After splitting into separate repos:**
-1. First, publish `dddart` to pub.dev
-2. Update `dddart_serialization/pubspec.yaml` to use `dddart: ^0.9.0`
-3. Publish `dddart_serialization` to pub.dev
-4. Update `dddart_json` and `dddart_http` to use published versions
-5. Publish `dddart_json` and `dddart_http`
-
-**Example pubspec changes after split:**
+**Example git dependency:**
 ```yaml
-# Before (monorepo with path dependencies)
 dependencies:
   dddart:
-    path: ../dddart
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+```
 
-# After (separate repo with published dependency)
+**How it works:**
+1. Push each package to its GitHub repository
+2. Run `dart pub get` - Dart will fetch from GitHub
+3. Dependencies resolve automatically from the latest commits
+
+**Optional: Using version tags**
+If you want to pin to specific versions, you can add git tags:
+```bash
+# In each repo, tag a version
+git tag v0.9.0
+git push origin v0.9.0
+```
+
+Then update pubspec to use the tag:
+```yaml
+dependencies:
+  dddart:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: v0.9.0  # Pin to specific tag
+```
+
+**When to publish to pub.dev:**
+Later, when you're ready to make packages publicly available:
+1. Publish `dddart` to pub.dev first (no dependencies)
+2. Publish `dddart_serialization` (depends on dddart)
+3. Publish `dddart_json` and `dddart_http` in parallel
+
+Then update pubspecs to use pub.dev versions:
+```yaml
 dependencies:
   dddart: ^0.9.0
 ```

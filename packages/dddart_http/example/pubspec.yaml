@@ -8,11 +8,14 @@ environment:
 
 dependencies:
   dddart:
-    path: ../../dddart
+    git:
+      url: https://github.com/continuousimagination/dddart.git
   dddart_serialization:
-    path: ../../dddart_serialization
+    git:
+      url: https://github.com/continuousimagination/dddart_serialization.git
   dddart_http:
-    path: ../
+    git:
+      url: https://github.com/continuousimagination/dddart_http.git
   shelf: ^1.4.0
 
 dev_dependencies:
