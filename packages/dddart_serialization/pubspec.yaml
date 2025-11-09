@@ -9,8 +9,7 @@ environment:
   sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
-  dddart:
-    path: ../dddart
+  dddart: ^0.9.0
 
 dev_dependencies:
   test: ^1.24.0
