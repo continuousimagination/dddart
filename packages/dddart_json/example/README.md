@@ -1,12 +1,12 @@
-# DDDart Serialization Example
+# DDDart JSON Serialization Example
 
-This example demonstrates the complete DDDart serialization system with a realistic e-commerce domain model.
+This example demonstrates the complete DDDart JSON serialization system with a realistic e-commerce domain model.
 
 ## Domain Model
 
 The example includes:
 - **Order** (AggregateRoot) - The main aggregate containing order information
-- **OrderItem** (Entity) - Individual items within an order
+- **OrderItem** (Value) - Individual items within an order
 - **Customer** (AggregateRoot) - Customer information
 - **Address** (Value) - Shipping and billing addresses
 - **Money** (Value) - Price and total amounts
@@ -37,7 +37,7 @@ dart run build_runner build
 
 3. **Run the example**:
 ```bash
-dart run example/main.dart
+dart run example/serialization_example.dart
 ```
 
 ## Code Structure
@@ -48,16 +48,14 @@ example/
 │   ├── domain/
 │   │   ├── order.dart          # Order aggregate root
 │   │   ├── customer.dart       # Customer aggregate root
-│   │   ├── order_item.dart     # OrderItem entity
+│   │   ├── order_item.dart     # OrderItem value object
 │   │   ├── address.dart        # Address value object
 │   │   ├── money.dart          # Money value object
 │   │   └── product_info.dart   # ProductInfo value object
-│   ├── services/
-│   │   ├── order_service.dart  # Business logic using serialization
-│   │   └── api_client.dart     # Example API integration
 │   └── example.dart            # Main example code
-├── main.dart                   # Entry point
+├── serialization_example.dart  # Entry point
 ├── pubspec.yaml
+├── build.yaml
 └── README.md
 ```
 
@@ -67,8 +65,8 @@ example/
 
 The example follows proper DDD patterns:
 - Aggregates maintain consistency boundaries
-- Entities are only serialized within their aggregate
 - Values are immutable and safely shareable
+- Business logic is encapsulated in domain objects
 
 ### 2. Serialization Configuration
 
@@ -121,9 +119,6 @@ The example generates JSON like:
   "customer_id": "550e8400-e29b-41d4-a716-446655440001",
   "items": [
     {
-      "id": "550e8400-e29b-41d4-a716-446655440002",
-      "created_at": "2024-01-01T12:00:00.000Z",
-      "updated_at": "2024-01-01T12:00:00.000Z",
       "product": {
         "name": "Laptop",
         "sku": "LAP-001",
@@ -142,10 +137,6 @@ The example generates JSON like:
     "state": "CA",
     "zip_code": "12345",
     "country": "USA"
-  },
-  "total": {
-    "amount": 999.99,
-    "currency": "USD"
   },
   "status": "pending"
 }

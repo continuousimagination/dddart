@@ -9,8 +9,10 @@ environment:
   sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
-  dddart: ^0.9.0
-  dddart_serialization: ^0.9.0
+  dddart:
+    path: ../dddart
+  dddart_serialization:
+    path: ../dddart_serialization
   build: ^2.4.0
   source_gen: ^1.4.0
   analyzer: ^6.0.0

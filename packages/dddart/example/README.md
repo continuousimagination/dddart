@@ -5,16 +5,21 @@ This directory contains comprehensive examples demonstrating the domain events s
 ## Running the Examples
 
 ```bash
-# Run the domain events examples
-dart run example/events_main.dart
+# Main events example - comprehensive event patterns
+dart run example/events_example.dart
 
-# Run the serialization examples
-dart run example/main.dart
+# Event serialization - persistence and message queues
+dart run example/event_serialization_example.dart
+
+# Error handling - graceful failure and compensation
+dart run example/error_handling_example.dart
 ```
 
-## Domain Events Examples
+## Examples Overview
 
-The events example (`events_main.dart`) demonstrates:
+### 1. events_example.dart - Core Event Patterns
+
+The main example demonstrating fundamental event-driven patterns.
 
 ### 1. Basic Event Raising
 - Creating aggregates that raise domain events
@@ -45,6 +50,25 @@ The events example (`events_main.dart`) demonstrates:
 - E-commerce order processing workflow
 - Multiple services coordinating through events
 - User registration, order placement, and shipment tracking
+
+### 2. event_serialization_example.dart - Event Persistence
+
+Demonstrates how to serialize events for:
+- Event store persistence
+- Message queue integration (RabbitMQ, AWS SQS, etc.)
+- Event sourcing patterns
+- Cross-service communication
+- Manual JSON serialization with UuidValue handling
+
+### 3. error_handling_example.dart - Resilient Event Handling
+
+Shows error handling best practices:
+- Try-catch in event handlers
+- Compensation events for failures
+- Error isolation between handlers
+- Stream-level error handling with onError
+- Preventing cascading failures
+- Logging without crashing
 
 ## Example Domain Events
 
@@ -179,26 +203,8 @@ The domain events system is designed with:
 - **Type safety**: Leverages Dart's type system for compile-time guarantees
 - **Simplicity**: Minimal API surface for easy adoption
 
-## Future Enhancements
-
-The architecture supports future additions:
-- **Remote event transport**: WebSocket, HTTP, message queues (RabbitMQ, AWS SQS/SNS)
-- **Event filtering and subscriptions**: Server-side filtering based on event context
-- **Event persistence and replay**: Store events for audit trails and event sourcing
-- **Distributed event sourcing**: Rebuild aggregate state from event history
-- **Event versioning**: Handle schema evolution for long-lived events
-- **Dead letter queues**: Handle failed event processing with retry logic
-
 ## Additional Resources
 
-- **Main Documentation**: See [packages/dddart/README.md](../packages/dddart/README.md) for quick start guide
-- **Domain Events Guide**: See [packages/dddart/DOMAIN_EVENTS_GUIDE.md](../packages/dddart/DOMAIN_EVENTS_GUIDE.md) for comprehensive patterns and best practices
-- **API Reference**: See [packages/dddart/API_REFERENCE.md](../packages/dddart/API_REFERENCE.md) for complete API documentation
-
-## Questions or Issues?
-
-If you have questions or encounter issues:
-1. Check the documentation files listed above
-2. Review the example code in this directory
-3. Run the examples to see the system in action
-4. Open an issue on the project repository
+- **Main Documentation**: See [../README.md](../README.md) for quick start guide
+- **Domain Events Guide**: See [../DOMAIN_EVENTS_GUIDE.md](../DOMAIN_EVENTS_GUIDE.md) for comprehensive patterns and best practices
+- **API Reference**: See [../API_REFERENCE.md](../API_REFERENCE.md) for complete API documentation

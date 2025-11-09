@@ -1,10 +1,26 @@
 import 'dart:async';
 import 'package:dddart/dddart.dart';
 
-import 'domain/user_aggregate.dart';
-import 'domain/user_registered_event.dart';
-import 'domain/order_placed_event.dart';
-import 'domain/order_shipped_event.dart';
+import 'lib/user_aggregate.dart';
+import 'lib/user_registered_event.dart';
+import 'lib/order_placed_event.dart';
+import 'lib/order_shipped_event.dart';
+
+/// Entry point for the DDDart domain events example.
+///
+/// This example demonstrates:
+/// - Basic event raising in aggregates
+/// - EventBus publish/subscribe functionality
+/// - Multiple listeners for the same event
+/// - Type-filtered event subscriptions
+/// - Complete event lifecycle management
+/// - Real-world e-commerce workflow scenario
+///
+/// Run with: dart run example/events_example.dart
+Future<void> main() async {
+  final example = EventsExample();
+  await example.runAll();
+}
 
 /// Comprehensive example demonstrating DDDart domain events features.
 class EventsExample {

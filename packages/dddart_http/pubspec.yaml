@@ -11,8 +11,10 @@ environment:
 dependencies:
   shelf: ^1.4.0
   shelf_router: ^1.1.0
-  dddart: ^0.9.0
-  dddart_serialization: ^0.9.0
+  dddart:
+    path: ../dddart
+  dddart_serialization:
+    path: ../dddart_serialization
 
 dev_dependencies:
   test: ^1.24.0
