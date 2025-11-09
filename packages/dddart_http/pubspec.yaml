@@ -1,6 +1,9 @@
 name: dddart_http
 description: HTTP CRUD API framework for DDDart - Provides RESTful endpoints for aggregate roots
-version: 1.0.0
+version: 0.9.0
+homepage: https://github.com/continuousimagination/dddart_http
+repository: https://github.com/continuousimagination/dddart_http
+issue_tracker: https://github.com/continuousimagination/dddart_http/issues
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

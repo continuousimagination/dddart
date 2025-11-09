@@ -1,6 +1,9 @@
 name: dddart_json
 description: JSON serialization support for DDDart - Domain-Driven Design for Dart
-version: 1.0.0
+version: 0.9.0
+homepage: https://github.com/continuousimagination/dddart_json
+repository: https://github.com/continuousimagination/dddart_json
+issue_tracker: https://github.com/continuousimagination/dddart_json/issues
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

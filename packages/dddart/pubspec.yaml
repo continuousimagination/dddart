@@ -1,7 +1,9 @@
 name: dddart
 description: A lightweight Domain-Driven Design (DDD) framework for Dart that provides base classes and utilities to help developers implement DDD principles in their applications.
-version: 1.0.0
-homepage: https://github.com/example/dddart-monorepo
+version: 0.9.0
+homepage: https://github.com/continuousimagination/dddart
+repository: https://github.com/continuousimagination/dddart
+issue_tracker: https://github.com/continuousimagination/dddart/issues
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
