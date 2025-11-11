@@ -39,22 +39,20 @@ class Order extends AggregateRoot {
   final String status;
   final String? notes;
 
-
-
   /// Calculate the total amount for this order
   Money get total {
     if (items.isEmpty) return Money.zero('USD');
-    
+
     final firstCurrency = items.first.unitPrice.currency;
     var totalAmount = 0.0;
-    
+
     for (final item in items) {
       if (item.unitPrice.currency != firstCurrency) {
         throw StateError('All items must have the same currency');
       }
       totalAmount += item.totalPrice.amount;
     }
-    
+
     return Money(amount: totalAmount, currency: firstCurrency);
   }
 
@@ -62,7 +60,8 @@ class Order extends AggregateRoot {
   int get itemCount => items.fold(0, (sum, item) => sum + item.quantity);
 
   /// Check if this order can be cancelled
-  bool get canBeCancelled => status == OrderStatus.pending || status == OrderStatus.confirmed;
+  bool get canBeCancelled =>
+      status == OrderStatus.pending || status == OrderStatus.confirmed;
 
   /// Check if this order can be shipped
   bool get canBeShipped => status == OrderStatus.confirmed;
@@ -74,7 +73,8 @@ class Order extends AggregateRoot {
   Address get effectiveBillingAddress => billingAddress ?? shippingAddress;
 
   @override
-  String toString() => 'Order(${id.toString()}, ${items.length} items, $status)';
+  String toString() =>
+      'Order(${id.toString()}, ${items.length} items, $status)';
 
   /// Create a copy with updated status
   Order withStatus(String newStatus) {
@@ -139,7 +139,7 @@ class Order extends AggregateRoot {
   /// Validate the order
   bool get isValid {
     return items.isNotEmpty &&
-           items.every((item) => item.isValid) &&
-           total.isPositive;
+        items.every((item) => item.isValid) &&
+        total.isPositive;
   }
 }

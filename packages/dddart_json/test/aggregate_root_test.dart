@@ -1,6 +1,7 @@
-import 'package:test/test.dart';
 import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
+import 'package:test/test.dart';
+
 import 'test_models.dart';
 
 void main() {
@@ -20,10 +21,13 @@ void main() {
         expect(json['id'], isA<String>());
         expect(json['createdAt'], isA<String>());
         expect(json['updatedAt'], isA<String>());
-        
+
         // Verify UUID format
-        expect(json['id'], matches(RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')));
-        
+        expect(
+            json['id'],
+            matches(RegExp(
+                r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',),),);
+
         // Verify ISO 8601 format
         expect(() => DateTime.parse(json['createdAt']), returnsNormally);
         expect(() => DateTime.parse(json['updatedAt']), returnsNormally);
@@ -43,9 +47,12 @@ void main() {
 
         expect(user.name, equals('Jane Smith'));
         expect(user.email, equals('jane@example.com'));
-        expect(user.id.toString(), equals('550e8400-e29b-41d4-a716-446655440000'));
-        expect(user.createdAt, equals(DateTime.parse('2024-01-01T12:00:00.000Z')));
-        expect(user.updatedAt, equals(DateTime.parse('2024-01-01T12:30:00.000Z')));
+        expect(
+            user.id.toString(), equals('550e8400-e29b-41d4-a716-446655440000'),);
+        expect(
+            user.createdAt, equals(DateTime.parse('2024-01-01T12:00:00.000Z')),);
+        expect(
+            user.updatedAt, equals(DateTime.parse('2024-01-01T12:30:00.000Z')),);
       });
 
       test('round-trip serialization maintains equality', () {
@@ -72,7 +79,7 @@ void main() {
 
     group('AggregateRoot with nested Values', () {
       test('serializes AggregateRoot with nested Value objects', () {
-        final address = TestAddress(
+        const address = TestAddress(
           street: '123 Main St',
           city: 'Anytown',
           zipCode: '12345',
@@ -89,7 +96,7 @@ void main() {
         expect(json['name'], equals('Bob Wilson'));
         expect(json['email'], equals('bob@example.com'));
         expect(json['address'], isA<Map<String, dynamic>>());
-        
+
         final addressJson = json['address'] as Map<String, dynamic>;
         expect(addressJson['street'], equals('123 Main St'));
         expect(addressJson['city'], equals('Anytown'));
@@ -120,8 +127,9 @@ void main() {
         expect(user.address.zipCode, equals('67890'));
       });
 
-      test('round-trip serialization with nested Values maintains equality', () {
-        final address = TestAddress(
+      test('round-trip serialization with nested Values maintains equality',
+          () {
+        const address = TestAddress(
           street: '789 Pine Rd',
           city: 'Elsewhere',
           zipCode: '54321',
@@ -152,7 +160,7 @@ void main() {
           emailAddress: 'emma.thompson@example.com',
         );
 
-        final snakeConfig = SerializationConfig(fieldRename: FieldRename.snake);
+        const snakeConfig = SerializationConfig(fieldRename: FieldRename.snake);
         final serializer = TestUserSnakeCaseJsonSerializer(snakeConfig);
         final json = serializer.toJson(user);
 
@@ -173,7 +181,7 @@ void main() {
           'updated_at': '2024-01-04T09:15:00.000Z',
         };
 
-        final snakeConfig = SerializationConfig(fieldRename: FieldRename.snake);
+        const snakeConfig = SerializationConfig(fieldRename: FieldRename.snake);
         final serializer = TestUserSnakeCaseJsonSerializer(snakeConfig);
         final user = serializer.fromJson(json);
 
@@ -189,7 +197,7 @@ void main() {
           emailAddress: 'grace.lee@example.com',
         );
 
-        final kebabConfig = SerializationConfig(fieldRename: FieldRename.kebab);
+        const kebabConfig = SerializationConfig(fieldRename: FieldRename.kebab);
         final serializer = TestUserKebabCaseJsonSerializer(kebabConfig);
         final json = serializer.toJson(user);
 
@@ -210,7 +218,7 @@ void main() {
           'updated-at': '2024-01-05T11:20:00.000Z',
         };
 
-        final kebabConfig = SerializationConfig(fieldRename: FieldRename.kebab);
+        const kebabConfig = SerializationConfig(fieldRename: FieldRename.kebab);
         final serializer = TestUserKebabCaseJsonSerializer(kebabConfig);
         final user = serializer.fromJson(json);
 
@@ -234,22 +242,23 @@ void main() {
         final json = serializer.toJson(user);
 
         // Verify all required fields are present
-        expect(json.keys, containsAll(['id', 'createdAt', 'updatedAt', 'name', 'email']));
-        
+        expect(json.keys,
+            containsAll(['id', 'createdAt', 'updatedAt', 'name', 'email']),);
+
         // Verify field types
         expect(json['id'], isA<String>());
         expect(json['createdAt'], isA<String>());
         expect(json['updatedAt'], isA<String>());
         expect(json['name'], isA<String>());
         expect(json['email'], isA<String>());
-        
+
         // Verify deterministic ordering (fields should be consistently ordered)
         final keys = json.keys.toList();
         expect(keys, equals(['id', 'createdAt', 'updatedAt', 'email', 'name']));
       });
 
       test('verifies nested JSON structure', () {
-        final address = TestAddress(
+        const address = TestAddress(
           street: 'Test Street',
           city: 'Test City',
           zipCode: '00000',

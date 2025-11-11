@@ -47,7 +47,9 @@ void _basicSerialization() {
   print(JsonEncoder.withIndent('  ').convert(json));
 
   // Deserialize back
-  final restoredEvent = UserRegisteredEvent.fromJson(jsonDecode(jsonString));
+  final restoredEvent = UserRegisteredEvent.fromJson(
+    jsonDecode(jsonString) as Map<String, dynamic>,
+  );
 
   print('\nRestored event:');
   print('  Event ID: ${restoredEvent.eventId.uuid}');

@@ -1,10 +1,12 @@
 /// Test to verify runtime configuration works correctly.
+library;
 
 import 'dart:convert';
-import 'package:test/test.dart';
+
 import 'package:dddart/dddart.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:dddart_json/dddart_json.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
+import 'package:test/test.dart';
 
 part 'runtime_config_test.g.dart';
 
@@ -27,7 +29,8 @@ class FlexibleUser extends AggregateRoot {
 
 void main() {
   group('Runtime Configuration Tests', () {
-    test('Same class can be serialized with different field naming strategies', () {
+    test('Same class can be serialized with different field naming strategies',
+        () {
       final user = FlexibleUser(
         firstName: 'John',
         lastName: 'Doe',
@@ -43,14 +46,14 @@ void main() {
       expect(camelJson['emailAddress'], equals('john.doe@example.com'));
 
       // Snake case configuration - override at method level
-      final snakeConfig = SerializationConfig(fieldRename: FieldRename.snake);
+      const snakeConfig = SerializationConfig(fieldRename: FieldRename.snake);
       final snakeJson = serializer.toJson(user, snakeConfig);
       expect(snakeJson['first_name'], equals('John'));
       expect(snakeJson['last_name'], equals('Doe'));
       expect(snakeJson['email_address'], equals('john.doe@example.com'));
 
       // Kebab case configuration - override at method level
-      final kebabConfig = SerializationConfig(fieldRename: FieldRename.kebab);
+      const kebabConfig = SerializationConfig(fieldRename: FieldRename.kebab);
       final kebabJson = serializer.toJson(user, kebabConfig);
       expect(kebabJson['first-name'], equals('John'));
       expect(kebabJson['last-name'], equals('Doe'));
@@ -81,7 +84,7 @@ void main() {
         'created_at': '2024-01-01T12:00:00.000Z',
         'updated_at': '2024-01-01T12:00:00.000Z',
       };
-      final snakeConfig = SerializationConfig(fieldRename: FieldRename.snake);
+      const snakeConfig = SerializationConfig(fieldRename: FieldRename.snake);
       final snakeUser = serializer.fromJson(snakeJson, snakeConfig);
       expect(snakeUser.firstName, equals('Bob'));
       expect(snakeUser.lastName, equals('Wilson'));
@@ -103,7 +106,7 @@ void main() {
       expect(defaultJson, contains('"emailAddress"'));
 
       // Snake case serialization - override at method level
-      final snakeConfig = SerializationConfig(fieldRename: FieldRename.snake);
+      const snakeConfig = SerializationConfig(fieldRename: FieldRename.snake);
       final snakeJson = serializer.serialize(user, snakeConfig);
       expect(snakeJson, contains('"first_name"'));
       expect(snakeJson, contains('"email_address"'));
@@ -127,12 +130,13 @@ void main() {
       expect(defaultJson['firstName'], equals('Charlie'));
 
       // Configured static methods
-      final kebabConfig = SerializationConfig(fieldRename: FieldRename.kebab);
+      const kebabConfig = SerializationConfig(fieldRename: FieldRename.kebab);
       final kebabJson = FlexibleUserJsonSerializer.encode(user, kebabConfig);
       expect(kebabJson['first-name'], equals('Charlie'));
       expect(kebabJson['last-name'], equals('Brown'));
 
-      final restored = FlexibleUserJsonSerializer.decode(kebabJson, kebabConfig);
+      final restored =
+          FlexibleUserJsonSerializer.decode(kebabJson, kebabConfig);
       expect(restored.firstName, equals('Charlie'));
       expect(restored.lastName, equals('Brown'));
     });

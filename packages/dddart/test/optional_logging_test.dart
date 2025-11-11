@@ -1,34 +1,26 @@
 import 'package:dddart/dddart.dart';
-import 'package:logging/logging.dart';
 import 'package:test/test.dart';
 
 // Test domain models
 class TestUser extends AggregateRoot {
-  final String name;
-
   TestUser({
     required this.name,
-    UuidValue? id,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) : super(id: id, createdAt: createdAt, updatedAt: updatedAt);
+    super.id,
+    super.createdAt,
+    super.updatedAt,
+  });
+  final String name;
 }
 
 class UserRegisteredEvent extends DomainEvent {
-  final String userName;
-
   UserRegisteredEvent({
-    required UuidValue aggregateId,
+    required super.aggregateId,
     required this.userName,
-    UuidValue? eventId,
-    DateTime? occurredAt,
-    Map<String, dynamic> context = const {},
-  }) : super(
-          aggregateId: aggregateId,
-          eventId: eventId,
-          occurredAt: occurredAt,
-          context: context,
-        );
+    super.eventId,
+    super.occurredAt,
+    super.context,
+  });
+  final String userName;
 }
 
 void main() {
@@ -63,10 +55,10 @@ void main() {
       });
 
       eventBus.publish(event);
-      
+
       // Wait for async event delivery
-      await Future.delayed(Duration(milliseconds: 10));
-      
+      await Future.delayed(const Duration(milliseconds: 10));
+
       expect(receivedEvent, isTrue);
 
       await eventBus.close();
@@ -181,7 +173,8 @@ void main() {
       await eventBus.close();
     });
 
-    test('Repository operations complete successfully without logging', () async {
+    test('Repository operations complete successfully without logging',
+        () async {
       // Requirement 4.2, 4.4, 4.5
       final repository = InMemoryRepository<TestUser>();
       final userId = UuidValue.generate();
@@ -200,7 +193,7 @@ void main() {
 
       // Verify deletion
       expect(
-        () async => await repository.getById(userId),
+        () async => repository.getById(userId),
         throwsA(isA<RepositoryException>()),
       );
     });
@@ -212,9 +205,7 @@ void main() {
 
       // Create subscription
       final subscription = eventBus.on<UserRegisteredEvent>();
-      subscription.listen((event) {
-        receivedEvents.add(event);
-      });
+      subscription.listen(receivedEvents.add);
 
       // Publish multiple events
       for (var i = 0; i < 5; i++) {
@@ -227,7 +218,7 @@ void main() {
       }
 
       // Wait for async event delivery
-      await Future.delayed(Duration(milliseconds: 10));
+      await Future.delayed(const Duration(milliseconds: 10));
 
       // Verify all events received
       expect(receivedEvents.length, equals(5));

@@ -1,6 +1,8 @@
-import 'aggregate_root.dart';
-import 'repository_exception.dart';
-import 'uuid_value.dart';
+import 'package:dddart/dddart.dart' show InMemoryRepository;
+import 'package:dddart/src/aggregate_root.dart';
+import 'package:dddart/src/in_memory_repository.dart' show InMemoryRepository;
+import 'package:dddart/src/repository_exception.dart';
+import 'package:dddart/src/uuid_value.dart';
 
 /// Base interface for repositories that manage aggregate roots.
 ///
@@ -30,26 +32,26 @@ import 'uuid_value.dart';
 /// // Implement the repository for a specific data store
 /// class MySqlUserRepository implements UserRepository {
 ///   MySqlUserRepository(this.connection);
-///   
+///
 ///   final MySqlConnection connection;
-///   
+///
 ///   @override
 ///   Future<User> getById(UuidValue id) async {
 ///     final result = await connection.query(
 ///       'SELECT * FROM users WHERE id = ?',
 ///       [id.uuid],
 ///     );
-///     
+///
 ///     if (result.isEmpty) {
 ///       throw RepositoryException(
 ///         'User with ID $id not found',
 ///         type: RepositoryExceptionType.notFound,
 ///       );
 ///     }
-///     
+///
 ///     return User.fromRow(result.first);
 ///   }
-///   
+///
 ///   @override
 ///   Future<void> save(User aggregate) async {
 ///     await connection.query(
@@ -70,14 +72,14 @@ import 'uuid_value.dart';
 ///       ],
 ///     );
 ///   }
-///   
+///
 ///   @override
 ///   Future<void> deleteById(UuidValue id) async {
 ///     final result = await connection.query(
 ///       'DELETE FROM users WHERE id = ?',
 ///       [id.uuid],
 ///     );
-///     
+///
 ///     if (result.affectedRows == 0) {
 ///       throw RepositoryException(
 ///         'User with ID $id not found',
@@ -85,23 +87,23 @@ import 'uuid_value.dart';
 ///       );
 ///     }
 ///   }
-///   
+///
 ///   @override
 ///   Future<User?> getByEmail(String email) async {
 ///     final result = await connection.query(
 ///       'SELECT * FROM users WHERE email = ?',
 ///       [email],
 ///     );
-///     
+///
 ///     return result.isEmpty ? null : User.fromRow(result.first);
 ///   }
-///   
+///
 ///   @override
 ///   Future<List<User>> getActiveUsers() async {
 ///     final result = await connection.query(
 ///       'SELECT * FROM users WHERE is_active = true',
 ///     );
-///     
+///
 ///     return result.map((row) => User.fromRow(row)).toList();
 ///   }
 /// }
@@ -219,7 +221,7 @@ abstract interface class Repository<T extends AggregateRoot> {
   /// Example:
   /// ```dart
   /// final user = User(name: 'Jane Doe', email: 'jane@example.com');
-  /// 
+  ///
   /// try {
   ///   await userRepository.save(user);
   ///   print('User saved successfully');

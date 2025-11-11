@@ -11,11 +11,11 @@ environment:
   sdk: '>=3.5.0 <4.0.0'
 
 dependencies:
-  shelf: ^1.4.0
-  shelf_router: ^1.1.0
-  logging: ^1.2.0
   dddart: ^0.9.0
   dddart_serialization: ^0.9.0
+  logging: ^1.2.0
+  shelf: ^1.4.0
+  shelf_router: ^1.1.0
 
 dev_dependencies:
   test: ^1.24.0

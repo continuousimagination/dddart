@@ -1,13 +1,13 @@
-import 'package:test/test.dart';
 import 'package:dddart/dddart.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
+import 'package:test/test.dart';
+
 import 'test_models.dart';
 
 void main() {
   group('Value Object Serialization', () {
     group('Simple Value objects', () {
       test('serializes simple Value object with primitive fields to JSON', () {
-        final address = TestAddress(
+        const address = TestAddress(
           street: '123 Main Street',
           city: 'Springfield',
           zipCode: '12345',
@@ -19,7 +19,7 @@ void main() {
         expect(json['street'], equals('123 Main Street'));
         expect(json['city'], equals('Springfield'));
         expect(json['zipCode'], equals('12345'));
-        
+
         // Verify all props are included
         expect(json.keys.length, equals(3));
         expect(json.keys, containsAll(['street', 'city', 'zipCode']));
@@ -41,7 +41,7 @@ void main() {
       });
 
       test('round-trip serialization maintains equality for simple Value', () {
-        final original = TestAddress(
+        const original = TestAddress(
           street: '789 Pine Road',
           city: 'Hillside',
           zipCode: '54321',
@@ -60,7 +60,8 @@ void main() {
 
     group('Value objects with special types', () {
       test('serializes Value object with UuidValue and DateTime fields', () {
-        final testId = UuidValue.fromString('550e8400-e29b-41d4-a716-446655440000');
+        final testId =
+            UuidValue.fromString('550e8400-e29b-41d4-a716-446655440000');
         final testTime = DateTime.parse('2024-01-01T12:00:00.000Z');
         final value = TestValueWithSpecialTypes(
           id: testId,
@@ -74,7 +75,7 @@ void main() {
         expect(json['id'], equals('550e8400-e29b-41d4-a716-446655440000'));
         expect(json['timestamp'], equals('2024-01-01T12:00:00.000Z'));
         expect(json['name'], equals('Test Value'));
-        
+
         // Verify UUID is serialized as string
         expect(json['id'], isA<String>());
         // Verify DateTime is serialized as ISO 8601 string
@@ -92,12 +93,15 @@ void main() {
         final serializer = TestValueWithSpecialTypesJsonSerializer();
         final value = serializer.fromJson(json);
 
-        expect(value.id.toString(), equals('550e8400-e29b-41d4-a716-446655440001'));
-        expect(value.timestamp, equals(DateTime.parse('2024-01-02T15:30:00.000Z')));
+        expect(value.id.toString(),
+            equals('550e8400-e29b-41d4-a716-446655440001'),);
+        expect(value.timestamp,
+            equals(DateTime.parse('2024-01-02T15:30:00.000Z')),);
         expect(value.name, equals('Deserialized Value'));
       });
 
-      test('round-trip serialization with special types maintains equality', () {
+      test('round-trip serialization with special types maintains equality',
+          () {
         final original = TestValueWithSpecialTypes(
           id: UuidValue.fromString('550e8400-e29b-41d4-a716-446655440002'),
           timestamp: DateTime.parse('2024-01-03T09:45:00.000Z'),
@@ -117,7 +121,7 @@ void main() {
 
     group('Props-based field inclusion', () {
       test('verifies only props fields are included in serialization', () {
-        final address = TestAddress(
+        const address = TestAddress(
           street: 'Test Street',
           city: 'Test City',
           zipCode: 'Test Zip',
@@ -129,23 +133,24 @@ void main() {
         // Verify that only the fields defined in props are serialized
         final expectedProps = address.props;
         expect(json.keys.length, equals(expectedProps.length));
-        
+
         // The props for TestAddress are [street, city, zipCode]
         expect(json.keys, containsAll(['street', 'city', 'zipCode']));
-        
+
         // Verify values match props order and content
         expect(json['street'], equals(expectedProps[0]));
         expect(json['city'], equals(expectedProps[1]));
         expect(json['zipCode'], equals(expectedProps[2]));
       });
 
-      test('verifies props-based equality is preserved through serialization', () {
-        final address1 = TestAddress(
+      test('verifies props-based equality is preserved through serialization',
+          () {
+        const address1 = TestAddress(
           street: 'Same Street',
           city: 'Same City',
           zipCode: 'Same Zip',
         );
-        final address2 = TestAddress(
+        const address2 = TestAddress(
           street: 'Same Street',
           city: 'Same City',
           zipCode: 'Same Zip',
@@ -172,18 +177,18 @@ void main() {
 
     group('Value object immutability', () {
       test('verifies Value objects remain immutable after serialization', () {
-        final original = TestAddress(
+        const original = TestAddress(
           street: 'Original Street',
           city: 'Original City',
           zipCode: '00000',
         );
         final serializer = TestAddressJsonSerializer();
         final json = serializer.toJson(original);
-        
+
         // Modify the JSON
         json['street'] = 'Modified Street';
         json['city'] = 'Modified City';
-        
+
         // Verify original object is unchanged
         expect(original.street, equals('Original Street'));
         expect(original.city, equals('Original City'));
@@ -193,7 +198,7 @@ void main() {
       test('verifies deserialized Value objects are properly constructed', () {
         final json = {
           'street': 'New Street',
-          'city': 'New City', 
+          'city': 'New City',
           'zipCode': 'New Zip',
         };
 
@@ -204,7 +209,7 @@ void main() {
         expect(address.street, equals('New Street'));
         expect(address.city, equals('New City'));
         expect(address.zipCode, equals('New Zip'));
-        
+
         // Verify props are correctly set
         expect(address.props, equals(['New Street', 'New City', 'New Zip']));
       });
@@ -212,7 +217,7 @@ void main() {
 
     group('JSON structure verification', () {
       test('verifies Value JSON structure is deterministic', () {
-        final address = TestAddress(
+        const address = TestAddress(
           street: 'Deterministic Street',
           city: 'Deterministic City',
           zipCode: '99999',
@@ -224,7 +229,7 @@ void main() {
 
         // Verify multiple serializations produce identical results
         expect(json1, equals(json2));
-        
+
         // Verify field ordering is consistent
         expect(json1.keys.toList(), equals(json2.keys.toList()));
       });
@@ -242,7 +247,7 @@ void main() {
         // Verify exactly the expected fields are present
         expect(json.keys, hasLength(3));
         expect(json.keys, containsAll(['id', 'timestamp', 'name']));
-        
+
         // Verify no extra fields are included
         expect(json.keys, isNot(contains('props')));
         expect(json.keys, isNot(contains('hashCode')));

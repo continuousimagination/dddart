@@ -4,41 +4,37 @@ import 'package:test/test.dart';
 
 // Test domain events
 class TestEvent extends DomainEvent {
-  final String message;
-
   TestEvent({
-    required UuidValue aggregateId,
+    required super.aggregateId,
     required this.message,
-  }) : super(aggregateId: aggregateId);
+  });
+  final String message;
 }
 
 class OrderCreatedEvent extends DomainEvent {
-  final String customerId;
-  final int itemCount;
-
   OrderCreatedEvent({
     required UuidValue orderId,
     required this.customerId,
     required this.itemCount,
   }) : super(aggregateId: orderId);
+  final String customerId;
+  final int itemCount;
 }
 
 class OrderConfirmedEvent extends DomainEvent {
-  final DateTime confirmedAt;
-
   OrderConfirmedEvent({
     required UuidValue orderId,
     required this.confirmedAt,
   }) : super(aggregateId: orderId);
+  final DateTime confirmedAt;
 }
 
 class PaymentProcessedEvent extends DomainEvent {
-  final double amount;
-
   PaymentProcessedEvent({
     required UuidValue orderId,
     required this.amount,
   }) : super(aggregateId: orderId);
+  final double amount;
 }
 
 // Test aggregate root
@@ -46,34 +42,37 @@ class TestAggregate extends AggregateRoot {
   TestAggregate({super.id});
 
   void doSomething(String message) {
-    raiseEvent(TestEvent(
-      aggregateId: id,
-      message: message,
-    ));
+    raiseEvent(
+      TestEvent(
+        aggregateId: id,
+        message: message,
+      ),
+    );
     touch();
   }
 }
 
 // Test aggregate for order flow
 class TestOrder extends AggregateRoot {
-  final String customerId;
-  int itemCount;
-  String status = 'pending';
-
   TestOrder({
     required this.customerId,
     this.itemCount = 0,
     super.id,
   });
+  final String customerId;
+  int itemCount;
+  String status = 'pending';
 
   void create(int items) {
     itemCount = items;
     status = 'created';
-    raiseEvent(OrderCreatedEvent(
-      orderId: id,
-      customerId: customerId,
-      itemCount: items,
-    ));
+    raiseEvent(
+      OrderCreatedEvent(
+        orderId: id,
+        customerId: customerId,
+        itemCount: items,
+      ),
+    );
   }
 
   void confirm() {
@@ -81,17 +80,21 @@ class TestOrder extends AggregateRoot {
       throw StateError('Order must be created before confirming');
     }
     status = 'confirmed';
-    raiseEvent(OrderConfirmedEvent(
-      orderId: id,
-      confirmedAt: DateTime.now(),
-    ));
+    raiseEvent(
+      OrderConfirmedEvent(
+        orderId: id,
+        confirmedAt: DateTime.now(),
+      ),
+    );
   }
 
   void processPayment(double amount) {
-    raiseEvent(PaymentProcessedEvent(
-      orderId: id,
-      amount: amount,
-    ));
+    raiseEvent(
+      PaymentProcessedEvent(
+        orderId: id,
+        amount: amount,
+      ),
+    );
   }
 }
 
@@ -122,7 +125,7 @@ void main() {
 
     test('AggregateRoot can raise and collect events', () {
       final aggregate = TestAggregate();
-      
+
       aggregate.doSomething('first');
       aggregate.doSomething('second');
 
@@ -146,7 +149,7 @@ void main() {
 
       eventBus.publish(event);
 
-      await Future.delayed(Duration(milliseconds: 10));
+      await Future.delayed(const Duration(milliseconds: 10));
 
       expect(receivedEvents.length, equals(1));
       expect(receivedEvents[0].message, equals('test message'));
@@ -170,7 +173,7 @@ void main() {
       }
       aggregate.markEventsAsCommitted();
 
-      await Future.delayed(Duration(milliseconds: 10));
+      await Future.delayed(const Duration(milliseconds: 10));
 
       expect(receivedEvents.length, equals(1));
       expect(receivedEvents[0].message, equals('operation completed'));
@@ -223,7 +226,7 @@ void main() {
       order.markEventsAsCommitted();
 
       // Wait for async event delivery
-      await Future.delayed(Duration(milliseconds: 10));
+      await Future.delayed(const Duration(milliseconds: 10));
 
       // Verify all listeners received appropriate events
       expect(listener1Events.length, equals(2)); // All events
@@ -261,7 +264,7 @@ void main() {
       }
       order.markEventsAsCommitted();
 
-      await Future.delayed(Duration(milliseconds: 10));
+      await Future.delayed(const Duration(milliseconds: 10));
 
       // Verify events are received in the same order
       expect(receivedEvents.length, equals(3));
@@ -296,7 +299,7 @@ void main() {
         order.markEventsAsCommitted();
       }
 
-      await Future.delayed(Duration(milliseconds: 10));
+      await Future.delayed(const Duration(milliseconds: 10));
 
       // Verify all events were received
       expect(allEvents.length, equals(3));
@@ -307,7 +310,8 @@ void main() {
       expect(aggregateIds.length, equals(3));
     });
 
-    test('Event delivery guarantees - all subscribers receive events', () async {
+    test('Event delivery guarantees - all subscribers receive events',
+        () async {
       final order = TestOrder(customerId: 'customer-789');
       final subscriber1 = <OrderCreatedEvent>[];
       final subscriber2 = <OrderCreatedEvent>[];
@@ -327,7 +331,7 @@ void main() {
       }
       order.markEventsAsCommitted();
 
-      await Future.delayed(Duration(milliseconds: 10));
+      await Future.delayed(const Duration(milliseconds: 10));
 
       // All subscribers should receive the event
       expect(subscriber1.length, equals(1));
@@ -341,7 +345,8 @@ void main() {
       expect(subscriber3[0].eventId, equals(subscriber4[0].eventId));
     });
 
-    test('Complex event flow with multiple event types and listeners', () async {
+    test('Complex event flow with multiple event types and listeners',
+        () async {
       final order = TestOrder(customerId: 'customer-complex');
       final allEvents = <DomainEvent>[];
       final createdEvents = <OrderCreatedEvent>[];
@@ -365,7 +370,7 @@ void main() {
       }
       order.markEventsAsCommitted();
 
-      await Future.delayed(Duration(milliseconds: 10));
+      await Future.delayed(const Duration(milliseconds: 10));
 
       // Verify event distribution
       expect(allEvents.length, equals(3));
@@ -374,8 +379,8 @@ void main() {
       expect(paymentEvents.length, equals(1));
 
       // Verify event data
-      expect((createdEvents[0]).itemCount, equals(7));
-      expect((paymentEvents[0]).amount, equals(149.99));
+      expect(createdEvents[0].itemCount, equals(7));
+      expect(paymentEvents[0].amount, equals(149.99));
     });
   });
 
@@ -390,7 +395,8 @@ void main() {
       await eventBus.close();
     });
 
-    test('EventBus continues operating when a listener has error handling', () async {
+    test('EventBus continues operating when a listener has error handling',
+        () async {
       final order = TestOrder(customerId: 'customer-error');
       final successfulListener = <OrderCreatedEvent>[];
       final errorCaughtListener = <OrderCreatedEvent>[];
@@ -416,7 +422,7 @@ void main() {
         eventBus.publish(event);
       }
 
-      await Future.delayed(Duration(milliseconds: 10));
+      await Future.delayed(const Duration(milliseconds: 10));
 
       // Error was handled and other listener still received event
       expect(errorHandled, isTrue);
@@ -455,14 +461,15 @@ void main() {
         eventBus.publish(event);
       }
 
-      await Future.delayed(Duration(milliseconds: 10));
+      await Future.delayed(const Duration(milliseconds: 10));
 
       expect(errorCount, equals(2));
       expect(workingListeners.length, equals(1));
     });
 
     test('Cannot publish events to closed EventBus', () {
-      final event = TestEvent(aggregateId: UuidValue.generate(), message: 'test');
+      final event =
+          TestEvent(aggregateId: UuidValue.generate(), message: 'test');
 
       eventBus.close();
 
@@ -477,14 +484,15 @@ void main() {
       var listenerCompleted = false;
 
       eventBus.on<TestEvent>().listen(
-        receivedEvents.add,
-        onDone: () => listenerCompleted = true,
-      );
+            receivedEvents.add,
+            onDone: () => listenerCompleted = true,
+          );
 
-      final event = TestEvent(aggregateId: UuidValue.generate(), message: 'before close');
+      final event =
+          TestEvent(aggregateId: UuidValue.generate(), message: 'before close');
       eventBus.publish(event);
 
-      await Future.delayed(Duration(milliseconds: 10));
+      await Future.delayed(const Duration(milliseconds: 10));
       expect(receivedEvents.length, equals(1));
 
       await eventBus.close();
@@ -508,7 +516,7 @@ void main() {
       }
       aggregate.markEventsAsCommitted();
 
-      await Future.delayed(Duration(milliseconds: 50));
+      await Future.delayed(const Duration(milliseconds: 50));
 
       // All events should be delivered
       expect(receivedEvents.length, equals(100));
@@ -583,7 +591,7 @@ void main() {
       }
       aggregate.markEventsAsCommitted();
 
-      await Future.delayed(Duration(milliseconds: 10));
+      await Future.delayed(const Duration(milliseconds: 10));
 
       expect(receivedEvents.length, equals(1));
       expect(receivedEvents[0].message, equals('cross-platform event'));

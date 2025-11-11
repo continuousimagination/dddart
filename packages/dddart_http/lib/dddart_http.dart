@@ -6,8 +6,8 @@
 library dddart_http;
 
 export 'src/crud_resource.dart';
+export 'src/error_mapper.dart';
 export 'src/exceptions.dart';
 export 'src/http_server.dart';
 export 'src/query_handler.dart';
-export 'src/error_mapper.dart';
 export 'src/response_builder.dart';

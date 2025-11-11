@@ -1,10 +1,11 @@
 import 'dart:convert';
 import 'dart:io' as io;
-import 'package:test/test.dart';
-import 'package:shelf/shelf.dart';
+
 import 'package:dddart/dddart.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:dddart_http/dddart_http.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
+import 'package:shelf/shelf.dart';
+import 'package:test/test.dart';
 
 // Test aggregate root
 class TestUser extends AggregateRoot {
@@ -110,7 +111,8 @@ Future<HttpResponse> makeRequest({
 }) async {
   final client = io.HttpClient();
   try {
-    final request = await client.openUrl(method, Uri.parse('http://localhost:$port$path'));
+    final request =
+        await client.openUrl(method, Uri.parse('http://localhost:$port$path'));
 
     // Add headers
     if (headers != null) {
@@ -172,9 +174,6 @@ void main() {
           serializers: {
             'application/json': serializer,
           },
-          defaultSkip: 0,
-          defaultTake: 50,
-          maxTake: 100,
         ),
       );
 
@@ -293,7 +292,8 @@ void main() {
       );
 
       expect(notFoundResponse.statusCode, equals(404));
-      expect(notFoundResponse.header('content-type'), equals('application/problem+json'));
+      expect(notFoundResponse.header('content-type'),
+          equals('application/problem+json'),);
 
       final errorBody = jsonDecode(notFoundResponse.body);
       expect(errorBody['type'], equals('about:blank'));
@@ -332,7 +332,6 @@ void main() {
               );
             },
           },
-          defaultSkip: 0,
           defaultTake: 10,
           maxTake: 50,
         ),
@@ -461,7 +460,8 @@ void main() {
       );
 
       expect(jsonCreateResponse.statusCode, equals(201));
-      expect(jsonCreateResponse.header('content-type'), equals('application/json'));
+      expect(jsonCreateResponse.header('content-type'),
+          equals('application/json'),);
 
       final jsonUserId = jsonDecode(jsonCreateResponse.body)['id'];
 
@@ -487,7 +487,8 @@ void main() {
       );
 
       expect(yamlCreateResponse.statusCode, equals(201));
-      expect(yamlCreateResponse.header('content-type'), equals('application/yaml'));
+      expect(yamlCreateResponse.header('content-type'),
+          equals('application/yaml'),);
       expect(yamlCreateResponse.body, contains('name: YAML User'));
 
       // Test GET with JSON Accept header
@@ -499,7 +500,8 @@ void main() {
       );
 
       expect(jsonGetResponse.statusCode, equals(200));
-      expect(jsonGetResponse.header('content-type'), equals('application/json'));
+      expect(
+          jsonGetResponse.header('content-type'), equals('application/json'),);
 
       final jsonGetUser = jsonDecode(jsonGetResponse.body);
       expect(jsonGetUser['name'], equals('JSON User'));
@@ -513,7 +515,8 @@ void main() {
       );
 
       expect(yamlGetResponse.statusCode, equals(200));
-      expect(yamlGetResponse.header('content-type'), equals('application/yaml'));
+      expect(
+          yamlGetResponse.header('content-type'), equals('application/yaml'),);
       expect(yamlGetResponse.body, contains('name: JSON User'));
 
       // Test 415 response for unsupported Content-Type
@@ -529,7 +532,8 @@ void main() {
       );
 
       expect(unsupportedContentTypeResponse.statusCode, equals(415));
-      expect(unsupportedContentTypeResponse.header('content-type'), equals('application/problem+json'));
+      expect(unsupportedContentTypeResponse.header('content-type'),
+          equals('application/problem+json'),);
 
       final unsupportedError = jsonDecode(unsupportedContentTypeResponse.body);
       expect(unsupportedError['title'], equals('Unsupported Media Type'));
@@ -544,7 +548,8 @@ void main() {
       );
 
       expect(unsupportedAcceptResponse.statusCode, equals(406));
-      expect(unsupportedAcceptResponse.header('content-type'), equals('application/problem+json'));
+      expect(unsupportedAcceptResponse.header('content-type'),
+          equals('application/problem+json'),);
 
       final acceptError = jsonDecode(unsupportedAcceptResponse.body);
       expect(acceptError['title'], equals('Not Acceptable'));
@@ -601,7 +606,8 @@ void main() {
       );
 
       expect(notFoundResponse.statusCode, equals(404));
-      expect(notFoundResponse.header('content-type'), equals('application/problem+json'));
+      expect(notFoundResponse.header('content-type'),
+          equals('application/problem+json'),);
 
       final notFoundError = jsonDecode(notFoundResponse.body);
       expect(notFoundError['type'], equals('about:blank'));
@@ -621,7 +627,8 @@ void main() {
       );
 
       expect(invalidJsonResponse.statusCode, equals(400));
-      expect(invalidJsonResponse.header('content-type'), equals('application/problem+json'));
+      expect(invalidJsonResponse.header('content-type'),
+          equals('application/problem+json'),);
 
       final invalidJsonError = jsonDecode(invalidJsonResponse.body);
       expect(invalidJsonError['type'], equals('about:blank'));
@@ -637,7 +644,8 @@ void main() {
       );
 
       expect(invalidUuidResponse.statusCode, equals(400));
-      expect(invalidUuidResponse.header('content-type'), equals('application/problem+json'));
+      expect(invalidUuidResponse.header('content-type'),
+          equals('application/problem+json'),);
 
       final invalidUuidError = jsonDecode(invalidUuidResponse.body);
       expect(invalidUuidError['type'], equals('about:blank'));
@@ -652,13 +660,15 @@ void main() {
       );
 
       expect(unsupportedParamResponse.statusCode, equals(400));
-      expect(unsupportedParamResponse.header('content-type'), equals('application/problem+json'));
+      expect(unsupportedParamResponse.header('content-type'),
+          equals('application/problem+json'),);
 
       final unsupportedParamError = jsonDecode(unsupportedParamResponse.body);
       expect(unsupportedParamError['type'], equals('about:blank'));
       expect(unsupportedParamError['title'], equals('Bad Request'));
       expect(unsupportedParamError['status'], equals(400));
-      expect(unsupportedParamError['detail'], contains('Unsupported query parameter'));
+      expect(unsupportedParamError['detail'],
+          contains('Unsupported query parameter'),);
 
       // Test 400 response for multiple query parameters
       final multipleParamsResponse = await makeRequest(
@@ -669,13 +679,15 @@ void main() {
       );
 
       expect(multipleParamsResponse.statusCode, equals(400));
-      expect(multipleParamsResponse.header('content-type'), equals('application/problem+json'));
+      expect(multipleParamsResponse.header('content-type'),
+          equals('application/problem+json'),);
 
       final multipleParamsError = jsonDecode(multipleParamsResponse.body);
       expect(multipleParamsError['type'], equals('about:blank'));
       expect(multipleParamsError['title'], equals('Bad Request'));
       expect(multipleParamsError['status'], equals(400));
-      expect(multipleParamsError['detail'], contains('Cannot combine multiple query parameters'));
+      expect(multipleParamsError['detail'],
+          contains('Cannot combine multiple query parameters'),);
     });
   });
 
@@ -743,7 +755,8 @@ void main() {
       );
 
       expect(customExceptionResponse.statusCode, equals(418));
-      expect(customExceptionResponse.header('content-type'), equals('application/problem+json'));
+      expect(customExceptionResponse.header('content-type'),
+          equals('application/problem+json'),);
 
       final customError = jsonDecode(customExceptionResponse.body);
       expect(customError['type'], equals('about:blank'));
@@ -762,7 +775,8 @@ void main() {
       );
 
       expect(notFoundResponse.statusCode, equals(404));
-      expect(notFoundResponse.header('content-type'), equals('application/problem+json'));
+      expect(notFoundResponse.header('content-type'),
+          equals('application/problem+json'),);
 
       final notFoundError = jsonDecode(notFoundResponse.body);
       expect(notFoundError['title'], equals('Not Found'));
@@ -798,7 +812,6 @@ void main() {
               );
             },
           },
-          defaultSkip: 0,
           defaultTake: 10,
           maxTake: 20,
         ),
@@ -813,7 +826,7 @@ void main() {
 
     test('pagination end-to-end', () async {
       // Create multiple test aggregates
-      for (int i = 0; i < 25; i++) {
+      for (var i = 0; i < 25; i++) {
         final user = TestUser(
           id: UuidValue.generate(),
           name: i < 15 ? 'Alice' : 'Bob',
@@ -833,7 +846,8 @@ void main() {
       );
 
       expect(paginatedResponse.statusCode, equals(200));
-      expect(paginatedResponse.header('content-type'), equals('application/json'));
+      expect(
+          paginatedResponse.header('content-type'), equals('application/json'),);
       expect(paginatedResponse.header('x-total-count'), equals('25'));
 
       final paginatedUsers = jsonDecode(paginatedResponse.body) as List;
@@ -864,7 +878,8 @@ void main() {
       expect(filteredPaginatedResponse.statusCode, equals(200));
       expect(filteredPaginatedResponse.header('x-total-count'), equals('15'));
 
-      final filteredPaginatedUsers = jsonDecode(filteredPaginatedResponse.body) as List;
+      final filteredPaginatedUsers =
+          jsonDecode(filteredPaginatedResponse.body) as List;
       expect(filteredPaginatedUsers.length, equals(5));
       expect(filteredPaginatedUsers.every((u) => u['name'] == 'Alice'), isTrue);
     });

@@ -6,7 +6,7 @@ import '../models/address.dart';
 import '../models/profile.dart';
 
 /// JSON serializer for User aggregate root
-/// 
+///
 /// Implements JsonSerializer to provide toJson and fromJson methods
 /// for serializing User aggregates to/from JSON format
 class UserSerializer implements Serializer<User> {
@@ -43,7 +43,8 @@ class UserSerializer implements Serializer<User> {
       lastName: json['lastName'],
       email: json['email'],
       address: _addressFromJson(json['address']),
-      profile: json['profile'] != null ? _profileFromJson(json['profile']) : null,
+      profile:
+          json['profile'] != null ? _profileFromJson(json['profile']) : null,
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
     );

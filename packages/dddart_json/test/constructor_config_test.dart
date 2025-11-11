@@ -1,10 +1,12 @@
 /// Test to verify constructor-level configuration with optional method overrides.
+library;
 
 import 'dart:convert';
-import 'package:test/test.dart';
+
 import 'package:dddart/dddart.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:dddart_json/dddart_json.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
+import 'package:test/test.dart';
 
 part 'constructor_config_test.g.dart';
 
@@ -37,7 +39,7 @@ void main() {
       // Default constructor (no config)
       final serializer = ConfigurableUserJsonSerializer();
       final json = serializer.toJson(user);
-      
+
       expect(json['firstName'], equals('John'));
       expect(json['lastName'], equals('Doe'));
       expect(json['emailAddress'], equals('john.doe@example.com'));
@@ -51,9 +53,9 @@ void main() {
       );
 
       // Constructor with snake_case config
-      final snakeConfig = SerializationConfig(fieldRename: FieldRename.snake);
+      const snakeConfig = SerializationConfig(fieldRename: FieldRename.snake);
       final serializer = ConfigurableUserJsonSerializer(snakeConfig);
-      
+
       // Uses constructor config by default
       final json = serializer.toJson(user);
       expect(json['first_name'], equals('Jane'));
@@ -71,15 +73,15 @@ void main() {
       );
 
       // Constructor with snake_case config
-      final snakeConfig = SerializationConfig(fieldRename: FieldRename.snake);
+      const snakeConfig = SerializationConfig(fieldRename: FieldRename.snake);
       final serializer = ConfigurableUserJsonSerializer(snakeConfig);
-      
+
       // Default method uses constructor config (snake_case)
       final snakeJson = serializer.toJson(user);
       expect(snakeJson['first_name'], equals('Bob'));
-      
+
       // Override with kebab-case at method level
-      final kebabConfig = SerializationConfig(fieldRename: FieldRename.kebab);
+      const kebabConfig = SerializationConfig(fieldRename: FieldRename.kebab);
       final kebabJson = serializer.toJson(user, kebabConfig);
       expect(kebabJson['first-name'], equals('Bob'));
       expect(kebabJson['last-name'], equals('Wilson'));
@@ -88,7 +90,7 @@ void main() {
 
     test('Deserialization works with constructor and method configs', () {
       // Snake case serializer
-      final snakeConfig = SerializationConfig(fieldRename: FieldRename.snake);
+      const snakeConfig = SerializationConfig(fieldRename: FieldRename.snake);
       final serializer = ConfigurableUserJsonSerializer(snakeConfig);
 
       // Deserialize snake_case JSON using constructor config
@@ -100,8 +102,8 @@ void main() {
         'created_at': '2024-01-01T12:00:00.000Z',
         'updated_at': '2024-01-01T12:00:00.000Z',
       };
-      
-      final user1 = serializer.fromJson(snakeJson);  // Uses constructor config
+
+      final user1 = serializer.fromJson(snakeJson); // Uses constructor config
       expect(user1.firstName, equals('Alice'));
       expect(user1.lastName, equals('Johnson'));
 
@@ -114,9 +116,10 @@ void main() {
         'createdAt': '2024-01-01T12:00:00.000Z',
         'updatedAt': '2024-01-01T12:00:00.000Z',
       };
-      
-      final defaultConfig = SerializationConfig();  // camelCase
-      final user2 = serializer.fromJson(camelJson, defaultConfig);  // Override config
+
+      const defaultConfig = SerializationConfig(); // camelCase
+      final user2 =
+          serializer.fromJson(camelJson, defaultConfig); // Override config
       expect(user2.firstName, equals('Charlie'));
       expect(user2.lastName, equals('Brown'));
     });
@@ -128,7 +131,7 @@ void main() {
         emailAddress: 'david@test.com',
       );
 
-      final kebabConfig = SerializationConfig(fieldRename: FieldRename.kebab);
+      const kebabConfig = SerializationConfig(fieldRename: FieldRename.kebab);
       final serializer = ConfigurableUserJsonSerializer(kebabConfig);
 
       // Serialize using constructor config
@@ -137,7 +140,7 @@ void main() {
       expect(kebabString, contains('"email-address"'));
 
       // Override with snake_case
-      final snakeConfig = SerializationConfig(fieldRename: FieldRename.snake);
+      const snakeConfig = SerializationConfig(fieldRename: FieldRename.snake);
       final snakeString = serializer.serialize(user, snakeConfig);
       expect(snakeString, contains('"first_name"'));
       expect(snakeString, contains('"email_address"'));
@@ -160,22 +163,24 @@ void main() {
       expect(defaultJson['firstName'], equals('Eva'));
 
       // Static methods with custom config
-      final snakeConfig = SerializationConfig(fieldRename: FieldRename.snake);
-      final snakeJson = ConfigurableUserJsonSerializer.encode(user, snakeConfig);
+      const snakeConfig = SerializationConfig(fieldRename: FieldRename.snake);
+      final snakeJson =
+          ConfigurableUserJsonSerializer.encode(user, snakeConfig);
       expect(snakeJson['first_name'], equals('Eva'));
       expect(snakeJson['last_name'], equals('Davis'));
 
-      final restored = ConfigurableUserJsonSerializer.decode(snakeJson, snakeConfig);
+      final restored =
+          ConfigurableUserJsonSerializer.decode(snakeJson, snakeConfig);
       expect(restored.firstName, equals('Eva'));
       expect(restored.lastName, equals('Davis'));
     });
 
     test('Perfect for DI container usage', () {
       // Simulate DI container setup
-      final apiConfig = SerializationConfig(fieldRename: FieldRename.snake);
+      const apiConfig = SerializationConfig(fieldRename: FieldRename.snake);
       final apiSerializer = ConfigurableUserJsonSerializer(apiConfig);
-      
-      final internalConfig = SerializationConfig(fieldRename: FieldRename.none);
+
+      const internalConfig = SerializationConfig();
       final internalSerializer = ConfigurableUserJsonSerializer(internalConfig);
 
       final user = ConfigurableUser(
@@ -195,7 +200,7 @@ void main() {
       expect(internalJson['emailAddress'], equals('frank@company.com'));
 
       // But can still override when needed
-      final kebabConfig = SerializationConfig(fieldRename: FieldRename.kebab);
+      const kebabConfig = SerializationConfig(fieldRename: FieldRename.kebab);
       final specialJson = apiSerializer.toJson(user, kebabConfig);
       expect(specialJson['first-name'], equals('Frank'));
     });

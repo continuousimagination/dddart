@@ -1,23 +1,23 @@
-import 'package:test/test.dart';
 import 'package:dddart/dddart.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
+import 'package:test/test.dart';
+
 import 'test_models.dart';
 
 void main() {
   group('Complex Object Graph Serialization', () {
     group('AggregateRoot with multiple nested entities and values', () {
       test('serializes complex AggregateRoot with nested structures', () {
-        final homeAddress = TestAddress(
+        const homeAddress = TestAddress(
           street: '123 Home St',
           city: 'Home City',
           zipCode: '12345',
         );
-        final workAddress = TestAddress(
+        const workAddress = TestAddress(
           street: '456 Work Ave',
           city: 'Work City',
           zipCode: '67890',
         );
-        final contactInfo = TestContactInfo(
+        const contactInfo = TestContactInfo(
           email: 'complex@example.com',
           phone: '+1-555-0123',
           address: homeAddress,
@@ -53,7 +53,8 @@ void main() {
         expect(contactJson['address'], isA<Map<String, dynamic>>());
 
         // Verify nested address within contact info
-        final nestedAddressJson = contactJson['address'] as Map<String, dynamic>;
+        final nestedAddressJson =
+            contactJson['address'] as Map<String, dynamic>;
         expect(nestedAddressJson['street'], equals('123 Home St'));
         expect(nestedAddressJson['city'], equals('Home City'));
         expect(nestedAddressJson['zipCode'], equals('12345'));
@@ -120,17 +121,19 @@ void main() {
         final complexUser = serializer.fromJson(json);
 
         expect(complexUser.name, equals('Deserialized Complex User'));
-        expect(complexUser.contactInfo.email, equals('deserialized@example.com'));
+        expect(
+            complexUser.contactInfo.email, equals('deserialized@example.com'),);
         expect(complexUser.contactInfo.phone, equals('+1-555-9876'));
-        expect(complexUser.contactInfo.address.street, equals('789 Deserial St'));
-        
+        expect(
+            complexUser.contactInfo.address.street, equals('789 Deserial St'),);
+
         expect(complexUser.addresses, hasLength(2));
         expect(complexUser.addresses[0].street, equals('111 First St'));
         expect(complexUser.addresses[1].street, equals('222 Second St'));
-        
+
         expect(complexUser.tags, hasLength(2));
         expect(complexUser.tags, containsAll(['admin', 'manager']));
-        
+
         expect(complexUser.metadata['department'], equals('Operations'));
         expect(complexUser.metadata['level'], equals('Lead'));
         expect(complexUser.metadata['active'], equals(false));
@@ -138,17 +141,17 @@ void main() {
       });
 
       test('round-trip complex object maintains complete structure', () {
-        final address1 = TestAddress(
+        const address1 = TestAddress(
           street: 'Round Trip St 1',
           city: 'RT City 1',
           zipCode: '11111',
         );
-        final address2 = TestAddress(
+        const address2 = TestAddress(
           street: 'Round Trip St 2',
           city: 'RT City 2',
           zipCode: '22222',
         );
-        final contactInfo = TestContactInfo(
+        const contactInfo = TestContactInfo(
           email: 'roundtrip@example.com',
           phone: '+1-555-1111',
           address: address1,
@@ -186,7 +189,7 @@ void main() {
       test('serializes AggregateRoot with collections of different types', () {
         final user1 = TestUser(name: 'User 1', email: 'user1@example.com');
         final user2 = TestUser(name: 'User 2', email: 'user2@example.com');
-        
+
         final milestone1 = TestValueWithSpecialTypes(
           id: UuidValue.generate(),
           timestamp: DateTime.parse('2024-01-01T00:00:00.000Z'),
@@ -198,12 +201,12 @@ void main() {
           name: 'Milestone 2',
         );
 
-        final homeOffice = TestAddress(
+        const homeOffice = TestAddress(
           street: '123 Home Office',
           city: 'Remote City',
           zipCode: '00000',
         );
-        final mainOffice = TestAddress(
+        const mainOffice = TestAddress(
           street: '456 Main Office',
           city: 'HQ City',
           zipCode: '11111',
@@ -224,7 +227,8 @@ void main() {
         final json = serializer.toJson(project);
 
         expect(json['title'], equals('Test Project'));
-        expect(json['description'], equals('A project for testing collections'));
+        expect(
+            json['description'], equals('A project for testing collections'),);
 
         // Verify collaborators list
         expect(json['collaborators'], isA<List>());
@@ -303,28 +307,31 @@ void main() {
 
         expect(project.milestones, hasLength(2));
         final milestonesList = project.milestones.toList();
-        expect(milestonesList.any((m) => m.name == 'Deserialized Milestone 1'), isTrue);
-        expect(milestonesList.any((m) => m.name == 'Deserialized Milestone 2'), isTrue);
+        expect(milestonesList.any((m) => m.name == 'Deserialized Milestone 1'),
+            isTrue,);
+        expect(milestonesList.any((m) => m.name == 'Deserialized Milestone 2'),
+            isTrue,);
 
         expect(project.settings, hasLength(2));
         expect(project.settings['primary']?.street, equals('Primary Street'));
-        expect(project.settings['secondary']?.street, equals('Secondary Street'));
+        expect(
+            project.settings['secondary']?.street, equals('Secondary Street'),);
       });
     });
 
     group('Deeply nested object structures', () {
       test('serializes deeply nested Value objects', () {
-        final deepChild = TestNestedValue(
+        const deepChild = TestNestedValue(
           level: 3,
           data: 'Deep Level 3',
           child: null,
         );
-        final midChild = TestNestedValue(
+        const midChild = TestNestedValue(
           level: 2,
           data: 'Mid Level 2',
           child: deepChild,
         );
-        final topLevel = TestNestedValue(
+        const topLevel = TestNestedValue(
           level: 1,
           data: 'Top Level 1',
           child: midChild,
@@ -378,7 +385,7 @@ void main() {
       });
 
       test('round-trip deeply nested structures maintain integrity', () {
-        final original = TestNestedValue(
+        const original = TestNestedValue(
           level: 1,
           data: 'Round Trip Level 1',
           child: TestNestedValue(
@@ -404,17 +411,20 @@ void main() {
 
     group('Performance with large object graphs', () {
       test('handles serialization of large collections efficiently', () {
-        final addresses = List.generate(100, (i) => 
-          TestAddress(
+        final addresses = List.generate(
+          100,
+          (i) => TestAddress(
             street: 'Street $i',
             city: 'City $i',
             zipCode: 'Zip$i',
-          ));
-        
+          ),
+        );
+
         final tags = Set<String>.from(List.generate(50, (i) => 'tag$i'));
-        
+
         final metadata = Map.fromEntries(
-          List.generate(200, (i) => MapEntry('key$i', 'value$i')));
+          List.generate(200, (i) => MapEntry('key$i', 'value$i')),
+        );
 
         final contactInfo = TestContactInfo(
           email: 'performance@example.com',
@@ -440,7 +450,7 @@ void main() {
         expect(json['addresses'], hasLength(100));
         expect(json['tags'], hasLength(50));
         expect(json['metadata'], hasLength(200));
-        
+
         // Performance should be reasonable (less than 100ms for this size)
         expect(stopwatch.elapsedMilliseconds, lessThan(100));
       });
@@ -457,14 +467,18 @@ void main() {
               'zipCode': 'LARGE',
             },
           },
-          'addresses': List.generate(100, (i) => {
-            'street': 'Street $i',
-            'city': 'City $i',
-            'zipCode': 'Zip$i',
-          }),
+          'addresses': List.generate(
+            100,
+            (i) => {
+              'street': 'Street $i',
+              'city': 'City $i',
+              'zipCode': 'Zip$i',
+            },
+          ),
           'tags': List.generate(50, (i) => 'tag$i'),
           'metadata': Map.fromEntries(
-            List.generate(200, (i) => MapEntry('key$i', 'value$i'))),
+            List.generate(200, (i) => MapEntry('key$i', 'value$i')),
+          ),
           'id': '550e8400-e29b-41d4-a716-446655440099',
           'createdAt': '2024-01-01T12:00:00.000Z',
           'updatedAt': '2024-01-01T12:30:00.000Z',
@@ -480,7 +494,7 @@ void main() {
         expect(largeUser.addresses, hasLength(100));
         expect(largeUser.tags, hasLength(50));
         expect(largeUser.metadata, hasLength(200));
-        
+
         // Performance should be reasonable (less than 100ms for this size)
         expect(stopwatch.elapsedMilliseconds, lessThan(100));
       });

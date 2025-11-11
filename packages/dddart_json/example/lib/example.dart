@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
-import 'package:dddart_json/dddart_json.dart';
 
 import 'domain/address.dart';
 import 'domain/customer.dart';
@@ -12,18 +11,17 @@ import 'domain/product_info.dart';
 
 /// Comprehensive example demonstrating DDDart serialization features.
 class SerializationExample {
-  
   /// Run all example scenarios
   void runAll() {
     print('🚀 DDDart Serialization Example\n');
-    
+
     _basicSerialization();
     _fieldNamingStrategies();
     _constructorConfiguration();
     _complexObjectGraphs();
     _errorHandling();
     _performanceDemo();
-    
+
     print('\n✅ All examples completed successfully!');
   }
 
@@ -57,7 +55,7 @@ class SerializationExample {
 
     print('Address JSON:');
     print(JsonEncoder.withIndent('  ').convert(addressJson));
-    
+
     print('\nCustomer JSON:');
     print(JsonEncoder.withIndent('  ').convert(customerJson));
 
@@ -68,7 +66,7 @@ class SerializationExample {
     // Verify round-trip integrity
     assert(restoredAddress == address, 'Address round-trip failed');
     assert(restoredCustomer == customer, 'Customer round-trip failed');
-    
+
     print('\n✅ Round-trip serialization successful!\n');
   }
 
@@ -112,7 +110,7 @@ class SerializationExample {
     // Verify all can be deserialized back
     final fromCamel = serializer.fromJson(camelJson);
     print('✅ CamelCase deserialization successful');
-    
+
     Customer? fromSnake;
     try {
       fromSnake = serializer.fromJson(snakeJson, snakeConfig);
@@ -121,11 +119,12 @@ class SerializationExample {
       print('❌ Snake_case deserialization failed: $e');
       print('Snake JSON keys: ${snakeJson.keys}');
       if (snakeJson['default_shipping_address'] != null) {
-        print('Address keys: ${(snakeJson['default_shipping_address'] as Map).keys}');
+        print(
+            'Address keys: ${(snakeJson['default_shipping_address'] as Map).keys}');
       }
       rethrow;
     }
-    
+
     final fromKebab = serializer.fromJson(kebabJson, kebabConfig);
 
     assert(fromCamel == customer, 'CamelCase deserialization failed');
@@ -165,16 +164,14 @@ class SerializationExample {
 
     // Perfect for dependency injection scenarios
     print('\n🔧 DI Container Simulation:');
-    
+
     // API serializer (always snake_case)
     final apiSerializer = AddressJsonSerializer(
-      SerializationConfig(fieldRename: FieldRename.snake)
-    );
-    
+        SerializationConfig(fieldRename: FieldRename.snake));
+
     // Database serializer (always camelCase)
     final dbSerializer = AddressJsonSerializer(
-      SerializationConfig(fieldRename: FieldRename.none)
-    );
+        SerializationConfig(fieldRename: FieldRename.none));
 
     final apiJson = apiSerializer.toJson(address);
     final dbJson = dbSerializer.toJson(address);
@@ -192,9 +189,9 @@ class SerializationExample {
 
     // Create a complex order with multiple items
     final order = _createSampleOrder();
-    
+
     final serializer = OrderJsonSerializer();
-    
+
     // Serialize the entire object graph
     final json = serializer.toJson(order);
     print('Complete Order JSON:');
@@ -205,9 +202,10 @@ class SerializationExample {
 
     // Verify complex object integrity
     assert(restoredOrder == order, 'Order round-trip failed');
-    assert(restoredOrder.items.length == order.items.length, 'Items count mismatch');
+    assert(restoredOrder.items.length == order.items.length,
+        'Items count mismatch');
     assert(restoredOrder.total == order.total, 'Total calculation mismatch');
-    
+
     print('\n📊 Order Summary:');
     print('Customer ID: ${restoredOrder.customerId}');
     print('Items: ${restoredOrder.items.length}');
@@ -308,18 +306,23 @@ class SerializationExample {
 
     // Measure deserialization performance
     final deserializeStart = DateTime.now();
-    final restoredOrders = jsonList.map((json) => serializer.fromJson(json)).toList();
+    final restoredOrders =
+        jsonList.map((json) => serializer.fromJson(json)).toList();
     final deserializeEnd = DateTime.now();
     final deserializeDuration = deserializeEnd.difference(deserializeStart);
 
-    print('Serialized ${orders.length} complex orders in ${serializeDuration.inMilliseconds}ms');
-    print('Deserialized ${restoredOrders.length} complex orders in ${deserializeDuration.inMilliseconds}ms');
-    
+    print(
+        'Serialized ${orders.length} complex orders in ${serializeDuration.inMilliseconds}ms');
+    print(
+        'Deserialized ${restoredOrders.length} complex orders in ${deserializeDuration.inMilliseconds}ms');
+
     final avgSerialize = serializeDuration.inMicroseconds / orders.length;
     final avgDeserialize = deserializeDuration.inMicroseconds / orders.length;
-    
-    print('Average serialization: ${avgSerialize.toStringAsFixed(1)}μs per order');
-    print('Average deserialization: ${avgDeserialize.toStringAsFixed(1)}μs per order');
+
+    print(
+        'Average serialization: ${avgSerialize.toStringAsFixed(1)}μs per order');
+    print(
+        'Average deserialization: ${avgDeserialize.toStringAsFixed(1)}μs per order');
 
     // Verify integrity
     for (int i = 0; i < orders.length; i++) {
@@ -332,7 +335,7 @@ class SerializationExample {
   /// Create a sample order for testing
   Order _createSampleOrder() {
     final customerId = UuidValue.generate();
-    
+
     final items = [
       OrderItem(
         product: ProductInfo(

@@ -69,8 +69,8 @@ class Customer extends AggregateRoot {
   /// Validate customer data
   bool get isValid {
     return firstName.isNotEmpty &&
-           lastName.isNotEmpty &&
-           email.contains('@') &&
-           email.contains('.');
+        lastName.isNotEmpty &&
+        email.contains('@') &&
+        email.contains('.');
   }
 }

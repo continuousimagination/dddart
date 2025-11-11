@@ -1,17 +1,15 @@
 /// Code generator for DDDart JSON serialization.
+library;
 
-import 'package:build/build.dart';
-import 'package:source_gen/source_gen.dart';
 import 'package:analyzer/dart/element/element.dart';
-import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
-import 'package:dddart/dddart.dart';
+import 'package:analyzer/dart/element/type.dart';
+import 'package:build/build.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
-
-import '../json_serializer.dart';
+import 'package:source_gen/source_gen.dart';
 
 /// Builder function for the serializable generator.
-Builder serializableBuilder(BuilderOptions options) => 
+Builder serializableBuilder(BuilderOptions options) =>
     SharedPartBuilder([SerializableGenerator()], 'json_serializable');
 
 /// Generator for DDDart serialization code.
@@ -31,17 +29,18 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
 
     final classElement = element;
     final className = classElement.name;
-    
+
     // Validate that the class extends AggregateRoot or Value
     final classAnalysis = _analyzeClass(classElement);
-    
+
     // Extract annotation configuration
     final config = _extractAnnotationConfig(annotation);
-    
+
     // Generate serialization code based on class type
     switch (classAnalysis.type) {
       case ClassType.aggregateRoot:
-        return _generateAggregateRootSerialization(classElement, classAnalysis, config);
+        return _generateAggregateRootSerialization(
+            classElement, classAnalysis, config,);
       case ClassType.value:
         return _generateValueSerialization(classElement, classAnalysis, config);
       case ClassType.entity:
@@ -59,27 +58,31 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
   }
 
   /// Generates serialization code for AggregateRoot classes.
-  String _generateAggregateRootSerialization(ClassElement classElement, ClassAnalysis analysis, SerializationConfig config) {
+  String _generateAggregateRootSerialization(ClassElement classElement,
+      ClassAnalysis analysis, SerializationConfig config,) {
     final className = analysis.className;
-    
+
     // Generate the basic toJson and fromJson method bodies
     final toJsonBody = _generateAggregateRootToJson(analysis, config);
     final fromJsonBody = _generateAggregateRootFromJson(analysis, config);
-    
+
     // Generate the complete JsonSerializer class
-    return _generateJsonSerializerClass(className, toJsonBody, fromJsonBody, analysis);
+    return _generateJsonSerializerClass(
+        className, toJsonBody, fromJsonBody, analysis,);
   }
 
   /// Generates serialization code for Value classes.
-  String _generateValueSerialization(ClassElement classElement, ClassAnalysis analysis, SerializationConfig config) {
+  String _generateValueSerialization(ClassElement classElement,
+      ClassAnalysis analysis, SerializationConfig config,) {
     final className = analysis.className;
-    
+
     // Generate the basic toJson and fromJson method bodies
     final toJsonBody = _generateValueToJson(analysis, config);
     final fromJsonBody = _generateValueFromJson(analysis, config);
-    
+
     // Generate the complete JsonSerializer class
-    return _generateJsonSerializerClass(className, toJsonBody, fromJsonBody, analysis);
+    return _generateJsonSerializerClass(
+        className, toJsonBody, fromJsonBody, analysis,);
   }
 
   /// Extracts configuration from the @Serializable annotation.
@@ -87,12 +90,12 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
     // For now, return default config. In the future, we can extract config from annotation parameters
     return const SerializationConfig();
   }
-  
+
   /// Analyzes a class to determine its type and extract field information.
   ClassAnalysis _analyzeClass(ClassElement classElement) {
     final className = classElement.name;
     final supertype = classElement.supertype;
-    
+
     if (supertype == null) {
       return ClassAnalysis(
         type: ClassType.invalid,
@@ -100,13 +103,13 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
         fields: [],
       );
     }
-    
+
     // Check inheritance hierarchy
     final classType = _determineClassType(classElement);
-    
+
     // Extract field information
     final fields = _extractFields(classElement, classType);
-    
+
     return ClassAnalysis(
       type: classType,
       className: className,
@@ -118,13 +121,13 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
   ClassType _determineClassType(ClassElement classElement) {
     // Walk up the inheritance hierarchy to find the base type
     ClassElement? current = classElement;
-    
+
     while (current != null) {
       final supertype = current.supertype;
       if (supertype == null) break;
-      
+
       final supertypeName = supertype.element.name;
-      
+
       // Check for direct inheritance from DDDart base classes
       switch (supertypeName) {
         case 'AggregateRoot':
@@ -134,46 +137,53 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
         case 'Value':
           return ClassType.value;
       }
-      
+
       current = supertype.element as ClassElement?;
     }
-    
+
     return ClassType.invalid;
   }
 
   /// Extracts field information from a class element.
-  List<FieldInfo> _extractFields(ClassElement classElement, ClassType classType) {
+  List<FieldInfo> _extractFields(
+      ClassElement classElement, ClassType classType,) {
     final fields = <FieldInfo>[];
-    
+
     // Get all fields from the class (excluding inherited ones from DDDart base classes)
     for (final field in classElement.fields) {
       // Skip static fields and synthetic fields
       if (field.isStatic || field.isSynthetic) continue;
-      
+
       // Skip fields that are part of the DDDart base classes
-      if (['id', 'createdAt', 'updatedAt'].contains(field.name) && classType == ClassType.aggregateRoot) {
+      if (['id', 'createdAt', 'updatedAt'].contains(field.name) &&
+          classType == ClassType.aggregateRoot) {
         continue;
       }
-      
+
       final fieldType = field.type;
-      final isNullable = fieldType.nullabilitySuffix == NullabilitySuffix.question;
-      
-      fields.add(FieldInfo(
-        name: field.name,
-        type: fieldType,
-        isNullable: isNullable,
-      ));
+      final isNullable =
+          fieldType.nullabilitySuffix == NullabilitySuffix.question;
+
+      fields.add(
+        FieldInfo(
+          name: field.name,
+          type: fieldType,
+          isNullable: isNullable,
+        ),
+      );
     }
-    
+
     return fields;
   }
 
   /// Generates a complete JsonSerializer class with constructor + optional parameter design.
-  String _generateJsonSerializerClass(String className, String toJsonBody, String fromJsonBody, ClassAnalysis analysis) {
+  String _generateJsonSerializerClass(String className, String toJsonBody,
+      String fromJsonBody, ClassAnalysis analysis,) {
     // Generate configurable versions of the methods
     final toJsonWithConfigBody = _generateToJsonWithConfig(className, analysis);
-    final fromJsonWithConfigBody = _generateFromJsonWithConfig(className, analysis);
-    
+    final fromJsonWithConfigBody =
+        _generateFromJsonWithConfig(className, analysis);
+
     return '''
 class ${className}JsonSerializer implements JsonSerializer<$className> {
   /// Default configuration for this serializer.
@@ -228,40 +238,46 @@ $fromJsonWithConfigBody
   String _generateToJsonWithConfig(String className, ClassAnalysis analysis) {
     final buffer = StringBuffer();
     buffer.writeln('    final json = <String, dynamic>{');
-    
+
     // Add Entity base fields with runtime field naming
     if (analysis.type == ClassType.aggregateRoot) {
-      buffer.writeln("      SerializationUtils.applyFieldRename('id', effectiveConfig.fieldRename): instance.id.toString(),");
-      buffer.writeln("      SerializationUtils.applyFieldRename('createdAt', effectiveConfig.fieldRename): instance.createdAt.toIso8601String(),");
-      buffer.writeln("      SerializationUtils.applyFieldRename('updatedAt', effectiveConfig.fieldRename): instance.updatedAt.toIso8601String(),");
+      buffer.writeln(
+          "      SerializationUtils.applyFieldRename('id', effectiveConfig.fieldRename): instance.id.toString(),",);
+      buffer.writeln(
+          "      SerializationUtils.applyFieldRename('createdAt', effectiveConfig.fieldRename): instance.createdAt.toIso8601String(),",);
+      buffer.writeln(
+          "      SerializationUtils.applyFieldRename('updatedAt', effectiveConfig.fieldRename): instance.updatedAt.toIso8601String(),",);
     }
-    
+
     // Sort custom fields alphabetically for deterministic ordering
     final sortedFields = List<FieldInfo>.from(analysis.fields)
       ..sort((a, b) => a.name.compareTo(b.name));
-    
+
     // Add custom fields with runtime field naming
     for (final field in sortedFields) {
       final fieldName = field.name;
-      
+
       if (field.isNullable) {
-        buffer.writeln("      if (instance.$fieldName != null || effectiveConfig.includeNullFields)");
-        buffer.writeln("        SerializationUtils.applyFieldRename('$fieldName', effectiveConfig.fieldRename): ${_generateFieldSerializationNonNull(field, 'instance.')},");
+        buffer.writeln(
+            '      if (instance.$fieldName != null || effectiveConfig.includeNullFields)',);
+        buffer.writeln(
+            "        SerializationUtils.applyFieldRename('$fieldName', effectiveConfig.fieldRename): ${_generateFieldSerializationNonNull(field, 'instance.')},",);
       } else {
-        buffer.writeln("      SerializationUtils.applyFieldRename('$fieldName', effectiveConfig.fieldRename): ${_generateFieldSerialization(field, 'instance.')},");
+        buffer.writeln(
+            "      SerializationUtils.applyFieldRename('$fieldName', effectiveConfig.fieldRename): ${_generateFieldSerialization(field, 'instance.')},",);
       }
     }
-    
+
     buffer.writeln('    };');
     buffer.writeln('    return json;');
-    
+
     return buffer.toString();
   }
 
   /// Generates configurable fromJson method body.
   String _generateFromJsonWithConfig(String className, ClassAnalysis analysis) {
     final buffer = StringBuffer();
-    
+
     buffer.writeln('    if (json == null) {');
     buffer.writeln('      throw DeserializationException(');
     buffer.writeln("        'Cannot deserialize $className from null JSON',");
@@ -270,31 +286,35 @@ $fromJsonWithConfigBody
     buffer.writeln('    }');
     buffer.writeln('    if (json is! Map<String, dynamic>) {');
     buffer.writeln('      throw DeserializationException(');
-    buffer.writeln("        'Expected Map<String, dynamic> but got \${json.runtimeType}',");
+    buffer.writeln(
+        r"        'Expected Map<String, dynamic> but got ${json.runtimeType}',",);
     buffer.writeln("        expectedType: '$className',");
     buffer.writeln('      );');
     buffer.writeln('    }');
     buffer.writeln('    try {');
     buffer.writeln('      return $className(');
-    
+
     // Sort custom fields alphabetically for deterministic ordering
     final sortedFields = List<FieldInfo>.from(analysis.fields)
       ..sort((a, b) => a.name.compareTo(b.name));
-    
+
     // Add custom field parameters with runtime field naming
     for (final field in sortedFields) {
       final fieldName = field.name;
       final deserialization = _generateFieldDeserializationWithConfig(field);
       buffer.writeln('        $fieldName: $deserialization,');
     }
-    
+
     // Add Entity base field parameters with runtime field naming
     if (analysis.type == ClassType.aggregateRoot) {
-      buffer.writeln("        id: UuidValue.fromString(json[SerializationUtils.applyFieldRename('id', effectiveConfig.fieldRename)] as String),");
-      buffer.writeln("        createdAt: DateTime.parse(json[SerializationUtils.applyFieldRename('createdAt', effectiveConfig.fieldRename)] as String),");
-      buffer.writeln("        updatedAt: DateTime.parse(json[SerializationUtils.applyFieldRename('updatedAt', effectiveConfig.fieldRename)] as String),");
+      buffer.writeln(
+          "        id: UuidValue.fromString(json[SerializationUtils.applyFieldRename('id', effectiveConfig.fieldRename)] as String),",);
+      buffer.writeln(
+          "        createdAt: DateTime.parse(json[SerializationUtils.applyFieldRename('createdAt', effectiveConfig.fieldRename)] as String),",);
+      buffer.writeln(
+          "        updatedAt: DateTime.parse(json[SerializationUtils.applyFieldRename('updatedAt', effectiveConfig.fieldRename)] as String),",);
     }
-    
+
     buffer.writeln('      );');
     buffer.writeln('    } catch (e, stackTrace) {');
     buffer.writeln('      throw DeserializationException(');
@@ -302,7 +322,7 @@ $fromJsonWithConfigBody
     buffer.writeln("        expectedType: '$className',");
     buffer.writeln('      );');
     buffer.writeln('    }');
-    
+
     return buffer.toString();
   }
 
@@ -310,94 +330,102 @@ $fromJsonWithConfigBody
   String _generateFieldDeserializationWithConfig(FieldInfo field) {
     final typeName = field.type.getDisplayString(withNullability: false);
     final fieldName = field.name;
-    final jsonAccess = "json[SerializationUtils.applyFieldRename('$fieldName', effectiveConfig.fieldRename)]";
-    
+    final jsonAccess =
+        "json[SerializationUtils.applyFieldRename('$fieldName', effectiveConfig.fieldRename)]";
+
     // Handle special types with standardized formats
     if (typeName == 'UuidValue') {
-      return "UuidValue.fromString($jsonAccess as String)";
+      return 'UuidValue.fromString($jsonAccess as String)';
     }
-    
+
     if (typeName == 'DateTime') {
-      return "DateTime.parse($jsonAccess as String)";
+      return 'DateTime.parse($jsonAccess as String)';
     }
-    
+
     // Handle nullable special types
     if (field.isNullable) {
       if (typeName == 'UuidValue') {
-        return "$jsonAccess != null ? UuidValue.fromString($jsonAccess as String) : null";
+        return '$jsonAccess != null ? UuidValue.fromString($jsonAccess as String) : null';
       }
       if (typeName == 'DateTime') {
-        return "$jsonAccess != null ? DateTime.parse($jsonAccess as String) : null";
+        return '$jsonAccess != null ? DateTime.parse($jsonAccess as String) : null';
       }
-      
+
       // Handle nullable DDDart types
       if (_isDDDartType(field.type)) {
-        return "$jsonAccess != null ? ${typeName}JsonSerializer().fromJson($jsonAccess as Map<String, dynamic>, effectiveConfig) : null";
+        return '$jsonAccess != null ? ${typeName}JsonSerializer().fromJson($jsonAccess as Map<String, dynamic>, effectiveConfig) : null';
       }
     }
-    
+
     // Handle collections
     if (typeName.startsWith('List<') || typeName.startsWith('Set<')) {
       return _generateCollectionDeserializationWithConfig(field, jsonAccess);
     }
-    
+
     if (typeName.startsWith('Map<')) {
       return _generateMapDeserializationWithConfig(field, jsonAccess);
     }
-    
+
     // Check if it's a DDDart type
     if (_isDDDartType(field.type)) {
-      return "${typeName}JsonSerializer().fromJson($jsonAccess as Map<String, dynamic>, effectiveConfig)";
+      return '${typeName}JsonSerializer().fromJson($jsonAccess as Map<String, dynamic>, effectiveConfig)';
     }
-    
+
     // Default: primitive types with casting
-    return "$jsonAccess as $typeName";
+    return '$jsonAccess as $typeName';
   }
 
   /// Generates the toJson method body for AggregateRoot classes.
-  String _generateAggregateRootToJson(ClassAnalysis analysis, SerializationConfig config) {
+  String _generateAggregateRootToJson(
+      ClassAnalysis analysis, SerializationConfig config,) {
     final buffer = StringBuffer();
     buffer.writeln('    final json = <String, dynamic>{');
-    
+
     // Add Entity base fields with consistent naming
-    buffer.writeln("      '${_applyFieldRename('id', config.fieldRename)}': instance.id.toString(),");
-    buffer.writeln("      '${_applyFieldRename('createdAt', config.fieldRename)}': instance.createdAt.toIso8601String(),");
-    buffer.writeln("      '${_applyFieldRename('updatedAt', config.fieldRename)}': instance.updatedAt.toIso8601String(),");
-    
+    buffer.writeln(
+        "      '${_applyFieldRename('id', config.fieldRename)}': instance.id.toString(),",);
+    buffer.writeln(
+        "      '${_applyFieldRename('createdAt', config.fieldRename)}': instance.createdAt.toIso8601String(),",);
+    buffer.writeln(
+        "      '${_applyFieldRename('updatedAt', config.fieldRename)}': instance.updatedAt.toIso8601String(),",);
+
     // Sort custom fields alphabetically for deterministic ordering
     final sortedFields = List<FieldInfo>.from(analysis.fields)
       ..sort((a, b) => a.name.compareTo(b.name));
-    
+
     // Add custom fields
     for (final field in sortedFields) {
       final fieldName = field.name;
       final jsonKey = _applyFieldRename(fieldName, config.fieldRename);
-      
+
       if (field.isNullable && !config.includeNullFields) {
-        buffer.writeln('      if (instance.$fieldName != null) \'$jsonKey\': ${_generateFieldSerializationNonNull(field, 'instance.')},');
+        buffer.writeln(
+            "      if (instance.$fieldName != null) '$jsonKey': ${_generateFieldSerializationNonNull(field, 'instance.')},",);
       } else {
-        buffer.writeln("      '$jsonKey': ${_generateFieldSerialization(field, 'instance.')},");
+        buffer.writeln(
+            "      '$jsonKey': ${_generateFieldSerialization(field, 'instance.')},",);
       }
     }
-    
+
     buffer.writeln('    };');
     buffer.writeln('    return json;');
-    
+
     return buffer.toString();
   }
 
   /// Generates the fromJson method body for AggregateRoot classes.
-  String _generateAggregateRootFromJson(ClassAnalysis analysis, SerializationConfig config) {
+  String _generateAggregateRootFromJson(
+      ClassAnalysis analysis, SerializationConfig config,) {
     final className = analysis.className;
     final buffer = StringBuffer();
-    
+
     buffer.writeln('    try {');
     buffer.writeln('      return $className(');
-    
+
     // Sort custom fields alphabetically for deterministic ordering
     final sortedFields = List<FieldInfo>.from(analysis.fields)
       ..sort((a, b) => a.name.compareTo(b.name));
-    
+
     // Add custom field parameters
     for (final field in sortedFields) {
       final fieldName = field.name;
@@ -405,16 +433,19 @@ $fromJsonWithConfigBody
       final deserialization = _generateFieldDeserialization(field, jsonKey);
       buffer.writeln('        $fieldName: $deserialization,');
     }
-    
+
     // Add Entity base field parameters with consistent naming
     final idKey = _applyFieldRename('id', config.fieldRename);
     final createdAtKey = _applyFieldRename('createdAt', config.fieldRename);
     final updatedAtKey = _applyFieldRename('updatedAt', config.fieldRename);
-    
-    buffer.writeln('        id: UuidValue.fromString(json[\'$idKey\'] as String),');
-    buffer.writeln('        createdAt: DateTime.parse(json[\'$createdAtKey\'] as String),');
-    buffer.writeln('        updatedAt: DateTime.parse(json[\'$updatedAtKey\'] as String),');
-    
+
+    buffer
+        .writeln("        id: UuidValue.fromString(json['$idKey'] as String),");
+    buffer.writeln(
+        "        createdAt: DateTime.parse(json['$createdAtKey'] as String),",);
+    buffer.writeln(
+        "        updatedAt: DateTime.parse(json['$updatedAtKey'] as String),",);
+
     buffer.writeln('      );');
     buffer.writeln('    } catch (e, stackTrace) {');
     buffer.writeln('      throw DeserializationException(');
@@ -422,49 +453,53 @@ $fromJsonWithConfigBody
     buffer.writeln("        expectedType: '$className',");
     buffer.writeln('      );');
     buffer.writeln('    }');
-    
+
     return buffer.toString();
   }
 
   /// Generates the toJson method body for Value classes.
-  String _generateValueToJson(ClassAnalysis analysis, SerializationConfig config) {
+  String _generateValueToJson(
+      ClassAnalysis analysis, SerializationConfig config,) {
     final buffer = StringBuffer();
     buffer.writeln('    final json = <String, dynamic>{');
-    
+
     // Sort custom fields alphabetically for deterministic ordering
     final sortedFields = List<FieldInfo>.from(analysis.fields)
       ..sort((a, b) => a.name.compareTo(b.name));
-    
+
     // Add custom fields
     for (final field in sortedFields) {
       final fieldName = field.name;
       final jsonKey = _applyFieldRename(fieldName, config.fieldRename);
-      
+
       if (field.isNullable && !config.includeNullFields) {
-        buffer.writeln('      if (instance.$fieldName != null) \'$jsonKey\': ${_generateFieldSerializationNonNull(field, 'instance.')},');
+        buffer.writeln(
+            "      if (instance.$fieldName != null) '$jsonKey': ${_generateFieldSerializationNonNull(field, 'instance.')},",);
       } else {
-        buffer.writeln("      '$jsonKey': ${_generateFieldSerialization(field, 'instance.')},");
+        buffer.writeln(
+            "      '$jsonKey': ${_generateFieldSerialization(field, 'instance.')},",);
       }
     }
-    
+
     buffer.writeln('    };');
     buffer.writeln('    return json;');
-    
+
     return buffer.toString();
   }
 
   /// Generates the fromJson method body for Value classes.
-  String _generateValueFromJson(ClassAnalysis analysis, SerializationConfig config) {
+  String _generateValueFromJson(
+      ClassAnalysis analysis, SerializationConfig config,) {
     final className = analysis.className;
     final buffer = StringBuffer();
-    
+
     buffer.writeln('    try {');
     buffer.writeln('      return $className(');
-    
+
     // Sort custom fields alphabetically for deterministic ordering
     final sortedFields = List<FieldInfo>.from(analysis.fields)
       ..sort((a, b) => a.name.compareTo(b.name));
-    
+
     // Add custom field parameters
     for (final field in sortedFields) {
       final fieldName = field.name;
@@ -472,7 +507,7 @@ $fromJsonWithConfigBody
       final deserialization = _generateFieldDeserialization(field, jsonKey);
       buffer.writeln('        $fieldName: $deserialization,');
     }
-    
+
     buffer.writeln('      );');
     buffer.writeln('    } catch (e, stackTrace) {');
     buffer.writeln('      throw DeserializationException(');
@@ -480,7 +515,7 @@ $fromJsonWithConfigBody
     buffer.writeln("        expectedType: '$className',");
     buffer.writeln('      );');
     buffer.writeln('    }');
-    
+
     return buffer.toString();
   }
 
@@ -499,7 +534,7 @@ $fromJsonWithConfigBody
   /// Converts a camelCase string to snake_case.
   String _toSnakeCase(String input) {
     return input.replaceAllMapped(
-      RegExp(r'[A-Z]'),
+      RegExp('[A-Z]'),
       (match) => '_${match.group(0)!.toLowerCase()}',
     );
   }
@@ -507,41 +542,42 @@ $fromJsonWithConfigBody
   /// Converts a camelCase string to kebab-case.
   String _toKebabCase(String input) {
     return input.replaceAllMapped(
-      RegExp(r'[A-Z]'),
+      RegExp('[A-Z]'),
       (match) => '-${match.group(0)!.toLowerCase()}',
     );
   }
 
   /// Generates serialization code for a field assuming it's not null.
-  String _generateFieldSerializationNonNull(FieldInfo field, [String prefix = '']) {
+  String _generateFieldSerializationNonNull(FieldInfo field,
+      [String prefix = '',]) {
     final typeName = field.type.getDisplayString(withNullability: false);
     final fieldRef = '$prefix${field.name}';
-    
+
     // Handle special types with standardized formats
     if (typeName == 'UuidValue') {
       return '$fieldRef.toString()';
     }
-    
+
     if (typeName == 'DateTime') {
       return '$fieldRef.toIso8601String()';
     }
-    
+
     // Handle collections
     if (typeName.startsWith('List<') || typeName.startsWith('Set<')) {
       return _generateCollectionSerialization(field, fieldRef);
     }
-    
+
     if (typeName.startsWith('Map<')) {
       return _generateMapSerialization(field, fieldRef);
     }
-    
+
     // Check if it's a DDDart type (Entity or Value) - assume non-null
     if (_isDDDartType(field.type)) {
       final serializerName = '${typeName}JsonSerializer';
       // Use non-null assertion since we're in a context where we know it's not null
       return '$serializerName().toJson($fieldRef!, effectiveConfig)';
     }
-    
+
     // Default: primitive types
     return fieldRef;
   }
@@ -550,16 +586,16 @@ $fromJsonWithConfigBody
   String _generateFieldSerialization(FieldInfo field, [String prefix = '']) {
     final typeName = field.type.getDisplayString(withNullability: false);
     final fieldRef = '$prefix${field.name}';
-    
+
     // Handle special types with standardized formats
     if (typeName == 'UuidValue') {
       return '$fieldRef.toString()';
     }
-    
+
     if (typeName == 'DateTime') {
       return '$fieldRef.toIso8601String()';
     }
-    
+
     // Handle nullable special types
     if (field.isNullable) {
       if (typeName == 'UuidValue') {
@@ -568,32 +604,32 @@ $fromJsonWithConfigBody
       if (typeName == 'DateTime') {
         return '$fieldRef?.toIso8601String()';
       }
-      
+
       // Handle nullable collections
       if (typeName.startsWith('List<') || typeName.startsWith('Set<')) {
         return '$fieldRef != null ? ${_generateCollectionSerialization(field, fieldRef)} : null';
       }
-      
+
       if (typeName.startsWith('Map<')) {
         return '$fieldRef != null ? ${_generateMapSerialization(field, fieldRef)} : null';
       }
-      
+
       // Handle nullable DDDart types
       if (_isDDDartType(field.type)) {
         final serializerName = '${typeName}JsonSerializer';
         return '$fieldRef != null ? $serializerName().toJson($fieldRef, effectiveConfig) : null';
       }
     }
-    
+
     // Handle collections
     if (typeName.startsWith('List<') || typeName.startsWith('Set<')) {
       return _generateCollectionSerialization(field, fieldRef);
     }
-    
+
     if (typeName.startsWith('Map<')) {
       return _generateMapSerialization(field, fieldRef);
     }
-    
+
     // Check if it's a DDDart type (Entity or Value)
     if (_isDDDartType(field.type)) {
       final serializerName = '${typeName}JsonSerializer';
@@ -602,136 +638,139 @@ $fromJsonWithConfigBody
       }
       return '$serializerName().toJson($fieldRef, effectiveConfig)';
     }
-    
+
     // Default: primitive types
     return fieldRef;
   }
-  
+
   /// Generates deserialization code for a field.
   String _generateFieldDeserialization(FieldInfo field, String jsonKey) {
     final typeName = field.type.getDisplayString(withNullability: false);
-    
+
     // Handle special types with standardized formats
     if (typeName == 'UuidValue') {
-      return 'UuidValue.fromString(json[\'$jsonKey\'] as String)';
+      return "UuidValue.fromString(json['$jsonKey'] as String)";
     }
-    
+
     if (typeName == 'DateTime') {
-      return 'DateTime.parse(json[\'$jsonKey\'] as String)';
+      return "DateTime.parse(json['$jsonKey'] as String)";
     }
-    
+
     // Handle nullable special types
     if (field.isNullable) {
       if (typeName == 'UuidValue') {
-        return 'json[\'$jsonKey\'] != null ? UuidValue.fromString(json[\'$jsonKey\'] as String) : null';
+        return "json['$jsonKey'] != null ? UuidValue.fromString(json['$jsonKey'] as String) : null";
       }
       if (typeName == 'DateTime') {
-        return 'json[\'$jsonKey\'] != null ? DateTime.parse(json[\'$jsonKey\'] as String) : null';
+        return "json['$jsonKey'] != null ? DateTime.parse(json['$jsonKey'] as String) : null";
       }
-      
+
       // Handle nullable DDDart types
       if (_isDDDartType(field.type)) {
-        return 'json[\'$jsonKey\'] != null ? ${typeName}JsonSerializer().fromJson(json[\'$jsonKey\'], effectiveConfig) : null';
+        return "json['$jsonKey'] != null ? ${typeName}JsonSerializer().fromJson(json['$jsonKey'], effectiveConfig) : null";
       }
     }
-    
+
     // Handle collections
     if (typeName.startsWith('List<') || typeName.startsWith('Set<')) {
       return _generateCollectionDeserialization(field, jsonKey);
     }
-    
+
     if (typeName.startsWith('Map<')) {
       return _generateMapDeserialization(field, jsonKey);
     }
-    
+
     // Check if it's a DDDart type
     if (_isDDDartType(field.type)) {
-      return '${typeName}JsonSerializer().fromJson(json[\'$jsonKey\'], effectiveConfig)';
+      return "${typeName}JsonSerializer().fromJson(json['$jsonKey'], effectiveConfig)";
     }
-    
+
     // Default: primitive types with casting
-    return 'json[\'$jsonKey\'] as $typeName';
+    return "json['$jsonKey'] as $typeName";
   }
-  
+
   /// Generates serialization code for collections (List, Set).
   String _generateCollectionSerialization(FieldInfo field, String fieldRef) {
     final typeName = field.type.getDisplayString(withNullability: false);
-    final typeArgs = field.type is ParameterizedType ? 
-        (field.type as ParameterizedType).typeArguments : <DartType>[];
-    
+    final typeArgs = field.type is ParameterizedType
+        ? (field.type as ParameterizedType).typeArguments
+        : <DartType>[];
+
     if (typeArgs.isEmpty) {
       // Untyped collection, serialize as-is
       return fieldRef;
     }
-    
+
     final itemType = typeArgs.first;
     final itemTypeName = itemType.getDisplayString(withNullability: false);
-    
+
     // Handle special item types
     if (itemTypeName == 'UuidValue') {
       return '$fieldRef.map((item) => item.toString()).toList()';
     }
-    
+
     if (itemTypeName == 'DateTime') {
       return '$fieldRef.map((item) => item.toIso8601String()).toList()';
     }
-    
+
     // Handle DDDart types
     if (_isDDDartType(itemType)) {
       return '$fieldRef.map((item) => ${itemTypeName}JsonSerializer().toJson(item, effectiveConfig)).toList()';
     }
-    
+
     // Handle nested collections
-    if (itemTypeName.startsWith('List<') || itemTypeName.startsWith('Set<') || itemTypeName.startsWith('Map<')) {
+    if (itemTypeName.startsWith('List<') ||
+        itemTypeName.startsWith('Set<') ||
+        itemTypeName.startsWith('Map<')) {
       // For nested collections, we need to recursively handle them
       // This is complex, so for now we'll serialize as-is and let Dart handle it
       return fieldRef;
     }
-    
+
     // Primitive types - convert Set to List for JSON compatibility
     if (typeName.startsWith('Set<')) {
       return '$fieldRef.toList()';
     }
-    
+
     // Other primitive types - serialize as-is
     return fieldRef;
   }
 
   /// Generates serialization code for maps.
   String _generateMapSerialization(FieldInfo field, String fieldRef) {
-    final typeName = field.type.getDisplayString(withNullability: false);
-    final typeArgs = field.type is ParameterizedType ? 
-        (field.type as ParameterizedType).typeArguments : <DartType>[];
-    
+    final typeArgs = field.type is ParameterizedType
+        ? (field.type as ParameterizedType).typeArguments
+        : <DartType>[];
+
     if (typeArgs.length < 2) {
       // Untyped map, serialize as-is
       return fieldRef;
     }
-    
+
     final keyType = typeArgs[0];
     final valueType = typeArgs[1];
     final keyTypeName = keyType.getDisplayString(withNullability: false);
     final valueTypeName = valueType.getDisplayString(withNullability: false);
-    
+
     // Only handle String keys for now (JSON limitation)
     if (keyTypeName != 'String') {
       return fieldRef;
     }
-    
+
     // Handle special value types
     if (valueTypeName == 'UuidValue') {
       return '$fieldRef.map((key, value) => MapEntry(key, value.toString()))';
     }
-    
+
     if (valueTypeName == 'DateTime') {
       return '$fieldRef.map((key, value) => MapEntry(key, value.toIso8601String()))';
     }
-    
+
     // Handle DDDart value types
     if (_isDDDartType(valueType)) {
       return '$fieldRef.map((key, value) => MapEntry(key, ${valueTypeName}JsonSerializer().toJson(value, effectiveConfig)))';
     }
-    
+
     // Primitive values - serialize as-is
     return fieldRef;
   }
@@ -739,221 +778,224 @@ $fromJsonWithConfigBody
   /// Generates deserialization code for collections (List, Set).
   String _generateCollectionDeserialization(FieldInfo field, String jsonKey) {
     final typeName = field.type.getDisplayString(withNullability: false);
-    final typeArgs = field.type is ParameterizedType ? 
-        (field.type as ParameterizedType).typeArguments : <DartType>[];
-    
+    final typeArgs = field.type is ParameterizedType
+        ? (field.type as ParameterizedType).typeArguments
+        : <DartType>[];
+
     if (typeArgs.isEmpty) {
       // Untyped collection
-      return 'json[\'$jsonKey\'] as $typeName';
+      return "json['$jsonKey'] as $typeName";
     }
-    
+
     final itemType = typeArgs.first;
     final itemTypeName = itemType.getDisplayString(withNullability: false);
     final isSet = typeName.startsWith('Set<');
     final collectionMethod = isSet ? 'toSet()' : 'toList()';
-    
+
     // Handle special item types
     if (itemTypeName == 'UuidValue') {
-      return '(json[\'$jsonKey\'] as List).map((item) => UuidValue.fromString(item as String)).$collectionMethod';
+      return "(json['$jsonKey'] as List).map((item) => UuidValue.fromString(item as String)).$collectionMethod";
     }
-    
+
     if (itemTypeName == 'DateTime') {
-      return '(json[\'$jsonKey\'] as List).map((item) => DateTime.parse(item as String)).$collectionMethod';
+      return "(json['$jsonKey'] as List).map((item) => DateTime.parse(item as String)).$collectionMethod";
     }
-    
+
     // Handle DDDart types
     if (_isDDDartType(itemType)) {
-      return '(json[\'$jsonKey\'] as List).map((item) => ${itemTypeName}JsonSerializer().fromJson(item, effectiveConfig)).$collectionMethod';
+      return "(json['$jsonKey'] as List).map((item) => ${itemTypeName}JsonSerializer().fromJson(item, effectiveConfig)).$collectionMethod";
     }
-    
+
     // Handle primitive types
     if (_isPrimitiveType(itemTypeName)) {
-      return '(json[\'$jsonKey\'] as List).map((item) => item as $itemTypeName).$collectionMethod';
+      return "(json['$jsonKey'] as List).map((item) => item as $itemTypeName).$collectionMethod";
     }
-    
+
     // Default case
-    return 'json[\'$jsonKey\'] as $typeName';
+    return "json['$jsonKey'] as $typeName";
   }
 
   /// Generates deserialization code for maps.
   String _generateMapDeserialization(FieldInfo field, String jsonKey) {
-    final typeName = field.type.getDisplayString(withNullability: false);
-    final typeArgs = field.type is ParameterizedType ? 
-        (field.type as ParameterizedType).typeArguments : <DartType>[];
-    
+    final typeArgs = field.type is ParameterizedType
+        ? (field.type as ParameterizedType).typeArguments
+        : <DartType>[];
+
     if (typeArgs.length < 2) {
       // Untyped map - use Map.from to handle dynamic keys
-      return 'Map.from(json[\'$jsonKey\'] as Map)';
+      return "Map.from(json['$jsonKey'] as Map)";
     }
-    
+
     final keyType = typeArgs[0];
     final valueType = typeArgs[1];
     final keyTypeName = keyType.getDisplayString(withNullability: false);
     final valueTypeName = valueType.getDisplayString(withNullability: false);
-    
+
     // Only handle String keys for now (JSON limitation)
     if (keyTypeName != 'String') {
-      return 'Map.from(json[\'$jsonKey\'] as Map)';
+      return "Map.from(json['$jsonKey'] as Map)";
     }
-    
+
     // Handle special value types
     if (valueTypeName == 'UuidValue') {
-      return 'Map<String, dynamic>.from(json[\'$jsonKey\'] as Map).map((key, value) => MapEntry(key, UuidValue.fromString(value as String)))';
+      return "Map<String, dynamic>.from(json['$jsonKey'] as Map).map((key, value) => MapEntry(key, UuidValue.fromString(value as String)))";
     }
-    
+
     if (valueTypeName == 'DateTime') {
-      return 'Map<String, dynamic>.from(json[\'$jsonKey\'] as Map).map((key, value) => MapEntry(key, DateTime.parse(value as String)))';
+      return "Map<String, dynamic>.from(json['$jsonKey'] as Map).map((key, value) => MapEntry(key, DateTime.parse(value as String)))";
     }
-    
+
     // Handle DDDart value types
     if (_isDDDartType(valueType)) {
-      return 'Map<String, dynamic>.from(json[\'$jsonKey\'] as Map).map((key, value) => MapEntry(key, ${valueTypeName}JsonSerializer().fromJson(value, effectiveConfig)))';
+      return "Map<String, dynamic>.from(json['$jsonKey'] as Map).map((key, value) => MapEntry(key, ${valueTypeName}JsonSerializer().fromJson(value, effectiveConfig)))";
     }
-    
+
     // Handle primitive value types (including dynamic)
     if (_isPrimitiveType(valueTypeName) || valueTypeName == 'dynamic') {
-      return 'Map<String, dynamic>.from(json[\'$jsonKey\'] as Map).map((key, value) => MapEntry(key, value as $valueTypeName))';
+      return "Map<String, dynamic>.from(json['$jsonKey'] as Map).map((key, value) => MapEntry(key, value as $valueTypeName))";
     }
-    
+
     // Default case - use Map.from for safe casting
-    return 'Map<String, dynamic>.from(json[\'$jsonKey\'] as Map)';
+    return "Map<String, dynamic>.from(json['$jsonKey'] as Map)";
   }
 
   /// Generates deserialization code for collections with runtime configuration.
-  String _generateCollectionDeserializationWithConfig(FieldInfo field, String jsonAccess) {
+  String _generateCollectionDeserializationWithConfig(
+      FieldInfo field, String jsonAccess,) {
     final typeName = field.type.getDisplayString(withNullability: false);
-    final typeArgs = field.type is ParameterizedType ? 
-        (field.type as ParameterizedType).typeArguments : <DartType>[];
-    
+    final typeArgs = field.type is ParameterizedType
+        ? (field.type as ParameterizedType).typeArguments
+        : <DartType>[];
+
     if (typeArgs.isEmpty) {
       // Untyped collection
       return '$jsonAccess as $typeName';
     }
-    
+
     final itemType = typeArgs.first;
     final itemTypeName = itemType.getDisplayString(withNullability: false);
     final isSet = typeName.startsWith('Set<');
     final collectionMethod = isSet ? 'toSet()' : 'toList()';
-    
+
     // Handle special item types
     if (itemTypeName == 'UuidValue') {
       return '($jsonAccess as List).map((item) => UuidValue.fromString(item as String)).$collectionMethod';
     }
-    
+
     if (itemTypeName == 'DateTime') {
       return '($jsonAccess as List).map((item) => DateTime.parse(item as String)).$collectionMethod';
     }
-    
+
     // Handle DDDart types
     if (_isDDDartType(itemType)) {
       return '($jsonAccess as List).map((item) => ${itemTypeName}JsonSerializer().fromJson(item as Map<String, dynamic>, effectiveConfig)).$collectionMethod';
     }
-    
+
     // Handle primitive types
     if (_isPrimitiveType(itemTypeName)) {
       return '($jsonAccess as List).map((item) => item as $itemTypeName).$collectionMethod';
     }
-    
+
     // Default case
     return '$jsonAccess as $typeName';
   }
 
   /// Generates deserialization code for maps with runtime configuration.
-  String _generateMapDeserializationWithConfig(FieldInfo field, String jsonAccess) {
-    final typeName = field.type.getDisplayString(withNullability: false);
-    final typeArgs = field.type is ParameterizedType ? 
-        (field.type as ParameterizedType).typeArguments : <DartType>[];
-    
+  String _generateMapDeserializationWithConfig(
+      FieldInfo field, String jsonAccess,) {
+    final typeArgs = field.type is ParameterizedType
+        ? (field.type as ParameterizedType).typeArguments
+        : <DartType>[];
+
     if (typeArgs.length < 2) {
       // Untyped map - use Map.from to handle dynamic keys
       return 'Map.from($jsonAccess as Map)';
     }
-    
+
     final keyType = typeArgs[0];
     final valueType = typeArgs[1];
     final keyTypeName = keyType.getDisplayString(withNullability: false);
     final valueTypeName = valueType.getDisplayString(withNullability: false);
-    
+
     // Only handle String keys for now (JSON limitation)
     if (keyTypeName != 'String') {
       return 'Map.from($jsonAccess as Map)';
     }
-    
+
     // Handle special value types
     if (valueTypeName == 'UuidValue') {
       return 'Map<String, dynamic>.from($jsonAccess as Map).map((key, value) => MapEntry(key, UuidValue.fromString(value as String)))';
     }
-    
+
     if (valueTypeName == 'DateTime') {
       return 'Map<String, dynamic>.from($jsonAccess as Map).map((key, value) => MapEntry(key, DateTime.parse(value as String)))';
     }
-    
+
     // Handle DDDart value types
     if (_isDDDartType(valueType)) {
       return 'Map<String, dynamic>.from($jsonAccess as Map).map((key, value) => MapEntry(key, ${valueTypeName}JsonSerializer().fromJson(value as Map<String, dynamic>, effectiveConfig)))';
     }
-    
+
     // Handle primitive value types (including dynamic)
     if (_isPrimitiveType(valueTypeName) || valueTypeName == 'dynamic') {
       return 'Map<String, dynamic>.from($jsonAccess as Map).map((key, value) => MapEntry(key, value as $valueTypeName))';
     }
-    
+
     // Default case - use Map.from for safe casting
     return 'Map<String, dynamic>.from($jsonAccess as Map)';
   }
 
   /// Checks if a type name represents a primitive type.
   bool _isPrimitiveType(String typeName) {
-    return ['String', 'int', 'double', 'bool', 'num', 'dynamic'].contains(typeName);
+    return ['String', 'int', 'double', 'bool', 'num', 'dynamic']
+        .contains(typeName);
   }
 
   /// Checks if a type is a DDDart type (AggregateRoot, Entity, or Value).
   bool _isDDDartType(DartType type) {
     final element = type.element;
     if (element is! ClassElement) return false;
-    
+
     // Walk up the inheritance hierarchy
     ClassElement? current = element;
     while (current != null) {
       final supertype = current.supertype;
       if (supertype == null) break;
-      
+
       final supertypeName = supertype.element.name;
       if (['AggregateRoot', 'Entity', 'Value'].contains(supertypeName)) {
         return true;
       }
-      
+
       current = supertype.element as ClassElement?;
     }
-    
+
     return false;
   }
 }
 
 /// Represents the analysis result of a class.
 class ClassAnalysis {
-  final ClassType type;
-  final String className;
-  final List<FieldInfo> fields;
-  
   const ClassAnalysis({
     required this.type,
     required this.className,
     required this.fields,
   });
+  final ClassType type;
+  final String className;
+  final List<FieldInfo> fields;
 }
 
 /// Represents information about a field.
 class FieldInfo {
-  final String name;
-  final DartType type;
-  final bool isNullable;
-  
   const FieldInfo({
     required this.name,
     required this.type,
     required this.isNullable,
   });
+  final String name;
+  final DartType type;
+  final bool isNullable;
 }
 
 /// Enumeration of class types for serialization.

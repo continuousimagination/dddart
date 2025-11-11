@@ -9,7 +9,7 @@ import 'lib/handlers/exception_handlers.dart';
 import 'lib/exceptions/user_exceptions.dart';
 
 /// Example HTTP CRUD API application
-/// 
+///
 /// This example demonstrates:
 /// - Defining an aggregate root with child entities and value objects
 /// - Creating a JSON serializer
@@ -70,36 +70,36 @@ void main() async {
 }
 
 /// Seeds the repository with sample data for demonstration
-/// 
+///
 /// SAMPLE DATA SEEDING:
 /// This function populates the repository with test data so you can immediately
 /// try out the API without having to create users first.
-/// 
+///
 /// DATA DESIGN:
 /// The sample data is designed to demonstrate various features:
-/// 
+///
 /// 1. QUERY HANDLER TESTING:
 ///    - Two users named "John" (Doe and Anderson) to test firstName filter
 ///    - Each user has unique email to test email filter
 ///    - GET /users?firstName=John should return 2 users
 ///    - GET /users?email=john.doe@example.com should return 1 user
-/// 
+///
 /// 2. AGGREGATE STRUCTURE:
 ///    - All users have Address (required value object)
 ///    - Some users have Profile (optional child entity)
 ///    - Bob and John Anderson have no profile to show optional fields work
-/// 
+///
 /// 3. PAGINATION TESTING:
 ///    - 5 users total allows testing pagination
 ///    - Default take=10 returns all 5
 ///    - GET /users?skip=2&take=2 returns users 3-4
 ///    - GET /users?skip=10 returns empty array
-/// 
+///
 /// 4. VARIED DATA:
 ///    - Different cities/states for realistic data
 ///    - Different bio lengths and content
 ///    - Mix of users with and without profiles
-/// 
+///
 /// PRODUCTION CONSIDERATIONS:
 /// - In production, use database migrations or seed scripts
 /// - Don't seed data in application startup
@@ -125,7 +125,7 @@ Future<void> _seedSampleData(Repository<User> repository) async {
         phoneNumber: '+1-555-0101',
       ),
     ),
-    
+
     // User 2: Jane Smith - has profile, different from John for testing
     User(
       firstName: 'Jane',
@@ -144,7 +144,7 @@ Future<void> _seedSampleData(Repository<User> repository) async {
         phoneNumber: '+1-555-0102',
       ),
     ),
-    
+
     // User 3: Bob Johnson - NO profile (demonstrates optional child entity)
     User(
       firstName: 'Bob',
@@ -159,7 +159,7 @@ Future<void> _seedSampleData(Repository<User> repository) async {
       ),
       // profile is null - demonstrates optional child entity
     ),
-    
+
     // User 4: Alice Williams - has profile, different location
     User(
       firstName: 'Alice',
@@ -178,7 +178,7 @@ Future<void> _seedSampleData(Repository<User> repository) async {
         phoneNumber: '+1-555-0104',
       ),
     ),
-    
+
     // User 5: John Anderson - NO profile, second "John" for firstName query testing
     // This demonstrates that firstName query should return multiple results
     User(
@@ -204,6 +204,7 @@ Future<void> _seedSampleData(Repository<User> repository) async {
 
   print('Seeded ${users.length} sample users');
   print('  - 2 users named "John" (for firstName query testing)');
-  print('  - 3 users with profiles, 2 without (demonstrates optional child entity)');
+  print(
+      '  - 3 users with profiles, 2 without (demonstrates optional child entity)');
   print('  - All users have addresses (demonstrates required value object)');
 }

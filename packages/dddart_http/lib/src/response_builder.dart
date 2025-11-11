@@ -1,7 +1,8 @@
 import 'dart:convert';
-import 'package:shelf/shelf.dart';
+
 import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
+import 'package:shelf/shelf.dart';
 
 /// Constructs HTTP responses with proper status codes and serialization.
 ///
@@ -101,10 +102,11 @@ class ResponseBuilder<T extends AggregateRoot> {
     }
 
     // Serialize each aggregate and collect as a list
-    final serializedList = aggregates.map((a) => serializer.serialize(a)).toList();
+    final serializedList =
+        aggregates.map((a) => serializer.serialize(a)).toList();
 
     // Parse each serialized string as JSON and encode the array
-    final jsonList = serializedList.map((s) => jsonDecode(s)).toList();
+    final jsonList = serializedList.map(jsonDecode).toList();
 
     return Response.ok(
       jsonEncode(jsonList),

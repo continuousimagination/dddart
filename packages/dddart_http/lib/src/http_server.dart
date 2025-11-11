@@ -1,8 +1,8 @@
 import 'dart:io' as io;
-import 'package:shelf/shelf.dart';
+
+import 'package:dddart_http/src/crud_resource.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_router/shelf_router.dart';
-import 'crud_resource.dart';
 
 /// Manages the shelf HTTP server lifecycle and route registration.
 ///
@@ -76,33 +76,24 @@ class HttpServer {
     // Register routes for each resource
     for (final resource in _resources) {
       // GET /{path}/:id → resource.handleGetById
-      router.get('${resource.path}/<id>', (Request request, String id) {
-        return resource.handleGetById(request, id);
-      });
+      router.get('${resource.path}/<id>', resource.handleGetById);
 
       // GET /{path} → resource.handleQuery
-      router.get(resource.path, (Request request) {
-        return resource.handleQuery(request);
-      });
+      router.get(resource.path, resource.handleQuery);
 
       // POST /{path} → resource.handleCreate
-      router.post(resource.path, (Request request) {
-        return resource.handleCreate(request);
-      });
+      router.post(resource.path, resource.handleCreate);
 
       // PUT /{path}/:id → resource.handleUpdate
-      router.put('${resource.path}/<id>', (Request request, String id) {
-        return resource.handleUpdate(request, id);
-      });
+      router.put('${resource.path}/<id>', resource.handleUpdate);
 
       // DELETE /{path}/:id → resource.handleDelete
-      router.delete('${resource.path}/<id>', (Request request, String id) {
-        return resource.handleDelete(request, id);
-      });
+      router.delete('${resource.path}/<id>', resource.handleDelete);
     }
 
     // Start shelf server with router on configured port
-    _shelfServer = await shelf_io.serve(router, io.InternetAddress.anyIPv4, port);
+    _shelfServer =
+        await shelf_io.serve(router.call, io.InternetAddress.anyIPv4, port);
   }
 
   /// Stops the HTTP server

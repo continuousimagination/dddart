@@ -4,26 +4,38 @@ import 'package:test/test.dart';
 
 // Test domain events for serialization testing
 class UserRegisteredEvent extends DomainEvent {
-  final String email;
-  final String organizationId;
-  final String fullName;
-
   UserRegisteredEvent({
     required UuidValue userId,
     required this.email,
     required this.organizationId,
     required this.fullName,
-    UuidValue? eventId,
-    DateTime? occurredAt,
+    super.eventId,
+    super.occurredAt,
   }) : super(
           aggregateId: userId,
-          eventId: eventId,
-          occurredAt: occurredAt,
           context: {
             'organizationId': organizationId,
             'email': email,
           },
         );
+
+  factory UserRegisteredEvent.fromJson(Map<String, dynamic> json) {
+    return UserRegisteredEvent(
+      userId: UuidValue.fromString(json['aggregateId'] as String),
+      email: json['email'] as String,
+      organizationId: json['organizationId'] as String,
+      fullName: json['fullName'] as String,
+      eventId: json['eventId'] != null
+          ? UuidValue.fromString(json['eventId'] as String)
+          : null,
+      occurredAt: json['occurredAt'] != null
+          ? DateTime.parse(json['occurredAt'] as String)
+          : null,
+    );
+  }
+  final String email;
+  final String organizationId;
+  final String fullName;
 
   // Manual serialization methods for testing
   Map<String, dynamic> toJson() {
@@ -37,41 +49,19 @@ class UserRegisteredEvent extends DomainEvent {
       'fullName': fullName,
     };
   }
-
-  factory UserRegisteredEvent.fromJson(Map<String, dynamic> json) {
-    return UserRegisteredEvent(
-      userId: UuidValue.fromString(json['aggregateId'] as String),
-      email: json['email'] as String,
-      organizationId: json['organizationId'] as String,
-      fullName: json['fullName'] as String,
-      eventId: json['eventId'] != null 
-          ? UuidValue.fromString(json['eventId'] as String)
-          : null,
-      occurredAt: json['occurredAt'] != null
-          ? DateTime.parse(json['occurredAt'] as String)
-          : null,
-    );
-  }
 }
 
 class OrderPlacedEvent extends DomainEvent {
-  final String customerId;
-  final double totalAmount;
-  final String currency;
-  final int itemCount;
-
   OrderPlacedEvent({
     required UuidValue orderId,
     required this.customerId,
     required this.totalAmount,
     required this.currency,
     required this.itemCount,
-    UuidValue? eventId,
-    DateTime? occurredAt,
+    super.eventId,
+    super.occurredAt,
   }) : super(
           aggregateId: orderId,
-          eventId: eventId,
-          occurredAt: occurredAt,
           context: {
             'customerId': customerId,
             'totalAmount': totalAmount,
@@ -79,19 +69,6 @@ class OrderPlacedEvent extends DomainEvent {
             'itemCount': itemCount,
           },
         );
-
-  Map<String, dynamic> toJson() {
-    return {
-      'eventId': eventId.uuid,
-      'occurredAt': occurredAt.toIso8601String(),
-      'aggregateId': aggregateId.uuid,
-      'context': context,
-      'customerId': customerId,
-      'totalAmount': totalAmount,
-      'currency': currency,
-      'itemCount': itemCount,
-    };
-  }
 
   factory OrderPlacedEvent.fromJson(Map<String, dynamic> json) {
     return OrderPlacedEvent(
@@ -108,6 +85,23 @@ class OrderPlacedEvent extends DomainEvent {
           : null,
     );
   }
+  final String customerId;
+  final double totalAmount;
+  final String currency;
+  final int itemCount;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'eventId': eventId.uuid,
+      'occurredAt': occurredAt.toIso8601String(),
+      'aggregateId': aggregateId.uuid,
+      'context': context,
+      'customerId': customerId,
+      'totalAmount': totalAmount,
+      'currency': currency,
+      'itemCount': itemCount,
+    };
+  }
 }
 
 void main() {
@@ -120,7 +114,7 @@ void main() {
           organizationId: 'org-456',
           fullName: 'Test User',
           eventId: UuidValue.fromString('11111111-2222-3333-4444-555555555555'),
-          occurredAt: DateTime(2023, 6, 15, 10, 30, 0),
+          occurredAt: DateTime(2023, 6, 15, 10, 30),
         );
 
         final json = event.toJson();
@@ -149,7 +143,7 @@ void main() {
 
         expect(event.eventId, equals('event-789'));
         expect(event.aggregateId, equals('user-123'));
-        expect(event.occurredAt, equals(DateTime(2023, 6, 15, 10, 30, 0)));
+        expect(event.occurredAt, equals(DateTime(2023, 6, 15, 10, 30)));
         expect(event.email, equals('test@example.com'));
         expect(event.organizationId, equals('org-456'));
         expect(event.fullName, equals('Test User'));
@@ -179,7 +173,7 @@ void main() {
           organizationId: 'org-456',
           fullName: 'Test User',
           eventId: UuidValue.fromString('11111111-2222-3333-4444-555555555555'),
-          occurredAt: DateTime(2023, 6, 15, 10, 30, 0),
+          occurredAt: DateTime(2023, 6, 15, 10, 30),
         );
 
         final json = original.toJson();
@@ -203,7 +197,7 @@ void main() {
           currency: 'USD',
           itemCount: 3,
           eventId: UuidValue.fromString('11111111-2222-3333-4444-555555555555'),
-          occurredAt: DateTime(2023, 6, 15, 10, 30, 0),
+          occurredAt: DateTime(2023, 6, 15, 10, 30),
         );
 
         final json = original.toJson();
@@ -273,7 +267,8 @@ void main() {
     });
 
     group('serialization compatibility with EventBus', () {
-      test('serialized events can be published and received through EventBus', () async {
+      test('serialized events can be published and received through EventBus',
+          () async {
         final eventBus = EventBus();
         final receivedEvents = <UserRegisteredEvent>[];
 
@@ -303,7 +298,8 @@ void main() {
         await eventBus.close();
       });
 
-      test('multiple serialized event types can be published to same EventBus', () async {
+      test('multiple serialized event types can be published to same EventBus',
+          () async {
         final eventBus = EventBus();
         final userEvents = <UserRegisteredEvent>[];
         final orderEvents = <OrderPlacedEvent>[];
@@ -390,12 +386,14 @@ class TestAggregate extends AggregateRoot {
   TestAggregate({super.id});
 
   void registerUser(String email, String organizationId, String fullName) {
-    raiseEvent(UserRegisteredEvent(
-      userId: id,
-      email: email,
-      organizationId: organizationId,
-      fullName: fullName,
-    ));
+    raiseEvent(
+      UserRegisteredEvent(
+        userId: id,
+        email: email,
+        organizationId: organizationId,
+        fullName: fullName,
+      ),
+    );
     touch();
   }
 }

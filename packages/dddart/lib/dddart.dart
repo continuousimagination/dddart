@@ -4,18 +4,6 @@
 /// implement DDD principles in their applications.
 library dddart;
 
-// Export all public classes
-export 'src/aggregate_root.dart';
-export 'src/domain_event.dart';
-export 'src/entity.dart';
-export 'src/event_bus.dart';
-export 'src/file_log_handler.dart';
-export 'src/in_memory_repository.dart';
-export 'src/repository.dart';
-export 'src/repository_exception.dart';
-export 'src/value.dart';
-export 'src/uuid_value.dart';
-
 /// ## Logging Integration
 ///
 /// DDDart integrates with the official Dart [logging](https://pub.dev/packages/logging)
@@ -64,4 +52,16 @@ export 'src/uuid_value.dart';
 ///
 /// See the [logging package documentation](https://pub.dev/packages/logging)
 /// for complete configuration options.
-export 'package:logging/logging.dart' show Logger, Level;
+export 'package:logging/logging.dart' show Level, Logger;
+
+// Export all public classes
+export 'src/aggregate_root.dart';
+export 'src/domain_event.dart';
+export 'src/entity.dart';
+export 'src/event_bus.dart';
+export 'src/file_log_handler.dart';
+export 'src/in_memory_repository.dart';
+export 'src/repository.dart';
+export 'src/repository_exception.dart';
+export 'src/uuid_value.dart';
+export 'src/value.dart';

@@ -38,7 +38,8 @@ class Address extends Value {
   }
 
   /// Check if this is a US address
-  bool get isUSAddress => country.toUpperCase() == 'USA' || country.toUpperCase() == 'US';
+  bool get isUSAddress =>
+      country.toUpperCase() == 'USA' || country.toUpperCase() == 'US';
 
   /// Get the full city/state/zip line
   String get cityStateZip => '$city, $state $zipCode';

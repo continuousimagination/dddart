@@ -8,7 +8,7 @@ import 'product_info.dart';
 part 'order_item.g.dart';
 
 /// Value object representing an item within an order.
-/// 
+///
 /// Changed from Entity to Value to make the example work.
 /// In a real system, you might keep this as an Entity and handle
 /// the serialization inline within the Order aggregate.
@@ -34,10 +34,12 @@ class OrderItem extends Value {
   bool get isValid => quantity > 0 && unitPrice.isPositive;
 
   /// Get a description of this order item
-  String get description => '${product.name} x $quantity @ ${unitPrice.toString()}';
+  String get description =>
+      '${product.name} x $quantity @ ${unitPrice.toString()}';
 
   @override
-  String toString() => 'OrderItem(${product.sku}, qty: $quantity, price: $unitPrice)';
+  String toString() =>
+      'OrderItem(${product.sku}, qty: $quantity, price: $unitPrice)';
 
   /// Create a copy with updated quantity
   OrderItem withQuantity(int newQuantity) {

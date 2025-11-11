@@ -1,12 +1,12 @@
 import 'dart:convert';
-import 'package:shelf/shelf.dart';
-import 'package:logging/logging.dart';
+
 import 'package:dddart/dddart.dart';
+import 'package:dddart_http/src/error_mapper.dart';
+import 'package:dddart_http/src/exceptions.dart';
+import 'package:dddart_http/src/query_handler.dart';
+import 'package:dddart_http/src/response_builder.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
-import 'error_mapper.dart';
-import 'response_builder.dart';
-import 'query_handler.dart';
-import 'exceptions.dart';
+import 'package:shelf/shelf.dart';
 
 /// Main class that handles HTTP CRUD operations for an aggregate root.
 ///
@@ -65,7 +65,8 @@ class CrudResource<T extends AggregateRoot> {
 
     // Validate serializers map is not empty
     if (serializers.isEmpty) {
-      throw ArgumentError('serializers map cannot be empty. At least one serializer must be provided.');
+      throw ArgumentError(
+          'serializers map cannot be empty. At least one serializer must be provided.',);
     }
   }
 
@@ -126,7 +127,7 @@ class CrudResource<T extends AggregateRoot> {
   ///
   /// Returns: A Response with status 200 and serialized aggregate, or error response
   Future<Response> handleGetById(Request request, String id) async {
-    _logger.info('GET /$path/$id - Retrieving ${T.toString()}');
+    _logger.info('GET /$path/$id - Retrieving $T');
     try {
       final uuid = UuidValue.fromString(id);
       final aggregate = await repository.getById(uuid);
@@ -154,8 +155,9 @@ class CrudResource<T extends AggregateRoot> {
   ///
   /// Returns: A Response with status 200 and serialized array, or error response
   Future<Response> handleQuery(Request request) async {
-    final queryString = request.url.query.isEmpty ? '' : '?${request.url.query}';
-    _logger.info('GET /$path$queryString - Querying ${T.toString()}');
+    final queryString =
+        request.url.query.isEmpty ? '' : '?${request.url.query}';
+    _logger.info('GET /$path$queryString - Querying $T');
     try {
       final queryParams = request.url.queryParameters;
       final pagination = _parsePagination(queryParams);
@@ -222,12 +224,13 @@ class CrudResource<T extends AggregateRoot> {
   ///
   /// Returns: A Response with status 201 and serialized aggregate, or error response
   Future<Response> handleCreate(Request request) async {
-    _logger.info('POST /$path - Creating ${T.toString()}');
+    _logger.info('POST /$path - Creating $T');
     try {
-      final contentTypeHeader = request.headers['content-type'] ?? serializers.keys.first;
+      final contentTypeHeader =
+          request.headers['content-type'] ?? serializers.keys.first;
       // Extract media type, removing charset and other parameters
       final contentType = _extractMediaType(contentTypeHeader);
-      
+
       // Case-insensitive lookup
       Serializer<T>? requestSerializer;
       for (final entry in serializers.entries) {
@@ -263,7 +266,8 @@ class CrudResource<T extends AggregateRoot> {
       }
       await repository.save(aggregate);
 
-      final responseSerializerEntry = _selectSerializer(request.headers['accept']);
+      final responseSerializerEntry =
+          _selectSerializer(request.headers['accept']);
       final response = _responseBuilder.created(
         aggregate,
         responseSerializerEntry.serializer,
@@ -287,12 +291,13 @@ class CrudResource<T extends AggregateRoot> {
   ///
   /// Returns: A Response with status 200 and serialized aggregate, or error response
   Future<Response> handleUpdate(Request request, String id) async {
-    _logger.info('PUT /$path/$id - Updating ${T.toString()}');
+    _logger.info('PUT /$path/$id - Updating $T');
     try {
-      final contentTypeHeader = request.headers['content-type'] ?? serializers.keys.first;
+      final contentTypeHeader =
+          request.headers['content-type'] ?? serializers.keys.first;
       // Extract media type, removing charset and other parameters
       final contentType = _extractMediaType(contentTypeHeader);
-      
+
       // Case-insensitive lookup
       Serializer<T>? requestSerializer;
       for (final entry in serializers.entries) {
@@ -328,7 +333,8 @@ class CrudResource<T extends AggregateRoot> {
       }
       await repository.save(aggregate);
 
-      final responseSerializerEntry = _selectSerializer(request.headers['accept']);
+      final responseSerializerEntry =
+          _selectSerializer(request.headers['accept']);
       final response = _responseBuilder.ok(
         aggregate,
         responseSerializerEntry.serializer,
@@ -351,7 +357,7 @@ class CrudResource<T extends AggregateRoot> {
   ///
   /// Returns: A Response with status 204, or error response
   Future<Response> handleDelete(Request request, String id) async {
-    _logger.info('DELETE /$path/$id - Deleting ${T.toString()}');
+    _logger.info('DELETE /$path/$id - Deleting $T');
     try {
       final uuid = UuidValue.fromString(id);
       await repository.deleteById(uuid);
@@ -367,7 +373,7 @@ class CrudResource<T extends AggregateRoot> {
   ///
   /// Returns first serializer (default) if Accept is */*, missing, or empty.
   /// Throws UnsupportedMediaTypeException if Accept header specifies unsupported type.
-  /// 
+  ///
   /// Edge cases handled:
   /// - Parses quality values (q=) and selects highest priority supported type
   /// - Case-insensitive media type matching
@@ -387,9 +393,9 @@ class CrudResource<T extends AggregateRoot> {
     for (final part in acceptHeader.split(',')) {
       final segments = part.trim().split(';');
       final mediaType = segments.first.trim();
-      
+
       // Parse quality value (default to 1.0)
-      double quality = 1.0;
+      var quality = 1.0;
       for (var i = 1; i < segments.length; i++) {
         final param = segments[i].trim();
         if (param.startsWith('q=')) {
@@ -397,10 +403,10 @@ class CrudResource<T extends AggregateRoot> {
           break;
         }
       }
-      
+
       acceptedTypes.add(_AcceptType(mediaType, quality));
     }
-    
+
     // Sort by quality (highest first)
     acceptedTypes.sort((a, b) => b.quality.compareTo(a.quality));
 
@@ -410,7 +416,7 @@ class CrudResource<T extends AggregateRoot> {
         final firstEntry = serializers.entries.first;
         return _SerializerEntry(firstEntry.value, firstEntry.key);
       }
-      
+
       // Case-insensitive matching
       for (final entry in serializers.entries) {
         if (entry.key.toLowerCase() == acceptedType.mediaType.toLowerCase()) {
@@ -435,7 +441,7 @@ class CrudResource<T extends AggregateRoot> {
   /// Returns: A Response with appropriate status code and error body
   Response _handleException(Object error, StackTrace stackTrace) {
     _logger.severe('Exception during request handling', error, stackTrace);
-    
+
     // Check custom handlers first
     final customHandler = customExceptionHandlers[error.runtimeType];
     if (customHandler != null) {
@@ -474,22 +480,22 @@ class CrudResource<T extends AggregateRoot> {
   _PaginationParams _parsePagination(Map<String, String> queryParams) {
     var skip = int.tryParse(queryParams['skip'] ?? '') ?? defaultSkip;
     var take = int.tryParse(queryParams['take'] ?? '') ?? defaultTake;
-    
+
     // Handle negative skip - treat as zero
     if (skip < 0) {
       skip = 0;
     }
-    
+
     // Handle negative take - treat as defaultTake
     if (take < 0) {
       take = defaultTake;
     }
-    
+
     // Enforce maxTake limit
     if (take > maxTake) {
       take = maxTake;
     }
-    
+
     return _PaginationParams(skip, take);
   }
 
@@ -509,16 +515,16 @@ class CrudResource<T extends AggregateRoot> {
     // For other repository types, you should register a query handler
     if (repository is InMemoryRepository<T>) {
       final allItems = (repository as InMemoryRepository<T>).getAll();
-      
+
       // Handle zero take - return empty array
       if (take == 0) {
         return QueryResult([], totalCount: allItems.length);
       }
-      
+
       final paginatedItems = allItems.skip(skip).take(take).toList();
       return QueryResult(paginatedItems, totalCount: allItems.length);
     }
-    
+
     throw UnsupportedError(
       'Repository does not support getAll(). '
       'Please register a query handler for collection queries.',

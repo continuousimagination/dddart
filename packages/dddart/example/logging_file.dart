@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:logging/logging.dart';
 import 'package:dddart/dddart.dart';
 
 import 'lib/user_aggregate.dart';

@@ -1,12 +1,13 @@
-import 'package:test/test.dart';
-import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
+import 'package:test/test.dart';
+
 import 'test_models.dart';
 
 void main() {
   group('Error Handling and Edge Cases', () {
     group('Missing required fields', () {
-      test('throws DeserializationException when required field is missing', () {
+      test('throws DeserializationException when required field is missing',
+          () {
         final json = {
           'email': 'incomplete@example.com',
           // Missing 'name' field
@@ -22,7 +23,8 @@ void main() {
         );
       });
 
-      test('throws descriptive error for missing AggregateRoot base fields', () {
+      test('throws descriptive error for missing AggregateRoot base fields',
+          () {
         final json = {
           'name': 'Test User',
           'email': 'test@example.com',
@@ -186,7 +188,8 @@ void main() {
         );
 
         expect(
-          () => TestUserJsonSerializer().fromJson(['not', 'a', 'map'] as dynamic),
+          () =>
+              TestUserJsonSerializer().fromJson(['not', 'a', 'map'] as dynamic),
           throwsA(isA<DeserializationException>()),
         );
       });
@@ -233,7 +236,7 @@ void main() {
         } catch (e) {
           expect(e, isA<DeserializationException>());
           final exception = e as DeserializationException;
-          
+
           // Verify error message contains useful information
           expect(exception.message, isNotEmpty);
           expect(exception.message, contains('TestUser'));
@@ -277,9 +280,10 @@ void main() {
 
         expect(missingFieldError, isNotNull);
         expect(wrongTypeError, isNotNull);
-        
+
         // Both should be DeserializationExceptions but with different messages
-        expect(missingFieldError!.message, isNot(equals(wrongTypeError!.message)));
+        expect(
+            missingFieldError!.message, isNot(equals(wrongTypeError!.message)),);
       });
 
       test('nested deserialization errors provide context', () {
@@ -404,7 +408,8 @@ void main() {
       });
 
       test('handles special characters in strings correctly', () {
-        final specialString = 'Test with émojis 🎉 and ñ special chars & symbols!';
+        const specialString =
+            'Test with émojis 🎉 and ñ special chars & symbols!';
         final json = {
           'name': specialString,
           'email': 'special@example.com',
@@ -433,8 +438,10 @@ void main() {
         };
 
         final user = TestUserJsonSerializer().fromJson(json);
-        expect(user.createdAt, equals(DateTime.parse('1970-01-01T00:00:00.000Z')));
-        expect(user.updatedAt, equals(DateTime.parse('2099-12-31T23:59:59.999Z')));
+        expect(
+            user.createdAt, equals(DateTime.parse('1970-01-01T00:00:00.000Z')),);
+        expect(
+            user.updatedAt, equals(DateTime.parse('2099-12-31T23:59:59.999Z')),);
       });
     });
 
@@ -471,9 +478,10 @@ void main() {
         expect(user.name, equals('Valid User'));
       });
 
-      test('multiple consecutive errors do not affect subsequent operations', () {
+      test('multiple consecutive errors do not affect subsequent operations',
+          () {
         // Cause multiple errors
-        for (int i = 0; i < 5; i++) {
+        for (var i = 0; i < 5; i++) {
           expect(
             () => TestUserJsonSerializer().fromJson({'invalid': 'data$i'}),
             throwsA(isA<DeserializationException>()),
@@ -491,7 +499,7 @@ void main() {
 
         final user = TestUserJsonSerializer().fromJson(validJson);
         expect(user.name, equals('Post Error User'));
-        
+
         final serializer = TestUserJsonSerializer();
         final json = serializer.toJson(user);
         final roundTrip = serializer.fromJson(json);

@@ -1,10 +1,11 @@
 import 'dart:convert';
-import 'package:test/test.dart';
-import 'package:shelf/shelf.dart';
+
 import 'package:dddart/dddart.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:dddart_http/src/crud_resource.dart';
 import 'package:dddart_http/src/query_handler.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
+import 'package:shelf/shelf.dart';
+import 'package:test/test.dart';
 
 // Test aggregate root
 class TestUser extends AggregateRoot {
@@ -80,11 +81,13 @@ void main() {
           repository: repository,
           serializers: {}, // Empty map
         ),
-        throwsA(isA<ArgumentError>().having(
-          (e) => e.message,
-          'message',
-          contains('serializers map cannot be empty'),
-        )),
+        throwsA(
+          isA<ArgumentError>().having(
+            (e) => e.message,
+            'message',
+            contains('serializers map cannot be empty'),
+          ),
+        ),
       );
     });
 
@@ -96,11 +99,13 @@ void main() {
           repository: repository,
           serializers: {'application/json': serializer},
         ),
-        throwsA(isA<ArgumentError>().having(
-          (e) => e.message,
-          'message',
-          contains('path cannot be empty'),
-        )),
+        throwsA(
+          isA<ArgumentError>().having(
+            (e) => e.message,
+            'message',
+            contains('path cannot be empty'),
+          ),
+        ),
       );
     });
   });
@@ -108,7 +113,7 @@ void main() {
   group('CrudResource - Pagination Edge Cases', () {
     test('negative skip is treated as zero', () async {
       // Arrange
-      for (int i = 0; i < 5; i++) {
+      for (var i = 0; i < 5; i++) {
         final user = TestUser(
           id: UuidValue.generate(),
           name: 'User $i',
@@ -133,7 +138,7 @@ void main() {
 
       // Assert
       expect(response.statusCode, equals(200));
-      
+
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString) as List;
       // Should return first 3 items (skip treated as 0)
@@ -142,7 +147,7 @@ void main() {
 
     test('negative take uses defaultTake', () async {
       // Arrange
-      for (int i = 0; i < 5; i++) {
+      for (var i = 0; i < 5; i++) {
         final user = TestUser(
           id: UuidValue.generate(),
           name: 'User $i',
@@ -167,7 +172,7 @@ void main() {
 
       // Assert
       expect(response.statusCode, equals(200));
-      
+
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString) as List;
       // Should return defaultTake (3) items
@@ -176,7 +181,7 @@ void main() {
 
     test('zero take returns empty array', () async {
       // Arrange
-      for (int i = 0; i < 5; i++) {
+      for (var i = 0; i < 5; i++) {
         final user = TestUser(
           id: UuidValue.generate(),
           name: 'User $i',
@@ -200,18 +205,18 @@ void main() {
 
       // Assert
       expect(response.statusCode, equals(200));
-      
+
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString) as List;
       expect(body.length, equals(0));
-      
+
       // X-Total-Count should still reflect total items
       expect(response.headers['X-Total-Count'], equals('5'));
     });
 
     test('very large skip returns empty array', () async {
       // Arrange
-      for (int i = 0; i < 5; i++) {
+      for (var i = 0; i < 5; i++) {
         final user = TestUser(
           id: UuidValue.generate(),
           name: 'User $i',
@@ -235,11 +240,11 @@ void main() {
 
       // Assert
       expect(response.statusCode, equals(200));
-      
+
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString) as List;
       expect(body.length, equals(0));
-      
+
       // X-Total-Count should still reflect total items
       expect(response.headers['X-Total-Count'], equals('5'));
     });
@@ -250,7 +255,7 @@ void main() {
       // Arrange
       final jsonSerializer = TestUserSerializer();
       final yamlSerializer = TestUserSerializer(); // Using same for simplicity
-      
+
       final testUser = TestUser(
         id: UuidValue.fromString('123e4567-e89b-12d3-a456-426614174000'),
         name: 'Test User',
@@ -258,7 +263,7 @@ void main() {
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
-      
+
       await repository.save(testUser);
 
       final resource = CrudResource<TestUser>(
@@ -277,7 +282,8 @@ void main() {
       );
 
       // Act
-      final response = await resource.handleGetById(request, testUser.id.toString());
+      final response =
+          await resource.handleGetById(request, testUser.id.toString());
 
       // Assert
       expect(response.statusCode, equals(200));
@@ -303,7 +309,6 @@ void main() {
       final requestBody = serializer.serialize(newUser);
       final request = createRequest(
         method: 'POST',
-        path: '/users',
         headers: {
           'content-type': 'application/json; charset=utf-8', // With charset
         },
@@ -315,7 +320,7 @@ void main() {
 
       // Assert
       expect(response.statusCode, equals(201));
-      
+
       // Verify the user was saved
       final savedUser = await repository.getById(newUser.id);
       expect(savedUser.name, equals('New User'));
@@ -340,7 +345,6 @@ void main() {
       final requestBody = serializer.serialize(newUser);
       final request = createRequest(
         method: 'POST',
-        path: '/users',
         headers: {
           'content-type': 'APPLICATION/JSON', // Uppercase
           'accept': 'Application/Json', // Mixed case
@@ -368,15 +372,15 @@ void main() {
         updatedAt: DateTime.now(),
       );
 
-      final testHandler = (
+      Future<QueryResult<TestUser>> testHandler(
         Repository<TestUser> repo,
         Map<String, String> params,
         int skip,
         int take,
       ) async {
         // Return result with null totalCount
-        return QueryResult<TestUser>([testUser], totalCount: null);
-      };
+        return QueryResult<TestUser>([testUser]);
+      }
 
       final resource = CrudResource<TestUser>(
         path: '/users',
@@ -397,7 +401,7 @@ void main() {
 
     test('empty results from query handler', () async {
       // Arrange
-      final testHandler = (
+      Future<QueryResult<TestUser>> testHandler(
         Repository<TestUser> repo,
         Map<String, String> params,
         int skip,
@@ -405,7 +409,7 @@ void main() {
       ) async {
         // Return empty result
         return QueryResult<TestUser>([], totalCount: 0);
-      };
+      }
 
       final resource = CrudResource<TestUser>(
         path: '/users',
@@ -421,7 +425,7 @@ void main() {
 
       // Assert
       expect(response.statusCode, equals(200));
-      
+
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString) as List;
       expect(body.length, equals(0));

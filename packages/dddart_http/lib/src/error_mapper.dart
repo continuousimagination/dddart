@@ -1,8 +1,9 @@
 import 'dart:convert';
-import 'package:shelf/shelf.dart';
+
 import 'package:dddart/dddart.dart';
+import 'package:dddart_http/src/exceptions.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
-import 'exceptions.dart';
+import 'package:shelf/shelf.dart';
 
 /// Maps domain exceptions to HTTP responses using RFC 7807 Problem Details format.
 ///

@@ -1,16 +1,16 @@
 /// Configuration options for serialization.
 class SerializationConfig {
-  /// Field naming strategy to use during serialization.
-  final FieldRename fieldRename;
-  
-  /// Whether to include null fields in the serialized output.
-  final bool includeNullFields;
-  
   /// Creates a serialization configuration.
   const SerializationConfig({
     this.fieldRename = FieldRename.none,
     this.includeNullFields = false,
   });
+
+  /// Field naming strategy to use during serialization.
+  final FieldRename fieldRename;
+
+  /// Whether to include null fields in the serialized output.
+  final bool includeNullFields;
 
   @override
   bool operator ==(Object other) {
@@ -33,10 +33,10 @@ class SerializationConfig {
 enum FieldRename {
   /// Keep field names as-is.
   none,
-  
+
   /// Convert field names to snake_case.
   snake,
-  
+
   /// Convert field names to kebab-case.
   kebab,
 }

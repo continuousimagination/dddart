@@ -17,7 +17,7 @@ import 'lib/user_registered_event.dart';
 Future<void> main() async {
   print('🌳 DDDart Hierarchical Logging Configuration Example\n');
   print('=' * 60);
-  
+
   // Enable hierarchical logging globally
   hierarchicalLoggingEnabled = true;
 
@@ -39,7 +39,8 @@ Future<void> _demonstrateDefaultConfiguration() async {
   // Configure console logging with ALL level
   Logger.root.level = Level.ALL;
   Logger.root.onRecord.listen((record) {
-    print('  ${record.level.name.padRight(7)} [${record.loggerName}] ${record.message}');
+    print(
+        '  ${record.level.name.padRight(7)} [${record.loggerName}] ${record.message}');
   });
 
   print('Configuration: Logger.root.level = Level.ALL\n');
@@ -67,7 +68,8 @@ Future<void> _demonstrateComponentSpecificLevels() async {
   // Logger('dddart.repository').level is not set, so it uses root level
 
   Logger.root.onRecord.listen((record) {
-    print('  ${record.level.name.padRight(7)} [${record.loggerName}] ${record.message}');
+    print(
+        '  ${record.level.name.padRight(7)} [${record.loggerName}] ${record.message}');
   });
 
   print('Configuration:');
@@ -97,7 +99,8 @@ Future<void> _demonstrateParentChildRelationship() async {
   Logger('dddart').level = Level.SEVERE;
 
   Logger.root.onRecord.listen((record) {
-    print('  ${record.level.name.padRight(7)} [${record.loggerName}] ${record.message}');
+    print(
+        '  ${record.level.name.padRight(7)} [${record.loggerName}] ${record.message}');
   });
 
   print('Configuration:');
@@ -118,7 +121,7 @@ Future<void> _demonstrateSelectiveLogging() async {
 
   // Clear previous handlers and reset levels
   Logger.root.clearListeners();
-  
+
   Logger('dddart').level = null; // Reset parent
   Logger('dddart.eventbus').level = null; // Reset
 
@@ -132,7 +135,8 @@ Future<void> _demonstrateSelectiveLogging() async {
   Logger('dddart.repository').level = Level.FINE;
 
   Logger.root.onRecord.listen((record) {
-    print('  ${record.level.name.padRight(7)} [${record.loggerName}] ${record.message}');
+    print(
+        '  ${record.level.name.padRight(7)} [${record.loggerName}] ${record.message}');
   });
 
   print('Configuration:');

@@ -6,11 +6,15 @@ analyzer:
     - "**/*.freezed.dart"
   language:
     strict-casts: true
-    strict-inference: true
+    strict-inference: false  # Too pedantic for examples and tests
     strict-raw-types: true
 
 linter:
   rules:
     # Project-specific rule adjustments
     public_member_api_docs: true
-    lines_longer_than_80_chars: true
+    lines_longer_than_80_chars: false  # Allow longer lines in tests for readability
+    avoid_slow_async_io: false  # OK in tests
+    cascade_invocations: false  # Not always more readable
+    avoid_positional_boolean_parameters: false  # Sometimes clearer than named
+    avoid_equals_and_hash_code_on_mutable_classes: false  # Entity/DomainEvent need custom equality

@@ -25,7 +25,8 @@ class Money extends Value {
   /// Add two money amounts (must be same currency)
   Money operator +(Money other) {
     if (currency != other.currency) {
-      throw ArgumentError('Cannot add different currencies: $currency + ${other.currency}');
+      throw ArgumentError(
+          'Cannot add different currencies: $currency + ${other.currency}');
     }
     return Money(amount: amount + other.amount, currency: currency);
   }
@@ -38,7 +39,8 @@ class Money extends Value {
   /// Check if this amount is greater than another
   bool operator >(Money other) {
     if (currency != other.currency) {
-      throw ArgumentError('Cannot compare different currencies: $currency > ${other.currency}');
+      throw ArgumentError(
+          'Cannot compare different currencies: $currency > ${other.currency}');
     }
     return amount > other.amount;
   }

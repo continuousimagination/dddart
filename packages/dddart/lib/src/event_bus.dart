@@ -1,6 +1,7 @@
 import 'dart:async';
+
+import 'package:dddart/src/domain_event.dart';
 import 'package:logging/logging.dart';
-import 'domain_event.dart';
 
 /// A local event bus for publishing and subscribing to domain events.
 ///
@@ -38,7 +39,8 @@ class EventBus {
     if (_controller.isClosed) {
       throw StateError('Cannot publish event: EventBus is closed');
     }
-    _logger.fine('Publishing event: ${event.runtimeType} for aggregate ${event.aggregateId}');
+    _logger.fine(
+        'Publishing event: ${event.runtimeType} for aggregate ${event.aggregateId}',);
     _controller.add(event);
   }
 
@@ -58,17 +60,19 @@ class EventBus {
   Stream<T> on<T extends DomainEvent>() {
     _logger.fine('Creating subscription for event type: $T');
     final stream = _controller.stream.where((event) => event is T).cast<T>();
-    
+
     // Wrap the stream to log handler exceptions
-    return stream.transform(StreamTransformer<T, T>.fromHandlers(
-      handleData: (event, sink) {
-        sink.add(event);
-      },
-      handleError: (error, stackTrace, sink) {
-        _logger.severe('Event handler threw exception', error, stackTrace);
-        sink.addError(error, stackTrace);
-      },
-    ));
+    return stream.transform(
+      StreamTransformer<T, T>.fromHandlers(
+        handleData: (event, sink) {
+          sink.add(event);
+        },
+        handleError: (error, stackTrace, sink) {
+          _logger.severe('Event handler threw exception', error, stackTrace);
+          sink.addError(error, stackTrace);
+        },
+      ),
+    );
   }
 
   /// Closes the event bus and releases resources.

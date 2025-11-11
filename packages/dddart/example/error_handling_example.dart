@@ -41,7 +41,8 @@ Future<void> _basicErrorHandling() async {
       print('✅ Inventory reserved successfully');
     } catch (e) {
       // Log error but don't crash
-      logger.error('Failed to reserve inventory for order ${event.aggregateId}', e);
+      logger.error(
+          'Failed to reserve inventory for order ${event.aggregateId}', e);
       print('❌ Inventory reservation failed: $e');
       // System continues running despite the error
     }
@@ -199,7 +200,7 @@ Future<void> _streamErrorHandling() async {
         }
 
         print('✅ Order processed successfully');
-      } catch (e, stackTrace) {
+      } catch (e) {
         // Catch and log the error
         logger.error('Order processing error', e);
         print('⚠️  Error caught in handler:');
@@ -209,7 +210,7 @@ Future<void> _streamErrorHandling() async {
         print('   → Handler continues running');
       }
     },
-    onError: (error, stackTrace) {
+    onError: (Object error, StackTrace stackTrace) {
       // Stream-level error handler (for uncaught errors)
       logger.error('Stream error caught', error);
       print('⚠️  Stream error handler invoked:');
@@ -264,7 +265,8 @@ Future<void> _reserveInventory(UuidValue orderId, int itemCount) async {
   await Future.delayed(Duration(milliseconds: 10));
 
   if (itemCount > 50) {
-    throw Exception('Insufficient inventory: requested $itemCount, available 50');
+    throw Exception(
+        'Insufficient inventory: requested $itemCount, available 50');
   }
 }
 

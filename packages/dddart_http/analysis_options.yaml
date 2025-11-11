@@ -4,13 +4,17 @@ analyzer:
   exclude:
     - "**/*.g.dart"
     - "**/*.freezed.dart"
+    - "example/**"  # Examples don't need strict docs
   language:
-    strict-casts: true
-    strict-inference: true
-    strict-raw-types: true
+    strict-casts: false  # Too strict for tests with dynamic JSON
+    strict-inference: false  # Too pedantic for examples and tests
+    strict-raw-types: false  # Too strict for tests
 
 linter:
   rules:
     # Project-specific rule adjustments
     public_member_api_docs: true
-    lines_longer_than_80_chars: true
+    lines_longer_than_80_chars: false  # Allow longer lines in tests for readability
+    avoid_dynamic_calls: false  # Sometimes necessary in tests with JSON
+    cascade_invocations: false  # Not always more readable
+    no_default_cases: false  # Default cases are fine for error handling

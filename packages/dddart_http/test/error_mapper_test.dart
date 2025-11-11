@@ -1,15 +1,16 @@
 import 'dart:convert';
-import 'package:test/test.dart';
+
 import 'package:dddart/dddart.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:dddart_http/src/error_mapper.dart';
 import 'package:dddart_http/src/exceptions.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('ErrorMapper - RepositoryException mapping', () {
     test('notFound exception maps to 404', () async {
       // Arrange
-      final exception = RepositoryException(
+      const exception = RepositoryException(
         'User with ID 123 not found',
         type: RepositoryExceptionType.notFound,
       );
@@ -19,7 +20,8 @@ void main() {
 
       // Assert
       expect(response.statusCode, equals(404));
-      expect(response.headers['Content-Type'], equals('application/problem+json'));
+      expect(
+          response.headers['Content-Type'], equals('application/problem+json'),);
 
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
@@ -31,7 +33,7 @@ void main() {
 
     test('duplicate exception maps to 409', () async {
       // Arrange
-      final exception = RepositoryException(
+      const exception = RepositoryException(
         'User with email already exists',
         type: RepositoryExceptionType.duplicate,
       );
@@ -41,7 +43,8 @@ void main() {
 
       // Assert
       expect(response.statusCode, equals(409));
-      expect(response.headers['Content-Type'], equals('application/problem+json'));
+      expect(
+          response.headers['Content-Type'], equals('application/problem+json'),);
 
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
@@ -53,7 +56,7 @@ void main() {
 
     test('constraint exception maps to 422', () async {
       // Arrange
-      final exception = RepositoryException(
+      const exception = RepositoryException(
         'Foreign key constraint violation',
         type: RepositoryExceptionType.constraint,
       );
@@ -63,7 +66,8 @@ void main() {
 
       // Assert
       expect(response.statusCode, equals(422));
-      expect(response.headers['Content-Type'], equals('application/problem+json'));
+      expect(
+          response.headers['Content-Type'], equals('application/problem+json'),);
 
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
@@ -75,7 +79,7 @@ void main() {
 
     test('other RepositoryException types map to 500', () async {
       // Arrange
-      final exception = RepositoryException(
+      const exception = RepositoryException(
         'Connection timeout',
         type: RepositoryExceptionType.timeout,
       );
@@ -85,7 +89,8 @@ void main() {
 
       // Assert
       expect(response.statusCode, equals(500));
-      expect(response.headers['Content-Type'], equals('application/problem+json'));
+      expect(
+          response.headers['Content-Type'], equals('application/problem+json'),);
 
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
@@ -100,7 +105,7 @@ void main() {
   group('ErrorMapper - Serialization exception mapping', () {
     test('DeserializationException maps to 400', () async {
       // Arrange
-      final exception = DeserializationException(
+      const exception = DeserializationException(
         'Invalid JSON format',
         expectedType: 'User',
         field: 'email',
@@ -111,7 +116,8 @@ void main() {
 
       // Assert
       expect(response.statusCode, equals(400));
-      expect(response.headers['Content-Type'], equals('application/problem+json'));
+      expect(
+          response.headers['Content-Type'], equals('application/problem+json'),);
 
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
@@ -123,7 +129,7 @@ void main() {
 
     test('SerializationException maps to 500', () async {
       // Arrange
-      final exception = SerializationException(
+      const exception = SerializationException(
         'Failed to encode object',
         expectedType: 'User',
       );
@@ -133,7 +139,8 @@ void main() {
 
       // Assert
       expect(response.statusCode, equals(500));
-      expect(response.headers['Content-Type'], equals('application/problem+json'));
+      expect(
+          response.headers['Content-Type'], equals('application/problem+json'),);
 
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
@@ -157,14 +164,16 @@ void main() {
 
       // Assert
       expect(response.statusCode, equals(406));
-      expect(response.headers['Content-Type'], equals('application/problem+json'));
+      expect(
+          response.headers['Content-Type'], equals('application/problem+json'),);
 
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
       expect(body['type'], equals('about:blank'));
       expect(body['title'], equals('Not Acceptable'));
       expect(body['status'], equals(406));
-      expect(body['detail'], contains('Accept header specifies unsupported media type'));
+      expect(body['detail'],
+          contains('Accept header specifies unsupported media type'),);
     });
   });
 
@@ -178,7 +187,8 @@ void main() {
 
       // Assert
       expect(response.statusCode, equals(500));
-      expect(response.headers['Content-Type'], equals('application/problem+json'));
+      expect(
+          response.headers['Content-Type'], equals('application/problem+json'),);
 
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
@@ -197,7 +207,8 @@ void main() {
 
       // Assert
       expect(response.statusCode, equals(400));
-      expect(response.headers['Content-Type'], equals('application/problem+json'));
+      expect(
+          response.headers['Content-Type'], equals('application/problem+json'),);
 
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
@@ -216,7 +227,8 @@ void main() {
 
       // Assert
       expect(response.statusCode, equals(500));
-      expect(response.headers['Content-Type'], equals('application/problem+json'));
+      expect(
+          response.headers['Content-Type'], equals('application/problem+json'),);
 
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);

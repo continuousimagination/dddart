@@ -1,10 +1,12 @@
 /// Simple test to verify the new three-package architecture works correctly.
+library;
 
 import 'dart:convert';
-import 'package:test/test.dart';
+
 import 'package:dddart/dddart.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:dddart_json/dddart_json.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
+import 'package:test/test.dart';
 
 part 'simple_architecture_test.g.dart';
 
@@ -50,7 +52,7 @@ void main() {
       // Test serialization using the service class
       final serializer = SimpleUserJsonSerializer();
       final json = serializer.toJson(user);
-      
+
       expect(json['name'], equals('John Doe'));
       expect(json['email'], equals('john@example.com'));
       expect(json['id'], isA<String>());
@@ -59,7 +61,7 @@ void main() {
 
       // Test deserialization using the service class
       final deserialized = serializer.fromJson(json);
-      
+
       expect(deserialized.name, equals('John Doe'));
       expect(deserialized.email, equals('john@example.com'));
       expect(deserialized.id, equals(user.id));
@@ -77,13 +79,13 @@ void main() {
       // Test serialization using the service class
       final serializer = SimpleAddressJsonSerializer();
       final json = serializer.toJson(address);
-      
+
       expect(json['street'], equals('123 Main St'));
       expect(json['city'], equals('Anytown'));
 
       // Test deserialization using the service class
       final deserialized = serializer.fromJson(json);
-      
+
       expect(deserialized.street, equals('123 Main St'));
       expect(deserialized.city, equals('Anytown'));
       expect(deserialized, equals(address));

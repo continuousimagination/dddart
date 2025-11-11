@@ -1,3 +1,5 @@
+import 'package:meta/meta.dart';
+
 /// Base class for immutable value objects in Domain-Driven Design.
 ///
 /// Value objects are immutable objects that are defined by their attributes
@@ -20,10 +22,10 @@
 /// ```dart
 /// class Money extends Value {
 ///   const Money(this.amount, this.currency);
-///   
+///
 ///   final double amount;
 ///   final String currency;
-///   
+///
 ///   @override
 ///   List<Object?> get props => [amount, currency];
 /// }
@@ -42,6 +44,7 @@
 /// In most cases, all properties should be included in [props] since value objects
 /// are defined by their complete state. Only exclude properties in rare cases where
 /// certain fields don't contribute to the object's logical identity.
+@immutable
 abstract class Value {
   /// Creates a const Value.
   ///
@@ -50,7 +53,7 @@ abstract class Value {
   const Value();
 
   /// Properties that define this value object's identity.
-  /// 
+  ///
   /// Subclasses must override this method to return all properties that
   /// should be considered for equality comparison. For true value objects,
   /// this should typically include all properties.
@@ -67,16 +70,16 @@ abstract class Value {
     if (identical(this, other)) return true;
     if (other.runtimeType != runtimeType) return false;
     if (other is! Value) return false;
-    
+
     final thisProps = props;
     final otherProps = other.props;
-    
+
     if (thisProps.length != otherProps.length) return false;
-    
-    for (int i = 0; i < thisProps.length; i++) {
+
+    for (var i = 0; i < thisProps.length; i++) {
       if (thisProps[i] != otherProps[i]) return false;
     }
-    
+
     return true;
   }
 

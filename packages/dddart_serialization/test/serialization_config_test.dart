@@ -1,11 +1,11 @@
-import 'package:test/test.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('SerializationConfig', () {
     test('creates with default values', () {
       const config = SerializationConfig();
-      
+
       expect(config.fieldRename, equals(FieldRename.none));
       expect(config.includeNullFields, isFalse);
     });
@@ -15,7 +15,7 @@ void main() {
         fieldRename: FieldRename.snake,
         includeNullFields: true,
       );
-      
+
       expect(config.fieldRename, equals(FieldRename.snake));
       expect(config.includeNullFields, isTrue);
     });
@@ -24,7 +24,7 @@ void main() {
       const config1 = SerializationConfig(fieldRename: FieldRename.snake);
       const config2 = SerializationConfig(fieldRename: FieldRename.snake);
       const config3 = SerializationConfig(fieldRename: FieldRename.kebab);
-      
+
       expect(config1, equals(config2));
       expect(config1, isNot(equals(config3)));
     });
@@ -34,7 +34,7 @@ void main() {
         fieldRename: FieldRename.snake,
         includeNullFields: true,
       );
-      
+
       final str = config.toString();
       expect(str, contains('SerializationConfig'));
       expect(str, contains('snake'));
@@ -60,7 +60,7 @@ void main() {
   group('Serializable annotation', () {
     test('creates with default values', () {
       const annotation = Serializable();
-      
+
       expect(annotation.includeNullFields, isFalse);
       expect(annotation.fieldRename, equals(FieldRename.none));
     });
@@ -70,7 +70,7 @@ void main() {
         includeNullFields: true,
         fieldRename: FieldRename.snake,
       );
-      
+
       expect(annotation.includeNullFields, isTrue);
       expect(annotation.fieldRename, equals(FieldRename.snake));
     });
@@ -79,7 +79,7 @@ void main() {
       const annotation1 = Serializable(fieldRename: FieldRename.snake);
       const annotation2 = Serializable(fieldRename: FieldRename.snake);
       const annotation3 = Serializable(fieldRename: FieldRename.kebab);
-      
+
       expect(annotation1, equals(annotation2));
       expect(annotation1, isNot(equals(annotation3)));
     });

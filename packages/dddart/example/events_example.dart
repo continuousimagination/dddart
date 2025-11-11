@@ -67,7 +67,8 @@ class EventsExample {
     // Mark events as committed (typically done after publishing)
     user.markEventsAsCommitted();
     print('Events marked as committed');
-    print('Remaining uncommitted events: ${user.getUncommittedEvents().length}');
+    print(
+        'Remaining uncommitted events: ${user.getUncommittedEvents().length}');
 
     print('\n✅ Basic event raising completed!\n');
   }
@@ -114,7 +115,7 @@ class EventsExample {
     final eventBus = EventBus();
 
     // Multiple listeners for the same event type
-    final subscriptions = <StreamSubscription>[];
+    final subscriptions = <StreamSubscription<DomainEvent>>[];
 
     // Listener 1: Send welcome email
     subscriptions.add(
@@ -133,7 +134,8 @@ class EventsExample {
     // Listener 3: Update analytics
     subscriptions.add(
       eventBus.on<UserRegisteredEvent>().listen((event) {
-        print('📊 Analytics Service: Recording registration for org ${event.organizationId}');
+        print(
+            '📊 Analytics Service: Recording registration for org ${event.organizationId}');
       }),
     );
 
@@ -172,11 +174,14 @@ class EventsExample {
       print('👤 User Event Handler: ${event.runtimeType}');
     });
 
-    final orderPlacedSubscription = eventBus.on<OrderPlacedEvent>().listen((event) {
-      print('📦 Order Placed Handler: Order ${event.aggregateId} for \$${event.totalAmount}');
+    final orderPlacedSubscription =
+        eventBus.on<OrderPlacedEvent>().listen((event) {
+      print(
+          '📦 Order Placed Handler: Order ${event.aggregateId} for \$${event.totalAmount}');
     });
 
-    final orderShippedSubscription = eventBus.on<OrderShippedEvent>().listen((event) {
+    final orderShippedSubscription =
+        eventBus.on<OrderShippedEvent>().listen((event) {
       print('🚚 Order Shipped Handler: Tracking ${event.trackingNumber}');
     });
 
@@ -271,7 +276,7 @@ class EventsExample {
     print('Scenario: E-commerce order processing workflow\n');
 
     final eventBus = EventBus();
-    final subscriptions = <StreamSubscription>[];
+    final subscriptions = <StreamSubscription<DomainEvent>>[];
 
     // Set up event handlers for different services
 
@@ -284,39 +289,45 @@ class EventsExample {
 
     subscriptions.add(
       eventBus.on<OrderPlacedEvent>().listen((event) {
-        print('📧 Email Service: Sending order confirmation for order ${event.aggregateId}');
+        print(
+            '📧 Email Service: Sending order confirmation for order ${event.aggregateId}');
       }),
     );
 
     subscriptions.add(
       eventBus.on<OrderShippedEvent>().listen((event) {
-        print('📧 Email Service: Sending shipping notification with tracking ${event.trackingNumber}');
+        print(
+            '📧 Email Service: Sending shipping notification with tracking ${event.trackingNumber}');
       }),
     );
 
     // Inventory service
     subscriptions.add(
       eventBus.on<OrderPlacedEvent>().listen((event) {
-        print('📦 Inventory Service: Reserving ${event.itemCount} items for order ${event.aggregateId}');
+        print(
+            '📦 Inventory Service: Reserving ${event.itemCount} items for order ${event.aggregateId}');
       }),
     );
 
     subscriptions.add(
       eventBus.on<OrderShippedEvent>().listen((event) {
-        print('📦 Inventory Service: Marking items as shipped for order ${event.aggregateId}');
+        print(
+            '📦 Inventory Service: Marking items as shipped for order ${event.aggregateId}');
       }),
     );
 
     // Analytics service
     subscriptions.add(
       eventBus.on<UserRegisteredEvent>().listen((event) {
-        print('📊 Analytics Service: New user registered in org ${event.organizationId}');
+        print(
+            '📊 Analytics Service: New user registered in org ${event.organizationId}');
       }),
     );
 
     subscriptions.add(
       eventBus.on<OrderPlacedEvent>().listen((event) {
-        print('📊 Analytics Service: Revenue +\$${event.totalAmount} ${event.currency}');
+        print(
+            '📊 Analytics Service: Revenue +\$${event.totalAmount} ${event.currency}');
       }),
     );
 

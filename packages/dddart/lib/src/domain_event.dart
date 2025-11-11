@@ -1,25 +1,10 @@
-import 'package:uuid/uuid.dart' hide UuidValue;
-import 'uuid_value.dart';
+import 'package:dddart/src/uuid_value.dart';
 
 /// Base class for domain events in the DDD framework.
 ///
 /// A domain event represents something significant that happened in the domain.
 /// Events are immutable and contain metadata for traceability and filtering.
 abstract class DomainEvent {
-  /// Unique identifier for this event instance.
-  final UuidValue eventId;
-
-  /// Timestamp when the event occurred.
-  final DateTime occurredAt;
-
-  /// Identifier of the aggregate that raised this event.
-  final UuidValue aggregateId;
-
-  /// Additional context data for filtering and metadata.
-  /// This map can contain arbitrary key-value pairs that provide
-  /// additional information about the event context.
-  final Map<String, dynamic> context;
-
   /// Creates a new domain event.
   ///
   /// [aggregateId] is required and identifies the aggregate that raised the event.
@@ -33,6 +18,20 @@ abstract class DomainEvent {
     this.context = const {},
   })  : eventId = eventId ?? UuidValue.generate(),
         occurredAt = occurredAt ?? DateTime.now();
+
+  /// Unique identifier for this event instance.
+  final UuidValue eventId;
+
+  /// Timestamp when the event occurred.
+  final DateTime occurredAt;
+
+  /// Identifier of the aggregate that raised this event.
+  final UuidValue aggregateId;
+
+  /// Additional context data for filtering and metadata.
+  /// This map can contain arbitrary key-value pairs that provide
+  /// additional information about the event context.
+  final Map<String, dynamic> context;
 
   @override
   String toString() {

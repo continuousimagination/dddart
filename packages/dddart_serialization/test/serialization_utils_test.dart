@@ -1,5 +1,5 @@
-import 'package:test/test.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('SerializationUtils', () {
@@ -25,7 +25,8 @@ void main() {
           equals('first_name'),
         );
         expect(
-          SerializationUtils.applyFieldRename('emailAddress', FieldRename.snake),
+          SerializationUtils.applyFieldRename(
+              'emailAddress', FieldRename.snake,),
           equals('email_address'),
         );
         expect(
@@ -44,7 +45,8 @@ void main() {
           equals('first-name'),
         );
         expect(
-          SerializationUtils.applyFieldRename('emailAddress', FieldRename.kebab),
+          SerializationUtils.applyFieldRename(
+              'emailAddress', FieldRename.kebab,),
           equals('email-address'),
         );
         expect(
@@ -72,10 +74,15 @@ void main() {
 
       test('throws DeserializationException when null', () {
         expect(
-          () => SerializationUtils.validateNotNull(null, 'testField', 'TestType'),
-          throwsA(isA<DeserializationException>()
-              .having((e) => e.message, 'message', contains('Required field "testField" is null'))
-              .having((e) => e.expectedType, 'expectedType', equals('TestType'))),
+          () =>
+              SerializationUtils.validateNotNull(null, 'testField', 'TestType'),
+          throwsA(
+            isA<DeserializationException>()
+                .having((e) => e.message, 'message',
+                    contains('Required field "testField" is null'),)
+                .having(
+                    (e) => e.expectedType, 'expectedType', equals('TestType'),),
+          ),
         );
       });
     });
@@ -83,7 +90,8 @@ void main() {
     group('validateType', () {
       test('returns value when type matches', () {
         expect(
-          SerializationUtils.validateType<String>('test', 'fieldName', 'String'),
+          SerializationUtils.validateType<String>(
+              'test', 'fieldName', 'String',),
           equals('test'),
         );
         expect(
@@ -94,10 +102,18 @@ void main() {
 
       test('throws DeserializationException when type mismatch', () {
         expect(
-          () => SerializationUtils.validateType<String>(42, 'testField', 'TestType'),
-          throwsA(isA<DeserializationException>()
-              .having((e) => e.message, 'message', contains('Field "testField" expected type String but got int'))
-              .having((e) => e.expectedType, 'expectedType', equals('TestType'))),
+          () => SerializationUtils.validateType<String>(
+              42, 'testField', 'TestType',),
+          throwsA(
+            isA<DeserializationException>()
+                .having(
+                    (e) => e.message,
+                    'message',
+                    contains(
+                        'Field "testField" expected type String but got int',),)
+                .having(
+                    (e) => e.expectedType, 'expectedType', equals('TestType'),),
+          ),
         );
       });
     });

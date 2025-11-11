@@ -1,10 +1,11 @@
 import 'dart:convert';
-import 'package:test/test.dart';
-import 'package:shelf/shelf.dart';
+
 import 'package:dddart/dddart.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:dddart_http/src/crud_resource.dart';
 import 'package:dddart_http/src/query_handler.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
+import 'package:shelf/shelf.dart';
+import 'package:test/test.dart';
 
 // Test aggregate root
 class TestUser extends AggregateRoot {
@@ -49,7 +50,7 @@ class TestUserSerializer implements Serializer<TestUser> {
 // Mock repository for testing
 class MockRepository implements Repository<TestUser> {
   final Map<UuidValue, TestUser> _storage = {};
-  
+
   @override
   Future<TestUser> getById(UuidValue id) async {
     final user = _storage[id];
@@ -91,7 +92,7 @@ class MockRepository implements Repository<TestUser> {
 class CustomDomainException implements Exception {
   CustomDomainException(this.message);
   final String message;
-  
+
   @override
   String toString() => message;
 }
@@ -127,11 +128,8 @@ void main() {
       serializers: {
         'application/json': serializer,
       },
-      defaultSkip: 0,
-      defaultTake: 50,
-      maxTake: 100,
     );
-    
+
     testUser = TestUser(
       id: UuidValue.fromString('123e4567-e89b-12d3-a456-426614174000'),
       name: 'John Doe',
@@ -142,7 +140,8 @@ void main() {
   });
 
   group('CrudResource - handleGetById', () {
-    test('successful retrieval returns 200 with serialized aggregate', () async {
+    test('successful retrieval returns 200 with serialized aggregate',
+        () async {
       // Arrange
       await repository.save(testUser);
       final request = createRequest(
@@ -151,12 +150,13 @@ void main() {
       );
 
       // Act
-      final response = await resource.handleGetById(request, testUser.id.toString());
+      final response =
+          await resource.handleGetById(request, testUser.id.toString());
 
       // Assert
       expect(response.statusCode, equals(200));
       expect(response.headers['Content-Type'], equals('application/json'));
-      
+
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
       expect(body['id'], equals(testUser.id.toString()));
@@ -167,7 +167,7 @@ void main() {
     test('ID parsing with valid UUID', () async {
       // Arrange
       await repository.save(testUser);
-      final validId = '123e4567-e89b-12d3-a456-426614174000';
+      const validId = '123e4567-e89b-12d3-a456-426614174000';
       final request = createRequest(path: '/users/$validId');
 
       // Act
@@ -199,7 +199,8 @@ void main() {
       );
 
       // Act
-      final response = await resource.handleGetById(request, testUser.id.toString());
+      final response =
+          await resource.handleGetById(request, testUser.id.toString());
 
       // Assert
       expect(response.headers['Content-Type'], equals('application/json'));
@@ -207,7 +208,7 @@ void main() {
 
     test('404 response when aggregate not found', () async {
       // Arrange
-      final nonExistentId = '987fcdeb-51a2-43f7-b123-456789abcdef';
+      const nonExistentId = '987fcdeb-51a2-43f7-b123-456789abcdef';
       final request = createRequest(path: '/users/$nonExistentId');
 
       // Act
@@ -215,8 +216,9 @@ void main() {
 
       // Assert
       expect(response.statusCode, equals(404));
-      expect(response.headers['Content-Type'], equals('application/problem+json'));
-      
+      expect(
+          response.headers['Content-Type'], equals('application/problem+json'),);
+
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
       expect(body['type'], equals('about:blank'));
@@ -232,23 +234,24 @@ void main() {
         serializers: {'application/json': serializer},
         customExceptionHandlers: {
           CustomDomainException: (e) => Response(
-            418,
-            headers: {'Content-Type': 'application/problem+json'},
-            body: jsonEncode({
-              'type': 'about:blank',
-              'title': 'Custom Error',
-              'status': 418,
-              'detail': (e as CustomDomainException).message,
-            }),
-          ),
+                418,
+                headers: {'Content-Type': 'application/problem+json'},
+                body: jsonEncode({
+                  'type': 'about:blank',
+                  'title': 'Custom Error',
+                  'status': 418,
+                  'detail': (e as CustomDomainException).message,
+                }),
+              ),
         },
       );
-      
+
       // Use invalid ID format to trigger exception
       final request = createRequest(path: '/users/invalid-id');
 
       // Act
-      final response = await customResource.handleGetById(request, 'invalid-id');
+      final response =
+          await customResource.handleGetById(request, 'invalid-id');
 
       // Assert - should get error response
       expect(response.statusCode, greaterThanOrEqualTo(400));
@@ -279,25 +282,24 @@ void main() {
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
-      
+
       await repository.save(user1);
       await repository.save(user2);
       await repository.save(user3);
-      
+
       // Use InMemoryRepository for getAll support
       final inMemoryRepo = InMemoryRepository<TestUser>();
       await inMemoryRepo.save(user1);
       await inMemoryRepo.save(user2);
       await inMemoryRepo.save(user3);
-      
+
       final inMemoryResource = CrudResource<TestUser>(
         path: '/users',
         repository: inMemoryRepo,
         serializers: {'application/json': serializer},
-        defaultSkip: 0,
         defaultTake: 2,
       );
-      
+
       final request = createRequest(
         path: '/users?skip=0&take=2',
         headers: {'accept': 'application/json'},
@@ -308,7 +310,7 @@ void main() {
 
       // Assert
       expect(response.statusCode, equals(200));
-      
+
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString) as List;
       expect(body.length, equals(2));
@@ -318,23 +320,21 @@ void main() {
       // Arrange
       final inMemoryRepo = InMemoryRepository<TestUser>();
       await inMemoryRepo.save(testUser);
-      
+
       final inMemoryResource = CrudResource<TestUser>(
         path: '/users',
         repository: inMemoryRepo,
         serializers: {'application/json': serializer},
-        defaultSkip: 0,
-        defaultTake: 50,
       );
-      
-      final request = createRequest(path: '/users');
+
+      final request = createRequest();
 
       // Act
       final response = await inMemoryResource.handleQuery(request);
 
       // Assert
       expect(response.statusCode, equals(200));
-      
+
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString) as List;
       expect(body.length, equals(1));
@@ -344,14 +344,14 @@ void main() {
       // Arrange
       final inMemoryRepo = InMemoryRepository<TestUser>();
       await inMemoryRepo.save(testUser);
-      
+
       final inMemoryResource = CrudResource<TestUser>(
         path: '/users',
         repository: inMemoryRepo,
         serializers: {'application/json': serializer},
       );
-      
-      final request = createRequest(path: '/users');
+
+      final request = createRequest();
 
       // Act
       final response = await inMemoryResource.handleQuery(request);
@@ -365,15 +365,14 @@ void main() {
       // Arrange
       final inMemoryRepo = InMemoryRepository<TestUser>();
       await inMemoryRepo.save(testUser);
-      
+
       final inMemoryResource = CrudResource<TestUser>(
         path: '/users',
         repository: inMemoryRepo,
         serializers: {'application/json': serializer},
       );
-      
+
       final request = createRequest(
-        path: '/users',
         headers: {'accept': 'application/json'},
       );
 
@@ -392,8 +391,8 @@ void main() {
       var receivedParams = <String, String>{};
       var receivedSkip = -1;
       var receivedTake = -1;
-      
-      final testHandler = (
+
+      Future<QueryResult<TestUser>> testHandler(
         Repository<TestUser> repo,
         Map<String, String> params,
         int skip,
@@ -404,17 +403,15 @@ void main() {
         receivedSkip = skip;
         receivedTake = take;
         return QueryResult<TestUser>([testUser], totalCount: 1);
-      };
-      
+      }
+
       final resourceWithHandler = CrudResource<TestUser>(
         path: '/users',
         repository: repository,
         serializers: {'application/json': serializer},
         queryHandlers: {'name': testHandler},
-        defaultSkip: 0,
-        defaultTake: 50,
       );
-      
+
       final request = createRequest(path: '/users?name=John');
 
       // Act
@@ -432,8 +429,8 @@ void main() {
       // Arrange
       var receivedSkip = -1;
       var receivedTake = -1;
-      
-      final testHandler = (
+
+      Future<QueryResult<TestUser>> testHandler(
         Repository<TestUser> repo,
         Map<String, String> params,
         int skip,
@@ -442,15 +439,15 @@ void main() {
         receivedSkip = skip;
         receivedTake = take;
         return QueryResult<TestUser>([testUser], totalCount: 1);
-      };
-      
+      }
+
       final resourceWithHandler = CrudResource<TestUser>(
         path: '/users',
         repository: repository,
         serializers: {'application/json': serializer},
         queryHandlers: {'name': testHandler},
       );
-      
+
       final request = createRequest(path: '/users?name=John&skip=10&take=20');
 
       // Act
@@ -469,7 +466,7 @@ void main() {
         serializers: {'application/json': serializer},
         queryHandlers: {},
       );
-      
+
       final request = createRequest(path: '/users?unknownParam=value');
 
       // Act
@@ -477,7 +474,7 @@ void main() {
 
       // Assert
       expect(response.statusCode, equals(400));
-      
+
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
       expect(body['detail'], contains('Unsupported query parameter'));
@@ -492,23 +489,23 @@ void main() {
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
-      
-      final testHandler = (
+
+      Future<QueryResult<TestUser>> testHandler(
         Repository<TestUser> repo,
         Map<String, String> params,
         int skip,
         int take,
       ) async {
         return QueryResult<TestUser>([filteredUser], totalCount: 1);
-      };
-      
+      }
+
       final resourceWithHandler = CrudResource<TestUser>(
         path: '/users',
         repository: repository,
         serializers: {'application/json': serializer},
         queryHandlers: {'email': testHandler},
       );
-      
+
       final request = createRequest(path: '/users?email=filtered@example.com');
 
       // Act
@@ -516,7 +513,7 @@ void main() {
 
       // Assert
       expect(response.statusCode, equals(200));
-      
+
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString) as List;
       expect(body.length, equals(1));
@@ -527,30 +524,32 @@ void main() {
   group('CrudResource - handleQuery with multiple filters', () {
     test('returns 400 error when multiple filter params provided', () async {
       // Arrange
-      final request = createRequest(path: '/users?name=John&email=john@example.com');
+      final request =
+          createRequest(path: '/users?name=John&email=john@example.com');
 
       // Act
       final response = await resource.handleQuery(request);
 
       // Assert
       expect(response.statusCode, equals(400));
-      
+
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
-      expect(body['detail'], contains('Cannot combine multiple query parameters'));
+      expect(
+          body['detail'], contains('Cannot combine multiple query parameters'),);
     });
 
     test('pagination params do not count as filter params', () async {
       // Arrange
       final inMemoryRepo = InMemoryRepository<TestUser>();
       await inMemoryRepo.save(testUser);
-      
+
       final inMemoryResource = CrudResource<TestUser>(
         path: '/users',
         repository: inMemoryRepo,
         serializers: {'application/json': serializer},
       );
-      
+
       final request = createRequest(path: '/users?skip=0&take=10');
 
       // Act
@@ -562,15 +561,17 @@ void main() {
 
     test('error message follows RFC 7807 format', () async {
       // Arrange
-      final request = createRequest(path: '/users?name=John&email=john@example.com');
+      final request =
+          createRequest(path: '/users?name=John&email=john@example.com');
 
       // Act
       final response = await resource.handleQuery(request);
 
       // Assert
       expect(response.statusCode, equals(400));
-      expect(response.headers['Content-Type'], equals('application/problem+json'));
-      
+      expect(
+          response.headers['Content-Type'], equals('application/problem+json'),);
+
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
       expect(body['type'], equals('about:blank'));
@@ -590,11 +591,10 @@ void main() {
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
-      
+
       final requestBody = serializer.serialize(newUser);
       final request = createRequest(
         method: 'POST',
-        path: '/users',
         headers: {
           'content-type': 'application/json',
           'accept': 'application/json',
@@ -608,7 +608,7 @@ void main() {
       // Assert
       expect(response.statusCode, equals(201));
       expect(response.headers['Content-Type'], equals('application/json'));
-      
+
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
       expect(body['name'], equals('New User'));
@@ -624,11 +624,10 @@ void main() {
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
-      
+
       final requestBody = serializer.serialize(newUser);
       final request = createRequest(
         method: 'POST',
-        path: '/users',
         headers: {'content-type': 'application/json'},
         body: requestBody,
       );
@@ -649,11 +648,10 @@ void main() {
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
-      
+
       final requestBody = serializer.serialize(newUser);
       final request = createRequest(
         method: 'POST',
-        path: '/users',
         headers: {
           'content-type': 'application/json',
           'accept': 'application/json',
@@ -672,7 +670,6 @@ void main() {
       // Arrange
       final request = createRequest(
         method: 'POST',
-        path: '/users',
         headers: {'content-type': 'application/xml'},
         body: '<user><name>Test</name></user>',
       );
@@ -682,8 +679,9 @@ void main() {
 
       // Assert
       expect(response.statusCode, equals(415));
-      expect(response.headers['Content-Type'], equals('application/problem+json'));
-      
+      expect(
+          response.headers['Content-Type'], equals('application/problem+json'),);
+
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
       expect(body['title'], equals('Unsupported Media Type'));
@@ -699,11 +697,10 @@ void main() {
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
-      
+
       final requestBody = serializer.serialize(newUser);
       final request = createRequest(
         method: 'POST',
-        path: '/users',
         headers: {'content-type': 'application/json'},
         body: requestBody,
       );
@@ -713,7 +710,7 @@ void main() {
 
       // Assert
       expect(response.statusCode, equals(201));
-      
+
       // Verify the user was saved to repository
       final savedUser = await repository.getById(newUser.id);
       expect(savedUser.name, equals('Deserialized User'));
@@ -729,11 +726,10 @@ void main() {
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
-      
+
       final requestBody = serializer.serialize(newUser);
       final request = createRequest(
         method: 'POST',
-        path: '/users',
         headers: {'content-type': 'application/json'},
         body: requestBody,
       );
@@ -751,7 +747,6 @@ void main() {
       // Arrange - invalid JSON to trigger deserialization exception
       final request = createRequest(
         method: 'POST',
-        path: '/users',
         headers: {'content-type': 'application/json'},
         body: 'invalid json',
       );
@@ -768,7 +763,7 @@ void main() {
     test('successful update returns 200 with serialized aggregate', () async {
       // Arrange
       await repository.save(testUser);
-      
+
       final updatedUser = TestUser(
         id: testUser.id,
         name: 'Updated Name',
@@ -776,7 +771,7 @@ void main() {
         createdAt: testUser.createdAt,
         updatedAt: DateTime.now(),
       );
-      
+
       final requestBody = serializer.serialize(updatedUser);
       final request = createRequest(
         method: 'PUT',
@@ -789,12 +784,13 @@ void main() {
       );
 
       // Act
-      final response = await resource.handleUpdate(request, testUser.id.toString());
+      final response =
+          await resource.handleUpdate(request, testUser.id.toString());
 
       // Assert
       expect(response.statusCode, equals(200));
       expect(response.headers['Content-Type'], equals('application/json'));
-      
+
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
       expect(body['name'], equals('Updated Name'));
@@ -804,7 +800,7 @@ void main() {
     test('Content-Type header parsing for request', () async {
       // Arrange
       await repository.save(testUser);
-      
+
       final updatedUser = TestUser(
         id: testUser.id,
         name: 'Updated Name',
@@ -812,7 +808,7 @@ void main() {
         createdAt: testUser.createdAt,
         updatedAt: DateTime.now(),
       );
-      
+
       final requestBody = serializer.serialize(updatedUser);
       final request = createRequest(
         method: 'PUT',
@@ -822,7 +818,8 @@ void main() {
       );
 
       // Act
-      final response = await resource.handleUpdate(request, testUser.id.toString());
+      final response =
+          await resource.handleUpdate(request, testUser.id.toString());
 
       // Assert
       expect(response.statusCode, equals(200));
@@ -831,7 +828,7 @@ void main() {
     test('Accept header parsing for response', () async {
       // Arrange
       await repository.save(testUser);
-      
+
       final updatedUser = TestUser(
         id: testUser.id,
         name: 'Updated Name',
@@ -839,7 +836,7 @@ void main() {
         createdAt: testUser.createdAt,
         updatedAt: DateTime.now(),
       );
-      
+
       final requestBody = serializer.serialize(updatedUser);
       final request = createRequest(
         method: 'PUT',
@@ -852,7 +849,8 @@ void main() {
       );
 
       // Act
-      final response = await resource.handleUpdate(request, testUser.id.toString());
+      final response =
+          await resource.handleUpdate(request, testUser.id.toString());
 
       // Assert
       expect(response.headers['Content-Type'], equals('application/json'));
@@ -868,12 +866,14 @@ void main() {
       );
 
       // Act
-      final response = await resource.handleUpdate(request, testUser.id.toString());
+      final response =
+          await resource.handleUpdate(request, testUser.id.toString());
 
       // Assert
       expect(response.statusCode, equals(415));
-      expect(response.headers['Content-Type'], equals('application/problem+json'));
-      
+      expect(
+          response.headers['Content-Type'], equals('application/problem+json'),);
+
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
       expect(body['title'], equals('Unsupported Media Type'));
@@ -883,7 +883,7 @@ void main() {
     test('deserialization of request body', () async {
       // Arrange
       await repository.save(testUser);
-      
+
       final updatedUser = TestUser(
         id: testUser.id,
         name: 'Deserialized Update',
@@ -891,7 +891,7 @@ void main() {
         createdAt: testUser.createdAt,
         updatedAt: DateTime.now(),
       );
-      
+
       final requestBody = serializer.serialize(updatedUser);
       final request = createRequest(
         method: 'PUT',
@@ -901,11 +901,12 @@ void main() {
       );
 
       // Act
-      final response = await resource.handleUpdate(request, testUser.id.toString());
+      final response =
+          await resource.handleUpdate(request, testUser.id.toString());
 
       // Assert
       expect(response.statusCode, equals(200));
-      
+
       // Verify the user was updated in repository
       final savedUser = await repository.getById(testUser.id);
       expect(savedUser.name, equals('Deserialized Update'));
@@ -915,7 +916,7 @@ void main() {
     test('repository.save() is called', () async {
       // Arrange
       await repository.save(testUser);
-      
+
       final updatedUser = TestUser(
         id: testUser.id,
         name: 'Saved Update',
@@ -923,7 +924,7 @@ void main() {
         createdAt: testUser.createdAt,
         updatedAt: DateTime.now(),
       );
-      
+
       final requestBody = serializer.serialize(updatedUser);
       final request = createRequest(
         method: 'PUT',
@@ -950,7 +951,8 @@ void main() {
       );
 
       // Act
-      final response = await resource.handleUpdate(request, testUser.id.toString());
+      final response =
+          await resource.handleUpdate(request, testUser.id.toString());
 
       // Assert - should get error response
       expect(response.statusCode, greaterThanOrEqualTo(400));
@@ -967,11 +969,12 @@ void main() {
       );
 
       // Act
-      final response = await resource.handleDelete(request, testUser.id.toString());
+      final response =
+          await resource.handleDelete(request, testUser.id.toString());
 
       // Assert
       expect(response.statusCode, equals(204));
-      
+
       final bodyString = await response.readAsString();
       expect(bodyString, isEmpty);
     });
@@ -1014,7 +1017,7 @@ void main() {
 
     test('404 response when aggregate not found', () async {
       // Arrange
-      final nonExistentId = '987fcdeb-51a2-43f7-b123-456789abcdef';
+      const nonExistentId = '987fcdeb-51a2-43f7-b123-456789abcdef';
       final request = createRequest(
         method: 'DELETE',
         path: '/users/$nonExistentId',
@@ -1025,8 +1028,9 @@ void main() {
 
       // Assert
       expect(response.statusCode, equals(404));
-      expect(response.headers['Content-Type'], equals('application/problem+json'));
-      
+      expect(
+          response.headers['Content-Type'], equals('application/problem+json'),);
+
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
       expect(body['type'], equals('about:blank'));
@@ -1061,7 +1065,7 @@ void main() {
           'application/yaml': yamlSerializer,
         },
       );
-      
+
       await repository.save(testUser);
 
       // Act & Assert - JSON
@@ -1096,7 +1100,8 @@ void main() {
       );
 
       // Act
-      final response = await resource.handleGetById(request, testUser.id.toString());
+      final response =
+          await resource.handleGetById(request, testUser.id.toString());
 
       // Assert - should use first serializer (application/json)
       expect(response.statusCode, equals(200));
@@ -1109,7 +1114,8 @@ void main() {
       final request = createRequest(path: '/users/${testUser.id}');
 
       // Act
-      final response = await resource.handleGetById(request, testUser.id.toString());
+      final response =
+          await resource.handleGetById(request, testUser.id.toString());
 
       // Assert - should use first serializer (application/json)
       expect(response.statusCode, equals(200));
@@ -1125,12 +1131,14 @@ void main() {
       );
 
       // Act
-      final response = await resource.handleGetById(request, testUser.id.toString());
+      final response =
+          await resource.handleGetById(request, testUser.id.toString());
 
       // Assert
       expect(response.statusCode, equals(406));
-      expect(response.headers['Content-Type'], equals('application/problem+json'));
-      
+      expect(
+          response.headers['Content-Type'], equals('application/problem+json'),);
+
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
       expect(body['title'], equals('Not Acceptable'));
@@ -1142,7 +1150,7 @@ void main() {
     test('_parsePagination() with valid skip and take params', () async {
       // Arrange
       final inMemoryRepo = InMemoryRepository<TestUser>();
-      for (int i = 0; i < 10; i++) {
+      for (var i = 0; i < 10; i++) {
         final user = TestUser(
           id: UuidValue.generate(),
           name: 'User $i',
@@ -1152,13 +1160,13 @@ void main() {
         );
         await inMemoryRepo.save(user);
       }
-      
+
       final inMemoryResource = CrudResource<TestUser>(
         path: '/users',
         repository: inMemoryRepo,
         serializers: {'application/json': serializer},
       );
-      
+
       final request = createRequest(path: '/users?skip=2&take=3');
 
       // Act
@@ -1166,7 +1174,7 @@ void main() {
 
       // Assert
       expect(response.statusCode, equals(200));
-      
+
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString) as List;
       expect(body.length, equals(3));
@@ -1176,23 +1184,21 @@ void main() {
       // Arrange
       final inMemoryRepo = InMemoryRepository<TestUser>();
       await inMemoryRepo.save(testUser);
-      
+
       final inMemoryResource = CrudResource<TestUser>(
         path: '/users',
         repository: inMemoryRepo,
         serializers: {'application/json': serializer},
-        defaultSkip: 0,
-        defaultTake: 50,
       );
-      
-      final request = createRequest(path: '/users');
+
+      final request = createRequest();
 
       // Act
       final response = await inMemoryResource.handleQuery(request);
 
       // Assert
       expect(response.statusCode, equals(200));
-      
+
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString) as List;
       expect(body.length, equals(1));
@@ -1201,7 +1207,7 @@ void main() {
     test('maxTake enforcement', () async {
       // Arrange
       final inMemoryRepo = InMemoryRepository<TestUser>();
-      for (int i = 0; i < 150; i++) {
+      for (var i = 0; i < 150; i++) {
         final user = TestUser(
           id: UuidValue.generate(),
           name: 'User $i',
@@ -1211,14 +1217,13 @@ void main() {
         );
         await inMemoryRepo.save(user);
       }
-      
+
       final inMemoryResource = CrudResource<TestUser>(
         path: '/users',
         repository: inMemoryRepo,
         serializers: {'application/json': serializer},
-        maxTake: 100,
       );
-      
+
       // Request more than maxTake
       final request = createRequest(path: '/users?take=200');
 
@@ -1227,7 +1232,7 @@ void main() {
 
       // Assert
       expect(response.statusCode, equals(200));
-      
+
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString) as List;
       expect(body.length, equals(100)); // Should be limited to maxTake
@@ -1238,7 +1243,7 @@ void main() {
     test('_handleException() checks customExceptionHandlers first', () async {
       // Arrange
       var customHandlerCalled = false;
-      
+
       final customResource = CrudResource<TestUser>(
         path: '/users',
         repository: repository,
@@ -1259,7 +1264,7 @@ void main() {
           },
         },
       );
-      
+
       // Trigger custom exception by using invalid ID format
       final request = createRequest(path: '/users/invalid-id');
 
@@ -1281,26 +1286,28 @@ void main() {
           CustomDomainException: (e) => Response(418),
         },
       );
-      
+
       // Trigger RepositoryException (not in custom handlers)
-      final nonExistentId = '987fcdeb-51a2-43f7-b123-456789abcdef';
+      const nonExistentId = '987fcdeb-51a2-43f7-b123-456789abcdef';
       final request = createRequest(path: '/users/$nonExistentId');
 
       // Act
-      final response = await customResource.handleGetById(request, nonExistentId);
+      final response =
+          await customResource.handleGetById(request, nonExistentId);
 
       // Assert - should use ErrorMapper default handling
       expect(response.statusCode, equals(404));
-      expect(response.headers['Content-Type'], equals('application/problem+json'));
+      expect(
+          response.headers['Content-Type'], equals('application/problem+json'),);
     });
 
     test('custom handler is invoked with correct exception', () async {
       // Arrange
-      var receivedException = null;
-      
+      Object? receivedException;
+
       // Create a custom repository that throws CustomDomainException
       final customRepo = MockRepository();
-      
+
       final customResource = CrudResource<TestUser>(
         path: '/users',
         repository: customRepo,
@@ -1321,17 +1328,18 @@ void main() {
           },
         },
       );
-      
-      final nonExistentId = '987fcdeb-51a2-43f7-b123-456789abcdef';
+
+      const nonExistentId = '987fcdeb-51a2-43f7-b123-456789abcdef';
       final request = createRequest(path: '/users/$nonExistentId');
 
       // Act
-      final response = await customResource.handleGetById(request, nonExistentId);
+      final response =
+          await customResource.handleGetById(request, nonExistentId);
 
       // Assert
       expect(response.statusCode, equals(404));
       expect(receivedException, isA<RepositoryException>());
-      
+
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
       expect(body['detail'], equals('Custom handler invoked'));

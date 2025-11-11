@@ -1,6 +1,6 @@
 /// DDDart JSON - JSON serialization support for DDDart objects.
 ///
-/// This library provides JSON serialization capabilities for DDDart aggregate roots 
+/// This library provides JSON serialization capabilities for DDDart aggregate roots
 /// and value objects through generated serializer service classes.
 library dddart_json;
 

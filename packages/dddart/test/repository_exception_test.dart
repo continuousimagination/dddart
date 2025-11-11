@@ -1,23 +1,23 @@
+import 'package:dddart/src/repository_exception.dart';
 import 'package:test/test.dart';
-import '../lib/src/repository_exception.dart';
 
 void main() {
   group('RepositoryException', () {
     group('constructor', () {
       test('creates exception with message and default type', () {
-        final exception = RepositoryException('Test error message');
-        
+        const exception = RepositoryException('Test error message');
+
         expect(exception.message, equals('Test error message'));
         expect(exception.type, equals(RepositoryExceptionType.unknown));
         expect(exception.cause, isNull);
       });
 
       test('creates exception with message and specific type', () {
-        final exception = RepositoryException(
+        const exception = RepositoryException(
           'Not found error',
           type: RepositoryExceptionType.notFound,
         );
-        
+
         expect(exception.message, equals('Not found error'));
         expect(exception.type, equals(RepositoryExceptionType.notFound));
         expect(exception.cause, isNull);
@@ -30,7 +30,7 @@ void main() {
           type: RepositoryExceptionType.connection,
           cause: cause,
         );
-        
+
         expect(exception.message, equals('Wrapper error'));
         expect(exception.type, equals(RepositoryExceptionType.connection));
         expect(exception.cause, equals(cause));
@@ -39,14 +39,17 @@ void main() {
 
     group('toString', () {
       test('formats message without cause', () {
-        final exception = RepositoryException(
+        const exception = RepositoryException(
           'Test error',
           type: RepositoryExceptionType.duplicate,
         );
-        
+
         final result = exception.toString();
-        
-        expect(result, equals('RepositoryException: Test error (type: RepositoryExceptionType.duplicate)'));
+
+        expect(
+            result,
+            equals(
+                'RepositoryException: Test error (type: RepositoryExceptionType.duplicate)',),);
       });
 
       test('formats message with cause', () {
@@ -56,111 +59,123 @@ void main() {
           type: RepositoryExceptionType.connection,
           cause: cause,
         );
-        
+
         final result = exception.toString();
-        
-        expect(result, contains('RepositoryException: Failed to save aggregate'));
+
+        expect(
+            result, contains('RepositoryException: Failed to save aggregate'),);
         expect(result, contains('type: RepositoryExceptionType.connection'));
-        expect(result, contains('cause: Exception: Database connection failed'));
+        expect(
+            result, contains('cause: Exception: Database connection failed'),);
       });
 
       test('formats message for notFound type', () {
-        final exception = RepositoryException(
+        const exception = RepositoryException(
           'Aggregate not found',
           type: RepositoryExceptionType.notFound,
         );
-        
+
         final result = exception.toString();
-        
-        expect(result, equals('RepositoryException: Aggregate not found (type: RepositoryExceptionType.notFound)'));
+
+        expect(
+            result,
+            equals(
+                'RepositoryException: Aggregate not found (type: RepositoryExceptionType.notFound)',),);
       });
 
       test('formats message for constraint type', () {
-        final exception = RepositoryException(
+        const exception = RepositoryException(
           'Constraint violation',
           type: RepositoryExceptionType.constraint,
         );
-        
+
         final result = exception.toString();
-        
-        expect(result, equals('RepositoryException: Constraint violation (type: RepositoryExceptionType.constraint)'));
+
+        expect(
+            result,
+            equals(
+                'RepositoryException: Constraint violation (type: RepositoryExceptionType.constraint)',),);
       });
 
       test('formats message for timeout type', () {
-        final exception = RepositoryException(
+        const exception = RepositoryException(
           'Operation timed out',
           type: RepositoryExceptionType.timeout,
         );
-        
+
         final result = exception.toString();
-        
-        expect(result, equals('RepositoryException: Operation timed out (type: RepositoryExceptionType.timeout)'));
+
+        expect(
+            result,
+            equals(
+                'RepositoryException: Operation timed out (type: RepositoryExceptionType.timeout)',),);
       });
 
       test('formats message for unknown type', () {
-        final exception = RepositoryException(
+        const exception = RepositoryException(
           'Unknown error occurred',
-          type: RepositoryExceptionType.unknown,
         );
-        
+
         final result = exception.toString();
-        
-        expect(result, equals('RepositoryException: Unknown error occurred (type: RepositoryExceptionType.unknown)'));
+
+        expect(
+            result,
+            equals(
+                'RepositoryException: Unknown error occurred (type: RepositoryExceptionType.unknown)',),);
       });
     });
 
     group('exception type classification', () {
       test('supports notFound type', () {
-        final exception = RepositoryException(
+        const exception = RepositoryException(
           'Not found',
           type: RepositoryExceptionType.notFound,
         );
-        
+
         expect(exception.type, equals(RepositoryExceptionType.notFound));
       });
 
       test('supports duplicate type', () {
-        final exception = RepositoryException(
+        const exception = RepositoryException(
           'Duplicate',
           type: RepositoryExceptionType.duplicate,
         );
-        
+
         expect(exception.type, equals(RepositoryExceptionType.duplicate));
       });
 
       test('supports constraint type', () {
-        final exception = RepositoryException(
+        const exception = RepositoryException(
           'Constraint',
           type: RepositoryExceptionType.constraint,
         );
-        
+
         expect(exception.type, equals(RepositoryExceptionType.constraint));
       });
 
       test('supports connection type', () {
-        final exception = RepositoryException(
+        const exception = RepositoryException(
           'Connection',
           type: RepositoryExceptionType.connection,
         );
-        
+
         expect(exception.type, equals(RepositoryExceptionType.connection));
       });
 
       test('supports timeout type', () {
-        final exception = RepositoryException(
+        const exception = RepositoryException(
           'Timeout',
           type: RepositoryExceptionType.timeout,
         );
-        
+
         expect(exception.type, equals(RepositoryExceptionType.timeout));
       });
 
       test('supports unknown type', () {
-        final exception = RepositoryException(
+        const exception = RepositoryException(
           'Unknown',
-          type: RepositoryExceptionType.unknown,
         );
-        
+
         expect(exception.type, equals(RepositoryExceptionType.unknown));
       });
     });
@@ -172,9 +187,10 @@ void main() {
           'Wrapped error',
           cause: cause,
         );
-        
+
         expect(exception.cause, equals(cause));
-        expect(exception.toString(), contains('cause: Exception: Original error'));
+        expect(
+            exception.toString(), contains('cause: Exception: Original error'),);
       });
 
       test('wraps Error as cause', () {
@@ -183,28 +199,27 @@ void main() {
           'Wrapped error',
           cause: cause,
         );
-        
+
         expect(exception.cause, equals(cause));
         expect(exception.toString(), contains('cause:'));
       });
 
       test('wraps String as cause', () {
         const cause = 'String error message';
-        final exception = RepositoryException(
+        const exception = RepositoryException(
           'Wrapped error',
           cause: cause,
         );
-        
+
         expect(exception.cause, equals(cause));
         expect(exception.toString(), contains('cause: String error message'));
       });
 
       test('handles null cause', () {
-        final exception = RepositoryException(
+        const exception = RepositoryException(
           'Error without cause',
-          cause: null,
         );
-        
+
         expect(exception.cause, isNull);
         expect(exception.toString(), isNot(contains('cause:')));
       });
@@ -213,8 +228,8 @@ void main() {
 
   group('RepositoryExceptionType', () {
     test('enum contains all expected values', () {
-      final values = RepositoryExceptionType.values;
-      
+      const values = RepositoryExceptionType.values;
+
       expect(values, contains(RepositoryExceptionType.notFound));
       expect(values, contains(RepositoryExceptionType.duplicate));
       expect(values, contains(RepositoryExceptionType.constraint));

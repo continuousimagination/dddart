@@ -1,9 +1,8 @@
+import 'package:dddart/src/aggregate_root.dart';
+import 'package:dddart/src/repository.dart';
+import 'package:dddart/src/repository_exception.dart';
+import 'package:dddart/src/uuid_value.dart';
 import 'package:logging/logging.dart';
-
-import 'aggregate_root.dart';
-import 'repository.dart';
-import 'repository_exception.dart';
-import 'uuid_value.dart';
 
 /// In-memory implementation of [Repository] for testing purposes.
 ///
@@ -56,17 +55,17 @@ import 'uuid_value.dart';
 /// ```dart
 /// test('repository operations', () async {
 ///   final repository = InMemoryRepository<User>();
-///   
+///
 ///   // Add test data
 ///   final user1 = User(name: 'Alice');
 ///   final user2 = User(name: 'Bob');
 ///   await repository.save(user1);
 ///   await repository.save(user2);
-///   
+///
 ///   // Verify all users are stored
 ///   final allUsers = repository.getAll();
 ///   expect(allUsers, hasLength(2));
-///   
+///
 ///   // Clean up after test
 ///   repository.clear();
 ///   expect(repository.getAll(), isEmpty);
@@ -130,7 +129,8 @@ class InMemoryRepository<T extends AggregateRoot> implements Repository<T> {
       _logger.fine('Saving $T with ID: ${aggregate.id}');
       _storage[aggregate.id] = aggregate;
     } catch (e, stackTrace) {
-      _logger.severe('Failed to save $T with ID: ${aggregate.id}', e, stackTrace);
+      _logger.severe(
+          'Failed to save $T with ID: ${aggregate.id}', e, stackTrace,);
       rethrow;
     }
   }
@@ -162,10 +162,10 @@ class InMemoryRepository<T extends AggregateRoot> implements Repository<T> {
   /// ```dart
   /// test('user operations', () async {
   ///   final repository = InMemoryRepository<User>();
-  ///   
+  ///
   ///   // Perform test operations
   ///   await repository.save(User(name: 'Test User'));
-  ///   
+  ///
   ///   // Clean up
   ///   repository.clear();
   ///   expect(repository.getAll(), isEmpty);

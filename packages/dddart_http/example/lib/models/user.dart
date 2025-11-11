@@ -3,32 +3,32 @@ import 'address.dart';
 import 'profile.dart';
 
 /// Example aggregate root representing a User with child entities and value objects
-/// 
+///
 /// AGGREGATE ROOT PATTERN:
 /// An aggregate root is the entry point to an aggregate - a cluster of domain objects
 /// that can be treated as a single unit. The aggregate root ensures consistency of
 /// changes being made within the aggregate boundary.
-/// 
+///
 /// This User aggregate demonstrates:
-/// 
+///
 /// 1. AGGREGATE ROOT (User):
 ///    - Extends AggregateRoot from dddart package
 ///    - Has a unique identifier (id) inherited from AggregateRoot
 ///    - Controls access to all objects within the aggregate
 ///    - Ensures invariants are maintained across the aggregate
-/// 
+///
 /// 2. CHILD ENTITY (Profile):
 ///    - An entity within the aggregate that has its own identity
 ///    - Can only be accessed through the aggregate root
 ///    - Lifecycle is managed by the aggregate root
 ///    - Optional in this example (user may not have a profile)
-/// 
+///
 /// 3. VALUE OBJECT (Address):
 ///    - Immutable object defined by its attributes, not identity
 ///    - Two addresses with same values are considered equal
 ///    - Cannot exist independently - always part of an entity
 ///    - Required in this example (every user must have an address)
-/// 
+///
 /// AGGREGATE BOUNDARIES:
 /// The User aggregate boundary includes:
 /// - User (root) + Address (value object) + Profile (child entity)
@@ -36,7 +36,7 @@ import 'profile.dart';
 /// - Repository operations work on the entire aggregate, not individual parts
 class User extends AggregateRoot {
   /// Creates a User with the specified properties
-  /// 
+  ///
   /// The constructor enforces required fields (firstName, lastName, email, address)
   /// while allowing optional fields (profile). The id, createdAt, and updatedAt
   /// are inherited from AggregateRoot and managed by the framework.
@@ -62,7 +62,7 @@ class User extends AggregateRoot {
   final String email;
 
   /// User's physical address (VALUE OBJECT)
-  /// 
+  ///
   /// Address is a value object because:
   /// - It's immutable (all fields are final)
   /// - It's defined by its attributes, not an identity
@@ -71,7 +71,7 @@ class User extends AggregateRoot {
   final Address address;
 
   /// Optional user profile (CHILD ENTITY)
-  /// 
+  ///
   /// Profile is a child entity because:
   /// - It has its own identity (id field)
   /// - It has a lifecycle (createdAt, updatedAt)

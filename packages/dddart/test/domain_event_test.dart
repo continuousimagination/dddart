@@ -3,29 +3,22 @@ import 'package:test/test.dart';
 
 // Concrete test event for testing DomainEvent base class
 class TestDomainEvent extends DomainEvent {
-  final String data;
-
   TestDomainEvent({
-    required UuidValue aggregateId,
+    required super.aggregateId,
     required this.data,
-    UuidValue? eventId,
-    DateTime? occurredAt,
-    Map<String, dynamic> context = const {},
-  }) : super(
-          aggregateId: aggregateId,
-          eventId: eventId,
-          occurredAt: occurredAt,
-          context: context,
-        );
+    super.eventId,
+    super.occurredAt,
+    super.context,
+  });
+  final String data;
 }
 
 class AnotherTestEvent extends DomainEvent {
-  final int value;
-
   AnotherTestEvent({
-    required UuidValue aggregateId,
+    required super.aggregateId,
     required this.value,
-  }) : super(aggregateId: aggregateId);
+  });
+  final int value;
 }
 
 void main() {
@@ -52,7 +45,8 @@ void main() {
       });
 
       test('uses provided eventId when specified', () {
-        final customEventId = UuidValue.fromString('12345678-1234-1234-1234-123456789abc');
+        final customEventId =
+            UuidValue.fromString('12345678-1234-1234-1234-123456789abc');
         final event = TestDomainEvent(
           aggregateId: UuidValue.generate(),
           data: 'test data',
@@ -72,17 +66,19 @@ void main() {
 
         expect(event.occurredAt, isNotNull);
         expect(
-          event.occurredAt.isAfter(beforeCreation.subtract(const Duration(seconds: 1))),
+          event.occurredAt
+              .isAfter(beforeCreation.subtract(const Duration(seconds: 1))),
           isTrue,
         );
         expect(
-          event.occurredAt.isBefore(afterCreation.add(const Duration(seconds: 1))),
+          event.occurredAt
+              .isBefore(afterCreation.add(const Duration(seconds: 1))),
           isTrue,
         );
       });
 
       test('uses provided occurredAt timestamp when specified', () {
-        final customTimestamp = DateTime(2023, 6, 15, 10, 30, 0);
+        final customTimestamp = DateTime(2023, 6, 15, 10, 30);
         final event = TestDomainEvent(
           aggregateId: UuidValue.generate(),
           data: 'test data',
@@ -123,7 +119,8 @@ void main() {
 
     group('equality', () {
       test('events with same eventId are equal', () {
-        final eventId = UuidValue.fromString('12345678-1234-1234-1234-123456789abc');
+        final eventId =
+            UuidValue.fromString('12345678-1234-1234-1234-123456789abc');
         final event1 = TestDomainEvent(
           aggregateId: UuidValue.generate(),
           data: 'test data',
@@ -166,7 +163,8 @@ void main() {
       });
 
       test('events of different types with same eventId are equal', () {
-        final eventId = UuidValue.fromString('12345678-1234-1234-1234-123456789abc');
+        final eventId =
+            UuidValue.fromString('12345678-1234-1234-1234-123456789abc');
         final event1 = TestDomainEvent(
           aggregateId: UuidValue.generate(),
           data: 'test data',
@@ -176,12 +174,6 @@ void main() {
           aggregateId: UuidValue.generate(),
           value: 42,
         );
-        // Manually set the eventId for event2 by creating with same ID
-        final event2WithSameId = AnotherTestEvent(
-          aggregateId: UuidValue.generate(),
-          value: 42,
-        );
-
         // They should have different IDs by default
         expect(event1, isNot(equals(event2)));
       });
@@ -189,27 +181,31 @@ void main() {
 
     group('toString', () {
       test('includes event type, eventId, aggregateId, and occurredAt', () {
-        final aggregateId = UuidValue.fromString('12345678-1234-1234-1234-123456789abc');
-        final eventId = UuidValue.fromString('87654321-4321-4321-4321-cba987654321');
+        final aggregateId =
+            UuidValue.fromString('12345678-1234-1234-1234-123456789abc');
+        final eventId =
+            UuidValue.fromString('87654321-4321-4321-4321-cba987654321');
         final event = TestDomainEvent(
           aggregateId: aggregateId,
           data: 'test data',
           eventId: eventId,
-          occurredAt: DateTime(2023, 6, 15, 10, 30, 0),
+          occurredAt: DateTime(2023, 6, 15, 10, 30),
         );
 
         final result = event.toString();
 
         expect(result, contains('TestDomainEvent'));
-        expect(result, contains('eventId: 87654321-4321-4321-4321-cba987654321'));
-        expect(result, contains('aggregateId: 12345678-1234-1234-1234-123456789abc'));
+        expect(
+            result, contains('eventId: 87654321-4321-4321-4321-cba987654321'),);
+        expect(result,
+            contains('aggregateId: 12345678-1234-1234-1234-123456789abc'),);
         expect(result, contains('occurredAt: 2023-06-15 10:30:00.000'));
       });
     });
 
     group('metadata fields', () {
       test('all metadata fields are accessible', () {
-        final customTimestamp = DateTime(2023, 6, 15, 10, 30, 0);
+        final customTimestamp = DateTime(2023, 6, 15, 10, 30);
         final customContext = {'key': 'value'};
         final aggregateId = UuidValue.generate();
         final eventId = UuidValue.generate();

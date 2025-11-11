@@ -1,8 +1,9 @@
 import 'dart:convert';
-import 'package:test/test.dart';
+
 import 'package:dddart/dddart.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:dddart_http/src/response_builder.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
+import 'package:test/test.dart';
 
 // Test aggregate root
 class TestUser extends AggregateRoot {
@@ -102,7 +103,8 @@ void main() {
       expect(body['email'], equals('john@example.com'));
     });
 
-    test('Content-Type header is set correctly for different formats', () async {
+    test('Content-Type header is set correctly for different formats',
+        () async {
       // Act - JSON
       final jsonResponse = responseBuilder.ok(
         testUser,
@@ -246,14 +248,16 @@ void main() {
 
       // Assert
       expect(response.statusCode, equals(400));
-      expect(response.headers['Content-Type'], equals('application/problem+json'));
+      expect(
+          response.headers['Content-Type'], equals('application/problem+json'),);
 
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
       expect(body['type'], equals('about:blank'));
       expect(body['title'], equals('Bad Request'));
       expect(body['status'], equals(400));
-      expect(body['detail'], equals('Cannot combine multiple query parameters'));
+      expect(
+          body['detail'], equals('Cannot combine multiple query parameters'),);
     });
 
     test('notFound() method returns 404 with RFC 7807 format', () async {
@@ -264,20 +268,25 @@ void main() {
 
       // Assert
       expect(response.statusCode, equals(404));
-      expect(response.headers['Content-Type'], equals('application/problem+json'));
+      expect(
+          response.headers['Content-Type'], equals('application/problem+json'),);
 
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
       expect(body['type'], equals('about:blank'));
       expect(body['title'], equals('Not Found'));
       expect(body['status'], equals(404));
-      expect(body['detail'], equals('User with ID 123e4567-e89b-12d3-a456-426614174000 not found'));
+      expect(
+          body['detail'],
+          equals(
+              'User with ID 123e4567-e89b-12d3-a456-426614174000 not found',),);
     });
 
     test('error responses include all required RFC 7807 fields', () async {
       // Act - badRequest
       final badRequestResponse = responseBuilder.badRequest('Test message');
-      final badRequestBody = jsonDecode(await badRequestResponse.readAsString());
+      final badRequestBody =
+          jsonDecode(await badRequestResponse.readAsString());
 
       // Assert - badRequest has all required fields
       expect(badRequestBody.containsKey('type'), isTrue);
