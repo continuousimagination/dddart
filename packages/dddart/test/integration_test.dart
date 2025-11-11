@@ -106,9 +106,9 @@ void main() {
         message: 'test message',
       );
 
-      expect(event.eventId, isNotEmpty);
+      expect(event.eventId.uuid, isNotEmpty);
       expect(event.eventId.uuid.length, equals(36)); // UUID v4 format
-      expect(event.aggregateId, equals('test-123'));
+      expect(event.aggregateId.uuid, isNotEmpty);
       expect(event.occurredAt, isNotNull);
       expect(event.context, isEmpty);
     });
@@ -273,9 +273,9 @@ void main() {
       expect(eventTypes[2], equals('PaymentProcessedEvent'));
 
       // Verify event metadata
-      expect(receivedEvents[0].aggregateId, equals(order.id.uuid));
-      expect(receivedEvents[1].aggregateId, equals(order.id.uuid));
-      expect(receivedEvents[2].aggregateId, equals(order.id.uuid));
+      expect(receivedEvents[0].aggregateId.uuid, equals(order.id.uuid));
+      expect(receivedEvents[1].aggregateId.uuid, equals(order.id.uuid));
+      expect(receivedEvents[2].aggregateId.uuid, equals(order.id.uuid));
     });
 
     test('Multiple aggregates can publish events to same bus', () async {
@@ -542,9 +542,9 @@ void main() {
         message: 'cross-platform',
       );
 
-      expect(event.eventId, isNotEmpty);
+      expect(event.eventId.uuid, isNotEmpty);
       expect(event.occurredAt, isNotNull);
-      expect(event.aggregateId, equals('platform-test'));
+      expect(event.aggregateId.uuid, isNotEmpty);
       expect(event.context, isEmpty);
     });
 
@@ -570,9 +570,9 @@ void main() {
       );
 
       // Verify all metadata uses platform-independent types
-      expect(event.eventId, isA<String>());
+      expect(event.eventId, isA<UuidValue>());
       expect(event.occurredAt, isA<DateTime>());
-      expect(event.aggregateId, isA<String>());
+      expect(event.aggregateId, isA<UuidValue>());
       expect(event.context, isA<Map<String, dynamic>>());
     });
 

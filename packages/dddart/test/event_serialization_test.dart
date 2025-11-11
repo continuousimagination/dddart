@@ -119,17 +119,23 @@ void main() {
 
         final json = event.toJson();
 
-        expect(json['eventId'], equals('event-789'));
-        expect(json['aggregateId'], equals('user-123'));
+        expect(
+          json['eventId'],
+          equals('11111111-2222-3333-4444-555555555555'),
+        );
+        expect(
+          json['aggregateId'],
+          equals('12345678-1234-1234-1234-123456789abc'),
+        );
         expect(json['occurredAt'], equals('2023-06-15T10:30:00.000'));
         expect(json['context'], isA<Map<String, dynamic>>());
       });
 
       test('event can be deserialized from JSON', () {
         final json = {
-          'eventId': 'event-789',
+          'eventId': '11111111-2222-3333-4444-555555555555',
           'occurredAt': '2023-06-15T10:30:00.000',
-          'aggregateId': 'user-123',
+          'aggregateId': '12345678-1234-1234-1234-123456789abc',
           'context': {
             'organizationId': 'org-456',
             'email': 'test@example.com',
@@ -141,8 +147,14 @@ void main() {
 
         final event = UserRegisteredEvent.fromJson(json);
 
-        expect(event.eventId, equals('event-789'));
-        expect(event.aggregateId, equals('user-123'));
+        expect(
+          event.eventId.uuid,
+          equals('11111111-2222-3333-4444-555555555555'),
+        );
+        expect(
+          event.aggregateId.uuid,
+          equals('12345678-1234-1234-1234-123456789abc'),
+        );
         expect(event.occurredAt, equals(DateTime(2023, 6, 15, 10, 30)));
         expect(event.email, equals('test@example.com'));
         expect(event.organizationId, equals('org-456'));
@@ -228,7 +240,7 @@ void main() {
         final deserialized = UserRegisteredEvent.fromJson(json);
 
         expect(deserialized.eventId, equals(original.eventId));
-        expect(deserialized.eventId, isNotEmpty);
+        expect(deserialized.eventId.uuid, isNotEmpty);
       });
 
       test('auto-generated occurredAt is preserved during serialization', () {

@@ -92,8 +92,12 @@ class HttpServer {
     }
 
     // Start shelf server with router on configured port
-    _shelfServer =
-        await shelf_io.serve(router.call, io.InternetAddress.anyIPv4, port);
+    _shelfServer = await shelf_io.serve(
+      router.call,
+      io.InternetAddress.anyIPv4,
+      port,
+      shared: true,
+    );
   }
 
   /// Stops the HTTP server
