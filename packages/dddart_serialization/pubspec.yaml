@@ -5,13 +5,13 @@ homepage: https://github.com/continuousimagination/dddart_serialization
 repository: https://github.com/continuousimagination/dddart_serialization
 issue_tracker: https://github.com/continuousimagination/dddart_serialization/issues
 
+resolution: workspace
+
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: '>=3.5.0 <4.0.0'
 
 dependencies:
-  dddart:
-    git:
-      url: https://github.com/continuousimagination/dddart.git
+  dddart: ^0.9.0
 
 dev_dependencies:
   test: ^1.24.0

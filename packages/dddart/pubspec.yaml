@@ -5,8 +5,10 @@ homepage: https://github.com/continuousimagination/dddart
 repository: https://github.com/continuousimagination/dddart
 issue_tracker: https://github.com/continuousimagination/dddart/issues
 
+resolution: workspace
+
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: '>=3.5.0 <4.0.0'
 
 dependencies:
   uuid: ^4.0.0

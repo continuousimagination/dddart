@@ -1,0 +1,11 @@
+name: _dddart_workspace
+publish_to: none
+
+environment:
+  sdk: '>=3.5.0 <4.0.0'
+
+workspace:
+  - packages/dddart
+  - packages/dddart_serialization
+  - packages/dddart_json
+  - packages/dddart_http

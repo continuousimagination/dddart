@@ -5,19 +5,17 @@ homepage: https://github.com/continuousimagination/dddart_http
 repository: https://github.com/continuousimagination/dddart_http
 issue_tracker: https://github.com/continuousimagination/dddart_http/issues
 
+resolution: workspace
+
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: '>=3.5.0 <4.0.0'
 
 dependencies:
   shelf: ^1.4.0
   shelf_router: ^1.1.0
   logging: ^1.2.0
-  dddart:
-    git:
-      url: https://github.com/continuousimagination/dddart.git
-  dddart_serialization:
-    git:
-      url: https://github.com/continuousimagination/dddart_serialization.git
+  dddart: ^0.9.0
+  dddart_serialization: ^0.9.0
 
 dev_dependencies:
   test: ^1.24.0
