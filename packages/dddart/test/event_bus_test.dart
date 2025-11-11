@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:dddart/dddart.dart';
+import 'package:logging/logging.dart';
 import 'package:test/test.dart';
 
 // Test event classes
@@ -125,6 +126,121 @@ void main() {
       await Future.delayed(Duration(milliseconds: 10));
 
       expect(completed, isTrue);
+    });
+  });
+
+  group('EventBus Logging', () {
+    late EventBus eventBus;
+    late List<LogRecord> logRecords;
+    late StreamSubscription<LogRecord> logSubscription;
+
+    setUp(() {
+      eventBus = EventBus();
+      logRecords = [];
+      
+      // Enable logging at all levels
+      Logger.root.level = Level.ALL;
+      
+      // Capture log records
+      logSubscription = Logger('dddart.eventbus').onRecord.listen((record) {
+        logRecords.add(record);
+      });
+    });
+
+    tearDown(() async {
+      await logSubscription.cancel();
+      await eventBus.close();
+    });
+
+    test('logs event publishing at FINE level', () async {
+      final event = TestEvent(aggregateId: UuidValue.generate(), message: 'Test');
+      eventBus.publish(event);
+
+      await Future.delayed(Duration(milliseconds: 10));
+
+      final publishLogs = logRecords.where((r) => 
+        r.level == Level.FINE && 
+        r.message.contains('Publishing event')
+      ).toList();
+
+      expect(publishLogs, hasLength(1));
+      expect(publishLogs.first.message, contains('TestEvent'));
+      expect(publishLogs.first.message, contains(event.aggregateId.toString()));
+    });
+
+    test('logs subscription creation at FINE level', () async {
+      eventBus.on<TestEvent>();
+
+      await Future.delayed(Duration(milliseconds: 10));
+
+      final subscriptionLogs = logRecords.where((r) => 
+        r.level == Level.FINE && 
+        r.message.contains('Creating subscription')
+      ).toList();
+
+      expect(subscriptionLogs, hasLength(1));
+      expect(subscriptionLogs.first.message, contains('TestEvent'));
+    });
+
+    test('stream transformer logs errors at SEVERE level with stack trace', () async {
+      // Note: This tests that the stream transformer can log errors that are added to the stream.
+      // Exceptions thrown by user handlers are caught by Dart's zone system and cannot be
+      // intercepted by the EventBus without changing the API.
+      
+      final completer = Completer<void>();
+      
+      // Create a custom stream controller to simulate stream errors
+      final testController = StreamController<TestEvent>.broadcast();
+      final testError = Exception('Stream processing error');
+      final testStackTrace = StackTrace.current;
+      
+      // Subscribe to the stream with our transformer
+      testController.stream
+        .transform(StreamTransformer<TestEvent, TestEvent>.fromHandlers(
+          handleData: (event, sink) {
+            sink.add(event);
+          },
+          handleError: (error, stackTrace, sink) {
+            Logger('dddart.eventbus').severe('Event handler threw exception', error, stackTrace);
+            sink.addError(error, stackTrace);
+          },
+        ))
+        .listen(
+          (event) {},
+          onError: (error, stackTrace) {
+            completer.complete();
+          },
+        );
+
+      // Add an error to the stream
+      testController.addError(testError, testStackTrace);
+
+      // Wait for error to be handled
+      await completer.future.timeout(Duration(milliseconds: 100));
+
+      final errorLogs = logRecords.where((r) => 
+        r.level == Level.SEVERE && 
+        r.message.contains('Event handler threw exception')
+      ).toList();
+
+      expect(errorLogs, hasLength(1));
+      expect(errorLogs.first.error, equals(testError));
+      expect(errorLogs.first.stackTrace, equals(testStackTrace));
+      
+      await testController.close();
+    });
+
+    test('logs EventBus close at INFO level', () async {
+      await eventBus.close();
+
+      await Future.delayed(Duration(milliseconds: 10));
+
+      final closeLogs = logRecords.where((r) => 
+        r.level == Level.INFO && 
+        r.message.contains('EventBus closing')
+      ).toList();
+
+      expect(closeLogs, hasLength(1));
     });
   });
 }

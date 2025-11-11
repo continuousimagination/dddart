@@ -1,0 +1,20 @@
+[2025-11-10T23:48:42.099311] [FINE] [dddart.eventbus] Creating subscription for event type: UserRegisteredEvent
+[2025-11-10T23:48:42.106029] [FINE] [dddart.eventbus] Publishing event: UserRegisteredEvent for aggregate 272840c3-528d-43c9-b813-f85b242a572c
+[2025-11-10T23:48:42.106492] [FINE] [dddart.eventbus] Publishing event: UserRegisteredEvent for aggregate 95c5f91e-4bbb-4006-90a2-ed36f2c9c127
+[2025-11-10T23:48:42.106693] [FINE] [dddart.eventbus] Publishing event: OrderPlacedEvent for aggregate 0c9d2315-3ae7-48f2-b9e2-5ac686f87849
+[2025-11-10T23:48:42.159453] [FINE] [dddart.repository] Saving UserAggregate with ID: 272840c3-528d-43c9-b813-f85b242a572c
+[2025-11-10T23:48:42.160565] [FINE] [dddart.repository] Saving UserAggregate with ID: 95c5f91e-4bbb-4006-90a2-ed36f2c9c127
+[2025-11-10T23:48:42.160720] [FINE] [dddart.repository] Retrieving UserAggregate with ID: 272840c3-528d-43c9-b813-f85b242a572c
+[2025-11-10T23:48:42.160812] [FINE] [dddart.repository] Retrieving UserAggregate with ID: 95c5f91e-4bbb-4006-90a2-ed36f2c9c127
+[2025-11-10T23:48:42.160894] [FINE] [dddart.repository] Deleting UserAggregate with ID: 95c5f91e-4bbb-4006-90a2-ed36f2c9c127
+[2025-11-10T23:48:42.160949] [FINE] [dddart.repository] Retrieving UserAggregate with ID: 95c5f91e-4bbb-4006-90a2-ed36f2c9c127
+[2025-11-10T23:48:42.161048] [SEVERE] [dddart.repository] Failed to retrieve UserAggregate with ID: 95c5f91e-4bbb-4006-90a2-ed36f2c9c127
+Error: RepositoryException: Aggregate with ID 95c5f91e-4bbb-4006-90a2-ed36f2c9c127 not found (type: RepositoryExceptionType.notFound)
+Stack trace:
+#0      InMemoryRepository.getById (package:dddart/src/in_memory_repository.dart:115:9)
+#1      _performOperations (file:///Users/sean/Development/dddart/packages/dddart/example/logging_file.dart:128:22)
+<asynchronous suspension>
+#2      main (file:///Users/sean/Development/dddart/packages/dddart/example/logging_file.dart:42:3)
+<asynchronous suspension>
+
+[2025-11-10T23:48:42.162356] [INFO] [dddart.eventbus] EventBus closing

@@ -1,0 +1,73 @@
+# Technology Stack
+
+## Language & SDK
+
+- **Dart SDK**: >=3.0.0 <4.0.0
+- **Platform Support**: Server (Dart VM), Web, Mobile (Flutter), Desktop (Flutter)
+
+## Core Dependencies
+
+- **uuid**: ^4.0.0 - UUID generation for entity IDs
+- **shelf**: ^1.4.0 - HTTP server framework (dddart_http)
+- **shelf_router**: ^1.1.0 - HTTP routing (dddart_http)
+- **build**: ^2.4.0 - Build system for code generation (dddart_json)
+- **source_gen**: ^1.4.0 - Code generation utilities (dddart_json)
+- **analyzer**: ^6.0.0 - Dart code analysis (dddart_json)
+
+## Development Tools
+
+- **test**: ^1.24.0 - Testing framework
+- **build_runner**: ^2.4.0 - Code generation runner
+- **lints**: ^3.0.0 - Dart linting rules
+
+## Build System
+
+### Code Generation (dddart_json)
+
+Generate JSON serializers for annotated classes:
+
+```bash
+# Generate code
+dart run build_runner build
+
+# Generate with conflict resolution
+dart run build_runner build --delete-conflicting-outputs
+
+# Clean generated files
+dart run build_runner clean
+```
+
+### Testing
+
+Run tests for a specific package:
+
+```bash
+# Run all tests
+dart test
+
+# Run specific test file
+dart test test/aggregate_root_test.dart
+
+# Run with coverage
+dart test --coverage=coverage
+```
+
+### Package Management
+
+```bash
+# Get dependencies
+dart pub get
+
+# Update dependencies
+dart pub upgrade
+
+# Publish package (dry run)
+dart pub publish --dry-run
+```
+
+## Project Structure
+
+Monorepo with multiple packages under `packages/` directory. Each package has:
+- Independent git repository (`.git` folder)
+- Own `pubspec.yaml` with dependencies
+- Standard Dart package structure (lib/, test/, example/)

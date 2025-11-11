@@ -11,6 +11,7 @@ environment:
 dependencies:
   shelf: ^1.4.0
   shelf_router: ^1.1.0
+  logging: ^1.2.0
   dddart:
     git:
       url: https://github.com/continuousimagination/dddart.git

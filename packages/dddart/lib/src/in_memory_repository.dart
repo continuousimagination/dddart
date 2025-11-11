@@ -1,3 +1,5 @@
+import 'package:logging/logging.dart';
+
 import 'aggregate_root.dart';
 import 'repository.dart';
 import 'repository_exception.dart';
@@ -98,35 +100,56 @@ import 'uuid_value.dart';
 /// * [AggregateRoot] - The base class for aggregate roots
 /// * [RepositoryException] - Exception thrown by repository operations
 class InMemoryRepository<T extends AggregateRoot> implements Repository<T> {
+  /// Logger instance for repository operations.
+  final Logger _logger = Logger('dddart.repository');
+
   /// Internal storage map that holds aggregates keyed by their ID.
   final Map<UuidValue, T> _storage = {};
 
   @override
   Future<T> getById(UuidValue id) async {
-    final aggregate = _storage[id];
-    if (aggregate == null) {
-      throw RepositoryException(
-        'Aggregate with ID $id not found',
-        type: RepositoryExceptionType.notFound,
-      );
+    try {
+      _logger.fine('Retrieving $T with ID: $id');
+      final aggregate = _storage[id];
+      if (aggregate == null) {
+        throw RepositoryException(
+          'Aggregate with ID $id not found',
+          type: RepositoryExceptionType.notFound,
+        );
+      }
+      return aggregate;
+    } catch (e, stackTrace) {
+      _logger.severe('Failed to retrieve $T with ID: $id', e, stackTrace);
+      rethrow;
     }
-    return aggregate;
   }
 
   @override
   Future<void> save(T aggregate) async {
-    _storage[aggregate.id] = aggregate;
+    try {
+      _logger.fine('Saving $T with ID: ${aggregate.id}');
+      _storage[aggregate.id] = aggregate;
+    } catch (e, stackTrace) {
+      _logger.severe('Failed to save $T with ID: ${aggregate.id}', e, stackTrace);
+      rethrow;
+    }
   }
 
   @override
   Future<void> deleteById(UuidValue id) async {
-    if (!_storage.containsKey(id)) {
-      throw RepositoryException(
-        'Aggregate with ID $id not found',
-        type: RepositoryExceptionType.notFound,
-      );
+    try {
+      _logger.fine('Deleting $T with ID: $id');
+      if (!_storage.containsKey(id)) {
+        throw RepositoryException(
+          'Aggregate with ID $id not found',
+          type: RepositoryExceptionType.notFound,
+        );
+      }
+      _storage.remove(id);
+    } catch (e, stackTrace) {
+      _logger.severe('Failed to delete $T with ID: $id', e, stackTrace);
+      rethrow;
     }
-    _storage.remove(id);
   }
 
   /// Clears all aggregates from the repository.

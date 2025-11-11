@@ -8,8 +8,8 @@ environment:
 
 dependencies:
   dddart:
-    git:
-      url: https://github.com/continuousimagination/dddart.git
+    path: ../
+  logging: ^1.2.0
 
 dev_dependencies:
   lints: ^3.0.0

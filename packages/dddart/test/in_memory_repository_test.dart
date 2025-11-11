@@ -1,3 +1,4 @@
+import 'package:logging/logging.dart';
 import 'package:test/test.dart';
 import '../lib/src/aggregate_root.dart';
 import '../lib/src/in_memory_repository.dart';
@@ -368,6 +369,113 @@ void main() {
           () => repository.getById(aggregate.id),
           throwsA(isA<RepositoryException>()),
         );
+      });
+    });
+
+    group('logging integration', () {
+      late List<LogRecord> logRecords;
+      late InMemoryRepository<TestAggregate> loggingRepository;
+
+      setUp(() {
+        logRecords = [];
+        loggingRepository = InMemoryRepository<TestAggregate>();
+        
+        // Set up logging to capture log records
+        Logger.root.level = Level.ALL;
+        Logger.root.onRecord.listen((record) {
+          if (record.loggerName == 'dddart.repository') {
+            logRecords.add(record);
+          }
+        });
+      });
+
+      tearDown(() {
+        Logger.root.clearListeners();
+      });
+
+      test('save operation logs at FINE level', () async {
+        final aggregate = TestAggregate(name: 'Test User');
+        
+        await loggingRepository.save(aggregate);
+        
+        expect(logRecords, isNotEmpty);
+        final saveLog = logRecords.firstWhere(
+          (r) => r.message.contains('Saving') && r.message.contains(aggregate.id.toString()),
+        );
+        expect(saveLog.level, equals(Level.FINE));
+        expect(saveLog.message, contains('TestAggregate'));
+        expect(saveLog.message, contains(aggregate.id.toString()));
+      });
+
+      test('getById operation logs at FINE level', () async {
+        final aggregate = TestAggregate(name: 'Test User');
+        await loggingRepository.save(aggregate);
+        logRecords.clear();
+        
+        await loggingRepository.getById(aggregate.id);
+        
+        expect(logRecords, isNotEmpty);
+        final getLog = logRecords.firstWhere(
+          (r) => r.message.contains('Retrieving') && r.message.contains(aggregate.id.toString()),
+        );
+        expect(getLog.level, equals(Level.FINE));
+        expect(getLog.message, contains('TestAggregate'));
+        expect(getLog.message, contains(aggregate.id.toString()));
+      });
+
+      test('deleteById operation logs at FINE level', () async {
+        final aggregate = TestAggregate(name: 'Test User');
+        await loggingRepository.save(aggregate);
+        logRecords.clear();
+        
+        await loggingRepository.deleteById(aggregate.id);
+        
+        expect(logRecords, isNotEmpty);
+        final deleteLog = logRecords.firstWhere(
+          (r) => r.message.contains('Deleting') && r.message.contains(aggregate.id.toString()),
+        );
+        expect(deleteLog.level, equals(Level.FINE));
+        expect(deleteLog.message, contains('TestAggregate'));
+        expect(deleteLog.message, contains(aggregate.id.toString()));
+      });
+
+      test('operation failure logs at SEVERE level with exception', () async {
+        final nonExistentId = UuidValue.generate();
+        
+        try {
+          await loggingRepository.getById(nonExistentId);
+          fail('Expected RepositoryException to be thrown');
+        } catch (e) {
+          expect(e, isA<RepositoryException>());
+        }
+        
+        final severeLog = logRecords.firstWhere(
+          (r) => r.level == Level.SEVERE,
+        );
+        expect(severeLog.message, contains('Failed to retrieve'));
+        expect(severeLog.message, contains('TestAggregate'));
+        expect(severeLog.message, contains(nonExistentId.toString()));
+        expect(severeLog.error, isA<RepositoryException>());
+        expect(severeLog.stackTrace, isNotNull);
+      });
+
+      test('deleteById failure logs at SEVERE level with exception', () async {
+        final nonExistentId = UuidValue.generate();
+        
+        try {
+          await loggingRepository.deleteById(nonExistentId);
+          fail('Expected RepositoryException to be thrown');
+        } catch (e) {
+          expect(e, isA<RepositoryException>());
+        }
+        
+        final severeLog = logRecords.firstWhere(
+          (r) => r.level == Level.SEVERE && r.message.contains('Failed to delete'),
+        );
+        expect(severeLog.message, contains('TestAggregate'));
+        expect(severeLog.message, contains(nonExistentId.toString()));
+        expect(severeLog.error, isA<RepositoryException>());
+        expect(severeLog.stackTrace, isNotNull);
       });
     });
   });

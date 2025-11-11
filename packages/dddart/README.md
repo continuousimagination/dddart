@@ -185,6 +185,210 @@ The EventBus provides local publish/subscribe functionality for domain events wi
 - Built on Dart's Stream API
 - Platform-independent (works on server, web, mobile)
 
+## Logging
+
+DDDart integrates with the official Dart `logging` package to provide optional diagnostic logging across all components. Logging is completely optional - DDDart works perfectly without any logging configuration.
+
+### Hierarchical Logger Structure
+
+DDDart uses a hierarchical logger structure with `dddart` as the root:
+
+```
+dddart (root)
+├── dddart.eventbus    - Event publishing and subscriptions
+├── dddart.repository  - Repository operations (save, retrieve, delete)
+└── dddart.http        - HTTP request handling (in dddart_http package)
+```
+
+This structure allows you to configure logging levels independently for each component or set a global level for all DDDart components.
+
+### Console Logging
+
+Enable console logging to see DDDart diagnostic messages in your terminal:
+
+```dart
+import 'package:logging/logging.dart';
+import 'package:dddart/dddart.dart';
+
+void main() {
+  // Configure console logging
+  Logger.root.level = Level.ALL;
+  Logger.root.onRecord.listen((record) {
+    print('${record.level.name}: ${record.time}: ${record.message}');
+  });
+  
+  // Use DDDart components - they will log automatically
+  final eventBus = EventBus();
+  final repository = InMemoryRepository<User>();
+  
+  // Logs will appear in console:
+  // FINE: 2024-01-15 10:30:45.123: Publishing event: OrderPlaced for aggregate abc-123
+  // FINE: 2024-01-15 10:30:45.456: Saving User with ID: def-456
+}
+```
+
+### File Logging
+
+Write logs to a file using the built-in `FileLogHandler`:
+
+```dart
+import 'package:logging/logging.dart';
+import 'package:dddart/dddart.dart';
+
+void main() async {
+  // Configure file logging
+  final fileHandler = FileLogHandler('app.log');
+  
+  Logger.root.level = Level.ALL;
+  Logger.root.onRecord.listen(fileHandler);
+  
+  // Use DDDart components
+  final eventBus = EventBus();
+  final repository = InMemoryRepository<User>();
+  
+  // Logs will be written to app.log with format:
+  // [2024-01-15T10:30:45.123456] [FINE] [dddart.eventbus] Publishing event: OrderPlaced
+  
+  // Clean up when done
+  await fileHandler.close();
+}
+```
+
+### Component-Specific Log Levels
+
+Configure different log levels for different components:
+
+```dart
+import 'package:logging/logging.dart';
+import 'package:dddart/dddart.dart';
+
+void main() {
+  // Set default level for all loggers
+  Logger.root.level = Level.INFO;
+  
+  // Enable detailed logging for EventBus only
+  Logger('dddart.eventbus').level = Level.FINE;
+  
+  // Disable repository logging completely
+  Logger('dddart.repository').level = Level.OFF;
+  
+  // Enable HTTP logging at warning level (in dddart_http)
+  Logger('dddart.http').level = Level.WARNING;
+  
+  Logger.root.onRecord.listen((record) {
+    print('${record.level.name}: ${record.message}');
+  });
+  
+  // EventBus will log detailed FINE messages
+  // Repository will not log at all
+  // HTTP will only log warnings and errors
+}
+```
+
+### Log Levels
+
+DDDart components use these log levels:
+
+- **FINE** - Detailed tracing (event publishing, repository operations, HTTP responses)
+- **INFO** - Informational messages (EventBus closed, HTTP requests received)
+- **WARNING** - Warnings (deserialization failures, validation issues)
+- **SEVERE** - Errors (exceptions, operation failures, handler errors)
+
+### Custom Log Formatting
+
+Customize the log format by providing your own formatter:
+
+```dart
+import 'dart:convert';
+import 'package:logging/logging.dart';
+import 'package:dddart/dddart.dart';
+
+// JSON formatter for structured logging
+String jsonFormatter(LogRecord record) {
+  return jsonEncode({
+    'timestamp': record.time.toIso8601String(),
+    'level': record.level.name,
+    'logger': record.loggerName,
+    'message': record.message,
+    'error': record.error?.toString(),
+    'stackTrace': record.stackTrace?.toString(),
+  });
+}
+
+void main() async {
+  final fileHandler = FileLogHandler('app.json', formatter: jsonFormatter);
+  
+  Logger.root.level = Level.ALL;
+  Logger.root.onRecord.listen(fileHandler);
+  
+  // Logs will be written as JSON objects
+}
+```
+
+### Multiple Log Handlers
+
+Send logs to multiple destinations simultaneously:
+
+```dart
+import 'package:logging/logging.dart';
+import 'package:dddart/dddart.dart';
+
+void main() async {
+  // Log to both console and file
+  final fileHandler = FileLogHandler('app.log');
+  
+  Logger.root.level = Level.ALL;
+  Logger.root.onRecord.listen((record) {
+    // Console handler
+    print('${record.level.name}: ${record.message}');
+    
+    // File handler
+    fileHandler(record);
+  });
+  
+  // All logs go to both console and file
+  
+  // Clean up
+  await fileHandler.close();
+}
+```
+
+### Disabling Logging
+
+Logging is disabled by default. If you don't configure any handlers, DDDart components will still call logging methods, but the messages will be silently discarded with minimal performance overhead.
+
+```dart
+import 'package:dddart/dddart.dart';
+
+void main() {
+  // No logging configuration needed
+  final eventBus = EventBus();
+  final repository = InMemoryRepository<User>();
+  
+  // Components work normally, logging is a no-op
+}
+```
+
+### What Gets Logged
+
+**EventBus:**
+- Event publishing (FINE): Event type and aggregate ID
+- Subscription creation (FINE): Event type
+- Handler exceptions (SEVERE): Exception and stack trace
+- EventBus closed (INFO): Confirmation message
+
+**Repository:**
+- Save operations (FINE): Aggregate type and ID
+- Retrieve operations (FINE): Aggregate type and ID
+- Delete operations (FINE): Aggregate type and ID
+- Operation failures (SEVERE): Exception and stack trace
+
+**HTTP (dddart_http):**
+- Incoming requests (INFO): HTTP method, path, aggregate type
+- Responses (FINE): Status code
+- Deserialization errors (WARNING): Error details
+- Exceptions (SEVERE): Exception and stack trace
+
 ## Usage Guide
 
 ### Designing Domain Events

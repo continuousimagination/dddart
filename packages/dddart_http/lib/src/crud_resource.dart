@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:shelf/shelf.dart';
+import 'package:logging/logging.dart';
 import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 import 'error_mapper.dart';
@@ -111,6 +112,9 @@ class CrudResource<T extends AggregateRoot> {
   /// ResponseBuilder instance for creating HTTP responses
   late final ResponseBuilder<T> _responseBuilder = ResponseBuilder<T>();
 
+  /// Logger instance for HTTP request/response logging
+  final Logger _logger = Logger('dddart.http');
+
   /// Handles GET /resource/:id
   ///
   /// Parses the ID, calls repository.getById(), and returns serialized aggregate
@@ -122,15 +126,18 @@ class CrudResource<T extends AggregateRoot> {
   ///
   /// Returns: A Response with status 200 and serialized aggregate, or error response
   Future<Response> handleGetById(Request request, String id) async {
+    _logger.info('GET /$path/$id - Retrieving ${T.toString()}');
     try {
       final uuid = UuidValue.fromString(id);
       final aggregate = await repository.getById(uuid);
       final serializerEntry = _selectSerializer(request.headers['accept']);
-      return _responseBuilder.ok(
+      final response = _responseBuilder.ok(
         aggregate,
         serializerEntry.serializer,
         serializerEntry.contentType,
       );
+      _logger.fine('GET /$path/$id - ${response.statusCode}');
+      return response;
     } catch (e, stackTrace) {
       return _handleException(e, stackTrace);
     }
@@ -147,6 +154,8 @@ class CrudResource<T extends AggregateRoot> {
   ///
   /// Returns: A Response with status 200 and serialized array, or error response
   Future<Response> handleQuery(Request request) async {
+    final queryString = request.url.query.isEmpty ? '' : '?${request.url.query}';
+    _logger.info('GET /$path$queryString - Querying ${T.toString()}');
     try {
       final queryParams = request.url.queryParameters;
       final pagination = _parsePagination(queryParams);
@@ -163,18 +172,22 @@ class CrudResource<T extends AggregateRoot> {
         result = await _getAllItems(pagination.skip, pagination.take);
       } else if (filterParams.length > 1) {
         // Multiple filters not allowed
-        return _responseBuilder.badRequest(
+        final response = _responseBuilder.badRequest(
           'Cannot combine multiple query parameters. Use only one filter at a time.',
         );
+        _logger.fine('GET /$path$queryString - ${response.statusCode}');
+        return response;
       } else {
         // Single filter - look up handler
         final paramName = filterParams.keys.first;
         final handler = queryHandlers[paramName];
 
         if (handler == null) {
-          return _responseBuilder.badRequest(
+          final response = _responseBuilder.badRequest(
             'Unsupported query parameter: $paramName',
           );
+          _logger.fine('GET /$path$queryString - ${response.statusCode}');
+          return response;
         }
 
         result = await handler(
@@ -186,12 +199,14 @@ class CrudResource<T extends AggregateRoot> {
       }
 
       final serializerEntry = _selectSerializer(request.headers['accept']);
-      return _responseBuilder.okList(
+      final response = _responseBuilder.okList(
         result.items,
         serializerEntry.serializer,
         serializerEntry.contentType,
         totalCount: result.totalCount,
       );
+      _logger.fine('GET /$path$queryString - ${response.statusCode}');
+      return response;
     } catch (e, stackTrace) {
       return _handleException(e, stackTrace);
     }
@@ -207,6 +222,7 @@ class CrudResource<T extends AggregateRoot> {
   ///
   /// Returns: A Response with status 201 and serialized aggregate, or error response
   Future<Response> handleCreate(Request request) async {
+    _logger.info('POST /$path - Creating ${T.toString()}');
     try {
       final contentTypeHeader = request.headers['content-type'] ?? serializers.keys.first;
       // Extract media type, removing charset and other parameters
@@ -222,7 +238,7 @@ class CrudResource<T extends AggregateRoot> {
       }
 
       if (requestSerializer == null) {
-        return Response(
+        final response = Response(
           415,
           headers: {'Content-Type': 'application/problem+json'},
           body: jsonEncode({
@@ -233,18 +249,28 @@ class CrudResource<T extends AggregateRoot> {
                 'Supported types: ${serializers.keys.join(", ")}',
           }),
         );
+        _logger.fine('POST /$path - ${response.statusCode}');
+        return response;
       }
 
       final body = await request.readAsString();
-      final aggregate = requestSerializer.deserialize(body);
+      T aggregate;
+      try {
+        aggregate = requestSerializer.deserialize(body);
+      } catch (e) {
+        _logger.warning('POST /$path - Deserialization failed: $e');
+        rethrow;
+      }
       await repository.save(aggregate);
 
       final responseSerializerEntry = _selectSerializer(request.headers['accept']);
-      return _responseBuilder.created(
+      final response = _responseBuilder.created(
         aggregate,
         responseSerializerEntry.serializer,
         responseSerializerEntry.contentType,
       );
+      _logger.fine('POST /$path - ${response.statusCode}');
+      return response;
     } catch (e, stackTrace) {
       return _handleException(e, stackTrace);
     }
@@ -261,6 +287,7 @@ class CrudResource<T extends AggregateRoot> {
   ///
   /// Returns: A Response with status 200 and serialized aggregate, or error response
   Future<Response> handleUpdate(Request request, String id) async {
+    _logger.info('PUT /$path/$id - Updating ${T.toString()}');
     try {
       final contentTypeHeader = request.headers['content-type'] ?? serializers.keys.first;
       // Extract media type, removing charset and other parameters
@@ -276,7 +303,7 @@ class CrudResource<T extends AggregateRoot> {
       }
 
       if (requestSerializer == null) {
-        return Response(
+        final response = Response(
           415,
           headers: {'Content-Type': 'application/problem+json'},
           body: jsonEncode({
@@ -287,18 +314,28 @@ class CrudResource<T extends AggregateRoot> {
                 'Supported types: ${serializers.keys.join(", ")}',
           }),
         );
+        _logger.fine('PUT /$path/$id - ${response.statusCode}');
+        return response;
       }
 
       final body = await request.readAsString();
-      final aggregate = requestSerializer.deserialize(body);
+      T aggregate;
+      try {
+        aggregate = requestSerializer.deserialize(body);
+      } catch (e) {
+        _logger.warning('PUT /$path/$id - Deserialization failed: $e');
+        rethrow;
+      }
       await repository.save(aggregate);
 
       final responseSerializerEntry = _selectSerializer(request.headers['accept']);
-      return _responseBuilder.ok(
+      final response = _responseBuilder.ok(
         aggregate,
         responseSerializerEntry.serializer,
         responseSerializerEntry.contentType,
       );
+      _logger.fine('PUT /$path/$id - ${response.statusCode}');
+      return response;
     } catch (e, stackTrace) {
       return _handleException(e, stackTrace);
     }
@@ -314,10 +351,13 @@ class CrudResource<T extends AggregateRoot> {
   ///
   /// Returns: A Response with status 204, or error response
   Future<Response> handleDelete(Request request, String id) async {
+    _logger.info('DELETE /$path/$id - Deleting ${T.toString()}');
     try {
       final uuid = UuidValue.fromString(id);
       await repository.deleteById(uuid);
-      return _responseBuilder.noContent();
+      final response = _responseBuilder.noContent();
+      _logger.fine('DELETE /$path/$id - ${response.statusCode}');
+      return response;
     } catch (e, stackTrace) {
       return _handleException(e, stackTrace);
     }
@@ -394,6 +434,8 @@ class CrudResource<T extends AggregateRoot> {
   ///
   /// Returns: A Response with appropriate status code and error body
   Response _handleException(Object error, StackTrace stackTrace) {
+    _logger.severe('Exception during request handling', error, stackTrace);
+    
     // Check custom handlers first
     final customHandler = customExceptionHandlers[error.runtimeType];
     if (customHandler != null) {

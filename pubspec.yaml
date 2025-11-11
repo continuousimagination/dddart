@@ -1,9 +1,0 @@
-name: dddart_monorepo
-description: Monorepo for DDDart packages - Domain-Driven Design framework for Dart
-version: 0.1.0
-
-environment:
-  sdk: '>=3.0.0 <4.0.0'
-
-# This is a monorepo workspace file
-# Individual packages have their own pubspec.yaml files
