@@ -1,0 +1,49 @@
+# Sample configuration file for dddart_config examples
+# This demonstrates nested configuration structures
+
+# Database configuration
+database:
+  host: localhost
+  port: 5432
+  name: myapp_db
+  connection:
+    timeout: 30
+    pool_size: 10
+    ssl_enabled: true
+
+# Logging configuration
+logging:
+  level: info
+  file:
+    path: /var/log/myapp.log
+    max_size_mb: 100
+    rotate: true
+  console:
+    enabled: true
+    color: true
+
+# Application settings
+app:
+  name: MyApplication
+  version: 1.0.0
+  debug: false
+  features:
+    - authentication
+    - notifications
+    - analytics
+
+# API configuration
+api:
+  base_url: https://api.example.com
+  timeout: 60
+  retry_attempts: 3
+  endpoints:
+    users: /v1/users
+    orders: /v1/orders
+    products: /v1/products
+
+# Cache settings
+cache:
+  enabled: true
+  ttl: 3600
+  max_entries: 1000

@@ -1,0 +1,15 @@
+# Dart build artifacts
+.dart_tool/
+build/
+*.g.dart
+
+# Test coverage
+coverage/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store

@@ -9,3 +9,4 @@ workspace:
   - packages/dddart_serialization
   - packages/dddart_json
   - packages/dddart_http
+  - packages/dddart_config

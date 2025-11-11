@@ -1,0 +1,16 @@
+name: dddart_config
+description: Configuration management package for DDDart framework with support for multiple sources (YAML, environment variables) and layered configuration.
+version: 0.1.0
+repository: https://github.com/yourusername/dddart_config
+
+resolution: workspace
+
+environment:
+  sdk: '>=3.5.0 <4.0.0'
+
+dependencies:
+  yaml: ^3.1.0
+
+dev_dependencies:
+  test: ^1.24.0
+  very_good_analysis: ^6.0.0
