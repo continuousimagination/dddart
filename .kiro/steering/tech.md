@@ -18,7 +18,7 @@
 
 - **test**: ^1.24.0 - Testing framework
 - **build_runner**: ^2.4.0 - Code generation runner
-- **lints**: ^3.0.0 - Dart linting rules
+- **very_good_analysis**: ^6.0.0 - Comprehensive static analysis and linting
 
 ## Build System
 
