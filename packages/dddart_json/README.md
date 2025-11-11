@@ -18,9 +18,9 @@ Add the required packages to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  dddart: ^0.1.0
-  dddart_serialization: ^0.1.0
-  dddart_json: ^0.1.0
+  dddart: ^1.0.0
+  dddart_serialization: ^1.0.0
+  dddart_json: ^1.0.0
 
 dev_dependencies:
   build_runner: ^2.4.0

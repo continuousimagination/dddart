@@ -18,7 +18,7 @@ Add this to your package's `pubspec.yaml` file:
 
 ```yaml
 dependencies:
-  dddart: ^0.1.0
+  dddart: ^1.0.0
 ```
 
 Then run:

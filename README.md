@@ -18,9 +18,9 @@ JSON serialization code generation for DDDart objects. Generates type-safe seria
 1. **Add dependencies**:
 ```yaml
 dependencies:
-  dddart: ^0.1.0
-  dddart_serialization: ^0.1.0
-  dddart_json: ^0.1.0
+  dddart: ^1.0.0
+  dddart_serialization: ^1.0.0
+  dddart_json: ^1.0.0
 
 dev_dependencies:
   build_runner: ^2.4.0
