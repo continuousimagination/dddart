@@ -1,0 +1,22 @@
+name: dddart_webhooks_slack
+description: Slack webhook implementation for DDDart - Provides SlackWebhookVerifier with HMAC-SHA256 signature verification
+version: 0.9.0
+homepage: https://github.com/continuousimagination/dddart_webhooks_slack
+repository: https://github.com/continuousimagination/dddart_webhooks_slack
+issue_tracker: https://github.com/continuousimagination/dddart_webhooks_slack/issues
+
+resolution: workspace
+
+environment:
+  sdk: '>=3.5.0 <4.0.0'
+
+dependencies:
+  crypto: ^3.0.3
+  dddart: ^0.9.0
+  dddart_webhooks: ^0.9.0
+  shelf: ^1.4.0
+
+dev_dependencies:
+  dddart_http: ^0.9.0
+  test: ^1.24.0
+  very_good_analysis: ^6.0.0

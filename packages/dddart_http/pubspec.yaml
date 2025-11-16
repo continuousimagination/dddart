@@ -13,6 +13,8 @@ environment:
 dependencies:
   dddart: ^0.9.0
   dddart_serialization: ^0.9.0
+  dddart_webhooks:
+    path: ../dddart_webhooks
   logging: ^1.2.0
   shelf: ^1.4.0
   shelf_router: ^1.1.0

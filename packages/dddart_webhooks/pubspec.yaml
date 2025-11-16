@@ -1,0 +1,20 @@
+name: dddart_webhooks
+description: Webhook support for DDDart - Provides framework for receiving, verifying, and processing webhooks with strongly-typed payloads
+version: 0.9.0
+homepage: https://github.com/continuousimagination/dddart_webhooks
+repository: https://github.com/continuousimagination/dddart_webhooks
+issue_tracker: https://github.com/continuousimagination/dddart_webhooks/issues
+
+resolution: workspace
+
+environment:
+  sdk: '>=3.5.0 <4.0.0'
+
+dependencies:
+  dddart_http: ^0.9.0
+  logging: ^1.2.0
+  shelf: ^1.4.0
+
+dev_dependencies:
+  test: ^1.24.0
+  very_good_analysis: ^6.0.0

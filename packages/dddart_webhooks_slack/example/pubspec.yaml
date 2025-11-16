@@ -1,0 +1,31 @@
+name: dddart_webhooks_slack_example
+description: Example applications demonstrating dddart_webhooks_slack
+version: 1.0.0
+publish_to: none
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  dddart_http:
+    path: ../../dddart_http
+  dddart_webhooks:
+    path: ../../dddart_webhooks
+  dddart_webhooks_slack:
+    path: ../
+  shelf: ^1.4.0
+
+dependency_overrides:
+  dddart:
+    path: ../../dddart
+  dddart_http:
+    path: ../../dddart_http
+  dddart_serialization:
+    path: ../../dddart_serialization
+  dddart_webhooks:
+    path: ../../dddart_webhooks
+  dddart_webhooks_slack:
+    path: ../
+
+dev_dependencies:
+  lints: ^3.0.0

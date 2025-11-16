@@ -1,6 +1,7 @@
 import 'dart:io' as io;
 
 import 'package:dddart_http/src/crud_resource.dart';
+import 'package:dddart_webhooks/dddart_webhooks.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_router/shelf_router.dart';
 
@@ -30,6 +31,9 @@ class HttpServer {
   /// List of registered CrudResource instances
   final List<CrudResource> _resources = [];
 
+  /// List of registered WebhookResource instances
+  final List<dynamic> _webhooks = [];
+
   /// The underlying shelf HttpServer instance
   io.HttpServer? _shelfServer;
 
@@ -51,6 +55,38 @@ class HttpServer {
   /// ```
   void registerResource(CrudResource resource) {
     _resources.add(resource);
+  }
+
+  /// Registers a webhook resource with the server
+  ///
+  /// The webhook will be available once the server is started.
+  /// A POST route is automatically created at the webhook's path.
+  ///
+  /// Type Parameters:
+  /// - [TPayload]: The type of the deserialized webhook payload
+  /// - [TVerification]: The type of verification result (must extend
+  ///   [WebhookVerificationResult])
+  ///
+  /// Parameters:
+  /// - [webhook]: The WebhookResource instance to register
+  ///
+  /// Example:
+  /// ```dart
+  /// server.registerWebhook(WebhookResource<SlackSlashCommand, SlackVerification>(
+  ///   path: '/webhooks/slack/commands',
+  ///   verifier: SlackWebhookVerifier(signingSecret: slackSecret),
+  ///   deserializer: (body) => SlackSlashCommand.fromForm(body),
+  ///   handler: (command, verification) async {
+  ///     print('Command: ${command.command}');
+  ///     return Response.ok('Command received');
+  ///   },
+  /// ));
+  /// ```
+  void registerWebhook<TPayload,
+      TVerification extends WebhookVerificationResult>(
+    WebhookResource<TPayload, TVerification> webhook,
+  ) {
+    _webhooks.add(webhook);
   }
 
   /// Starts the HTTP server
@@ -89,6 +125,15 @@ class HttpServer {
 
       // DELETE /{path}/:id → resource.handleDelete
       router.delete('${resource.path}/<id>', resource.handleDelete);
+    }
+
+    // Register routes for each webhook
+    for (final webhook in _webhooks) {
+      // POST /{path} → webhook.handleRequest
+      router.post(
+        (webhook as dynamic).path as String,
+        (webhook as dynamic).handleRequest,
+      );
     }
 
     // Start shelf server with router on configured port
