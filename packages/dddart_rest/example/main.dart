@@ -1,5 +1,5 @@
 import 'package:dddart/dddart.dart';
-import 'package:dddart_http/dddart_http.dart';
+import 'package:dddart_rest/dddart_rest.dart';
 import 'lib/models/user.dart';
 import 'lib/models/address.dart';
 import 'lib/models/profile.dart';

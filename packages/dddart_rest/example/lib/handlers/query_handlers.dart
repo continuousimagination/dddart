@@ -1,5 +1,5 @@
 import 'package:dddart/dddart.dart';
-import 'package:dddart_http/dddart_http.dart';
+import 'package:dddart_rest/dddart_rest.dart';
 import '../models/user.dart';
 
 /// Query handler for filtering users by first name

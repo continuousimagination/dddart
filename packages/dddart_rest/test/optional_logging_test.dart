@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:dddart/dddart.dart';
-import 'package:dddart_http/dddart_http.dart';
+import 'package:dddart_rest/dddart_rest.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:shelf/shelf.dart';
 import 'package:test/test.dart';

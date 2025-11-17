@@ -1,6 +1,8 @@
-# dddart_http
+# dddart_rest
 
-HTTP CRUD API framework for DDDart - Provides RESTful endpoints for aggregate roots with minimal boilerplate.
+RESTful CRUD API framework for DDDart - Provides REST endpoints for aggregate roots with minimal boilerplate.
+
+> **Note:** This package was previously named `dddart_http`. See the [Migration Guide](#migration-from-dddart_http) below.
 
 ## Features
 
@@ -19,16 +21,16 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  dddart_http: ^1.0.0
-  dddart: ^1.0.0
-  dddart_serialization: ^1.0.0
+  dddart_rest: ^0.9.0
+  dddart: ^0.9.0
+  dddart_serialization: ^0.9.0
 ```
 
 ## Quick Start
 
 ```dart
 import 'package:dddart/dddart.dart';
-import 'package:dddart_http/dddart_http.dart';
+import 'package:dddart_rest/dddart_rest.dart';
 
 void main() async {
   // Create repository and serializer
@@ -459,7 +461,7 @@ See the [example application](example/main.dart) for a complete working implemen
 Run the example:
 
 ```bash
-cd packages/dddart_http/example
+cd packages/dddart_rest/example
 dart run main.dart
 ```
 
@@ -602,6 +604,54 @@ ResponseBuilder (serializes result)
     ↓
 HTTP Response
 ```
+
+## Migration from dddart_http
+
+This package was renamed from `dddart_http` to `dddart_rest` to better reflect its purpose of providing RESTful CRUD APIs, distinguishing it from other HTTP concerns like webhook handling.
+
+### Migration Steps
+
+**1. Update pubspec.yaml:**
+```yaml
+dependencies:
+  dddart_rest: ^0.9.0  # Changed from dddart_http
+```
+
+**2. Update imports:**
+```dart
+// Before
+import 'package:dddart_http/dddart_http.dart';
+
+// After
+import 'package:dddart_rest/dddart_rest.dart';
+```
+
+**3. Update logger configuration (if used):**
+```dart
+// Before
+Logger('dddart.http').level = Level.INFO;
+
+// After
+Logger('dddart.rest').level = Level.INFO;
+```
+
+**4. Run pub get and test:**
+```bash
+dart pub get
+dart test
+```
+
+### What Changed
+
+- **Package name**: `dddart_http` → `dddart_rest`
+- **Import path**: `package:dddart_http/*` → `package:dddart_rest/*`
+- **Logger name**: `dddart.http` → `dddart.rest`
+
+### What Stayed the Same
+
+- All API surfaces remain identical
+- No breaking changes to functionality
+- All class names and methods unchanged
 
 ## License
 

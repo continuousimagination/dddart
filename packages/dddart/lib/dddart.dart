@@ -14,7 +14,7 @@ library dddart;
 /// DDDart uses hierarchical logger names with 'dddart' as the root:
 /// - `dddart.eventbus` - EventBus component logging
 /// - `dddart.repository` - Repository component logging
-/// - `dddart.http` - HTTP framework logging (in dddart_http package)
+/// - `dddart.rest` - REST API framework logging (in dddart_rest package)
 ///
 /// ### Enabling Logging
 ///

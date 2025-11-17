@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:dddart_http/dddart_http.dart';
+import 'package:dddart_rest/dddart_rest.dart';
 import 'package:dddart_webhooks/dddart_webhooks.dart';
 import 'package:dddart_webhooks_slack/dddart_webhooks_slack.dart';
 import 'package:shelf/shelf.dart';

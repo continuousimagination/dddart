@@ -1,6 +1,6 @@
 import 'dart:io' as io;
 
-import 'package:dddart_http/src/crud_resource.dart';
+import 'package:dddart_rest/src/crud_resource.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_router/shelf_router.dart';
 

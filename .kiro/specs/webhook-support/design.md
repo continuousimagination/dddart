@@ -2,7 +2,7 @@
 
 ## Overview
 
-This design implements webhook support for DDDart following a two-package architecture: `dddart_webhooks` (base framework) and `dddart_webhooks_slack` (Slack implementation). The design emphasizes strong typing, extensibility, and integration with the existing `dddart_http` package.
+This design implements webhook support for DDDart following a two-package architecture: `dddart_webhooks` (base framework) and `dddart_webhooks_slack` (Slack implementation). The design emphasizes strong typing, extensibility, and integration with the existing `dddart_rest` package.
 
 ## Architecture
 
@@ -32,7 +32,7 @@ packages/
 ### Dependencies
 
 **dddart_webhooks:**
-- `dddart_http` - For HttpServer integration and Response types
+- `dddart_rest` - For HttpServer integration and Response types
 - `shelf` - For Request handling
 - `dart:convert` - For JSON parsing
 
@@ -404,7 +404,7 @@ class SlackSlashCommand extends Value {
 
 ## Integration with HttpServer
 
-The `HttpServer` class in `dddart_http` will be extended to support webhook resources:
+The `HttpServer` class in `dddart_rest` will be extended to support webhook resources:
 
 ```dart
 class HttpServer {

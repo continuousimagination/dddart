@@ -1,6 +1,6 @@
-# dddart_http Example
+# dddart_rest Example
 
-This example demonstrates how to use the `dddart_http` package to create a RESTful HTTP CRUD API for aggregate roots using Domain-Driven Design principles.
+This example demonstrates how to use the `dddart_rest` package to create a RESTful CRUD API for aggregate roots using Domain-Driven Design principles.
 
 ## What This Example Demonstrates
 
@@ -601,6 +601,6 @@ This is a learning example. For production use:
 ## Learn More
 
 - [dddart Package](../../packages/dddart/README.md) - Core DDD abstractions
-- [dddart_http Package](../README.md) - HTTP CRUD API framework
+- [dddart_rest Package](../README.md) - RESTful CRUD API framework
 - [Domain-Driven Design](https://martinfowler.com/bliki/DomainDrivenDesign.html) - Martin Fowler's overview
 - [RFC 7807](https://tools.ietf.org/html/rfc7807) - Problem Details for HTTP APIs

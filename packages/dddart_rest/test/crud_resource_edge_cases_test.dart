@@ -1,8 +1,8 @@
 import 'dart:convert';
 
 import 'package:dddart/dddart.dart';
-import 'package:dddart_http/src/crud_resource.dart';
-import 'package:dddart_http/src/query_handler.dart';
+import 'package:dddart_rest/src/crud_resource.dart';
+import 'package:dddart_rest/src/query_handler.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:shelf/shelf.dart';
 import 'package:test/test.dart';

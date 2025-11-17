@@ -1,27 +1,26 @@
-name: dddart_webhooks_example
-description: Example applications demonstrating dddart_webhooks
+name: dddart_rest_example
+description: Example application demonstrating dddart_rest RESTful CRUD API
 version: 1.0.0
 publish_to: none
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: ^3.0.0
 
 dependencies:
-  crypto: ^3.0.3
+  dddart:
+    path: ../../dddart
+  dddart_serialization:
+    path: ../../dddart_serialization
   dddart_rest:
-    path: ../../dddart_rest
-  dddart_webhooks:
     path: ../
   shelf: ^1.4.0
 
 dependency_overrides:
   dddart:
     path: ../../dddart
-  dddart_rest:
-    path: ../../dddart_rest
   dddart_serialization:
     path: ../../dddart_serialization
-  dddart_webhooks:
+  dddart_rest:
     path: ../
 
 dev_dependencies:

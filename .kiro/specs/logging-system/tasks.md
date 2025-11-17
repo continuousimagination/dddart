@@ -69,14 +69,14 @@
     - Test operation failure logs at SEVERE level with exception
     - _Requirements: 9.6_
 
-- [x] 6. Add logging package dependency to dddart_http
-  - Add `logging: ^1.2.0` to dddart_http pubspec.yaml dependencies
-  - Run `dart pub get` in dddart_http directory
+- [x] 6. Add logging package dependency to dddart_rest
+  - Add `logging: ^1.2.0` to dddart_rest pubspec.yaml dependencies
+  - Run `dart pub get` in dddart_rest directory
   - _Requirements: 1.1_
 
 - [x] 7. Integrate logging into CrudResource
   - [x] 7.1 Add logger to CrudResource class
-    - Create logger instance: `Logger('dddart.http')`
+    - Create logger instance: `Logger('dddart.rest')`
     - Add INFO level logging for incoming requests (method, path, aggregate type)
     - Add FINE level logging for responses (status code)
     - Add WARNING level logging for deserialization failures

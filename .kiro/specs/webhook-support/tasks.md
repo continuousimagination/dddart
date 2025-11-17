@@ -2,7 +2,7 @@
 
 - [x] 1. Set up dddart_webhooks package structure
   - Create packages/dddart_webhooks directory with standard Dart package layout
-  - Create pubspec.yaml with dependencies (dddart_http, shelf, dart:convert)
+  - Create pubspec.yaml with dependencies (dddart_rest, shelf, dart:convert)
   - Create lib/dddart_webhooks.dart main export file
   - Create lib/src/ directory for implementation files
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
@@ -60,7 +60,7 @@
   - _Requirements: 5.3, 5.4, 5.5, 7.4_
 
 - [x] 9. Add HttpServer integration for webhooks
-  - Update dddart_http HttpServer class to support webhook registration
+  - Update dddart_rest HttpServer class to support webhook registration
   - Add registerWebhook<TPayload, TVerification>() method
   - Register POST route for webhook path
   - Route requests to webhook.handleRequest()

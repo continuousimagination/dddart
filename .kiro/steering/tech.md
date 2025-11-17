@@ -8,8 +8,8 @@
 ## Core Dependencies
 
 - **uuid**: ^4.0.0 - UUID generation for entity IDs
-- **shelf**: ^1.4.0 - HTTP server framework (dddart_http)
-- **shelf_router**: ^1.1.0 - HTTP routing (dddart_http)
+- **shelf**: ^1.4.0 - HTTP server framework (dddart_rest)
+- **shelf_router**: ^1.1.0 - HTTP routing (dddart_rest)
 - **build**: ^2.4.0 - Build system for code generation (dddart_json)
 - **source_gen**: ^1.4.0 - Code generation utilities (dddart_json)
 - **analyzer**: ^6.0.0 - Dart code analysis (dddart_json)

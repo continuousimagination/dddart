@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:dddart/dddart.dart';
-import 'package:dddart_http/src/crud_resource.dart';
+import 'package:dddart_rest/src/crud_resource.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:logging/logging.dart';
 import 'package:shelf/shelf.dart';
@@ -143,7 +143,7 @@ void main() {
     logRecords = [];
     Logger.root.level = Level.ALL;
     Logger.root.onRecord.listen((record) {
-      if (record.loggerName == 'dddart.http') {
+      if (record.loggerName == 'dddart.rest') {
         logRecords.add(record);
       }
     });
@@ -550,7 +550,7 @@ void main() {
 
       // Assert
       expect(logRecords.isNotEmpty, isTrue);
-      expect(logRecords[0].loggerName, equals('dddart.http'));
+      expect(logRecords[0].loggerName, equals('dddart.rest'));
     });
 
     test('logging works when no handlers configured', () async {

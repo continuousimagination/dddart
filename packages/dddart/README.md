@@ -197,7 +197,7 @@ DDDart uses a hierarchical logger structure with `dddart` as the root:
 dddart (root)
 ├── dddart.eventbus    - Event publishing and subscriptions
 ├── dddart.repository  - Repository operations (save, retrieve, delete)
-└── dddart.http        - HTTP request handling (in dddart_http package)
+└── dddart.rest        - REST API request handling (in dddart_rest package)
 ```
 
 This structure allows you to configure logging levels independently for each component or set a global level for all DDDart components.
@@ -272,8 +272,8 @@ void main() {
   // Disable repository logging completely
   Logger('dddart.repository').level = Level.OFF;
   
-  // Enable HTTP logging at warning level (in dddart_http)
-  Logger('dddart.http').level = Level.WARNING;
+  // Enable REST API logging at warning level (in dddart_rest)
+  Logger('dddart.rest').level = Level.WARNING;
   
   Logger.root.onRecord.listen((record) {
     print('${record.level.name}: ${record.message}');
@@ -383,7 +383,7 @@ void main() {
 - Delete operations (FINE): Aggregate type and ID
 - Operation failures (SEVERE): Exception and stack trace
 
-**HTTP (dddart_http):**
+**REST API (dddart_rest):**
 - Incoming requests (INFO): HTTP method, path, aggregate type
 - Responses (FINE): Status code
 - Deserialization errors (WARNING): Error details

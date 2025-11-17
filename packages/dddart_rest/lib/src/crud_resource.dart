@@ -1,10 +1,10 @@
 import 'dart:convert';
 
 import 'package:dddart/dddart.dart';
-import 'package:dddart_http/src/error_mapper.dart';
-import 'package:dddart_http/src/exceptions.dart';
-import 'package:dddart_http/src/query_handler.dart';
-import 'package:dddart_http/src/response_builder.dart';
+import 'package:dddart_rest/src/error_mapper.dart';
+import 'package:dddart_rest/src/exceptions.dart';
+import 'package:dddart_rest/src/query_handler.dart';
+import 'package:dddart_rest/src/response_builder.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:shelf/shelf.dart';
 
@@ -113,8 +113,8 @@ class CrudResource<T extends AggregateRoot> {
   /// ResponseBuilder instance for creating HTTP responses
   late final ResponseBuilder<T> _responseBuilder = ResponseBuilder<T>();
 
-  /// Logger instance for HTTP request/response logging
-  final Logger _logger = Logger('dddart.http');
+  /// Logger instance for REST API request/response logging
+  final Logger _logger = Logger('dddart.rest');
 
   /// Handles GET /resource/:id
   ///

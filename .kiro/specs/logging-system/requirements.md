@@ -13,7 +13,7 @@ This specification defines logging integration for the DDDart framework using th
 - **Handler**: A function that processes LogRecords (e.g., writes to file, sends to cloud service)
 - **FileLogHandler**: A custom handler that writes log records to a file on disk
 - **Hierarchical Logger**: A logger with a dot-separated name (e.g., 'dddart.eventbus') that inherits settings from parent loggers
-- **DDDart Framework**: The collection of packages (dddart, dddart_http, dddart_json, dddart_serialization)
+- **DDDart Framework**: The collection of packages (dddart, dddart_rest, dddart_json, dddart_serialization)
 
 ## Requirements
 
@@ -38,7 +38,7 @@ This specification defines logging integration for the DDDart framework using th
 1. THE dddart package SHALL create a root logger named 'dddart'
 2. THE EventBus SHALL use a logger named 'dddart.eventbus'
 3. THE InMemoryRepository SHALL use a logger named 'dddart.repository'
-4. THE dddart_http package SHALL use a logger named 'dddart.http'
+4. THE dddart_rest package SHALL use a logger named 'dddart.rest'
 5. WHEN a user sets the level on the 'dddart' logger, THE setting SHALL apply to all DDDart component loggers
 6. WHEN a user sets the level on a specific component logger, THE setting SHALL override the parent logger setting
 
@@ -100,7 +100,7 @@ This specification defines logging integration for the DDDart framework using th
 
 #### Acceptance Criteria
 
-1. THE CrudResource SHALL use a logger named 'dddart.http'
+1. THE CrudResource SHALL use a logger named 'dddart.rest'
 2. WHEN an HTTP request is received, THE CrudResource SHALL log at INFO level with method, path, and aggregate type
 3. WHEN an HTTP response is sent, THE CrudResource SHALL log at FINE level with status code
 4. WHEN request deserialization fails, THE CrudResource SHALL log at WARNING level with error details

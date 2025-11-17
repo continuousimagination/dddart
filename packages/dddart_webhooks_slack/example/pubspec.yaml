@@ -7,8 +7,8 @@ environment:
   sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
-  dddart_http:
-    path: ../../dddart_http
+  dddart_rest:
+    path: ../../dddart_rest
   dddart_webhooks:
     path: ../../dddart_webhooks
   dddart_webhooks_slack:
@@ -18,8 +18,8 @@ dependencies:
 dependency_overrides:
   dddart:
     path: ../../dddart
-  dddart_http:
-    path: ../../dddart_http
+  dddart_rest:
+    path: ../../dddart_rest
   dddart_serialization:
     path: ../../dddart_serialization
   dddart_webhooks:

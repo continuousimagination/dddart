@@ -8,7 +8,7 @@ workspace:
   - packages/dddart
   - packages/dddart_serialization
   - packages/dddart_json
-  - packages/dddart_http
+  - packages/dddart_rest
   - packages/dddart_config
   - packages/dddart_webhooks
   - packages/dddart_webhooks_slack

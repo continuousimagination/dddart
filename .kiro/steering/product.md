@@ -7,7 +7,7 @@ DDDart is a lightweight Domain-Driven Design (DDD) framework for Dart that provi
 - **dddart**: Core DDD framework with Entity, AggregateRoot, Value, DomainEvent, EventBus, and Repository abstractions
 - **dddart_serialization**: Framework package providing serialization annotations and configuration
 - **dddart_json**: JSON serialization code generation for aggregate roots and value objects
-- **dddart_http**: HTTP CRUD API framework providing RESTful endpoints with minimal boilerplate
+- **dddart_rest**: RESTful CRUD API framework providing REST endpoints with minimal boilerplate
 
 ## Key Features
 

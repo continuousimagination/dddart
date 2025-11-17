@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:dddart/dddart.dart';
-import 'package:dddart_http/src/exceptions.dart';
+import 'package:dddart_rest/src/exceptions.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:shelf/shelf.dart';
 

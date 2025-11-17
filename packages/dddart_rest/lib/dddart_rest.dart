@@ -1,9 +1,9 @@
-/// HTTP CRUD API framework for DDDart
+/// RESTful CRUD API framework for DDDart
 ///
 /// Provides a declarative, type-safe way to expose aggregate roots through
 /// RESTful HTTP endpoints with support for content negotiation, custom query
 /// handlers, and extensible error handling.
-library dddart_http;
+library dddart_rest;
 
 export 'src/crud_resource.dart';
 export 'src/error_mapper.dart';

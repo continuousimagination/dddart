@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:dddart/dddart.dart';
-import 'package:dddart_http/src/response_builder.dart';
+import 'package:dddart_rest/src/response_builder.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:test/test.dart';
 

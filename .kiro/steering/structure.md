@@ -7,7 +7,7 @@ packages/
 ├── dddart/              # Core DDD framework
 ├── dddart_serialization/ # Serialization framework
 ├── dddart_json/         # JSON serialization implementation
-└── dddart_http/         # HTTP CRUD API framework
+└── dddart_rest/         # RESTful CRUD API framework
 ```
 
 ## Standard Package Layout

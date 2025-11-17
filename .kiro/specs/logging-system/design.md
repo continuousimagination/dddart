@@ -47,7 +47,7 @@ This design integrates the official Dart `logging` package into the DDDart frame
 dddart (root)
 ├── dddart.eventbus
 ├── dddart.repository
-└── dddart.http
+└── dddart.rest
 ```
 
 Each component gets its own logger, allowing fine-grained control over logging levels.
@@ -170,9 +170,9 @@ class InMemoryRepository<T extends AggregateRoot> implements Repository<T> {
 }
 ```
 
-### 5. CrudResource Integration (dddart_http)
+### 5. CrudResource Integration (dddart_rest)
 
-**Logger Name:** `dddart.http`
+**Logger Name:** `dddart.rest`
 
 **Logging Points:**
 - Request received (INFO level)
@@ -183,7 +183,7 @@ class InMemoryRepository<T extends AggregateRoot> implements Repository<T> {
 **Implementation Approach:**
 ```dart
 class CrudResource<T extends AggregateRoot> {
-  final Logger _logger = Logger('dddart.http');
+  final Logger _logger = Logger('dddart.rest');
   
   Future<Response> handleGetById(Request request, String id) async {
     _logger.info('GET /${path}/$id - Retrieving ${T.toString()}');
@@ -433,11 +433,11 @@ void main() async {
 2. Add logging to InMemoryRepository
 3. Write integration tests for component logging
 
-### Phase 3: HTTP Integration (dddart_http package)
+### Phase 3: REST API Integration (dddart_rest package)
 
-1. Add `logging` package dependency to dddart_http
+1. Add `logging` package dependency to dddart_rest
 2. Add logging to CrudResource
-3. Write integration tests for HTTP logging
+3. Write integration tests for REST API logging
 
 ### Phase 4: Documentation and Examples
 
@@ -454,7 +454,7 @@ void main() async {
 **dddart package:**
 - `logging: ^1.2.0` (production dependency)
 
-**dddart_http package:**
+**dddart_rest package:**
 - `logging: ^1.2.0` (production dependency)
 
 ### No Breaking Changes
