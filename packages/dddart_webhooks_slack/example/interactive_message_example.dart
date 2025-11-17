@@ -1,10 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:dddart_rest/dddart_rest.dart';
 import 'package:dddart_webhooks/dddart_webhooks.dart';
 import 'package:dddart_webhooks_slack/dddart_webhooks_slack.dart';
 import 'package:shelf/shelf.dart';
+import 'package:shelf/shelf_io.dart' as shelf_io;
+import 'package:shelf_router/shelf_router.dart';
 
 /// Example demonstrating Slack interactive message webhook handling.
 ///
@@ -14,6 +15,7 @@ import 'package:shelf/shelf.dart';
 /// - Processing button clicks and menu selections
 /// - Updating messages in response to interactions
 /// - Using block_actions and view_submission payloads
+/// - Using WebhookResource directly with Shelf Router
 
 void main() async {
   // Get Slack signing secret from environment
@@ -32,31 +34,35 @@ void main() async {
     exit(1);
   }
 
-  // Create HTTP server
-  final server = HttpServer(port: 8080);
-
-  // Register Slack interactive message webhook
-  server.registerWebhook(
-    WebhookResource<SlackInteractivePayload, SlackVerificationResult>(
-      path: '/slack/interactive',
-      verifier: SlackWebhookVerifier(signingSecret: signingSecret),
-      deserializer: (body) {
-        // Slack sends interactive payloads as form-encoded with a 'payload' field
-        final formData = Uri.splitQueryString(body);
-        final payloadJson = formData['payload'];
-        if (payloadJson == null) {
-          throw FormatException('Missing payload field in form data');
-        }
-        return SlackInteractivePayload.fromJson(
-          jsonDecode(payloadJson) as Map<String, dynamic>,
-        );
-      },
-      handler: _handleInteractiveMessage,
-    ),
+  // Create webhook resource
+  final webhook =
+      WebhookResource<SlackInteractivePayload, SlackVerificationResult>(
+    path: '/slack/interactive',
+    verifier: SlackWebhookVerifier(signingSecret: signingSecret),
+    deserializer: (body) {
+      // Slack sends interactive payloads as form-encoded with a 'payload' field
+      final formData = Uri.splitQueryString(body);
+      final payloadJson = formData['payload'];
+      if (payloadJson == null) {
+        throw FormatException('Missing payload field in form data');
+      }
+      return SlackInteractivePayload.fromJson(
+        jsonDecode(payloadJson) as Map<String, dynamic>,
+      );
+    },
+    handler: _handleInteractiveMessage,
   );
 
+  // Create router and register webhook
+  final router = Router();
+  router.post(webhook.path, webhook.handleRequest);
+
   // Start server
-  await server.start();
+  final server = await shelf_io.serve(
+    router.call,
+    InternetAddress.anyIPv4,
+    8080,
+  );
   print('✅ Slack interactive message webhook server started');
   print('');
   print('Server listening on http://localhost:8080');
@@ -82,7 +88,7 @@ void main() async {
 
   // Keep server running
   await ProcessSignal.sigint.watch().first;
-  await server.stop();
+  await server.close();
   print('Server stopped');
 }
 

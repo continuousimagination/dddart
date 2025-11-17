@@ -2,9 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
-import 'package:dddart_rest/dddart_rest.dart';
 import 'package:dddart_webhooks/dddart_webhooks.dart';
 import 'package:shelf/shelf.dart';
+import 'package:shelf/shelf_io.dart' as shelf_io;
+import 'package:shelf_router/shelf_router.dart';
 
 /// Example demonstrating raw JSON webhook handling.
 ///
@@ -13,28 +14,32 @@ import 'package:shelf/shelf.dart';
 /// - Handling strongly-typed JSON webhook payloads
 /// - Processing different event types from a single webhook endpoint
 /// - Custom deserialization error handling
+/// - Using WebhookResource directly with Shelf Router
 
 void main() async {
-  // Create HTTP server
-  final server = HttpServer(port: 8080);
-
-  // Register webhook for JSON events
-  server.registerWebhook(
-    WebhookResource<EventPayload, SimpleVerificationResult>(
-      path: '/webhooks/events',
-      verifier: SimpleWebhookVerifier(secret: 'json-secret'),
-      deserializer: (body) => WebhookDeserializers.json(
-        body,
-        EventPayload.fromJson,
-      ),
-      handler: _handleEvent,
-      onDeserializationError: _handleDeserializationError,
+  // Create webhook resource
+  final webhook = WebhookResource<EventPayload, SimpleVerificationResult>(
+    path: '/webhooks/events',
+    verifier: SimpleWebhookVerifier(secret: 'json-secret'),
+    deserializer: (body) => WebhookDeserializers.json(
+      body,
+      EventPayload.fromJson,
     ),
+    handler: _handleEvent,
+    onDeserializationError: _handleDeserializationError,
   );
 
+  // Create router and register webhook
+  final router = Router();
+  router.post(webhook.path, webhook.handleRequest);
+
   // Start server
-  await server.start();
-  print('Server listening on http://localhost:8080');
+  final server = await shelf_io.serve(
+    router.call,
+    InternetAddress.anyIPv4,
+    8080,
+  );
+  print('Server listening on http://localhost:${server.port}');
   print('');
   print('Test the webhook with:');
   print('');
@@ -58,7 +63,7 @@ void main() async {
 
   // Keep server running
   await ProcessSignal.sigint.watch().first;
-  await server.stop();
+  await server.close();
   print('Server stopped');
 }
 

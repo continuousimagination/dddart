@@ -2,9 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
-import 'package:dddart_rest/dddart_rest.dart';
 import 'package:dddart_webhooks/dddart_webhooks.dart';
 import 'package:shelf/shelf.dart';
+import 'package:shelf/shelf_io.dart' as shelf_io;
+import 'package:shelf_router/shelf_router.dart';
 
 /// Example demonstrating how to create a custom webhook verifier.
 ///
@@ -14,27 +15,31 @@ import 'package:shelf/shelf.dart';
 /// - Extracting metadata from headers
 /// - Validating timestamps to prevent replay attacks
 /// - Using constant-time comparison to prevent timing attacks
+/// - Using WebhookResource directly with Shelf Router
 
 void main() async {
-  // Create HTTP server
-  final server = HttpServer(port: 8080);
-
-  // Register webhook with custom verifier
-  server.registerWebhook(
-    WebhookResource<MyWebhookPayload, MyVerificationResult>(
-      path: '/webhooks/custom',
-      verifier: MyWebhookVerifier(secret: 'my-secret-key'),
-      deserializer: (body) => WebhookDeserializers.json(
-        body,
-        MyWebhookPayload.fromJson,
-      ),
-      handler: _handleWebhook,
+  // Create webhook resource
+  final webhook = WebhookResource<MyWebhookPayload, MyVerificationResult>(
+    path: '/webhooks/custom',
+    verifier: MyWebhookVerifier(secret: 'my-secret-key'),
+    deserializer: (body) => WebhookDeserializers.json(
+      body,
+      MyWebhookPayload.fromJson,
     ),
+    handler: _handleWebhook,
   );
 
+  // Create router and register webhook
+  final router = Router();
+  router.post(webhook.path, webhook.handleRequest);
+
   // Start server
-  await server.start();
-  print('Server listening on http://localhost:8080');
+  final server = await shelf_io.serve(
+    router.call,
+    InternetAddress.anyIPv4,
+    8080,
+  );
+  print('Server listening on http://localhost:${server.port}');
   print('');
   print('Test the webhook with:');
   print('');
@@ -49,7 +54,7 @@ void main() async {
 
   // Keep server running
   await ProcessSignal.sigint.watch().first;
-  await server.stop();
+  await server.close();
   print('Server stopped');
 }
 

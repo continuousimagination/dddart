@@ -1,10 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:dddart_rest/dddart_rest.dart';
 import 'package:dddart_webhooks/dddart_webhooks.dart';
 import 'package:dddart_webhooks_slack/dddart_webhooks_slack.dart';
 import 'package:shelf/shelf.dart';
+import 'package:shelf/shelf_io.dart' as shelf_io;
+import 'package:shelf_router/shelf_router.dart';
 
 /// Example demonstrating Slack slash command webhook handling.
 ///
@@ -14,6 +15,7 @@ import 'package:shelf/shelf.dart';
 /// - Processing different slash commands
 /// - Responding with formatted Slack messages
 /// - Using response_url for delayed responses
+/// - Using WebhookResource directly with Shelf Router
 
 void main() async {
   // Get Slack signing secret from environment
@@ -32,24 +34,27 @@ void main() async {
     exit(1);
   }
 
-  // Create HTTP server
-  final server = HttpServer(port: 8080);
-
-  // Register Slack slash command webhook
-  server.registerWebhook(
-    WebhookResource<SlackSlashCommand, SlackVerificationResult>(
-      path: '/slack/commands',
-      verifier: SlackWebhookVerifier(signingSecret: signingSecret),
-      deserializer: (body) => WebhookDeserializers.form(
-        body,
-        SlackSlashCommand.fromForm,
-      ),
-      handler: _handleSlashCommand,
+  // Create webhook resource
+  final webhook = WebhookResource<SlackSlashCommand, SlackVerificationResult>(
+    path: '/slack/commands',
+    verifier: SlackWebhookVerifier(signingSecret: signingSecret),
+    deserializer: (body) => WebhookDeserializers.form(
+      body,
+      SlackSlashCommand.fromForm,
     ),
+    handler: _handleSlashCommand,
   );
 
+  // Create router and register webhook
+  final router = Router();
+  router.post(webhook.path, webhook.handleRequest);
+
   // Start server
-  await server.start();
+  final server = await shelf_io.serve(
+    router.call,
+    InternetAddress.anyIPv4,
+    8080,
+  );
   print('✅ Slack slash command webhook server started');
   print('');
   print('Server listening on http://localhost:8080');
@@ -76,7 +81,7 @@ void main() async {
 
   // Keep server running
   await ProcessSignal.sigint.watch().first;
-  await server.stop();
+  await server.close();
   print('Server stopped');
 }
 
