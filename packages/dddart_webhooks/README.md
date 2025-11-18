@@ -10,7 +10,7 @@ Webhooks are HTTP callbacks that external services (GitHub, Slack, Stripe, etc.)
 - **Strongly-typed payloads** for compile-time safety and IDE support
 - **Flexible deserialization** supporting JSON, form-encoded, and custom formats
 - **Extensible architecture** for implementing custom webhook providers
-- **Seamless integration** with dddart_http's HttpServer
+- **Seamless integration** with dddart_rest's HttpServer
 
 ## Features
 
@@ -19,7 +19,7 @@ Webhooks are HTTP callbacks that external services (GitHub, Slack, Stripe, etc.)
 - **Strongly-typed verification results** - Type-safe verification results with provider-specific metadata
 - **Flexible payload deserialization** - Support for JSON, form-encoded, and custom formats
 - **Error handling** - Customizable error responses for verification and deserialization failures
-- **Integration with dddart_http** - Seamless integration with HttpServer
+- **Integration with dddart_rest** - Seamless integration with HttpServer for combining webhooks with REST APIs
 
 ## Installation
 
@@ -80,15 +80,15 @@ class MyWebhookVerifier extends WebhookVerifier<MyVerificationResult> {
 }
 ```
 
-### 2. Register Webhook with HttpServer
+### 2. Create Webhook Resource
 
 ```dart
-import 'package:dddart_http/dddart_http.dart';
 import 'package:dddart_webhooks/dddart_webhooks.dart';
+import 'package:shelf/shelf.dart';
+import 'package:shelf/shelf_io.dart' as shelf_io;
+import 'package:shelf_router/shelf_router.dart';
 
 void main() async {
-  final server = HttpServer(port: 8080);
-
   final webhook = WebhookResource<MyPayload, MyVerificationResult>(
     path: '/webhooks/my-service',
     verifier: MyWebhookVerifier('my-secret'),
@@ -104,10 +104,39 @@ void main() async {
     },
   );
 
-  server.registerWebhook(webhook);
+  // Register with Shelf Router
+  final router = Router();
+  router.post(webhook.path, webhook.handleRequest);
+
+  // Start server
+  final server = await shelf_io.serve(router.call, InternetAddress.anyIPv4, 8080);
+  print('Server listening on port ${server.port}');
+}
+```
+
+### 3. Combining with REST APIs (dddart_rest)
+
+To run webhooks alongside REST CRUD endpoints on the same server:
+
+```dart
+import 'package:dddart_rest/dddart_rest.dart';
+import 'package:dddart_webhooks/dddart_webhooks.dart';
+
+void main() async {
+  final server = HttpServer(port: 8080);
+
+  // Register CRUD resources
+  server.registerResource(userResource);
+
+  // Add webhook
+  final webhook = WebhookResource<MyPayload, MyVerificationResult>(...);
+  server.addRoute('POST', webhook.path, webhook.handleRequest);
+
   await server.start();
 }
 ```
+
+See `example/combined_with_rest_example.dart` for details.
 
 ## Deserialization Helpers
 

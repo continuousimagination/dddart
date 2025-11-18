@@ -60,6 +60,30 @@ This creates the following endpoints:
 - `PUT /users/:id` - Update user
 - `DELETE /users/:id` - Delete user
 
+### Adding Custom Routes
+
+You can add custom routes (like health checks, metrics, or webhooks) to the same server:
+
+```dart
+import 'package:dddart_rest/dddart_rest.dart';
+
+final server = HttpServer(port: 8080);
+
+// Register CRUD resources (creates 5 routes automatically)
+server.registerResource(userResource);
+
+// Add custom routes
+server.addRoute('GET', '/health', healthCheckHandler);
+server.addRoute('GET', '/metrics', metricsHandler);
+
+// You can also add webhook handlers from dddart_webhooks package
+// server.addRoute('POST', webhook.path, webhook.handleRequest);
+
+await server.start();
+```
+
+This allows you to run REST CRUD endpoints and custom handlers on a single server instance. See `example/custom_routes_example.dart` for a complete example.
+
 ## Usage Guide
 
 ### Basic CRUD Operations

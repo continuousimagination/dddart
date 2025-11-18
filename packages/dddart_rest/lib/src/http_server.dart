@@ -30,6 +30,9 @@ class HttpServer {
   /// List of registered CrudResource instances
   final List<CrudResource> _resources = [];
 
+  /// List of custom route handlers
+  final List<_CustomRoute> _customRoutes = [];
+
   /// The underlying shelf HttpServer instance
   io.HttpServer? _shelfServer;
 
@@ -51,6 +54,35 @@ class HttpServer {
   /// ```
   void registerResource(CrudResource resource) {
     _resources.add(resource);
+  }
+
+  /// Registers a custom route handler with the server
+  ///
+  /// This allows you to add non-CRUD routes (like webhooks) to the same
+  /// server instance. The handler will be registered when the server starts.
+  ///
+  /// Parameters:
+  /// - [method]: HTTP method (GET, POST, PUT, DELETE, etc.)
+  /// - [path]: The route path (e.g., '/webhooks/slack')
+  /// - [handler]: The request handler function
+  ///
+  /// Example:
+  /// ```dart
+  /// // Add a webhook endpoint
+  /// final webhook = WebhookResource<MyPayload, MyVerification>(...);
+  /// server.addRoute('POST', '/webhooks/events', webhook.handleRequest);
+  ///
+  /// // Add a health check endpoint
+  /// server.addRoute('GET', '/health', (request) async {
+  ///   return Response.ok('OK');
+  /// });
+  /// ```
+  void addRoute(
+    String method,
+    String path,
+    Function handler,
+  ) {
+    _customRoutes.add(_CustomRoute(method, path, handler));
   }
 
 
@@ -93,6 +125,28 @@ class HttpServer {
       router.delete('${resource.path}/<id>', resource.handleDelete);
     }
 
+    // Register custom routes
+    for (final route in _customRoutes) {
+      switch (route.method.toUpperCase()) {
+        case 'GET':
+          router.get(route.path, route.handler);
+        case 'POST':
+          router.post(route.path, route.handler);
+        case 'PUT':
+          router.put(route.path, route.handler);
+        case 'DELETE':
+          router.delete(route.path, route.handler);
+        case 'PATCH':
+          router.patch(route.path, route.handler);
+        case 'HEAD':
+          router.head(route.path, route.handler);
+        case 'OPTIONS':
+          router.options(route.path, route.handler);
+        default:
+          throw ArgumentError('Unsupported HTTP method: ${route.method}');
+      }
+    }
+
     // Start shelf server with router on configured port
     _shelfServer = await shelf_io.serve(
       router.call,
@@ -121,4 +175,13 @@ class HttpServer {
     await _shelfServer!.close(force: true);
     _shelfServer = null;
   }
+}
+
+/// Internal class to store custom route information
+class _CustomRoute {
+  _CustomRoute(this.method, this.path, this.handler);
+
+  final String method;
+  final String path;
+  final Function handler;
 }
