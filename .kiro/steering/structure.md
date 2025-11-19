@@ -59,10 +59,12 @@ export 'src/class2.dart';
 
 ### Examples (example/)
 
+- **REQUIRED**: Every package MUST include an `example/` directory
 - Runnable Dart files demonstrating usage
 - May have own `lib/` for domain models
 - Include README.md explaining examples
 - Own pubspec.yaml with dependencies
+- Examples should cover common use cases and integration patterns
 
 ## Generated Files
 
