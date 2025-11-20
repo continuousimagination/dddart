@@ -1,0 +1,14 @@
+targets:
+  $default:
+    builders:
+      dddart_repository_mongodb:mongo_repository:
+        enabled: true
+
+builders:
+  mongo_repository:
+    import: "package:dddart_repository_mongodb/src/generators/mongo_repository_generator.dart"
+    builder_factories: ["mongoRepositoryBuilder"]
+    build_extensions: {".dart": [".mongo_repository.g.part"]}
+    auto_apply: dependents
+    build_to: cache
+    applies_builders: ["source_gen|combining_builder"]

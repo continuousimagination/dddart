@@ -10,5 +10,6 @@ workspace:
   - packages/dddart_json
   - packages/dddart_rest
   - packages/dddart_config
+  - packages/dddart_repository_mongodb
   - packages/dddart_webhooks
   - packages/dddart_webhooks_slack
