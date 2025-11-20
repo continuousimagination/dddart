@@ -492,9 +492,11 @@ class MongoRepositoryGenerator
   ///
   /// Includes return type, method name, and parameters with types.
   String _generateMethodSignature(MethodElement method) {
+    // ignore: deprecated_member_use
     final returnType =
         method.returnType.getDisplayString(withNullability: true);
     final params = method.parameters.map((p) {
+      // ignore: deprecated_member_use
       final type = p.type.getDisplayString(withNullability: true);
       return '$type ${p.name}';
     }).join(', ');
