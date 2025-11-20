@@ -117,3 +117,32 @@ Before marking any implementation task as complete:
 3. Code follows Dart linting rules
 4. Test coverage is adequate for the feature
 5. Edge cases and error scenarios are tested
+
+## Test Infrastructure Maintenance
+
+**CRITICAL**: When adding new packages or changing test requirements, you MUST update:
+
+1. **`.github/workflows/test.yml`** - GitHub Actions CI/CD workflow
+   - Add new packages to the `matrix.package` list
+   - Update test commands if test requirements change
+
+2. **`scripts/test-all.sh`** - Local test script (used by pre-push hook)
+   - Add new packages to the `PACKAGES` array
+   - Keep test commands in sync with GitHub Actions
+
+3. **Root `pubspec.yaml`** - Workspace configuration
+   - Add new packages to the `workspace:` list
+
+**Why this matters:**
+- Ensures new packages are tested in CI/CD
+- Ensures pre-push hook catches issues before pushing
+- Maintains consistency between local and CI environments
+- Prevents untested code from being merged
+
+**Verification:**
+After adding a new package, verify it's tested by running:
+```bash
+./scripts/test-all.sh
+```
+
+The script should include your new package in its output.

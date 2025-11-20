@@ -50,7 +50,40 @@ dart test test/aggregate_root_test.dart
 
 # Run with coverage
 dart test --coverage=coverage
+
+# Exclude tests that require MongoDB
+dart test --exclude-tags=requires-mongo
 ```
+
+### Pre-Push Hook
+
+A pre-push git hook automatically runs all checks before pushing to catch issues early.
+
+**Setup (one-time):**
+```bash
+./scripts/setup-hooks.sh
+```
+
+**What it checks:**
+- Workspace dependency resolution
+- Code generation (where needed)
+- Static analysis (`dart analyze --fatal-infos`)
+- Format checking (`dart format --set-exit-if-changed`)
+- Tests (excluding `requires-mongo` tagged tests)
+
+**Usage:**
+```bash
+# The hook runs automatically on git push
+git push
+
+# Skip the hook if needed (not recommended)
+git push --no-verify
+
+# Run checks manually without pushing
+./scripts/test-all.sh
+```
+
+The hook calls the versioned `scripts/test-all.sh` script, which mirrors the GitHub Actions workflow.
 
 ### Package Management
 

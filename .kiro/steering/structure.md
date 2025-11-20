@@ -134,6 +134,36 @@ export 'src/class2.dart';
 - `build/` - Build output
 - `coverage/` - Test coverage reports
 
+## Adding New Packages
+
+**IMPORTANT**: When adding a new package to the workspace, you MUST update:
+
+1. **Root `pubspec.yaml`** - Add the package to the `workspace:` list
+2. **`.github/workflows/test.yml`** - Add the package to the `matrix.package` list
+3. **`scripts/test-all.sh`** - Add the package to the `PACKAGES` array
+
+This ensures the new package is:
+- Included in workspace dependency resolution
+- Tested in CI/CD (GitHub Actions)
+- Tested locally (pre-push hook)
+
+**Example:**
+```yaml
+# pubspec.yaml
+workspace:
+  - packages/new_package
+
+# .github/workflows/test.yml
+matrix:
+  package:
+    - new_package
+
+# scripts/test-all.sh
+PACKAGES=(
+  "new_package"
+)
+```
+
 ## CI/CD Considerations
 
 When setting up CI/CD (like GitHub Actions):
@@ -152,3 +182,5 @@ Example GitHub Actions workflow:
   run: dart analyze --fatal-infos
   working-directory: packages/${{ matrix.package }}
 ```
+
+**Maintenance**: The GitHub Actions workflow (`.github/workflows/test.yml`) and the local test script (`scripts/test-all.sh`) must be kept in sync. Both should test the same packages with the same checks.
