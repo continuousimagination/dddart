@@ -1,0 +1,56 @@
+name: Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        package:
+          - dddart
+          - dddart_serialization
+          - dddart_json
+          - dddart_rest
+          - dddart_config
+          - dddart_repository_mongodb
+          - dddart_webhooks
+          - dddart_webhooks_slack
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: 3.5.0
+      
+      - name: Get dependencies
+        run: dart pub get
+        working-directory: packages/${{ matrix.package }}
+      
+      - name: Run code generation (if needed)
+        run: |
+          if grep -q "build_runner" pubspec.yaml; then
+            dart run build_runner build --delete-conflicting-outputs
+          fi
+        working-directory: packages/${{ matrix.package }}
+        continue-on-error: true
+      
+      - name: Analyze code
+        run: dart analyze --fatal-infos
+        working-directory: packages/${{ matrix.package }}
+      
+      - name: Format check
+        run: dart format --output=none --set-exit-if-changed .
+        working-directory: packages/${{ matrix.package }}
+      
+      - name: Run tests
+        run: dart test --exclude-tags=requires-mongo
+        working-directory: packages/${{ matrix.package }}
