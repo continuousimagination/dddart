@@ -1,6 +1,8 @@
 /// Code generator for MongoDB repository implementations.
 library;
 
+// ignore_for_file: deprecated_member_use, avoid_redundant_argument_values
+
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:build/build.dart';
@@ -492,11 +494,9 @@ class MongoRepositoryGenerator
   ///
   /// Includes return type, method name, and parameters with types.
   String _generateMethodSignature(MethodElement method) {
-    // ignore: deprecated_member_use
     final returnType =
         method.returnType.getDisplayString(withNullability: true);
     final params = method.parameters.map((p) {
-      // ignore: deprecated_member_use
       final type = p.type.getDisplayString(withNullability: true);
       return '$type ${p.name}';
     }).join(', ');
