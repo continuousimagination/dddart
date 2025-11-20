@@ -2,12 +2,59 @@
 
 ## Monorepo Organization
 
+This project uses **Dart Workspaces** (SDK 3.5+) to manage multiple packages in a monorepo.
+
 ```
-packages/
-├── dddart/              # Core DDD framework
-├── dddart_serialization/ # Serialization framework
-├── dddart_json/         # JSON serialization implementation
-└── dddart_rest/         # RESTful CRUD API framework
+.
+├── pubspec.yaml         # Workspace root configuration
+└── packages/
+    ├── dddart/              # Core DDD framework
+    ├── dddart_serialization/ # Serialization framework
+    ├── dddart_json/         # JSON serialization implementation
+    ├── dddart_rest/         # RESTful CRUD API framework
+    ├── dddart_config/       # Configuration management
+    ├── dddart_repository_mongodb/ # MongoDB repository implementation
+    ├── dddart_webhooks/     # Webhook framework
+    └── dddart_webhooks_slack/ # Slack webhook integration
+```
+
+### Workspace Configuration
+
+The root `pubspec.yaml` defines the workspace:
+
+```yaml
+name: _dddart_workspace
+publish_to: none
+
+workspace:
+  - packages/dddart
+  - packages/dddart_serialization
+  # ... all packages
+```
+
+### Working with Workspaces
+
+**IMPORTANT**: When working with this workspace:
+
+- **Always run `dart pub get` from the workspace root** (not from individual packages)
+- This resolves all packages and their dependencies together
+- Individual packages reference each other using `resolution: workspace` in their pubspec.yaml
+- The `.dart_tool/package_config.json` is managed at the workspace level
+
+**Commands:**
+
+```bash
+# Get dependencies (run from root)
+dart pub get
+
+# Run tests for a specific package
+cd packages/package_name && dart test
+
+# Analyze a specific package
+cd packages/package_name && dart analyze
+
+# Format code (run from root for all packages)
+dart format .
 ```
 
 ## Standard Package Layout
@@ -16,8 +63,6 @@ Each package follows Dart conventions:
 
 ```
 package_name/
-├── .dart_tool/          # Build artifacts (ignored)
-├── .git/                # Independent git repository
 ├── lib/
 │   ├── package_name.dart  # Main library export file
 │   └── src/             # Implementation files (private)
@@ -85,7 +130,25 @@ export 'src/class2.dart';
 
 ## Key Directories to Ignore
 
-- `.dart_tool/` - Build artifacts
-- `.git/` - Version control (each package has own)
+- `.dart_tool/` - Build artifacts (managed at workspace root)
 - `build/` - Build output
 - `coverage/` - Test coverage reports
+
+## CI/CD Considerations
+
+When setting up CI/CD (like GitHub Actions):
+
+1. Run `dart pub get` from the workspace root first
+2. Then run package-specific commands (analyze, test, format) from each package directory
+3. This ensures proper package resolution and dependency management
+
+Example GitHub Actions workflow:
+
+```yaml
+- name: Get dependencies (workspace)
+  run: dart pub get
+
+- name: Analyze code
+  run: dart analyze --fatal-infos
+  working-directory: packages/${{ matrix.package }}
+```

@@ -76,7 +76,8 @@ void main() async {
     print('Note: Environment variables are re-read from Platform.environment');
     print('In a real application, you might update environment variables');
     print(
-        'through a configuration management system or container orchestration.');
+      'through a configuration management system or container orchestration.',
+    );
     print('\nCurrent database.host: ${config.getString('database.host')}');
     print('To override, set: export MYAPP_DATABASE_HOST=new-host.example.com');
 

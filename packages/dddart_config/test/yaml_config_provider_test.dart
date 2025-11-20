@@ -375,11 +375,15 @@ app:
 
         expect(provider.getString('app.name'), equals('MyApp'));
         expect(provider.getString('app.features'), equals('auth,logging'));
-        expect(provider.getString('app.database.primary.host'),
-            equals('localhost'));
+        expect(
+          provider.getString('app.database.primary.host'),
+          equals('localhost'),
+        );
         expect(provider.getString('app.database.primary.port'), equals('5432'));
-        expect(provider.getString('app.database.replicas'),
-            equals('replica1,replica2'));
+        expect(
+          provider.getString('app.database.replicas'),
+          equals('replica1,replica2'),
+        );
       });
 
       test('should handle empty lists', () {

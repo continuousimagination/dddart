@@ -18,3 +18,4 @@ linter:
     avoid_dynamic_calls: false  # Sometimes necessary in tests with JSON
     cascade_invocations: false  # Not always more readable
     no_default_cases: false  # Default cases are fine for error handling
+    avoid_print: false  # Allow print in examples and tests

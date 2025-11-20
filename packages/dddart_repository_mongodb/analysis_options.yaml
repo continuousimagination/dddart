@@ -4,6 +4,7 @@ analyzer:
   exclude:
     - "**/*.g.dart"
     - "**/*.freezed.dart"
+    - "example/**"  # Examples are for demonstration
   language:
     strict-casts: true
     strict-inference: false  # Too pedantic for examples and tests
@@ -18,3 +19,4 @@ linter:
     cascade_invocations: false  # Not always more readable
     avoid_positional_boolean_parameters: false  # Sometimes clearer than named
     avoid_equals_and_hash_code_on_mutable_classes: false  # Entity/DomainEvent need custom equality
+    avoid_print: false  # Allow print in examples and tests

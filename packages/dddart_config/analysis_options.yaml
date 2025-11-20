@@ -10,3 +10,4 @@ linter:
     avoid_slow_async_io: false  # OK in examples
     cascade_invocations: false  # Not always more readable
     avoid_positional_boolean_parameters: false  # Sometimes clearer than named
+    avoid_print: false  # Allow print in examples and tests

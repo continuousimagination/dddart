@@ -31,9 +31,8 @@ jobs:
         with:
           sdk: 3.5.0
       
-      - name: Get dependencies
+      - name: Get dependencies (workspace)
         run: dart pub get
-        working-directory: packages/${{ matrix.package }}
       
       - name: Run code generation (if needed)
         run: |
