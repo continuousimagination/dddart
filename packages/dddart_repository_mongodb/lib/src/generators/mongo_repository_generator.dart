@@ -85,11 +85,13 @@ class MongoRepositoryGenerator
       'hashAllUnordered',
     };
     final customMethods = interfaceMethods
-        .where((m) =>
-            !baseRepositoryMethods.contains(m.name) &&
-            !objectMethods.contains(m.name) &&
-            !m.isOperator &&
-            !m.isStatic,)
+        .where(
+          (m) =>
+              !baseRepositoryMethods.contains(m.name) &&
+              !objectMethods.contains(m.name) &&
+              !m.isOperator &&
+              !m.isStatic,
+        )
         .toList();
 
     if (customMethods.isEmpty) {

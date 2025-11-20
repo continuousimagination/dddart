@@ -47,9 +47,11 @@ void main() {
         final result = exception.toString();
 
         expect(
-            result,
-            equals(
-                'RepositoryException: Test error (type: RepositoryExceptionType.duplicate)',),);
+          result,
+          equals(
+            'RepositoryException: Test error (type: RepositoryExceptionType.duplicate)',
+          ),
+        );
       });
 
       test('formats message with cause', () {
@@ -63,10 +65,14 @@ void main() {
         final result = exception.toString();
 
         expect(
-            result, contains('RepositoryException: Failed to save aggregate'),);
+          result,
+          contains('RepositoryException: Failed to save aggregate'),
+        );
         expect(result, contains('type: RepositoryExceptionType.connection'));
         expect(
-            result, contains('cause: Exception: Database connection failed'),);
+          result,
+          contains('cause: Exception: Database connection failed'),
+        );
       });
 
       test('formats message for notFound type', () {
@@ -78,9 +84,11 @@ void main() {
         final result = exception.toString();
 
         expect(
-            result,
-            equals(
-                'RepositoryException: Aggregate not found (type: RepositoryExceptionType.notFound)',),);
+          result,
+          equals(
+            'RepositoryException: Aggregate not found (type: RepositoryExceptionType.notFound)',
+          ),
+        );
       });
 
       test('formats message for constraint type', () {
@@ -92,9 +100,11 @@ void main() {
         final result = exception.toString();
 
         expect(
-            result,
-            equals(
-                'RepositoryException: Constraint violation (type: RepositoryExceptionType.constraint)',),);
+          result,
+          equals(
+            'RepositoryException: Constraint violation (type: RepositoryExceptionType.constraint)',
+          ),
+        );
       });
 
       test('formats message for timeout type', () {
@@ -106,9 +116,11 @@ void main() {
         final result = exception.toString();
 
         expect(
-            result,
-            equals(
-                'RepositoryException: Operation timed out (type: RepositoryExceptionType.timeout)',),);
+          result,
+          equals(
+            'RepositoryException: Operation timed out (type: RepositoryExceptionType.timeout)',
+          ),
+        );
       });
 
       test('formats message for unknown type', () {
@@ -119,9 +131,11 @@ void main() {
         final result = exception.toString();
 
         expect(
-            result,
-            equals(
-                'RepositoryException: Unknown error occurred (type: RepositoryExceptionType.unknown)',),);
+          result,
+          equals(
+            'RepositoryException: Unknown error occurred (type: RepositoryExceptionType.unknown)',
+          ),
+        );
       });
     });
 
@@ -190,7 +204,9 @@ void main() {
 
         expect(exception.cause, equals(cause));
         expect(
-            exception.toString(), contains('cause: Exception: Original error'),);
+          exception.toString(),
+          contains('cause: Exception: Original error'),
+        );
       });
 
       test('wraps Error as cause', () {

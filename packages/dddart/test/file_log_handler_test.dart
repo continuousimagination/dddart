@@ -238,9 +238,11 @@ void main() {
 
       // Check format structure without exact timestamp
       expect(
-          formatted,
-          matches(
-              r'\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+\] \[INFO\] \[test\.logger\] Test message',),);
+        formatted,
+        matches(
+          r'\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+\] \[INFO\] \[test\.logger\] Test message',
+        ),
+      );
     });
 
     test('includes error when present', () {

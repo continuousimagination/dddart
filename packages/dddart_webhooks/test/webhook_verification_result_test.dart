@@ -45,7 +45,6 @@ void main() {
     test('should allow null error message for valid results', () {
       const result = TestVerificationResult(
         isValid: true,
-        errorMessage: null,
       );
 
       expect(result.isValid, isTrue);

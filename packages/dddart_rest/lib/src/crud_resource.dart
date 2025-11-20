@@ -66,7 +66,8 @@ class CrudResource<T extends AggregateRoot> {
     // Validate serializers map is not empty
     if (serializers.isEmpty) {
       throw ArgumentError(
-          'serializers map cannot be empty. At least one serializer must be provided.',);
+        'serializers map cannot be empty. At least one serializer must be provided.',
+      );
     }
   }
 

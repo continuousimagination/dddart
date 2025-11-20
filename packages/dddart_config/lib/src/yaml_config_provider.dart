@@ -1,9 +1,8 @@
 import 'dart:io';
 
+import 'package:dddart_config/src/config_provider.dart';
+import 'package:dddart_config/src/exceptions.dart';
 import 'package:yaml/yaml.dart';
-
-import 'config_provider.dart';
-import 'exceptions.dart';
 
 /// Configuration provider that reads from YAML files.
 ///

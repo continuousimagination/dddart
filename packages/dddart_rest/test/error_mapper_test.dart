@@ -21,7 +21,9 @@ void main() {
       // Assert
       expect(response.statusCode, equals(404));
       expect(
-          response.headers['Content-Type'], equals('application/problem+json'),);
+        response.headers['Content-Type'],
+        equals('application/problem+json'),
+      );
 
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
@@ -44,7 +46,9 @@ void main() {
       // Assert
       expect(response.statusCode, equals(409));
       expect(
-          response.headers['Content-Type'], equals('application/problem+json'),);
+        response.headers['Content-Type'],
+        equals('application/problem+json'),
+      );
 
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
@@ -67,7 +71,9 @@ void main() {
       // Assert
       expect(response.statusCode, equals(422));
       expect(
-          response.headers['Content-Type'], equals('application/problem+json'),);
+        response.headers['Content-Type'],
+        equals('application/problem+json'),
+      );
 
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
@@ -90,7 +96,9 @@ void main() {
       // Assert
       expect(response.statusCode, equals(500));
       expect(
-          response.headers['Content-Type'], equals('application/problem+json'),);
+        response.headers['Content-Type'],
+        equals('application/problem+json'),
+      );
 
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
@@ -117,7 +125,9 @@ void main() {
       // Assert
       expect(response.statusCode, equals(400));
       expect(
-          response.headers['Content-Type'], equals('application/problem+json'),);
+        response.headers['Content-Type'],
+        equals('application/problem+json'),
+      );
 
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
@@ -140,7 +150,9 @@ void main() {
       // Assert
       expect(response.statusCode, equals(500));
       expect(
-          response.headers['Content-Type'], equals('application/problem+json'),);
+        response.headers['Content-Type'],
+        equals('application/problem+json'),
+      );
 
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
@@ -165,15 +177,19 @@ void main() {
       // Assert
       expect(response.statusCode, equals(406));
       expect(
-          response.headers['Content-Type'], equals('application/problem+json'),);
+        response.headers['Content-Type'],
+        equals('application/problem+json'),
+      );
 
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
       expect(body['type'], equals('about:blank'));
       expect(body['title'], equals('Not Acceptable'));
       expect(body['status'], equals(406));
-      expect(body['detail'],
-          contains('Accept header specifies unsupported media type'),);
+      expect(
+        body['detail'],
+        contains('Accept header specifies unsupported media type'),
+      );
     });
   });
 
@@ -188,7 +204,9 @@ void main() {
       // Assert
       expect(response.statusCode, equals(500));
       expect(
-          response.headers['Content-Type'], equals('application/problem+json'),);
+        response.headers['Content-Type'],
+        equals('application/problem+json'),
+      );
 
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
@@ -208,7 +226,9 @@ void main() {
       // Assert
       expect(response.statusCode, equals(400));
       expect(
-          response.headers['Content-Type'], equals('application/problem+json'),);
+        response.headers['Content-Type'],
+        equals('application/problem+json'),
+      );
 
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
@@ -228,7 +248,9 @@ void main() {
       // Assert
       expect(response.statusCode, equals(500));
       expect(
-          response.headers['Content-Type'], equals('application/problem+json'),);
+        response.headers['Content-Type'],
+        equals('application/problem+json'),
+      );
 
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);

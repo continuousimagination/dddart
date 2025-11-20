@@ -324,12 +324,13 @@ value: original
         file.deleteSync();
 
         expect(
-          () => provider.reload(),
+          provider.reload,
           throwsA(isA<FileAccessException>()),
         );
       });
 
-      test('should throw FileAccessException if file becomes invalid', () async {
+      test('should throw FileAccessException if file becomes invalid',
+          () async {
         final file = createYamlFile(
           'config.yaml',
           '''
@@ -344,7 +345,7 @@ value: original
         file.writeAsStringSync('invalid: yaml: syntax:');
 
         expect(
-          () => provider.reload(),
+          provider.reload,
           throwsA(isA<FileAccessException>()),
         );
       });
@@ -374,9 +375,11 @@ app:
 
         expect(provider.getString('app.name'), equals('MyApp'));
         expect(provider.getString('app.features'), equals('auth,logging'));
-        expect(provider.getString('app.database.primary.host'), equals('localhost'));
+        expect(provider.getString('app.database.primary.host'),
+            equals('localhost'));
         expect(provider.getString('app.database.primary.port'), equals('5432'));
-        expect(provider.getString('app.database.replicas'), equals('replica1,replica2'));
+        expect(provider.getString('app.database.replicas'),
+            equals('replica1,replica2'));
       });
 
       test('should handle empty lists', () {

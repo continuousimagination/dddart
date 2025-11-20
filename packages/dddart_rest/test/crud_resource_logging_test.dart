@@ -489,7 +489,9 @@ void main() {
           logRecords.where((r) => r.level == Level.SEVERE).toList();
       expect(severeLogs.length, equals(1));
       expect(
-          severeLogs[0].message, contains('Exception during request handling'),);
+        severeLogs[0].message,
+        contains('Exception during request handling'),
+      );
       expect(severeLogs[0].error, isNotNull);
       expect(severeLogs[0].stackTrace, isNotNull);
     });

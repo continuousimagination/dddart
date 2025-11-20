@@ -85,8 +85,6 @@ class HttpServer {
     _customRoutes.add(_CustomRoute(method, path, handler));
   }
 
-
-
   /// Starts the HTTP server
   ///
   /// Creates a shelf_router Router instance and registers routes for all

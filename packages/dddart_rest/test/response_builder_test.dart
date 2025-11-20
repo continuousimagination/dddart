@@ -249,7 +249,9 @@ void main() {
       // Assert
       expect(response.statusCode, equals(400));
       expect(
-          response.headers['Content-Type'], equals('application/problem+json'),);
+        response.headers['Content-Type'],
+        equals('application/problem+json'),
+      );
 
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
@@ -257,7 +259,9 @@ void main() {
       expect(body['title'], equals('Bad Request'));
       expect(body['status'], equals(400));
       expect(
-          body['detail'], equals('Cannot combine multiple query parameters'),);
+        body['detail'],
+        equals('Cannot combine multiple query parameters'),
+      );
     });
 
     test('notFound() method returns 404 with RFC 7807 format', () async {
@@ -269,7 +273,9 @@ void main() {
       // Assert
       expect(response.statusCode, equals(404));
       expect(
-          response.headers['Content-Type'], equals('application/problem+json'),);
+        response.headers['Content-Type'],
+        equals('application/problem+json'),
+      );
 
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
@@ -277,9 +283,11 @@ void main() {
       expect(body['title'], equals('Not Found'));
       expect(body['status'], equals(404));
       expect(
-          body['detail'],
-          equals(
-              'User with ID 123e4567-e89b-12d3-a456-426614174000 not found',),);
+        body['detail'],
+        equals(
+          'User with ID 123e4567-e89b-12d3-a456-426614174000 not found',
+        ),
+      );
     });
 
     test('error responses include all required RFC 7807 fields', () async {

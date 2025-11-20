@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'config_provider.dart';
+import 'package:dddart_config/src/config_provider.dart';
 
 /// Configuration provider that reads from environment variables.
 ///
@@ -30,16 +30,6 @@ import 'config_provider.dart';
 /// // Reads from DATABASE_HOST environment variable
 /// ```
 class EnvironmentConfigProvider implements ConfigProvider {
-  /// Optional prefix for environment variable names.
-  ///
-  /// If provided, only environment variables starting with this prefix
-  /// (followed by an underscore) are considered. The prefix and underscore
-  /// are removed when converting to configuration keys.
-  final String? prefix;
-
-  /// Cache of environment variables converted to configuration keys.
-  Map<String, String> _cache = {};
-
   /// Creates an environment provider with optional prefix.
   ///
   /// If [prefix] is provided, only environment variables starting with
@@ -57,6 +47,16 @@ class EnvironmentConfigProvider implements ConfigProvider {
   EnvironmentConfigProvider({this.prefix}) {
     _loadEnvironment();
   }
+
+  /// Optional prefix for environment variable names.
+  ///
+  /// If provided, only environment variables starting with this prefix
+  /// (followed by an underscore) are considered. The prefix and underscore
+  /// are removed when converting to configuration keys.
+  final String? prefix;
+
+  /// Cache of environment variables converted to configuration keys.
+  Map<String, String> _cache = {};
 
   /// Loads environment variables into the cache.
   void _loadEnvironment() {
@@ -107,15 +107,6 @@ class EnvironmentConfigProvider implements ConfigProvider {
   /// 1. Convert to uppercase
   /// 2. Replace dots with underscores
   /// 3. Add prefix if configured
-  ///
-  /// Examples:
-  /// - `database.host` → `DATABASE_HOST` (no prefix)
-  /// - `database.host` → `MYAPP_DATABASE_HOST` (with prefix 'MYAPP')
-  String _configKeyToEnvKey(String configKey) {
-    final envKey = configKey.toUpperCase().replaceAll('.', '_');
-    return prefix != null ? '${prefix}_$envKey' : envKey;
-  }
-
   @override
   String? getString(String key) {
     return _cache[key];

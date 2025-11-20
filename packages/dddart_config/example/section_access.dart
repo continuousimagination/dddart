@@ -107,10 +107,6 @@ void main() {
 
 /// Example configuration object built from a section.
 class DatabaseSettings {
-  final String host;
-  final int port;
-  final String name;
-
   DatabaseSettings({
     required this.host,
     required this.port,
@@ -125,13 +121,13 @@ class DatabaseSettings {
       name: section['name'] ?? 'mydb',
     );
   }
+  final String host;
+  final int port;
+  final String name;
 }
 
 /// Example logging configuration object.
 class LoggingSettings {
-  final String level;
-  final bool consoleEnabled;
-
   LoggingSettings({
     required this.level,
     required this.consoleEnabled,
@@ -144,4 +140,6 @@ class LoggingSettings {
       consoleEnabled: section['console.enabled']?.toLowerCase() == 'true',
     );
   }
+  final String level;
+  final bool consoleEnabled;
 }

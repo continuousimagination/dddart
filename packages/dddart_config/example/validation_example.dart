@@ -29,38 +29,32 @@ void main() {
       ConfigRequirement(
         key: 'database.host',
         type: ConfigType.string,
-        required: true,
       ),
       ConfigRequirement(
         key: 'database.name',
         type: ConfigType.string,
-        required: true,
       ),
 
       // Required integer values
       ConfigRequirement(
         key: 'database.port',
         type: ConfigType.integer,
-        required: true,
       ),
       ConfigRequirement(
         key: 'database.connection.timeout',
         type: ConfigType.integer,
-        required: true,
       ),
 
       // Required boolean values
       ConfigRequirement(
         key: 'database.connection.ssl_enabled',
         type: ConfigType.boolean,
-        required: true,
       ),
 
       // Custom validator for logging level
       ConfigRequirement(
         key: 'logging.level',
         type: ConfigType.string,
-        required: true,
         validator: (value) {
           final validLevels = ['debug', 'info', 'warn', 'error'];
           if (!validLevels.contains(value)) {
@@ -76,7 +70,6 @@ void main() {
       ConfigRequirement(
         key: 'database.port',
         type: ConfigType.integer,
-        required: true,
         validator: (value) {
           final port = value as int;
           if (port < 1 || port > 65535) {
@@ -90,7 +83,6 @@ void main() {
       ConfigRequirement(
         key: 'database.connection.timeout',
         type: ConfigType.integer,
-        required: true,
         validator: (value) {
           final timeout = value as int;
           if (timeout < 1) {
@@ -157,12 +149,10 @@ void main() {
       ConfigRequirement(
         key: 'required.missing.key',
         type: ConfigType.string,
-        required: true,
       ),
       ConfigRequirement(
         key: 'another.missing.key',
         type: ConfigType.integer,
-        required: true,
       ),
     ]);
   } on ValidationException catch (e) {

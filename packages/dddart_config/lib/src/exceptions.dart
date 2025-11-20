@@ -120,7 +120,7 @@ class FileAccessException extends ConfigException {
   /// The [cause] is the underlying exception that caused the failure.
   FileAccessException(this.filePath, this.cause)
       : super(
-          'Cannot access configuration file: $filePath (${cause.toString()})',
+          'Cannot access configuration file: $filePath ($cause)',
         );
 
   /// The path to the file that could not be accessed.

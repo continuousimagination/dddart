@@ -36,21 +36,25 @@ void main() {
         final afterCreation = DateTime.now();
 
         expect(
-            entity.createdAt
-                .isAfter(beforeCreation.subtract(const Duration(seconds: 1))),
-            isTrue,);
+          entity.createdAt
+              .isAfter(beforeCreation.subtract(const Duration(seconds: 1))),
+          isTrue,
+        );
         expect(
-            entity.createdAt
-                .isBefore(afterCreation.add(const Duration(seconds: 1))),
-            isTrue,);
+          entity.createdAt
+              .isBefore(afterCreation.add(const Duration(seconds: 1))),
+          isTrue,
+        );
         expect(
-            entity.updatedAt
-                .isAfter(beforeCreation.subtract(const Duration(seconds: 1))),
-            isTrue,);
+          entity.updatedAt
+              .isAfter(beforeCreation.subtract(const Duration(seconds: 1))),
+          isTrue,
+        );
         expect(
-            entity.updatedAt
-                .isBefore(afterCreation.add(const Duration(seconds: 1))),
-            isTrue,);
+          entity.updatedAt
+              .isBefore(afterCreation.add(const Duration(seconds: 1))),
+          isTrue,
+        );
       });
 
       test('creates entity with provided timestamps', () {
@@ -73,13 +77,15 @@ void main() {
         expect(entity.id, equals(providedId));
         expect(entity.createdAt, equals(createdAt));
         expect(
-            entity.updatedAt
-                .isAfter(beforeCreation.subtract(const Duration(seconds: 1))),
-            isTrue,);
+          entity.updatedAt
+              .isAfter(beforeCreation.subtract(const Duration(seconds: 1))),
+          isTrue,
+        );
         expect(
-            entity.updatedAt
-                .isBefore(afterCreation.add(const Duration(seconds: 1))),
-            isTrue,);
+          entity.updatedAt
+              .isBefore(afterCreation.add(const Duration(seconds: 1))),
+          isTrue,
+        );
       });
     });
 

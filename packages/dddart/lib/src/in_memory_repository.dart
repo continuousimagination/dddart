@@ -130,7 +130,10 @@ class InMemoryRepository<T extends AggregateRoot> implements Repository<T> {
       _storage[aggregate.id] = aggregate;
     } catch (e, stackTrace) {
       _logger.severe(
-          'Failed to save $T with ID: ${aggregate.id}', e, stackTrace,);
+        'Failed to save $T with ID: ${aggregate.id}',
+        e,
+        stackTrace,
+      );
       rethrow;
     }
   }

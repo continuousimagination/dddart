@@ -27,6 +27,9 @@
 /// ```
 library dddart_webhooks_slack;
 
+import 'package:dddart_webhooks_slack/dddart_webhooks_slack.dart'
+    show SlackVerificationResult, SlackWebhookVerifier;
+
 export 'src/slack_slash_command.dart';
 export 'src/slack_verification_result.dart';
 export 'src/slack_webhook_verifier.dart';

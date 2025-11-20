@@ -34,7 +34,7 @@ void main() async {
     // Simulate a long-running application that needs to reload config
     for (var i = 2; i <= 4; i++) {
       print('Waiting 2 seconds before reload...');
-      await Future<void>.delayed(Duration(seconds: 2));
+      await Future<void>.delayed(const Duration(seconds: 2));
 
       print('\nUpdating configuration file (version $i)...');
       await _writeConfigFile(tempConfigFile, version: i);
@@ -75,7 +75,8 @@ void main() async {
     // Environment variables are also reloaded
     print('Note: Environment variables are re-read from Platform.environment');
     print('In a real application, you might update environment variables');
-    print('through a configuration management system or container orchestration.');
+    print(
+        'through a configuration management system or container orchestration.');
     print('\nCurrent database.host: ${config.getString('database.host')}');
     print('To override, set: export MYAPP_DATABASE_HOST=new-host.example.com');
 
@@ -112,7 +113,7 @@ database:
 
 app:
   version: 1.0.$version
-  debug: ${version % 2 == 0}
+  debug: ${version.isEven}
 
 logging:
   level: ${_getLogLevel(version)}

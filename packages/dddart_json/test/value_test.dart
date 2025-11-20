@@ -93,10 +93,14 @@ void main() {
         final serializer = TestValueWithSpecialTypesJsonSerializer();
         final value = serializer.fromJson(json);
 
-        expect(value.id.toString(),
-            equals('550e8400-e29b-41d4-a716-446655440001'),);
-        expect(value.timestamp,
-            equals(DateTime.parse('2024-01-02T15:30:00.000Z')),);
+        expect(
+          value.id.toString(),
+          equals('550e8400-e29b-41d4-a716-446655440001'),
+        );
+        expect(
+          value.timestamp,
+          equals(DateTime.parse('2024-01-02T15:30:00.000Z')),
+        );
         expect(value.name, equals('Deserialized Value'));
       });
 

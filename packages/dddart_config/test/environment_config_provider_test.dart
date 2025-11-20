@@ -5,13 +5,8 @@ import 'package:test/test.dart';
 
 void main() {
   group('EnvironmentConfigProvider', () {
-    // Store original environment to restore after tests
-    final originalEnv = Map<String, String>.from(Platform.environment);
-
-    tearDown(() {
-      // Note: We cannot actually restore Platform.environment as it's immutable
-      // Tests should be designed to work with the current environment
-    });
+    // Note: Platform.environment is immutable
+    // Tests should be designed to work with the current environment
 
     group('constructor and loading', () {
       test('should load environment variables without prefix', () {
@@ -31,12 +26,11 @@ void main() {
         final provider = EnvironmentConfigProvider();
 
         // If HOME or USERPROFILE exists (depending on OS)
-        final home = Platform.environment['HOME'] ??
-            Platform.environment['USERPROFILE'];
+        final home =
+            Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'];
         if (home != null) {
-          final key = Platform.environment.containsKey('HOME')
-              ? 'home'
-              : 'userprofile';
+          final key =
+              Platform.environment.containsKey('HOME') ? 'home' : 'userprofile';
           expect(provider.getString(key), equals(home));
         }
       });
@@ -56,11 +50,10 @@ void main() {
         final provider = EnvironmentConfigProvider();
 
         // Check if any environment variable with underscores exists
-        final envWithUnderscore = Platform.environment.entries
-            .firstWhere(
-              (e) => e.key.contains('_'),
-              orElse: () => const MapEntry('', ''),
-            );
+        final envWithUnderscore = Platform.environment.entries.firstWhere(
+          (e) => e.key.contains('_'),
+          orElse: () => const MapEntry('', ''),
+        );
 
         if (envWithUnderscore.key.isNotEmpty) {
           final configKey =
@@ -99,8 +92,7 @@ void main() {
         // Find any environment variable to test with
         final anyEnvVar = Platform.environment.entries.firstOrNull;
         if (anyEnvVar != null) {
-          final configKey =
-              anyEnvVar.key.toLowerCase().replaceAll('_', '.');
+          final configKey = anyEnvVar.key.toLowerCase().replaceAll('_', '.');
 
           // If the key has a dot, we can test section retrieval
           if (configKey.contains('.')) {
@@ -208,9 +200,8 @@ void main() {
             .firstOrNull;
 
         if (envWithMultipleUnderscores != null) {
-          final configKey = envWithMultipleUnderscores.key
-              .toLowerCase()
-              .replaceAll('_', '.');
+          final configKey =
+              envWithMultipleUnderscores.key.toLowerCase().replaceAll('_', '.');
           expect(
             provider.getString(configKey),
             equals(envWithMultipleUnderscores.value),

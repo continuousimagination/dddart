@@ -283,7 +283,9 @@ void main() {
 
         // Both should be DeserializationExceptions but with different messages
         expect(
-            missingFieldError!.message, isNot(equals(wrongTypeError!.message)),);
+          missingFieldError!.message,
+          isNot(equals(wrongTypeError!.message)),
+        );
       });
 
       test('nested deserialization errors provide context', () {
@@ -439,9 +441,13 @@ void main() {
 
         final user = TestUserJsonSerializer().fromJson(json);
         expect(
-            user.createdAt, equals(DateTime.parse('1970-01-01T00:00:00.000Z')),);
+          user.createdAt,
+          equals(DateTime.parse('1970-01-01T00:00:00.000Z')),
+        );
         expect(
-            user.updatedAt, equals(DateTime.parse('2099-12-31T23:59:59.999Z')),);
+          user.updatedAt,
+          equals(DateTime.parse('2099-12-31T23:59:59.999Z')),
+        );
       });
     });
 

@@ -295,9 +295,13 @@ void main() {
         // Verify they received the same records
         for (var i = 0; i < handler1Records.length; i++) {
           expect(
-              handler2Records[i].message, equals(handler1Records[i].message),);
+            handler2Records[i].message,
+            equals(handler1Records[i].message),
+          );
           expect(
-              handler3Records[i].message, equals(handler1Records[i].message),);
+            handler3Records[i].message,
+            equals(handler1Records[i].message),
+          );
         }
 
         await sub1.cancel();
@@ -345,8 +349,9 @@ void main() {
         // Second handler should only have INFO and above
         expect(infoAndAboveRecords, isNotEmpty);
         expect(
-            infoAndAboveRecords.every((r) => r.level.value >= Level.INFO.value),
-            isTrue,);
+          infoAndAboveRecords.every((r) => r.level.value >= Level.INFO.value),
+          isTrue,
+        );
 
         await sub1.cancel();
         await sub2.cancel();
@@ -385,13 +390,16 @@ void main() {
 
         // Each handler should only receive records from its logger
         expect(eventBusRecords, isNotEmpty);
-        expect(eventBusRecords.every((r) => r.loggerName == 'dddart.eventbus'),
-            isTrue,);
+        expect(
+          eventBusRecords.every((r) => r.loggerName == 'dddart.eventbus'),
+          isTrue,
+        );
 
         expect(repositoryRecords, isNotEmpty);
         expect(
-            repositoryRecords.every((r) => r.loggerName == 'dddart.repository'),
-            isTrue,);
+          repositoryRecords.every((r) => r.loggerName == 'dddart.repository'),
+          isTrue,
+        );
 
         await sub1.cancel();
         await sub2.cancel();
@@ -536,8 +544,9 @@ void main() {
         // Should have logs from second operation only
         expect(capturedRecords, isNotEmpty);
         expect(
-            capturedRecords.any((r) => r.message.contains('Publishing event')),
-            isTrue,);
+          capturedRecords.any((r) => r.message.contains('Publishing event')),
+          isTrue,
+        );
 
         await sub.cancel();
         await eventBus.close();

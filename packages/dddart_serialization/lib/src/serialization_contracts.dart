@@ -52,8 +52,11 @@ class SerializationException implements Exception {
 /// Exception thrown when deserialization fails.
 class DeserializationException extends SerializationException {
   /// Creates a deserialization exception.
-  const DeserializationException(super.message,
-      {super.expectedType, this.field,});
+  const DeserializationException(
+    super.message, {
+    super.expectedType,
+    this.field,
+  });
 
   /// The field that caused the deserialization error.
   final String? field;

@@ -40,7 +40,8 @@ class EventBus {
       throw StateError('Cannot publish event: EventBus is closed');
     }
     _logger.fine(
-        'Publishing event: ${event.runtimeType} for aggregate ${event.aggregateId}',);
+      'Publishing event: ${event.runtimeType} for aggregate ${event.aggregateId}',
+    );
     _controller.add(event);
   }
 

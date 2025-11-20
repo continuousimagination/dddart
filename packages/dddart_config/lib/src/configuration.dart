@@ -1,9 +1,9 @@
 /// Configuration management with multiple provider support.
 library;
 
-import 'config_provider.dart';
-import 'config_requirement.dart';
-import 'exceptions.dart';
+import 'package:dddart_config/src/config_provider.dart';
+import 'package:dddart_config/src/config_requirement.dart';
+import 'package:dddart_config/src/exceptions.dart';
 
 /// Unified configuration management with layered provider support.
 ///
@@ -522,7 +522,7 @@ class Configuration {
               case 'off':
                 typedValue = false;
               default:
-                throw FormatException('Invalid boolean value');
+                throw const FormatException('Invalid boolean value');
             }
           case ConfigType.list:
             if (rawValue.trim().isEmpty) {
@@ -541,7 +541,7 @@ class Configuration {
         try {
           requirement.validator!(typedValue);
         } catch (e) {
-          failures.add('$key validation failed: ${e.toString()}');
+          failures.add('$key validation failed: $e');
         }
       }
     }
@@ -573,7 +573,7 @@ class Configuration {
         await _providers[i].reload();
       } catch (e) {
         throw ConfigException(
-          'Failed to reload provider at index $i: ${e.toString()}',
+          'Failed to reload provider at index $i: $e',
         );
       }
     }

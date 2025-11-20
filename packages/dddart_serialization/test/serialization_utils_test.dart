@@ -26,7 +26,9 @@ void main() {
         );
         expect(
           SerializationUtils.applyFieldRename(
-              'emailAddress', FieldRename.snake,),
+            'emailAddress',
+            FieldRename.snake,
+          ),
           equals('email_address'),
         );
         expect(
@@ -46,7 +48,9 @@ void main() {
         );
         expect(
           SerializationUtils.applyFieldRename(
-              'emailAddress', FieldRename.kebab,),
+            'emailAddress',
+            FieldRename.kebab,
+          ),
           equals('email-address'),
         );
         expect(
@@ -78,10 +82,16 @@ void main() {
               SerializationUtils.validateNotNull(null, 'testField', 'TestType'),
           throwsA(
             isA<DeserializationException>()
-                .having((e) => e.message, 'message',
-                    contains('Required field "testField" is null'),)
                 .having(
-                    (e) => e.expectedType, 'expectedType', equals('TestType'),),
+                  (e) => e.message,
+                  'message',
+                  contains('Required field "testField" is null'),
+                )
+                .having(
+                  (e) => e.expectedType,
+                  'expectedType',
+                  equals('TestType'),
+                ),
           ),
         );
       });
@@ -91,7 +101,10 @@ void main() {
       test('returns value when type matches', () {
         expect(
           SerializationUtils.validateType<String>(
-              'test', 'fieldName', 'String',),
+            'test',
+            'fieldName',
+            'String',
+          ),
           equals('test'),
         );
         expect(
@@ -103,16 +116,24 @@ void main() {
       test('throws DeserializationException when type mismatch', () {
         expect(
           () => SerializationUtils.validateType<String>(
-              42, 'testField', 'TestType',),
+            42,
+            'testField',
+            'TestType',
+          ),
           throwsA(
             isA<DeserializationException>()
                 .having(
-                    (e) => e.message,
-                    'message',
-                    contains(
-                        'Field "testField" expected type String but got int',),)
+                  (e) => e.message,
+                  'message',
+                  contains(
+                    'Field "testField" expected type String but got int',
+                  ),
+                )
                 .having(
-                    (e) => e.expectedType, 'expectedType', equals('TestType'),),
+                  (e) => e.expectedType,
+                  'expectedType',
+                  equals('TestType'),
+                ),
           ),
         );
       });

@@ -196,9 +196,13 @@ void main() {
 
         expect(result, contains('TestDomainEvent'));
         expect(
-            result, contains('eventId: 87654321-4321-4321-4321-cba987654321'),);
-        expect(result,
-            contains('aggregateId: 12345678-1234-1234-1234-123456789abc'),);
+          result,
+          contains('eventId: 87654321-4321-4321-4321-cba987654321'),
+        );
+        expect(
+          result,
+          contains('aggregateId: 12345678-1234-1234-1234-123456789abc'),
+        );
         expect(result, contains('occurredAt: 2023-06-15 10:30:00.000'));
       });
     });

@@ -113,12 +113,13 @@ void main() {
         final section = config.getSection('database');
 
         expect(
-            section,
-            equals({
-              'host': 'localhost',
-              'port': '5432',
-              'name': 'mydb',
-            }));
+          section,
+          equals({
+            'host': 'localhost',
+            'port': '5432',
+            'name': 'mydb',
+          }),
+        );
       });
 
       test('should merge sections from multiple providers', () {
@@ -134,11 +135,12 @@ void main() {
         final section = config.getSection('database');
 
         expect(
-            section,
-            equals({
-              'host': 'prod.example.com', // From provider1 (higher precedence)
-              'port': '5432', // From provider2
-            }));
+          section,
+          equals({
+            'host': 'prod.example.com', // From provider1 (higher precedence)
+            'port': '5432', // From provider2
+          }),
+        );
       });
 
       test('should return empty map if no keys match prefix', () {
@@ -163,11 +165,12 @@ void main() {
         final section = config.getSection('database.connection');
 
         expect(
-            section,
-            equals({
-              'host': 'localhost',
-              'port': '5432',
-            }));
+          section,
+          equals({
+            'host': 'localhost',
+            'port': '5432',
+          }),
+        );
       });
     });
 
@@ -190,7 +193,7 @@ void main() {
         final config = Configuration([provider1, provider2]);
 
         expect(
-          () => config.reload(),
+          config.reload,
           throwsA(isA<ConfigException>()),
         );
       });
@@ -277,7 +280,9 @@ void main() {
         final config = Configuration([provider]);
 
         expect(
-            config.getStringOrDefault('missing', 'default'), equals('default'));
+          config.getStringOrDefault('missing', 'default'),
+          equals('default'),
+        );
       });
     });
 
@@ -422,14 +427,14 @@ void main() {
         final provider = MockConfigProvider({'timeout': '30.5'});
         final config = Configuration([provider]);
 
-        expect(config.getDoubleOrDefault('timeout', 10.0), equals(30.5));
+        expect(config.getDoubleOrDefault('timeout', 10), equals(30.5));
       });
 
       test('should return default when key does not exist', () {
         final provider = MockConfigProvider({});
         final config = Configuration([provider]);
 
-        expect(config.getDoubleOrDefault('missing', 10.0), equals(10.0));
+        expect(config.getDoubleOrDefault('missing', 10), equals(10.0));
       });
 
       test('should throw TypeConversionException for invalid double', () {
@@ -437,7 +442,7 @@ void main() {
         final config = Configuration([provider]);
 
         expect(
-          () => config.getDoubleOrDefault('timeout', 10.0),
+          () => config.getDoubleOrDefault('timeout', 10),
           throwsA(isA<TypeConversionException>()),
         );
       });
@@ -630,8 +635,10 @@ void main() {
         final provider = MockConfigProvider({'hosts': 'host1,host2,host3'});
         final config = Configuration([provider]);
 
-        expect(config.getRequiredList('hosts'),
-            equals(['host1', 'host2', 'host3']));
+        expect(
+          config.getRequiredList('hosts'),
+          equals(['host1', 'host2', 'host3']),
+        );
       });
 
       test('should throw MissingConfigException when key does not exist', () {
@@ -681,17 +688,14 @@ void main() {
             ConfigRequirement(
               key: 'database.host',
               type: ConfigType.string,
-              required: true,
             ),
             ConfigRequirement(
               key: 'database.port',
               type: ConfigType.integer,
-              required: true,
             ),
             ConfigRequirement(
               key: 'debug',
               type: ConfigType.boolean,
-              required: true,
             ),
           ]),
           returnsNormally,
@@ -707,7 +711,6 @@ void main() {
             ConfigRequirement(
               key: 'database.host',
               type: ConfigType.string,
-              required: true,
             ),
           ]),
           throwsA(isA<ValidationException>()),
@@ -723,12 +726,10 @@ void main() {
             ConfigRequirement(
               key: 'database.host',
               type: ConfigType.string,
-              required: true,
             ),
             ConfigRequirement(
               key: 'database.port',
               type: ConfigType.integer,
-              required: true,
             ),
           ]);
           fail('Should have thrown ValidationException');
@@ -750,7 +751,6 @@ void main() {
             ConfigRequirement(
               key: 'database.host',
               type: ConfigType.string,
-              required: true,
             ),
             ConfigRequirement(
               key: 'database.port',
@@ -773,14 +773,15 @@ void main() {
             ConfigRequirement(
               key: 'database.port',
               type: ConfigType.integer,
-              required: true,
             ),
           ]);
           fail('Should have thrown ValidationException');
         } on ValidationException catch (e) {
           expect(e.failures, hasLength(1));
-          expect(e.failures.first,
-              contains('database.port must be a valid integer'));
+          expect(
+            e.failures.first,
+            contains('database.port must be a valid integer'),
+          );
         }
       });
 
@@ -795,7 +796,6 @@ void main() {
             ConfigRequirement(
               key: 'timeout',
               type: ConfigType.double,
-              required: true,
             ),
           ]);
           fail('Should have thrown ValidationException');
@@ -816,7 +816,6 @@ void main() {
             ConfigRequirement(
               key: 'debug',
               type: ConfigType.boolean,
-              required: true,
             ),
           ]);
           fail('Should have thrown ValidationException');
@@ -837,7 +836,6 @@ void main() {
             ConfigRequirement(
               key: 'hosts',
               type: ConfigType.list,
-              required: true,
             ),
           ]),
           returnsNormally,
@@ -855,7 +853,6 @@ void main() {
             ConfigRequirement(
               key: 'name',
               type: ConfigType.string,
-              required: true,
             ),
           ]),
           returnsNormally,
@@ -875,7 +872,6 @@ void main() {
             ConfigRequirement(
               key: 'database.port',
               type: ConfigType.integer,
-              required: true,
               validator: (value) {
                 validatorCalled = true;
                 expect(value, equals(5432));
@@ -900,9 +896,9 @@ void main() {
             ConfigRequirement(
               key: 'database.port',
               type: ConfigType.integer,
-              required: true,
               validator: (value) {
-                if (value < 1 || value > 65535) {
+                final port = value as int;
+                if (port < 1 || port > 65535) {
                   throw ArgumentError('Port must be between 1 and 65535');
                 }
                 return value;
@@ -914,7 +910,9 @@ void main() {
           expect(e.failures, hasLength(1));
           expect(e.failures.first, contains('database.port validation failed'));
           expect(
-              e.failures.first, contains('Port must be between 1 and 65535'));
+            e.failures.first,
+            contains('Port must be between 1 and 65535'),
+          );
         }
       });
 
@@ -931,22 +929,18 @@ void main() {
             ConfigRequirement(
               key: 'database.host',
               type: ConfigType.string,
-              required: true,
             ),
             ConfigRequirement(
               key: 'database.port',
               type: ConfigType.integer,
-              required: true,
             ),
             ConfigRequirement(
               key: 'timeout',
               type: ConfigType.double,
-              required: true,
             ),
             ConfigRequirement(
               key: 'debug',
               type: ConfigType.boolean,
-              required: true,
             ),
           ]);
           fail('Should have thrown ValidationException');
@@ -970,7 +964,6 @@ void main() {
             ConfigRequirement(
               key: 'logging.level',
               type: ConfigType.string,
-              required: true,
               validator: (value) {
                 final valid = ['debug', 'info', 'warn', 'error'];
                 if (!valid.contains(value)) {
@@ -1001,7 +994,6 @@ void main() {
             ConfigRequirement(
               key: 'database.port',
               type: ConfigType.integer,
-              required: true,
               validator: (value) {
                 validatorCalled = true;
                 return value;
@@ -1027,7 +1019,6 @@ void main() {
             ConfigRequirement(
               key: 'hosts',
               type: ConfigType.list,
-              required: true,
             ),
           ]),
           returnsNormally,

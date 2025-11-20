@@ -75,7 +75,8 @@ Future<Response> _handleCustomEvent(Request request) async {
 /// Health check handler
 Future<Response> _handleHealthCheck(Request request) async {
   return Response.ok(
-    jsonEncode({'status': 'healthy', 'timestamp': DateTime.now().toIso8601String()}),
+    jsonEncode(
+        {'status': 'healthy', 'timestamp': DateTime.now().toIso8601String()}),
     headers: {'Content-Type': 'application/json'},
   );
 }

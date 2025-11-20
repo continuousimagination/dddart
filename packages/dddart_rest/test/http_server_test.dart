@@ -214,22 +214,22 @@ void main() {
       // Poll until the port is actually closed (with timeout)
       final client = io.HttpClient();
       var connectionRefused = false;
-      final maxAttempts = 50; // 5 seconds max (50 * 100ms)
-      
+      const maxAttempts = 50; // 5 seconds max (50 * 100ms)
+
       try {
         for (var i = 0; i < maxAttempts; i++) {
           try {
             final request = await client.get('localhost', 8084, '/users');
             await request.close();
             // Connection succeeded, wait a bit and try again
-            await Future<void>.delayed(Duration(milliseconds: 100));
+            await Future<void>.delayed(const Duration(milliseconds: 100));
           } on io.SocketException {
             // Connection refused - port is closed!
             connectionRefused = true;
             break;
           }
         }
-        
+
         expect(
           connectionRefused,
           isTrue,

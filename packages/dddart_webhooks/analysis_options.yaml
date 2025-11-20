@@ -5,3 +5,9 @@ analyzer:
     - "**/*.g.dart"
     - "**/*.freezed.dart"
     - "example/**"
+
+linter:
+  rules:
+    lines_longer_than_80_chars: false  # Allow longer lines for readability
+    comment_references: false  # Allow doc comment references without imports
+    one_member_abstracts: false  # Single-method abstracts are fine for strategy pattern

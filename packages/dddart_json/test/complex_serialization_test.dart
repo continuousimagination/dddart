@@ -122,10 +122,14 @@ void main() {
 
         expect(complexUser.name, equals('Deserialized Complex User'));
         expect(
-            complexUser.contactInfo.email, equals('deserialized@example.com'),);
+          complexUser.contactInfo.email,
+          equals('deserialized@example.com'),
+        );
         expect(complexUser.contactInfo.phone, equals('+1-555-9876'));
         expect(
-            complexUser.contactInfo.address.street, equals('789 Deserial St'),);
+          complexUser.contactInfo.address.street,
+          equals('789 Deserial St'),
+        );
 
         expect(complexUser.addresses, hasLength(2));
         expect(complexUser.addresses[0].street, equals('111 First St'));
@@ -228,7 +232,9 @@ void main() {
 
         expect(json['title'], equals('Test Project'));
         expect(
-            json['description'], equals('A project for testing collections'),);
+          json['description'],
+          equals('A project for testing collections'),
+        );
 
         // Verify collaborators list
         expect(json['collaborators'], isA<List>());
@@ -307,15 +313,21 @@ void main() {
 
         expect(project.milestones, hasLength(2));
         final milestonesList = project.milestones.toList();
-        expect(milestonesList.any((m) => m.name == 'Deserialized Milestone 1'),
-            isTrue,);
-        expect(milestonesList.any((m) => m.name == 'Deserialized Milestone 2'),
-            isTrue,);
+        expect(
+          milestonesList.any((m) => m.name == 'Deserialized Milestone 1'),
+          isTrue,
+        );
+        expect(
+          milestonesList.any((m) => m.name == 'Deserialized Milestone 2'),
+          isTrue,
+        );
 
         expect(project.settings, hasLength(2));
         expect(project.settings['primary']?.street, equals('Primary Street'));
         expect(
-            project.settings['secondary']?.street, equals('Secondary Street'),);
+          project.settings['secondary']?.street,
+          equals('Secondary Street'),
+        );
       });
     });
 

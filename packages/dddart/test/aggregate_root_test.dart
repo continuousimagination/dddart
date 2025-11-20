@@ -87,21 +87,25 @@ void main() {
         expect(aggregateRoot.id, isA<UuidValue>());
         expect(aggregateRoot.id.uuid, isNotEmpty);
         expect(
-            aggregateRoot.createdAt
-                .isAfter(beforeCreation.subtract(const Duration(seconds: 1))),
-            isTrue,);
+          aggregateRoot.createdAt
+              .isAfter(beforeCreation.subtract(const Duration(seconds: 1))),
+          isTrue,
+        );
         expect(
-            aggregateRoot.createdAt
-                .isBefore(afterCreation.add(const Duration(seconds: 1))),
-            isTrue,);
+          aggregateRoot.createdAt
+              .isBefore(afterCreation.add(const Duration(seconds: 1))),
+          isTrue,
+        );
         expect(
-            aggregateRoot.updatedAt
-                .isAfter(beforeCreation.subtract(const Duration(seconds: 1))),
-            isTrue,);
+          aggregateRoot.updatedAt
+              .isAfter(beforeCreation.subtract(const Duration(seconds: 1))),
+          isTrue,
+        );
         expect(
-            aggregateRoot.updatedAt
-                .isBefore(afterCreation.add(const Duration(seconds: 1))),
-            isTrue,);
+          aggregateRoot.updatedAt
+              .isBefore(afterCreation.add(const Duration(seconds: 1))),
+          isTrue,
+        );
       });
     });
 

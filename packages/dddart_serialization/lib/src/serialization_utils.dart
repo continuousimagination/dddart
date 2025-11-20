@@ -20,7 +20,9 @@ class SerializationUtils {
 
     return input
         .replaceAllMapped(
-            RegExp('[A-Z]'), (match) => '_${match.group(0)!.toLowerCase()}',)
+          RegExp('[A-Z]'),
+          (match) => '_${match.group(0)!.toLowerCase()}',
+        )
         .replaceFirst(RegExp('^_'), ''); // Remove leading underscore if present
   }
 
@@ -30,7 +32,9 @@ class SerializationUtils {
 
     return input
         .replaceAllMapped(
-            RegExp('[A-Z]'), (match) => '-${match.group(0)!.toLowerCase()}',)
+          RegExp('[A-Z]'),
+          (match) => '-${match.group(0)!.toLowerCase()}',
+        )
         .replaceFirst(RegExp('^-'), ''); // Remove leading dash if present
   }
 

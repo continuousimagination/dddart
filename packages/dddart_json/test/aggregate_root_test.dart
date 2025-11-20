@@ -24,9 +24,13 @@ void main() {
 
         // Verify UUID format
         expect(
-            json['id'],
-            matches(RegExp(
-                r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',),),);
+          json['id'],
+          matches(
+            RegExp(
+              r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+            ),
+          ),
+        );
 
         // Verify ISO 8601 format
         expect(() => DateTime.parse(json['createdAt']), returnsNormally);
@@ -48,11 +52,17 @@ void main() {
         expect(user.name, equals('Jane Smith'));
         expect(user.email, equals('jane@example.com'));
         expect(
-            user.id.toString(), equals('550e8400-e29b-41d4-a716-446655440000'),);
+          user.id.toString(),
+          equals('550e8400-e29b-41d4-a716-446655440000'),
+        );
         expect(
-            user.createdAt, equals(DateTime.parse('2024-01-01T12:00:00.000Z')),);
+          user.createdAt,
+          equals(DateTime.parse('2024-01-01T12:00:00.000Z')),
+        );
         expect(
-            user.updatedAt, equals(DateTime.parse('2024-01-01T12:30:00.000Z')),);
+          user.updatedAt,
+          equals(DateTime.parse('2024-01-01T12:30:00.000Z')),
+        );
       });
 
       test('round-trip serialization maintains equality', () {
@@ -242,8 +252,10 @@ void main() {
         final json = serializer.toJson(user);
 
         // Verify all required fields are present
-        expect(json.keys,
-            containsAll(['id', 'createdAt', 'updatedAt', 'name', 'email']),);
+        expect(
+          json.keys,
+          containsAll(['id', 'createdAt', 'updatedAt', 'name', 'email']),
+        );
 
         // Verify field types
         expect(json['id'], isA<String>());

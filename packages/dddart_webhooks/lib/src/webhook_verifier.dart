@@ -1,3 +1,5 @@
+import 'package:dddart_webhooks/dddart_webhooks.dart' show WebhookResource;
+import 'package:dddart_webhooks/src/webhook_resource.dart' show WebhookResource;
 import 'package:dddart_webhooks/src/webhook_verification_result.dart';
 import 'package:shelf/shelf.dart';
 

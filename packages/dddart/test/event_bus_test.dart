@@ -63,8 +63,10 @@ void main() {
 
       expect(subscriber1Events, hasLength(1));
       expect(subscriber2Events, hasLength(1));
-      expect(subscriber1Events.first.eventId,
-          equals(subscriber2Events.first.eventId),);
+      expect(
+        subscriber1Events.first.eventId,
+        equals(subscriber2Events.first.eventId),
+      );
     });
 
     test('type-safe subscriptions only receive matching event types', () async {
@@ -76,9 +78,11 @@ void main() {
       eventBus.on<AnotherTestEvent>().listen(anotherEvents.add);
 
       eventBus.publish(
-          TestEvent(aggregateId: UuidValue.generate(), message: 'Test'),);
+        TestEvent(aggregateId: UuidValue.generate(), message: 'Test'),
+      );
       eventBus.publish(
-          AnotherTestEvent(aggregateId: UuidValue.generate(), value: 42),);
+        AnotherTestEvent(aggregateId: UuidValue.generate(), value: 42),
+      );
 
       await Future.delayed(const Duration(milliseconds: 10));
 
@@ -93,7 +97,8 @@ void main() {
 
       expect(
         () => eventBus.publish(
-            TestEvent(aggregateId: UuidValue.generate(), message: 'Fail'),),
+          TestEvent(aggregateId: UuidValue.generate(), message: 'Fail'),
+        ),
         throwsStateError,
       );
     });

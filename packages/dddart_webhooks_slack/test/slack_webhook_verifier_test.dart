@@ -47,7 +47,7 @@ void main() {
       // Arrange
       final timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
       final body = jsonEncode({'team_id': 'T123'});
-      final invalidSignature = 'v0=invalid_signature_hash';
+      const invalidSignature = 'v0=invalid_signature_hash';
 
       final request = Request(
         'POST',
@@ -139,7 +139,7 @@ void main() {
     test('should handle non-JSON body gracefully', () async {
       // Arrange
       final timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-      final body = 'command=/test&text=hello';
+      const body = 'command=/test&text=hello';
       final baseString = 'v0:$timestamp:$body';
       final hmac = Hmac(sha256, utf8.encode(signingSecret));
       final digest = hmac.convert(utf8.encode(baseString));
@@ -166,7 +166,7 @@ void main() {
     test('should handle malformed JSON body gracefully', () async {
       // Arrange
       final timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-      final body = '{invalid json}';
+      const body = '{invalid json}';
       final baseString = 'v0:$timestamp:$body';
       final hmac = Hmac(sha256, utf8.encode(signingSecret));
       final digest = hmac.convert(utf8.encode(baseString));

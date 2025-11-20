@@ -217,7 +217,9 @@ void main() {
       // Assert
       expect(response.statusCode, equals(404));
       expect(
-          response.headers['Content-Type'], equals('application/problem+json'),);
+        response.headers['Content-Type'],
+        equals('application/problem+json'),
+      );
 
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
@@ -536,7 +538,9 @@ void main() {
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
       expect(
-          body['detail'], contains('Cannot combine multiple query parameters'),);
+        body['detail'],
+        contains('Cannot combine multiple query parameters'),
+      );
     });
 
     test('pagination params do not count as filter params', () async {
@@ -570,7 +574,9 @@ void main() {
       // Assert
       expect(response.statusCode, equals(400));
       expect(
-          response.headers['Content-Type'], equals('application/problem+json'),);
+        response.headers['Content-Type'],
+        equals('application/problem+json'),
+      );
 
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
@@ -680,7 +686,9 @@ void main() {
       // Assert
       expect(response.statusCode, equals(415));
       expect(
-          response.headers['Content-Type'], equals('application/problem+json'),);
+        response.headers['Content-Type'],
+        equals('application/problem+json'),
+      );
 
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
@@ -872,7 +880,9 @@ void main() {
       // Assert
       expect(response.statusCode, equals(415));
       expect(
-          response.headers['Content-Type'], equals('application/problem+json'),);
+        response.headers['Content-Type'],
+        equals('application/problem+json'),
+      );
 
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
@@ -1029,7 +1039,9 @@ void main() {
       // Assert
       expect(response.statusCode, equals(404));
       expect(
-          response.headers['Content-Type'], equals('application/problem+json'),);
+        response.headers['Content-Type'],
+        equals('application/problem+json'),
+      );
 
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
@@ -1137,7 +1149,9 @@ void main() {
       // Assert
       expect(response.statusCode, equals(406));
       expect(
-          response.headers['Content-Type'], equals('application/problem+json'),);
+        response.headers['Content-Type'],
+        equals('application/problem+json'),
+      );
 
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
@@ -1298,7 +1312,9 @@ void main() {
       // Assert - should use ErrorMapper default handling
       expect(response.statusCode, equals(404));
       expect(
-          response.headers['Content-Type'], equals('application/problem+json'),);
+        response.headers['Content-Type'],
+        equals('application/problem+json'),
+      );
     });
 
     test('custom handler is invoked with correct exception', () async {

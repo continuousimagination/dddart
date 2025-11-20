@@ -1,5 +1,8 @@
 import 'dart:convert';
 
+import 'package:dddart_webhooks/dddart_webhooks.dart' show WebhookDeserializers;
+import 'package:dddart_webhooks/src/webhook_deserializers.dart'
+    show WebhookDeserializers;
 import 'package:dddart_webhooks/src/webhook_verification_result.dart';
 import 'package:dddart_webhooks/src/webhook_verifier.dart';
 import 'package:logging/logging.dart';

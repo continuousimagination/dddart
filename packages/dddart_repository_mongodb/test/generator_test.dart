@@ -18,7 +18,7 @@ void main() {
 
     tearDown(() async {
       // Give the build system time to clean up file handles
-      await Future.delayed(Duration(milliseconds: 100));
+      await Future.delayed(const Duration(milliseconds: 100));
     });
 
     test('should validate annotation usage and class requirements', () async {
@@ -90,23 +90,41 @@ class Product extends AggregateRoot {
       );
 
       // Verify all critical features in one comprehensive test
-      expect(output, contains("collectionName => 'test_products'")); // Custom collection name
-      expect(output, contains('/// Generated MongoDB repository')); // Documentation
+      expect(
+          output,
+          contains(
+              "collectionName => 'test_products'")); // Custom collection name
+      expect(output,
+          contains('/// Generated MongoDB repository')); // Documentation
       expect(output, contains('class ProductMongoRepository')); // Class name
       expect(output, contains('implements Repository<Product>')); // Interface
       expect(output, contains('final Db _database')); // Database field
       expect(output, contains('final _serializer')); // Serializer field
-      expect(output, contains('Future<Product> getById(UuidValue id)')); // getById method
-      expect(output, contains('Future<void> save(Product aggregate)')); // save method
-      expect(output, contains('Future<void> deleteById(UuidValue id)')); // deleteById method
-      expect(output, contains("doc['id'] = doc['_id']")); // ID mapping in getById
+      expect(output,
+          contains('Future<Product> getById(UuidValue id)')); // getById method
+      expect(output,
+          contains('Future<void> save(Product aggregate)')); // save method
+      expect(
+          output,
+          contains(
+              'Future<void> deleteById(UuidValue id)')); // deleteById method
+      expect(
+          output, contains("doc['id'] = doc['_id']")); // ID mapping in getById
       expect(output, contains("doc.remove('_id')")); // ID cleanup in getById
       expect(output, contains("doc['_id'] = doc['id']")); // ID mapping in save
       expect(output, contains("doc.remove('id')")); // ID cleanup in save
-      expect(output, contains('RepositoryException _mapMongoException')); // Exception mapping
-      expect(output, contains('RepositoryExceptionType.duplicate')); // Duplicate exception
-      expect(output, contains('RepositoryExceptionType.connection')); // Connection exception
-      expect(output, contains('RepositoryExceptionType.timeout')); // Timeout exception
+      expect(
+          output,
+          contains(
+              'RepositoryException _mapMongoException')); // Exception mapping
+      expect(output,
+          contains('RepositoryExceptionType.duplicate')); // Duplicate exception
+      expect(
+          output,
+          contains(
+              'RepositoryExceptionType.connection')); // Connection exception
+      expect(output,
+          contains('RepositoryExceptionType.timeout')); // Timeout exception
     });
   });
 }

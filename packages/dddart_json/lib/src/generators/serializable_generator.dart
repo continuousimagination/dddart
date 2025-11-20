@@ -40,7 +40,10 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
     switch (classAnalysis.type) {
       case ClassType.aggregateRoot:
         return _generateAggregateRootSerialization(
-            classElement, classAnalysis, config,);
+          classElement,
+          classAnalysis,
+          config,
+        );
       case ClassType.value:
         return _generateValueSerialization(classElement, classAnalysis, config);
       case ClassType.entity:
@@ -58,8 +61,11 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
   }
 
   /// Generates serialization code for AggregateRoot classes.
-  String _generateAggregateRootSerialization(ClassElement classElement,
-      ClassAnalysis analysis, SerializationConfig config,) {
+  String _generateAggregateRootSerialization(
+    ClassElement classElement,
+    ClassAnalysis analysis,
+    SerializationConfig config,
+  ) {
     final className = analysis.className;
 
     // Generate the basic toJson and fromJson method bodies
@@ -68,12 +74,19 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
 
     // Generate the complete JsonSerializer class
     return _generateJsonSerializerClass(
-        className, toJsonBody, fromJsonBody, analysis,);
+      className,
+      toJsonBody,
+      fromJsonBody,
+      analysis,
+    );
   }
 
   /// Generates serialization code for Value classes.
-  String _generateValueSerialization(ClassElement classElement,
-      ClassAnalysis analysis, SerializationConfig config,) {
+  String _generateValueSerialization(
+    ClassElement classElement,
+    ClassAnalysis analysis,
+    SerializationConfig config,
+  ) {
     final className = analysis.className;
 
     // Generate the basic toJson and fromJson method bodies
@@ -82,7 +95,11 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
 
     // Generate the complete JsonSerializer class
     return _generateJsonSerializerClass(
-        className, toJsonBody, fromJsonBody, analysis,);
+      className,
+      toJsonBody,
+      fromJsonBody,
+      analysis,
+    );
   }
 
   /// Extracts configuration from the @Serializable annotation.
@@ -146,7 +163,9 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
 
   /// Extracts field information from a class element.
   List<FieldInfo> _extractFields(
-      ClassElement classElement, ClassType classType,) {
+    ClassElement classElement,
+    ClassType classType,
+  ) {
     final fields = <FieldInfo>[];
 
     // Get all fields from the class (excluding inherited ones from DDDart base classes)
@@ -177,8 +196,12 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
   }
 
   /// Generates a complete JsonSerializer class with constructor + optional parameter design.
-  String _generateJsonSerializerClass(String className, String toJsonBody,
-      String fromJsonBody, ClassAnalysis analysis,) {
+  String _generateJsonSerializerClass(
+    String className,
+    String toJsonBody,
+    String fromJsonBody,
+    ClassAnalysis analysis,
+  ) {
     // Generate configurable versions of the methods
     final toJsonWithConfigBody = _generateToJsonWithConfig(className, analysis);
     final fromJsonWithConfigBody =
@@ -242,11 +265,14 @@ $fromJsonWithConfigBody
     // Add Entity base fields with runtime field naming
     if (analysis.type == ClassType.aggregateRoot) {
       buffer.writeln(
-          "      SerializationUtils.applyFieldRename('id', effectiveConfig.fieldRename): instance.id.toString(),",);
+        "      SerializationUtils.applyFieldRename('id', effectiveConfig.fieldRename): instance.id.toString(),",
+      );
       buffer.writeln(
-          "      SerializationUtils.applyFieldRename('createdAt', effectiveConfig.fieldRename): instance.createdAt.toIso8601String(),",);
+        "      SerializationUtils.applyFieldRename('createdAt', effectiveConfig.fieldRename): instance.createdAt.toIso8601String(),",
+      );
       buffer.writeln(
-          "      SerializationUtils.applyFieldRename('updatedAt', effectiveConfig.fieldRename): instance.updatedAt.toIso8601String(),",);
+        "      SerializationUtils.applyFieldRename('updatedAt', effectiveConfig.fieldRename): instance.updatedAt.toIso8601String(),",
+      );
     }
 
     // Sort custom fields alphabetically for deterministic ordering
@@ -259,12 +285,15 @@ $fromJsonWithConfigBody
 
       if (field.isNullable) {
         buffer.writeln(
-            '      if (instance.$fieldName != null || effectiveConfig.includeNullFields)',);
+          '      if (instance.$fieldName != null || effectiveConfig.includeNullFields)',
+        );
         buffer.writeln(
-            "        SerializationUtils.applyFieldRename('$fieldName', effectiveConfig.fieldRename): ${_generateFieldSerializationNonNull(field, 'instance.')},",);
+          "        SerializationUtils.applyFieldRename('$fieldName', effectiveConfig.fieldRename): ${_generateFieldSerializationNonNull(field, 'instance.')},",
+        );
       } else {
         buffer.writeln(
-            "      SerializationUtils.applyFieldRename('$fieldName', effectiveConfig.fieldRename): ${_generateFieldSerialization(field, 'instance.')},",);
+          "      SerializationUtils.applyFieldRename('$fieldName', effectiveConfig.fieldRename): ${_generateFieldSerialization(field, 'instance.')},",
+        );
       }
     }
 
@@ -287,7 +316,8 @@ $fromJsonWithConfigBody
     buffer.writeln('    if (json is! Map<String, dynamic>) {');
     buffer.writeln('      throw DeserializationException(');
     buffer.writeln(
-        r"        'Expected Map<String, dynamic> but got ${json.runtimeType}',",);
+      r"        'Expected Map<String, dynamic> but got ${json.runtimeType}',",
+    );
     buffer.writeln("        expectedType: '$className',");
     buffer.writeln('      );');
     buffer.writeln('    }');
@@ -308,11 +338,14 @@ $fromJsonWithConfigBody
     // Add Entity base field parameters with runtime field naming
     if (analysis.type == ClassType.aggregateRoot) {
       buffer.writeln(
-          "        id: UuidValue.fromString(json[SerializationUtils.applyFieldRename('id', effectiveConfig.fieldRename)] as String),",);
+        "        id: UuidValue.fromString(json[SerializationUtils.applyFieldRename('id', effectiveConfig.fieldRename)] as String),",
+      );
       buffer.writeln(
-          "        createdAt: DateTime.parse(json[SerializationUtils.applyFieldRename('createdAt', effectiveConfig.fieldRename)] as String),",);
+        "        createdAt: DateTime.parse(json[SerializationUtils.applyFieldRename('createdAt', effectiveConfig.fieldRename)] as String),",
+      );
       buffer.writeln(
-          "        updatedAt: DateTime.parse(json[SerializationUtils.applyFieldRename('updatedAt', effectiveConfig.fieldRename)] as String),",);
+        "        updatedAt: DateTime.parse(json[SerializationUtils.applyFieldRename('updatedAt', effectiveConfig.fieldRename)] as String),",
+      );
     }
 
     buffer.writeln('      );');
@@ -377,17 +410,22 @@ $fromJsonWithConfigBody
 
   /// Generates the toJson method body for AggregateRoot classes.
   String _generateAggregateRootToJson(
-      ClassAnalysis analysis, SerializationConfig config,) {
+    ClassAnalysis analysis,
+    SerializationConfig config,
+  ) {
     final buffer = StringBuffer();
     buffer.writeln('    final json = <String, dynamic>{');
 
     // Add Entity base fields with consistent naming
     buffer.writeln(
-        "      '${_applyFieldRename('id', config.fieldRename)}': instance.id.toString(),",);
+      "      '${_applyFieldRename('id', config.fieldRename)}': instance.id.toString(),",
+    );
     buffer.writeln(
-        "      '${_applyFieldRename('createdAt', config.fieldRename)}': instance.createdAt.toIso8601String(),",);
+      "      '${_applyFieldRename('createdAt', config.fieldRename)}': instance.createdAt.toIso8601String(),",
+    );
     buffer.writeln(
-        "      '${_applyFieldRename('updatedAt', config.fieldRename)}': instance.updatedAt.toIso8601String(),",);
+      "      '${_applyFieldRename('updatedAt', config.fieldRename)}': instance.updatedAt.toIso8601String(),",
+    );
 
     // Sort custom fields alphabetically for deterministic ordering
     final sortedFields = List<FieldInfo>.from(analysis.fields)
@@ -400,10 +438,12 @@ $fromJsonWithConfigBody
 
       if (field.isNullable && !config.includeNullFields) {
         buffer.writeln(
-            "      if (instance.$fieldName != null) '$jsonKey': ${_generateFieldSerializationNonNull(field, 'instance.')},",);
+          "      if (instance.$fieldName != null) '$jsonKey': ${_generateFieldSerializationNonNull(field, 'instance.')},",
+        );
       } else {
         buffer.writeln(
-            "      '$jsonKey': ${_generateFieldSerialization(field, 'instance.')},",);
+          "      '$jsonKey': ${_generateFieldSerialization(field, 'instance.')},",
+        );
       }
     }
 
@@ -415,7 +455,9 @@ $fromJsonWithConfigBody
 
   /// Generates the fromJson method body for AggregateRoot classes.
   String _generateAggregateRootFromJson(
-      ClassAnalysis analysis, SerializationConfig config,) {
+    ClassAnalysis analysis,
+    SerializationConfig config,
+  ) {
     final className = analysis.className;
     final buffer = StringBuffer();
 
@@ -442,9 +484,11 @@ $fromJsonWithConfigBody
     buffer
         .writeln("        id: UuidValue.fromString(json['$idKey'] as String),");
     buffer.writeln(
-        "        createdAt: DateTime.parse(json['$createdAtKey'] as String),",);
+      "        createdAt: DateTime.parse(json['$createdAtKey'] as String),",
+    );
     buffer.writeln(
-        "        updatedAt: DateTime.parse(json['$updatedAtKey'] as String),",);
+      "        updatedAt: DateTime.parse(json['$updatedAtKey'] as String),",
+    );
 
     buffer.writeln('      );');
     buffer.writeln('    } catch (e, stackTrace) {');
@@ -459,7 +503,9 @@ $fromJsonWithConfigBody
 
   /// Generates the toJson method body for Value classes.
   String _generateValueToJson(
-      ClassAnalysis analysis, SerializationConfig config,) {
+    ClassAnalysis analysis,
+    SerializationConfig config,
+  ) {
     final buffer = StringBuffer();
     buffer.writeln('    final json = <String, dynamic>{');
 
@@ -474,10 +520,12 @@ $fromJsonWithConfigBody
 
       if (field.isNullable && !config.includeNullFields) {
         buffer.writeln(
-            "      if (instance.$fieldName != null) '$jsonKey': ${_generateFieldSerializationNonNull(field, 'instance.')},",);
+          "      if (instance.$fieldName != null) '$jsonKey': ${_generateFieldSerializationNonNull(field, 'instance.')},",
+        );
       } else {
         buffer.writeln(
-            "      '$jsonKey': ${_generateFieldSerialization(field, 'instance.')},",);
+          "      '$jsonKey': ${_generateFieldSerialization(field, 'instance.')},",
+        );
       }
     }
 
@@ -489,7 +537,9 @@ $fromJsonWithConfigBody
 
   /// Generates the fromJson method body for Value classes.
   String _generateValueFromJson(
-      ClassAnalysis analysis, SerializationConfig config,) {
+    ClassAnalysis analysis,
+    SerializationConfig config,
+  ) {
     final className = analysis.className;
     final buffer = StringBuffer();
 
@@ -548,8 +598,10 @@ $fromJsonWithConfigBody
   }
 
   /// Generates serialization code for a field assuming it's not null.
-  String _generateFieldSerializationNonNull(FieldInfo field,
-      [String prefix = '',]) {
+  String _generateFieldSerializationNonNull(
+    FieldInfo field, [
+    String prefix = '',
+  ]) {
     final typeName = field.type.getDisplayString(withNullability: false);
     final fieldRef = '$prefix${field.name}';
 
@@ -861,7 +913,9 @@ $fromJsonWithConfigBody
 
   /// Generates deserialization code for collections with runtime configuration.
   String _generateCollectionDeserializationWithConfig(
-      FieldInfo field, String jsonAccess,) {
+    FieldInfo field,
+    String jsonAccess,
+  ) {
     final typeName = field.type.getDisplayString(withNullability: false);
     final typeArgs = field.type is ParameterizedType
         ? (field.type as ParameterizedType).typeArguments
@@ -902,7 +956,9 @@ $fromJsonWithConfigBody
 
   /// Generates deserialization code for maps with runtime configuration.
   String _generateMapDeserializationWithConfig(
-      FieldInfo field, String jsonAccess,) {
+    FieldInfo field,
+    String jsonAccess,
+  ) {
     final typeArgs = field.type is ParameterizedType
         ? (field.type as ParameterizedType).typeArguments
         : <DartType>[];
