@@ -77,10 +77,40 @@ docker run -d -p 27017:27017 mongo:latest
 brew services start mongodb-community
 ```
 
-## CI/CD Recommendations
+## CI/CD
 
-For continuous integration:
+### GitHub Actions
 
+The GitHub Actions workflow automatically:
+- Starts a MongoDB service container for all test jobs
+- Runs **all tests** (including integration tests) for `dddart_repository_mongodb`
+- Excludes MongoDB tests for other packages
+
+This ensures integration tests run in CI without requiring developers to have MongoDB installed locally.
+
+### Local Pre-Push Hook
+
+The pre-push hook runs:
+```bash
+dart test --exclude-tags=requires-mongo
+```
+
+This allows fast local validation without requiring MongoDB. Integration tests are verified in CI.
+
+### Manual CI/CD Setup
+
+For other CI systems, use a MongoDB service container:
+
+```yaml
+# Example for GitHub Actions
+services:
+  mongodb:
+    image: mongo:latest
+    ports:
+      - 27017:27017
+```
+
+Then run:
 ```bash
 # Run unit tests only (fast, no external dependencies)
 dart test --exclude-tags=requires-mongo --concurrency=1

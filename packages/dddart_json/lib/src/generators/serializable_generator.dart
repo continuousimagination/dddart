@@ -343,10 +343,10 @@ $fromJsonWithConfigBody
         "        id: UuidValue.fromString(json[SerializationUtils.applyFieldRename('id', effectiveConfig.fieldRename)] as String),",
       );
       buffer.writeln(
-        "        createdAt: DateTime.parse(json[SerializationUtils.applyFieldRename('createdAt', effectiveConfig.fieldRename)] as String),",
+        "        createdAt: json[SerializationUtils.applyFieldRename('createdAt', effectiveConfig.fieldRename)] != null ? DateTime.parse(json[SerializationUtils.applyFieldRename('createdAt', effectiveConfig.fieldRename)] as String) : DateTime.now(),",
       );
       buffer.writeln(
-        "        updatedAt: DateTime.parse(json[SerializationUtils.applyFieldRename('updatedAt', effectiveConfig.fieldRename)] as String),",
+        "        updatedAt: json[SerializationUtils.applyFieldRename('updatedAt', effectiveConfig.fieldRename)] != null ? DateTime.parse(json[SerializationUtils.applyFieldRename('updatedAt', effectiveConfig.fieldRename)] as String) : DateTime.now(),",
       );
     }
 
@@ -404,6 +404,11 @@ $fromJsonWithConfigBody
     // Check if it's a DDDart type
     if (_isDDDartType(field.type)) {
       return '${typeName}JsonSerializer().fromJson($jsonAccess as Map<String, dynamic>, effectiveConfig)';
+    }
+
+    // Handle double type with int-to-double conversion
+    if (typeName == 'double') {
+      return '($jsonAccess is int ? ($jsonAccess as int).toDouble() : $jsonAccess as double)';
     }
 
     // Default: primitive types with casting

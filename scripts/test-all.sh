@@ -77,7 +77,8 @@ check_package() {
   fi
   echo -e "  ${GREEN}✓ Formatting check passed${NC}"
   
-  # Run tests
+  # Run tests (excluding MongoDB integration tests)
+  # Note: MongoDB integration tests run in CI with a MongoDB service container
   echo "  🧪 Running tests..."
   if ! dart test --exclude-tags=requires-mongo; then
     echo -e "  ${RED}✗ Tests failed${NC}"

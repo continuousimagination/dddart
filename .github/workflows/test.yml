@@ -10,6 +10,18 @@ jobs:
   test:
     runs-on: ubuntu-latest
     
+    # Add MongoDB service for integration tests
+    services:
+      mongodb:
+        image: mongo:latest
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ ping: 1 })'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
     strategy:
       matrix:
         package:
@@ -61,5 +73,5 @@ jobs:
         working-directory: packages/${{ matrix.package }}
       
       - name: Run tests
-        run: dart test --exclude-tags=requires-mongo
+        run: dart test
         working-directory: packages/${{ matrix.package }}
