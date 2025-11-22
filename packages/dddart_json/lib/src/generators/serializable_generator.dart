@@ -290,7 +290,7 @@ $fromJsonWithConfigBody
           '      if (instance.$fieldName != null || effectiveConfig.includeNullFields)',
         );
         buffer.writeln(
-          "        SerializationUtils.applyFieldRename('$fieldName', effectiveConfig.fieldRename): ${_generateFieldSerializationNonNull(field, 'instance.')},",
+          "        SerializationUtils.applyFieldRename('$fieldName', effectiveConfig.fieldRename): ${_generateFieldSerialization(field, 'instance.')},",
         );
       } else {
         buffer.writeln(
@@ -368,17 +368,9 @@ $fromJsonWithConfigBody
     final jsonAccess =
         "json[SerializationUtils.applyFieldRename('$fieldName', effectiveConfig.fieldRename)]";
 
-    // Handle special types with standardized formats
-    if (typeName == 'UuidValue') {
-      return 'UuidValue.fromString($jsonAccess as String)';
-    }
-
-    if (typeName == 'DateTime') {
-      return 'DateTime.parse($jsonAccess as String)';
-    }
-
-    // Handle nullable special types
+    // Handle nullable types first
     if (field.isNullable) {
+      // Handle nullable special types
       if (typeName == 'UuidValue') {
         return '$jsonAccess != null ? UuidValue.fromString($jsonAccess as String) : null';
       }
@@ -390,9 +382,35 @@ $fromJsonWithConfigBody
       if (_isDDDartType(field.type)) {
         return '$jsonAccess != null ? ${typeName}JsonSerializer().fromJson($jsonAccess as Map<String, dynamic>, effectiveConfig) : null';
       }
+
+      // Handle nullable collections
+      if (typeName.startsWith('List<') || typeName.startsWith('Set<')) {
+        return '$jsonAccess != null ? ${_generateCollectionDeserializationWithConfig(field, jsonAccess)} : null';
+      }
+
+      if (typeName.startsWith('Map<')) {
+        return '$jsonAccess != null ? ${_generateMapDeserializationWithConfig(field, jsonAccess)} : null';
+      }
+
+      // Handle nullable double type with int-to-double conversion
+      if (typeName == 'double') {
+        return '$jsonAccess != null ? ($jsonAccess is int ? ($jsonAccess as int).toDouble() : $jsonAccess as double) : null';
+      }
+
+      // Default nullable primitive types with casting
+      return '$jsonAccess as $typeName?';
     }
 
-    // Handle collections
+    // Handle non-nullable special types
+    if (typeName == 'UuidValue') {
+      return 'UuidValue.fromString($jsonAccess as String)';
+    }
+
+    if (typeName == 'DateTime') {
+      return 'DateTime.parse($jsonAccess as String)';
+    }
+
+    // Handle non-nullable collections
     if (typeName.startsWith('List<') || typeName.startsWith('Set<')) {
       return _generateCollectionDeserializationWithConfig(field, jsonAccess);
     }
@@ -646,17 +664,9 @@ $fromJsonWithConfigBody
     final typeName = field.type.getDisplayString(withNullability: false);
     final fieldRef = '$prefix${field.name}';
 
-    // Handle special types with standardized formats
-    if (typeName == 'UuidValue') {
-      return '$fieldRef.toString()';
-    }
-
-    if (typeName == 'DateTime') {
-      return '$fieldRef.toIso8601String()';
-    }
-
-    // Handle nullable special types
+    // Handle nullable types first
     if (field.isNullable) {
+      // Handle nullable special types
       if (typeName == 'UuidValue') {
         return '$fieldRef?.toString()';
       }
@@ -676,11 +686,23 @@ $fromJsonWithConfigBody
       // Handle nullable DDDart types
       if (_isDDDartType(field.type)) {
         final serializerName = '${typeName}JsonSerializer';
-        return '$fieldRef != null ? $serializerName().toJson($fieldRef, effectiveConfig) : null';
+        return '$fieldRef != null ? $serializerName().toJson($fieldRef!, effectiveConfig) : null';
       }
+
+      // Default nullable primitive types
+      return fieldRef;
     }
 
-    // Handle collections
+    // Handle non-nullable special types
+    if (typeName == 'UuidValue') {
+      return '$fieldRef.toString()';
+    }
+
+    if (typeName == 'DateTime') {
+      return '$fieldRef.toIso8601String()';
+    }
+
+    // Handle non-nullable collections
     if (typeName.startsWith('List<') || typeName.startsWith('Set<')) {
       return _generateCollectionSerialization(field, fieldRef);
     }
@@ -692,9 +714,6 @@ $fromJsonWithConfigBody
     // Check if it's a DDDart type (Entity or Value)
     if (_isDDDartType(field.type)) {
       final serializerName = '${typeName}JsonSerializer';
-      if (field.isNullable) {
-        return '$fieldRef != null ? $serializerName().toJson($fieldRef, effectiveConfig) : null';
-      }
       return '$serializerName().toJson($fieldRef, effectiveConfig)';
     }
 
