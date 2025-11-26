@@ -92,11 +92,19 @@ Set environment variables with a prefix:
 export MYAPP_DATABASE_HOST=prod-db.example.com
 export MYAPP_DATABASE_PORT=5432
 export MYAPP_LOGGING_LEVEL=warn
+export MYAPP_SLACK_BOT__TOKEN=xoxb-your-token-here
 ```
 
 The provider converts environment variable names to configuration keys:
 - `MYAPP_DATABASE_HOST` → `database.host`
 - `MYAPP_LOGGING_LEVEL` → `logging.level`
+- `MYAPP_SLACK_BOT__TOKEN` → `slack.bot_token`
+
+**Underscore Convention:**
+- Single underscore (`_`) → dot (`.`) for hierarchical keys
+- Double underscore (`__`) → single underscore (`_`) for keys containing underscores
+
+This allows you to represent configuration keys that contain underscores, such as `bot_token`, `client_id`, or `max_connections`.
 
 ## Usage Examples
 
@@ -220,6 +228,61 @@ final newHost = config.getString('database.host');
 - **[TypeConversionException](lib/src/exceptions.dart)**: Thrown when type conversion fails
 - **[ValidationException](lib/src/exceptions.dart)**: Thrown when validation fails
 - **[FileAccessException](lib/src/exceptions.dart)**: Thrown when file access fails
+
+## Environment Variable Naming Convention
+
+### Underscore Handling
+
+Environment variables use a special convention to represent both hierarchical structure (dots) and keys containing underscores:
+
+**Single Underscore (`_`)** - Represents hierarchy (converted to `.`)
+```bash
+export MYAPP_DATABASE_HOST=localhost
+# Accessible as: config.getString('database.host')
+
+export MYAPP_DATABASE_CONNECTION_TIMEOUT=30
+# Accessible as: config.getString('database.connection.timeout')
+```
+
+**Double Underscore (`__`)** - Represents an underscore in the key name (converted to `_`)
+```bash
+export MYAPP_SLACK_BOT__TOKEN=xoxb-token
+# Accessible as: config.getString('slack.bot_token')
+
+export MYAPP_OAUTH_CLIENT__ID=abc123
+# Accessible as: config.getString('oauth.client_id')
+```
+
+**Mixed Usage** - Combine both for complex keys
+```bash
+export MYAPP_DATABASE_MAX__CONNECTIONS=100
+# Accessible as: config.getString('database.max_connections')
+
+export MYAPP_API_V2__ENDPOINT_URL=https://api.example.com
+# Accessible as: config.getString('api.v2_endpoint.url')
+```
+
+### Common Patterns
+
+This convention is particularly useful for common configuration patterns:
+
+```bash
+# OAuth credentials
+export MYAPP_OAUTH_CLIENT__ID=your-client-id
+export MYAPP_OAUTH_CLIENT__SECRET=your-client-secret
+
+# Slack integration
+export MYAPP_SLACK_BOT__TOKEN=xoxb-your-bot-token
+export MYAPP_SLACK_WEBHOOK__URL=https://hooks.slack.com/...
+
+# Database settings
+export MYAPP_DATABASE_MAX__CONNECTIONS=50
+export MYAPP_DATABASE_IDLE__TIMEOUT=300
+
+# JWT configuration
+export MYAPP_JWT_ACCESS__TOKEN_EXPIRY=3600
+export MYAPP_JWT_REFRESH__TOKEN_EXPIRY=86400
+```
 
 ## Type Conversion
 

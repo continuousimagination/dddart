@@ -11,11 +11,13 @@ import 'package:dddart_config/src/config_provider.dart';
 /// Environment variable names are converted to configuration keys by:
 /// 1. Removing the optional prefix
 /// 2. Converting to lowercase
-/// 3. Replacing underscores with dots
+/// 3. Replacing single underscores with dots (for hierarchy)
+/// 4. Replacing double underscores with single underscores (for keys with underscores)
 ///
 /// For example, with prefix 'MYAPP':
 /// - `MYAPP_DATABASE_HOST` → `database.host`
 /// - `MYAPP_DATABASE_PORT` → `database.port`
+/// - `MYAPP_SLACK_BOT__TOKEN` → `slack.bot_token`
 ///
 /// Example usage:
 /// ```dart
@@ -23,6 +25,10 @@ import 'package:dddart_config/src/config_provider.dart';
 /// final provider = EnvironmentConfigProvider(prefix: 'MYAPP');
 /// final host = provider.getString('database.host');
 /// // Reads from MYAPP_DATABASE_HOST environment variable
+///
+/// // Keys with underscores
+/// final token = provider.getString('slack.bot_token');
+/// // Reads from MYAPP_SLACK_BOT__TOKEN environment variable
 ///
 /// // Without prefix
 /// final provider = EnvironmentConfigProvider();
@@ -90,13 +96,26 @@ class EnvironmentConfigProvider implements ConfigProvider {
   ///
   /// Conversion rules:
   /// 1. Convert to lowercase
-  /// 2. Replace underscores with dots
+  /// 2. Replace double underscores (`__`) with a placeholder
+  /// 3. Replace single underscores with dots
+  /// 4. Restore double underscores as single underscores
+  ///
+  /// This allows representing configuration keys that contain underscores:
+  /// - Single underscore (`_`) → dot (`.`) for hierarchy
+  /// - Double underscore (`__`) → single underscore (`_`) in the key
   ///
   /// Examples:
   /// - `DATABASE_HOST` → `database.host`
   /// - `DATABASE_CONNECTION_TIMEOUT` → `database.connection.timeout`
+  /// - `SLACK_BOT__TOKEN` → `slack.bot_token`
+  /// - `API__KEY_VALUE` → `api_key.value`
   String _envKeyToConfigKey(String envKey) {
-    return envKey.toLowerCase().replaceAll('_', '.');
+    const placeholder = '\u0000'; // Null character as temporary placeholder
+    return envKey
+        .toLowerCase()
+        .replaceAll('__', placeholder) // Protect double underscores
+        .replaceAll('_', '.') // Convert single underscores to dots
+        .replaceAll(placeholder, '_'); // Restore double underscores as single
   }
 
   /// Converts a configuration key to an environment variable name.

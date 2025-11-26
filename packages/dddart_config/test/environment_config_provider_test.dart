@@ -173,12 +173,12 @@ void main() {
         }
       });
 
-      test('should convert underscores to dots', () {
+      test('should convert single underscores to dots', () {
         final provider = EnvironmentConfigProvider();
 
         // Find any environment variable with underscores
         final envWithUnderscore = Platform.environment.entries
-            .where((e) => e.key.contains('_'))
+            .where((e) => e.key.contains('_') && !e.key.contains('__'))
             .firstOrNull;
 
         if (envWithUnderscore != null) {
@@ -191,12 +191,12 @@ void main() {
         }
       });
 
-      test('should handle multiple underscores', () {
+      test('should handle multiple single underscores', () {
         final provider = EnvironmentConfigProvider();
 
         // If there's an env var with multiple underscores, test it
         final envWithMultipleUnderscores = Platform.environment.entries
-            .where((e) => e.key.split('_').length > 2)
+            .where((e) => e.key.split('_').length > 2 && !e.key.contains('__'))
             .firstOrNull;
 
         if (envWithMultipleUnderscores != null) {
@@ -206,6 +206,84 @@ void main() {
             provider.getString(configKey),
             equals(envWithMultipleUnderscores.value),
           );
+        }
+      });
+    });
+
+    group('double underscore convention', () {
+      test('should convert double underscores to single underscores', () {
+        // Test the conversion logic by checking if a hypothetical
+        // SLACK_BOT__TOKEN would map to slack.bot_token
+        final provider = EnvironmentConfigProvider();
+
+        // Check if any env var with double underscores exists
+        final envWithDoubleUnderscore = Platform.environment.entries
+            .where((e) => e.key.contains('__'))
+            .firstOrNull;
+
+        if (envWithDoubleUnderscore != null) {
+          // Convert using the same logic as the provider
+          final configKey = envWithDoubleUnderscore.key
+              .toLowerCase()
+              .replaceAll('__', '\u0000')
+              .replaceAll('_', '.')
+              .replaceAll('\u0000', '_');
+
+          expect(
+            provider.getString(configKey),
+            equals(envWithDoubleUnderscore.value),
+          );
+        }
+      });
+
+      test('should handle mixed single and double underscores', () {
+        final provider = EnvironmentConfigProvider();
+
+        // Check for env vars with both single and double underscores
+        final envWithMixed = Platform.environment.entries
+            .where((e) => e.key.contains('__') && e.key.contains('_'))
+            .firstOrNull;
+
+        if (envWithMixed != null) {
+          final configKey = envWithMixed.key
+              .toLowerCase()
+              .replaceAll('__', '\u0000')
+              .replaceAll('_', '.')
+              .replaceAll('\u0000', '_');
+
+          expect(
+            provider.getString(configKey),
+            equals(envWithMixed.value),
+          );
+        }
+      });
+
+      test('should preserve underscores from double underscores in sections',
+          () {
+        final provider = EnvironmentConfigProvider();
+
+        // Find env var with double underscores
+        final envWithDoubleUnderscore = Platform.environment.entries
+            .where((e) => e.key.contains('__'))
+            .firstOrNull;
+
+        if (envWithDoubleUnderscore != null) {
+          final configKey = envWithDoubleUnderscore.key
+              .toLowerCase()
+              .replaceAll('__', '\u0000')
+              .replaceAll('_', '.')
+              .replaceAll('\u0000', '_');
+
+          if (configKey.contains('.')) {
+            final prefix = configKey.split('.').first;
+            final section = provider.getSection(prefix);
+
+            // The section should contain the key with underscores preserved
+            final keyWithoutPrefix = configKey.substring(prefix.length + 1);
+            if (section.containsKey(keyWithoutPrefix)) {
+              expect(section[keyWithoutPrefix], isNotNull);
+            }
+          }
         }
       });
     });

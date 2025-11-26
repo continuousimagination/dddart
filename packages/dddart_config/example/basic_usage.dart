@@ -85,4 +85,28 @@ void main() {
   print('To override database.host, set environment variable:');
   print('  export MYAPP_DATABASE_HOST=production.db.example.com');
   print('Current value: ${config.getString('database.host')}');
+
+  print('\n=== Underscore Convention ===\n');
+
+  // Single underscores in env vars become dots (hierarchy)
+  print('Single underscore: MYAPP_DATABASE_HOST → database.host');
+
+  // Double underscores in env vars become single underscores (in key name)
+  print('Double underscore: MYAPP_SLACK_BOT__TOKEN → slack.bot_token');
+
+  // Try accessing a key with underscore (if set in environment)
+  final botToken = config.getString('slack.bot_token');
+  if (botToken != null) {
+    print('Slack bot token found: ${botToken.substring(0, 10)}...');
+  } else {
+    print('To set a key with underscore, use double underscore:');
+    print('  export MYAPP_SLACK_BOT__TOKEN=xoxb-your-token');
+  }
+
+  // Mixed example
+  print('\nMixed: MYAPP_DATABASE_MAX__CONNECTIONS → database.max_connections');
+  final maxConnections = config.getInt('database.max_connections');
+  if (maxConnections != null) {
+    print('Max connections: $maxConnections');
+  }
 }

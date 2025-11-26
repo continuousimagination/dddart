@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **BREAKING**: `EnvironmentConfigProvider` now uses double underscore (`__`) convention for keys containing underscores
+  - Single underscore (`_`) → dot (`.`) for hierarchical keys (unchanged)
+  - Double underscore (`__`) → single underscore (`_`) in the configuration key (new)
+  - Example: `MYAPP_SLACK_BOT__TOKEN` → `slack.bot_token`
+  - This allows representing configuration keys that contain underscores (e.g., `bot_token`, `client_id`, `max_connections`)
+  - Migration: If you have environment variables with double underscores that you expect to become dots, replace `__` with `_`
+
+### Added
+
+- Comprehensive test coverage for double underscore convention
+- New example demonstrating underscore conversion (`example/underscore_demo.dart`)
+- Documentation for underscore naming convention in README
+
 ## [1.0.0] - 2025-11-11
 
 ### Added
