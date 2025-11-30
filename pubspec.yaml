@@ -12,5 +12,6 @@ workspace:
   - packages/dddart_rest_client
   - packages/dddart_config
   - packages/dddart_repository_mongodb
+  - packages/dddart_repository_dynamodb
   - packages/dddart_webhooks
   - packages/dddart_webhooks_slack

@@ -1,0 +1,14 @@
+targets:
+  $default:
+    builders:
+      dddart_repository_dynamodb:dynamo_repository:
+        enabled: true
+
+builders:
+  dynamo_repository:
+    import: "package:dddart_repository_dynamodb/src/generators/dynamo_repository_generator.dart"
+    builder_factories: ["dynamoRepositoryBuilder"]
+    build_extensions: {".dart": [".dynamo_repository.g.part"]}
+    auto_apply: dependents
+    build_to: cache
+    applies_builders: ["source_gen|combining_builder"]

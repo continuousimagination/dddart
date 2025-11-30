@@ -1,0 +1,21 @@
+# Test configuration for dddart_repository_dynamodb
+
+# Define test tags
+tags:
+  # Generator tests that use build_test (can hit file descriptor limits)
+  generator:
+    timeout: 2x
+  
+  # Property-based tests
+  property:
+    timeout: 2x
+  
+  # Tests that require DynamoDB Local to be running
+  requires-dynamodb-local:
+    skip: "DynamoDB Local must be running on localhost:8000"
+
+# Override settings for specific test files
+override:
+  generator_test.dart:
+    # Increase timeout and run with concurrency limit
+    timeout: 3x
