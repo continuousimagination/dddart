@@ -10,7 +10,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     
-    # Add MongoDB service for integration tests
+    # Add MongoDB and DynamoDB Local services for integration tests
     services:
       mongodb:
         image: mongo:latest
@@ -21,6 +21,11 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      
+      dynamodb:
+        image: amazon/dynamodb-local:latest
+        ports:
+          - 8000:8000
     
     strategy:
       matrix:
@@ -31,6 +36,7 @@ jobs:
           - dddart_rest
           - dddart_config
           - dddart_repository_mongodb
+          - dddart_repository_dynamodb
           - dddart_webhooks
           - dddart_webhooks_slack
     
@@ -73,5 +79,5 @@ jobs:
         working-directory: packages/${{ matrix.package }}
       
       - name: Run tests
-        run: dart test
+        run: dart test --run-skipped
         working-directory: packages/${{ matrix.package }}

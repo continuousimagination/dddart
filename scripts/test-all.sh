@@ -26,6 +26,7 @@ PACKAGES=(
   "dddart_rest"
   "dddart_config"
   "dddart_repository_mongodb"
+  "dddart_repository_dynamodb"
   "dddart_webhooks"
   "dddart_webhooks_slack"
 )
@@ -77,10 +78,10 @@ check_package() {
   fi
   echo -e "  ${GREEN}✓ Formatting check passed${NC}"
   
-  # Run tests (excluding MongoDB integration tests)
-  # Note: MongoDB integration tests run in CI with a MongoDB service container
+  # Run tests (excluding MongoDB and DynamoDB integration tests)
+  # Note: Integration tests run in CI with service containers
   echo "  🧪 Running tests..."
-  if ! dart test --exclude-tags=requires-mongo; then
+  if ! dart test --exclude-tags=requires-mongo --exclude-tags=requires-dynamodb-local; then
     echo -e "  ${RED}✗ Tests failed${NC}"
     cd - > /dev/null
     return 1
