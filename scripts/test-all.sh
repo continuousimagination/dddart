@@ -26,6 +26,7 @@ PACKAGES=(
   "dddart_rest"
   "dddart_config"
   "dddart_repository_mongodb"
+  "dddart_repository_dynamodb"
   "dddart_webhooks"
   "dddart_webhooks_slack"
 )
