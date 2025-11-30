@@ -419,7 +419,7 @@ aws dynamodb create-table \\\\
   static String getCloudFormationTemplate(String tableName) {
     return \'\'\'
 Resources:
-  \\\${tableName.split(\'_\').map((s) => s[0].toUpperCase() + s.substring(1)).join()}Table:
+  \\\${tableName.split('_').map((s) => s[0].toUpperCase() + s.substring(1)).join()}Table:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: \$tableName

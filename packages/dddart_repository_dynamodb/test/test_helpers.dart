@@ -1,7 +1,6 @@
 /// Test helpers and utilities for DynamoDB repository testing.
 library;
 
-import 'package:aws_dynamodb_api/dynamodb-2012-08-10.dart';
 import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';
 
 /// Helper class for managing test DynamoDB connections.
@@ -101,7 +100,7 @@ class TestDynamoHelper {
 
     try {
       await _connection!.client.deleteTable(tableName: tableName);
-      
+
       // Wait for table to be deleted
       await _waitForTableDeleted(tableName);
     } catch (e) {
@@ -123,7 +122,7 @@ class TestDynamoHelper {
     try {
       // Scan all items
       final result = await _connection!.client.scan(tableName: tableName);
-      
+
       if (result.items == null || result.items!.isEmpty) {
         return;
       }
@@ -183,7 +182,7 @@ class TestDynamoHelper {
       tableName: tableName,
       select: Select.count,
     );
-    
+
     return result.count ?? 0;
   }
 
@@ -218,7 +217,7 @@ class TestDynamoHelper {
         final result = await _connection!.client.describeTable(
           tableName: tableName,
         );
-        
+
         if (result.table?.tableStatus == TableStatus.active) {
           return;
         }

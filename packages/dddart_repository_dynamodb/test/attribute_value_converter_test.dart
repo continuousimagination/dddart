@@ -36,7 +36,8 @@ void main() {
       });
 
       test('should convert List to L AttributeValue', () {
-        final result = AttributeValueConverter.jsonToAttributeValue([1, 'two', true]);
+        final result =
+            AttributeValueConverter.jsonToAttributeValue([1, 'two', true]);
         expect(result.l, isNotNull);
         expect(result.l!.length, equals(3));
         expect(result.l![0].n, equals('1'));
@@ -144,11 +145,14 @@ void main() {
           'age': AttributeValue(n: '30'),
           'active': AttributeValue(boolValue: true),
         });
-        expect(result, equals({
-          'name': 'John',
-          'age': 30,
-          'active': true,
-        }));
+        expect(
+          result,
+          equals({
+            'name': 'John',
+            'age': 30,
+            'active': true,
+          }),
+        );
       });
     });
 
@@ -159,9 +163,11 @@ void main() {
 
       test('should round-trip null values', () {
         for (var i = 0; i < 100; i++) {
-          final original = null;
-          final attributeValue = AttributeValueConverter.jsonToAttributeValue(original);
-          final roundTripped = AttributeValueConverter.attributeValueToJson(attributeValue);
+          const original = null;
+          final attributeValue =
+              AttributeValueConverter.jsonToAttributeValue(original);
+          final roundTripped =
+              AttributeValueConverter.attributeValueToJson(attributeValue);
           expect(roundTripped, equals(original), reason: 'Iteration $i failed');
         }
       });
@@ -169,8 +175,10 @@ void main() {
       test('should round-trip bool values', () {
         for (var i = 0; i < 100; i++) {
           final original = random.nextBool();
-          final attributeValue = AttributeValueConverter.jsonToAttributeValue(original);
-          final roundTripped = AttributeValueConverter.attributeValueToJson(attributeValue);
+          final attributeValue =
+              AttributeValueConverter.jsonToAttributeValue(original);
+          final roundTripped =
+              AttributeValueConverter.attributeValueToJson(attributeValue);
           expect(roundTripped, equals(original), reason: 'Iteration $i failed');
         }
       });
@@ -178,8 +186,10 @@ void main() {
       test('should round-trip string values', () {
         for (var i = 0; i < 100; i++) {
           final original = _generateRandomString(random);
-          final attributeValue = AttributeValueConverter.jsonToAttributeValue(original);
-          final roundTripped = AttributeValueConverter.attributeValueToJson(attributeValue);
+          final attributeValue =
+              AttributeValueConverter.jsonToAttributeValue(original);
+          final roundTripped =
+              AttributeValueConverter.attributeValueToJson(attributeValue);
           expect(roundTripped, equals(original), reason: 'Iteration $i failed');
         }
       });
@@ -187,8 +197,10 @@ void main() {
       test('should round-trip integer values', () {
         for (var i = 0; i < 100; i++) {
           final original = random.nextInt(1000000) - 500000;
-          final attributeValue = AttributeValueConverter.jsonToAttributeValue(original);
-          final roundTripped = AttributeValueConverter.attributeValueToJson(attributeValue);
+          final attributeValue =
+              AttributeValueConverter.jsonToAttributeValue(original);
+          final roundTripped =
+              AttributeValueConverter.attributeValueToJson(attributeValue);
           expect(roundTripped, equals(original), reason: 'Iteration $i failed');
         }
       });
@@ -196,17 +208,25 @@ void main() {
       test('should round-trip double values', () {
         for (var i = 0; i < 100; i++) {
           final original = (random.nextDouble() * 1000000) - 500000;
-          final attributeValue = AttributeValueConverter.jsonToAttributeValue(original);
-          final roundTripped = AttributeValueConverter.attributeValueToJson(attributeValue);
-          expect(roundTripped, closeTo(original, 0.0000001), reason: 'Iteration $i failed');
+          final attributeValue =
+              AttributeValueConverter.jsonToAttributeValue(original);
+          final roundTripped =
+              AttributeValueConverter.attributeValueToJson(attributeValue);
+          expect(
+            roundTripped,
+            closeTo(original, 0.0000001),
+            reason: 'Iteration $i failed',
+          );
         }
       });
 
       test('should round-trip list values', () {
         for (var i = 0; i < 100; i++) {
           final original = _generateRandomList(random, depth: 0);
-          final attributeValue = AttributeValueConverter.jsonToAttributeValue(original);
-          final roundTripped = AttributeValueConverter.attributeValueToJson(attributeValue);
+          final attributeValue =
+              AttributeValueConverter.jsonToAttributeValue(original);
+          final roundTripped =
+              AttributeValueConverter.attributeValueToJson(attributeValue);
           expect(roundTripped, equals(original), reason: 'Iteration $i failed');
         }
       });
@@ -214,8 +234,10 @@ void main() {
       test('should round-trip map values', () {
         for (var i = 0; i < 100; i++) {
           final original = _generateRandomMap(random, depth: 0);
-          final attributeValue = AttributeValueConverter.jsonToAttributeValue(original);
-          final roundTripped = AttributeValueConverter.attributeValueToJson(attributeValue);
+          final attributeValue =
+              AttributeValueConverter.jsonToAttributeValue(original);
+          final roundTripped =
+              AttributeValueConverter.attributeValueToJson(attributeValue);
           expect(roundTripped, equals(original), reason: 'Iteration $i failed');
         }
       });
@@ -223,8 +245,10 @@ void main() {
       test('should round-trip nested structures', () {
         for (var i = 0; i < 100; i++) {
           final original = _generateRandomJson(random, depth: 0);
-          final attributeValue = AttributeValueConverter.jsonToAttributeValue(original);
-          final roundTripped = AttributeValueConverter.attributeValueToJson(attributeValue);
+          final attributeValue =
+              AttributeValueConverter.jsonToAttributeValue(original);
+          final roundTripped =
+              AttributeValueConverter.attributeValueToJson(attributeValue);
           _expectJsonEquals(roundTripped, original, 'Iteration $i failed');
         }
       });
@@ -232,8 +256,10 @@ void main() {
       test('should round-trip complex JSON objects', () {
         for (var i = 0; i < 100; i++) {
           final original = _generateRandomMap(random, depth: 0);
-          final attributeMap = AttributeValueConverter.jsonMapToAttributeMap(original);
-          final roundTripped = AttributeValueConverter.attributeMapToJsonMap(attributeMap);
+          final attributeMap =
+              AttributeValueConverter.jsonMapToAttributeMap(original);
+          final roundTripped =
+              AttributeValueConverter.attributeMapToJsonMap(attributeMap);
           expect(roundTripped, equals(original), reason: 'Iteration $i failed');
         }
       });
@@ -245,22 +271,29 @@ void main() {
 
 String _generateRandomString(Random random) {
   final length = random.nextInt(20) + 1;
-  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ';
+  const chars =
+      'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ';
   return String.fromCharCodes(
-    Iterable.generate(length, (_) => chars.codeUnitAt(random.nextInt(chars.length))),
+    Iterable.generate(
+      length,
+      (_) => chars.codeUnitAt(random.nextInt(chars.length)),
+    ),
   );
 }
 
 List<dynamic> _generateRandomList(Random random, {required int depth}) {
   if (depth > 2) return []; // Limit nesting depth
-  
+
   final length = random.nextInt(5) + 1;
-  return List.generate(length, (_) => _generateRandomJson(random, depth: depth + 1));
+  return List.generate(
+    length,
+    (_) => _generateRandomJson(random, depth: depth + 1),
+  );
 }
 
 Map<String, dynamic> _generateRandomMap(Random random, {required int depth}) {
   if (depth > 2) return {}; // Limit nesting depth
-  
+
   final length = random.nextInt(5) + 1;
   final map = <String, dynamic>{};
   for (var i = 0; i < length; i++) {

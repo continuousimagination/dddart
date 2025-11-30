@@ -52,7 +52,8 @@ void main() {
         // Property 5: Number of underscores should equal number of capital letters minus 1
         final capitalCount =
             pascalCase.split('').where((c) => c == c.toUpperCase()).length;
-        final underscoreCount = snakeCase.split('').where((c) => c == '_').length;
+        final underscoreCount =
+            snakeCase.split('').where((c) => c == '_').length;
         expect(
           underscoreCount,
           equals(capitalCount - 1),
@@ -62,8 +63,7 @@ void main() {
       }
     });
 
-    test('Property 5: snake_case conversion should handle known examples',
-        () {
+    test('Property 5: snake_case conversion should handle known examples', () {
       // Test specific known examples to verify correctness
       final examples = {
         'User': 'user',
@@ -93,7 +93,6 @@ void main() {
       for (var i = 0; i < 100; i++) {
         final pascalCase = _generatePascalCaseName();
         final snakeCase1 = _toSnakeCase(pascalCase);
-        final snakeCase2 = _toSnakeCase(snakeCase1);
 
         // Since snake_case is already lowercase with underscores,
         // converting it again should give the same result
@@ -154,7 +153,7 @@ String _generatePascalCaseName() {
     words.add(word);
   }
 
-  return words.join('');
+  return words.join();
 }
 
 /// Generates a random word starting with a capital letter.
@@ -170,7 +169,7 @@ String _generateWord(int length) {
     chars.add(String.fromCharCode(97 + random.nextInt(26))); // a-z
   }
 
-  return chars.join('');
+  return chars.join();
 }
 
 /// Converts a camelCase or PascalCase string to snake_case.

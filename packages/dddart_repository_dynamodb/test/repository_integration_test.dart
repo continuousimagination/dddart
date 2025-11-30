@@ -38,7 +38,7 @@ void main() {
       if (!dynamoAvailable) {
         markTestSkipped('DynamoDB Local not available on localhost:8000');
       }
-      
+
       // Create test tables
       await helper.createTable('test_users');
       await helper.createTable('custom_products');
@@ -157,8 +157,7 @@ void main() {
 
       test(
           'should throw RepositoryException.notFound when deleting '
-          'non-existent ID',
-          () async {
+          'non-existent ID', () async {
         final repo = TestUserDynamoRepository(helper.connection);
         final nonExistentId = UuidValue.generate();
 
@@ -383,7 +382,7 @@ void main() {
         // Create a connection but don't create the table
         final tempHelper = createTestHelper();
         final tempConnection = tempHelper.connect();
-        
+
         try {
           final repo = TestUserDynamoRepository(tempConnection);
           final user = TestUser(

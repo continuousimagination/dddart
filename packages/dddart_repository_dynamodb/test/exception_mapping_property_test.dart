@@ -22,7 +22,8 @@ void main() {
           expect(
             mapped.type,
             equals(RepositoryExceptionType.notFound),
-            reason: 'Iteration $i: ResourceNotFoundException should map to notFound',
+            reason:
+                'Iteration $i: ResourceNotFoundException should map to notFound',
           );
           expect(
             mapped.message,
@@ -32,7 +33,8 @@ void main() {
           expect(
             mapped.cause,
             equals(exception),
-            reason: 'Iteration $i: Original exception should be preserved as cause',
+            reason:
+                'Iteration $i: Original exception should be preserved as cause',
           );
         }
       });
@@ -49,26 +51,30 @@ void main() {
           expect(
             mapped.type,
             equals(RepositoryExceptionType.duplicate),
-            reason: 'Iteration $i: ConditionalCheckFailedException should map to duplicate',
+            reason:
+                'Iteration $i: ConditionalCheckFailedException should map to duplicate',
           );
           expect(
             mapped.message,
             contains('Conditional check failed'),
-            reason: 'Iteration $i: Message should indicate conditional check failure',
+            reason:
+                'Iteration $i: Message should indicate conditional check failure',
           );
           expect(
             mapped.cause,
             equals(exception),
-            reason: 'Iteration $i: Original exception should be preserved as cause',
+            reason:
+                'Iteration $i: Original exception should be preserved as cause',
           );
         }
       });
 
       test('should map connection errors to connection type', () {
         final connectionKeywords = ['connection', 'network', 'SocketException'];
-        
+
         for (var i = 0; i < 100; i++) {
-          final keyword = connectionKeywords[random.nextInt(connectionKeywords.length)];
+          final keyword =
+              connectionKeywords[random.nextInt(connectionKeywords.length)];
           final errorMessage = _generateRandomErrorMessage(random, keyword);
           final exception = _createMockException(errorMessage);
           final mapped = _mapDynamoException(exception, 'testOperation');
@@ -76,7 +82,8 @@ void main() {
           expect(
             mapped.type,
             equals(RepositoryExceptionType.connection),
-            reason: 'Iteration $i: Connection errors should map to connection type',
+            reason:
+                'Iteration $i: Connection errors should map to connection type',
           );
           expect(
             mapped.message,
@@ -86,16 +93,18 @@ void main() {
           expect(
             mapped.cause,
             equals(exception),
-            reason: 'Iteration $i: Original exception should be preserved as cause',
+            reason:
+                'Iteration $i: Original exception should be preserved as cause',
           );
         }
       });
 
       test('should map timeout errors to timeout type', () {
         final timeoutKeywords = ['timeout', 'TimeoutException'];
-        
+
         for (var i = 0; i < 100; i++) {
-          final keyword = timeoutKeywords[random.nextInt(timeoutKeywords.length)];
+          final keyword =
+              timeoutKeywords[random.nextInt(timeoutKeywords.length)];
           final errorMessage = _generateRandomErrorMessage(random, keyword);
           final exception = _createMockException(errorMessage);
           final mapped = _mapDynamoException(exception, 'testOperation');
@@ -113,7 +122,8 @@ void main() {
           expect(
             mapped.cause,
             equals(exception),
-            reason: 'Iteration $i: Original exception should be preserved as cause',
+            reason:
+                'Iteration $i: Original exception should be preserved as cause',
           );
         }
       });
@@ -132,7 +142,8 @@ void main() {
           expect(
             mapped.type,
             equals(RepositoryExceptionType.unknown),
-            reason: 'Iteration $i: Unrecognized exceptions should map to unknown type',
+            reason:
+                'Iteration $i: Unrecognized exceptions should map to unknown type',
           );
           expect(
             mapped.message,
@@ -142,7 +153,8 @@ void main() {
           expect(
             mapped.cause,
             equals(exception),
-            reason: 'Iteration $i: Original exception should be preserved as cause',
+            reason:
+                'Iteration $i: Original exception should be preserved as cause',
           );
         }
       });
@@ -217,14 +229,15 @@ String _generateRandomUnknownErrorMessage(Random random) {
 
   final errorType = errorTypes[random.nextInt(errorTypes.length)];
   final randomPart = _generateRandomString(random, maxLength: 30);
-  
+
   return '$errorType: $randomPart';
 }
 
 /// Generates a random string of variable length.
 String _generateRandomString(Random random, {int maxLength = 50}) {
   final length = random.nextInt(maxLength) + 1;
-  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ';
+  const chars =
+      'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ';
   return String.fromCharCodes(
     Iterable.generate(
       length,
@@ -298,7 +311,6 @@ RepositoryException _mapDynamoException(
   // All other errors map to unknown
   return RepositoryException(
     'DynamoDB error during $operation: $errorString',
-    type: RepositoryExceptionType.unknown,
     cause: error,
   );
 }

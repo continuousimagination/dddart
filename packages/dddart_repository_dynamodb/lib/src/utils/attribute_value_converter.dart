@@ -59,7 +59,7 @@ class AttributeValueConverter {
   /// attributeValueToJson(AttributeValue(nul: true)) // Returns: null
   /// ```
   static dynamic attributeValueToJson(AttributeValue attr) {
-    if (attr.nullValue == true) {
+    if (attr.nullValue ?? false) {
       return null;
     } else if (attr.boolValue != null) {
       return attr.boolValue;

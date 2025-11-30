@@ -18,7 +18,7 @@ void main() {
 
     tearDown(() async {
       // Give the build system time to clean up file handles
-      await Future.delayed(const Duration(milliseconds: 100));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
     });
 
     test('should throw error when annotating non-class element', () async {
@@ -260,27 +260,26 @@ class User extends AggregateRoot {
       expect(output, contains('final DynamoConnection _connection'));
       expect(output, contains("tableName => 'users'"));
       expect(output, contains('final _serializer = UserJsonSerializer()'));
-      
+
       // Verify CRUD methods are generated
       expect(output, contains('Future<User> getById(UuidValue id)'));
       expect(output, contains('Future<void> save(User aggregate)'));
       expect(output, contains('Future<void> deleteById(UuidValue id)'));
-      
+
       // Verify exception mapping method is generated
       expect(output, contains('_mapDynamoException'));
-      
+
       // Verify DynamoDB API calls are present
       expect(output, contains('_connection.client.getItem'));
       expect(output, contains('_connection.client.putItem'));
       expect(output, contains('_connection.client.deleteItem'));
-      
+
       // Verify AttributeValue conversion is used
       expect(output, contains('AttributeValueConverter.attributeMapToJsonMap'));
       expect(output, contains('AttributeValueConverter.jsonMapToAttributeMap'));
     });
 
-    test('should generate concrete repository with custom interface',
-        () async {
+    test('should generate concrete repository with custom interface', () async {
       final library = await resolveSource(
         '''
 library test;
@@ -370,15 +369,15 @@ class User extends AggregateRoot {
         output,
         contains('// Custom methods (must be implemented by subclass)'),
       );
-      
+
       // Verify CRUD methods are generated as concrete implementations
       expect(output, contains('Future<User> getById(UuidValue id)'));
       expect(output, contains('Future<void> save(User aggregate)'));
       expect(output, contains('Future<void> deleteById(UuidValue id)'));
-      
+
       // Verify exception mapping method is generated
       expect(output, contains('_mapDynamoException'));
-      
+
       // Verify DynamoDB API calls are present
       expect(output, contains('_connection.client.getItem'));
       expect(output, contains('_connection.client.putItem'));
@@ -429,7 +428,7 @@ class Order extends AggregateRoot {
         expect(output, contains('keyType: KeyType.hash'));
         expect(output, contains('attributeType: ScalarAttributeType.s'));
         expect(output, contains('billingMode: BillingMode.payPerRequest'));
-        expect(output, contains('_mapDynamoException(e, \'createTable\')'));
+        expect(output, contains("_mapDynamoException(e, 'createTable')"));
       });
 
       test('should generate getCreateTableCommand static method', () async {
@@ -478,8 +477,7 @@ class Customer extends AggregateRoot {
         expect(output, contains('--billing-mode PAY_PER_REQUEST'));
       });
 
-      test('should generate getCloudFormationTemplate static method',
-          () async {
+      test('should generate getCloudFormationTemplate static method', () async {
         final library = await resolveSource(
           '''
 library test;
@@ -606,10 +604,10 @@ class BillingTest extends AggregateRoot {
 
         // Verify billing mode in CreateTableInput
         expect(output, contains('billingMode: BillingMode.payPerRequest'));
-        
+
         // Verify billing mode in CLI command
         expect(output, contains('--billing-mode PAY_PER_REQUEST'));
-        
+
         // Verify billing mode in CloudFormation template
         expect(output, contains('BillingMode: PAY_PER_REQUEST'));
       });

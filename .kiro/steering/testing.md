@@ -117,6 +117,30 @@ Before marking any implementation task as complete:
 3. Code follows Dart linting rules
 4. Test coverage is adequate for the feature
 5. Edge cases and error scenarios are tested
+6. **`./scripts/test-all.sh` must pass completely** - This is the definitive quality gate
+
+### Local Test Script Compliance
+
+**MANDATORY**: The local test script (`./scripts/test-all.sh`) defines the quality standards for this project. Before completing any task or committing code:
+
+1. Run `./scripts/test-all.sh` from the workspace root
+2. Fix ALL issues reported by the script:
+   - Analysis errors and warnings (`dart analyze --fatal-infos`)
+   - Formatting issues (`dart format --set-exit-if-changed`)
+   - Test failures (`dart test`)
+3. The script must complete with exit code 0 (success)
+
+**Why this matters:**
+- The local script mirrors the CI/CD checks exactly
+- If the local script passes, CI/CD will pass
+- The pre-push hook runs this script automatically
+- This prevents broken code from being pushed
+
+**Common fixes:**
+- Run `dart fix --apply` to auto-fix many linting issues
+- Run `dart format .` to fix formatting
+- Check for unused imports, variables, and other warnings
+- Ensure all tests pass locally before pushing
 
 ## Test Infrastructure Maintenance
 

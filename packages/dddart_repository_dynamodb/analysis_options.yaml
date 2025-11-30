@@ -7,4 +7,7 @@ analyzer:
   
 linter:
   rules:
-    # Project-specific overrides can be added here if needed
+    # Allow longer lines in generated code and tests
+    lines_longer_than_80_chars: false
+    # Allow non-cascade style in code generation (more readable)
+    cascade_invocations: false

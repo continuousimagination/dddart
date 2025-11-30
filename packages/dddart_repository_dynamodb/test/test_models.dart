@@ -3,7 +3,6 @@ library;
 
 import 'dart:convert';
 
-import 'package:aws_dynamodb_api/dynamodb-2012-08-10.dart';
 import 'package:dddart/dddart.dart';
 import 'package:dddart_json/dddart_json.dart';
 import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';
