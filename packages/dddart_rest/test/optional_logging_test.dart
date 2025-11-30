@@ -56,7 +56,7 @@ void main() {
       // Requirement 4.1, 4.2, 4.4, 4.5
       final repository = InMemoryRepository<TestProduct>();
       final serializer = TestProductSerializer();
-      final resource = CrudResource<TestProduct>(
+      final resource = CrudResource<TestProduct, dynamic>(
         path: 'products',
         repository: repository,
         serializers: {'application/json': serializer},
@@ -86,7 +86,7 @@ void main() {
       // Requirement 4.1, 4.2, 4.4, 4.5
       final repository = InMemoryRepository<TestProduct>();
       final serializer = TestProductSerializer();
-      final resource = CrudResource<TestProduct>(
+      final resource = CrudResource<TestProduct, dynamic>(
         path: 'products',
         repository: repository,
         serializers: {'application/json': serializer},
@@ -116,7 +116,7 @@ void main() {
       // Requirement 4.1, 4.2, 4.4, 4.5
       final repository = InMemoryRepository<TestProduct>();
       final serializer = TestProductSerializer();
-      final resource = CrudResource<TestProduct>(
+      final resource = CrudResource<TestProduct, dynamic>(
         path: 'products',
         repository: repository,
         serializers: {'application/json': serializer},
@@ -150,7 +150,7 @@ void main() {
       // Requirement 4.1, 4.2, 4.4, 4.5
       final repository = InMemoryRepository<TestProduct>();
       final serializer = TestProductSerializer();
-      final resource = CrudResource<TestProduct>(
+      final resource = CrudResource<TestProduct, dynamic>(
         path: 'products',
         repository: repository,
         serializers: {'application/json': serializer},
@@ -174,7 +174,7 @@ void main() {
       // Requirement 4.1, 4.2, 4.4, 4.5
       final repository = InMemoryRepository<TestProduct>();
       final serializer = TestProductSerializer();
-      final resource = CrudResource<TestProduct>(
+      final resource = CrudResource<TestProduct, dynamic>(
         path: 'products',
         repository: repository,
         serializers: {'application/json': serializer},
@@ -197,7 +197,7 @@ void main() {
       // Requirement 4.1, 4.2, 4.3, 4.4, 4.5
       final repository = InMemoryRepository<TestProduct>();
       final serializer = TestProductSerializer();
-      final resource = CrudResource<TestProduct>(
+      final resource = CrudResource<TestProduct, dynamic>(
         path: 'products',
         repository: repository,
         serializers: {'application/json': serializer},
@@ -226,7 +226,7 @@ void main() {
 
       final repository = InMemoryRepository<TestProduct>();
       final serializer = TestProductSerializer();
-      final resource = CrudResource<TestProduct>(
+      final resource = CrudResource<TestProduct, dynamic>(
         path: 'products',
         repository: repository,
         serializers: {'application/json': serializer},
@@ -253,7 +253,7 @@ void main() {
 
       final repository = InMemoryRepository<TestProduct>();
       final serializer = TestProductSerializer();
-      final resource = CrudResource<TestProduct>(
+      final resource = CrudResource<TestProduct, dynamic>(
         path: 'products',
         repository: repository,
         serializers: {'application/json': serializer},

@@ -7,6 +7,8 @@ RESTful CRUD API framework for DDDart - Provides REST endpoints for aggregate ro
 ## Features
 
 - **Automatic CRUD endpoints** - Expose aggregate roots through REST APIs with a single configuration
+- **JWT Authentication** - Built-in support for self-hosted and OAuth/OIDC authentication
+- **Device Flow** - OAuth2 device flow for CLI tools and limited-input devices
 - **Content negotiation** - Support multiple serialization formats (JSON, YAML, etc.) via HTTP headers
 - **Custom query handlers** - Define filterable endpoints with custom query parameters
 - **Pagination support** - Built-in pagination with configurable defaults and limits
@@ -676,6 +678,472 @@ dart test
 - All API surfaces remain identical
 - No breaking changes to functionality
 - All class names and methods unchanged
+
+## Authentication
+
+dddart_rest provides comprehensive JWT-based authentication with support for both self-hosted and OAuth/OIDC providers.
+
+### Authentication Modes
+
+**Self-Hosted Authentication:**
+- Your application manages user credentials
+- Issues JWT access tokens and refresh tokens
+- Provides login, refresh, logout, and device flow endpoints
+- Requires refresh token storage (in-memory or database)
+
+**OAuth/OIDC Authentication:**
+- External provider (AWS Cognito, Auth0, Okta) manages authentication
+- Your application validates JWTs using provider's public keys (JWKS)
+- No authentication endpoints needed (provider handles them)
+- No refresh token storage needed
+
+### Quick Start: Self-Hosted Authentication
+
+#### 1. Define Custom Claims
+
+Create a class for your JWT claims and annotate with `@JwtSerializable()`:
+
+```dart
+import 'package:dddart_rest/dddart_rest.dart';
+
+part 'user_claims.g.dart';
+
+@JwtSerializable()
+class UserClaims {
+  const UserClaims({
+    required this.userId,
+    required this.email,
+    this.roles = const [],
+  });
+  
+  final String userId;
+  final String email;
+  final List<String> roles;
+}
+```
+
+Run code generation:
+```bash
+dart run build_runner build
+```
+
+This generates extension methods for serializing/deserializing claims.
+
+#### 2. Set Up Repositories
+
+Choose your persistence strategy:
+
+**Option A: In-Memory (Quick Start / Testing)**
+
+```dart
+import 'package:dddart_rest/dddart_rest.dart';
+
+final refreshTokenRepo = InMemoryRepository<RefreshToken>();
+final deviceCodeRepo = InMemoryRepository<DeviceCode>();
+```
+
+**Option B: MongoDB (Production)**
+
+Extend the base classes and annotate for code generation:
+
+```dart
+import 'package:dddart_rest/dddart_rest.dart';
+import 'package:dddart_repository_mongodb/dddart_repository_mongodb.dart';
+
+@Serializable()
+@GenerateMongoRepository()
+class AppRefreshToken extends RefreshToken {
+  AppRefreshToken({
+    required super.id,
+    required super.userId,
+    required super.token,
+    required super.expiresAt,
+    super.revoked,
+    super.deviceInfo,
+  });
+}
+
+@Serializable()
+@GenerateMongoRepository()
+class AppDeviceCode extends DeviceCode {
+  AppDeviceCode({
+    required super.id,
+    required super.deviceCode,
+    required super.userCode,
+    required super.clientId,
+    required super.expiresAt,
+    super.userId,
+    super.status,
+  });
+}
+
+part 'auth_models.g.dart';
+```
+
+Run code generation:
+```bash
+dart run build_runner build
+```
+
+Then create repository instances:
+```dart
+final refreshTokenRepo = AppRefreshTokenMongoRepository(database);
+final deviceCodeRepo = AppDeviceCodeMongoRepository(database);
+```
+
+#### 3. Create Auth Handler
+
+```dart
+final authHandler = JwtAuthHandler<UserClaims, RefreshToken>(
+  secret: 'your-256-bit-secret',  // Store in environment variable!
+  refreshTokenRepository: refreshTokenRepo,
+  issuer: 'https://api.example.com',
+  audience: 'my-app',
+  accessTokenDuration: Duration(minutes: 15),
+  refreshTokenDuration: Duration(days: 7),
+);
+```
+
+#### 4. Set Up Auth Endpoints
+
+```dart
+final authEndpoints = AuthEndpoints(
+  authHandler: authHandler,
+  deviceCodeRepository: deviceCodeRepo,
+  userValidator: (username, password) async {
+    // Validate credentials against your user database
+    final user = await userRepo.findByUsername(username);
+    if (user != null && user.verifyPassword(password)) {
+      return user.id;
+    }
+    return null;
+  },
+  claimsBuilder: (userId) async {
+    // Build claims for the user
+    final user = await userRepo.getById(userId);
+    return UserClaims(
+      userId: user.id,
+      email: user.email,
+      roles: user.roles,
+    );
+  },
+);
+
+// Register auth endpoints
+server.addRoute('POST', '/auth/login', authEndpoints.handleLogin);
+server.addRoute('POST', '/auth/refresh', authEndpoints.handleRefresh);
+server.addRoute('POST', '/auth/logout', authEndpoints.handleLogout);
+server.addRoute('POST', '/auth/device', authEndpoints.handleDeviceCode);
+server.addRoute('GET', '/auth/device/verify', authEndpoints.handleDeviceVerify);
+server.addRoute('POST', '/auth/token', authEndpoints.handleToken);
+```
+
+#### 5. Protect Resources
+
+```dart
+server.registerResource(
+  CrudResource<User, UserClaims>(
+    path: '/users',
+    repository: userRepo,
+    serializers: {'application/json': serializer},
+    authHandler: authHandler,  // Require authentication
+  ),
+);
+
+// Public resource (no auth required)
+server.registerResource(
+  CrudResource<Product>(
+    path: '/products',
+    repository: productRepo,
+    serializers: {'application/json': serializer},
+    // No authHandler = public access
+  ),
+);
+```
+
+### Quick Start: OAuth/OIDC Authentication
+
+#### 1. Define Custom Claims
+
+Same as self-hosted - create a claims class matching your provider's JWT structure:
+
+```dart
+@JwtSerializable()
+class CognitoClaims {
+  const CognitoClaims({
+    required this.sub,
+    required this.email,
+    this.cognitoGroups = const [],
+  });
+  
+  final String sub;
+  final String email;
+  final List<String> cognitoGroups;
+}
+```
+
+#### 2. Create OAuth Auth Handler
+
+```dart
+final authHandler = OAuthJwtAuthHandler<CognitoClaims>(
+  jwksUri: 'https://cognito-idp.us-east-1.amazonaws.com/us-east-1_ABC123/.well-known/jwks.json',
+  issuer: 'https://cognito-idp.us-east-1.amazonaws.com/us-east-1_ABC123',
+  audience: 'your-cognito-client-id',
+  cacheDuration: Duration(hours: 24),
+);
+```
+
+#### 3. Protect Resources
+
+```dart
+server.registerResource(
+  CrudResource<User, CognitoClaims>(
+    path: '/users',
+    repository: userRepo,
+    serializers: {'application/json': serializer},
+    authHandler: authHandler,
+  ),
+);
+```
+
+**Note:** With OAuth, you don't need auth endpoints - users authenticate through the OAuth provider (Cognito, Auth0, etc.).
+
+### Using Authentication in Custom Handlers
+
+Access user identity and claims in custom query handlers:
+
+```dart
+queryHandlers: {
+  'me': (repo, params, skip, take, authResult) async {
+    // authResult is null for public resources
+    // authResult is non-null for protected resources
+    
+    if (authResult == null) {
+      throw UnauthorizedException();
+    }
+    
+    // Type-safe access to claims
+    final userId = authResult.claims.userId;
+    final email = authResult.claims.email;
+    final isAdmin = authResult.claims.roles.contains('admin');
+    
+    // Return user's own data
+    final user = await repo.getById(userId);
+    return QueryResult([user], totalCount: 1);
+  },
+}
+```
+
+### Authentication Endpoints (Self-Hosted Only)
+
+#### POST /auth/login
+
+Username/password login.
+
+**Request:**
+```json
+{
+  "username": "alice",
+  "password": "secret"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "access_token": "eyJhbGc...",
+  "refresh_token": "def50200...",
+  "expires_in": 900,
+  "token_type": "Bearer"
+}
+```
+
+#### POST /auth/refresh
+
+Refresh access token.
+
+**Request:**
+```json
+{
+  "refresh_token": "def50200..."
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "access_token": "eyJhbGc...",
+  "expires_in": 900,
+  "token_type": "Bearer"
+}
+```
+
+#### POST /auth/logout
+
+Revoke refresh token.
+
+**Request:**
+```json
+{
+  "refresh_token": "def50200..."
+}
+```
+
+**Response:** 204 No Content
+
+#### POST /auth/device
+
+Initiate device flow (for CLI tools).
+
+**Request:**
+```json
+{
+  "client_id": "my-cli-app"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "device_code": "abc123...",
+  "user_code": "WDJB-MJHT",
+  "verification_uri": "https://api.example.com/auth/device/verify",
+  "expires_in": 600,
+  "interval": 5
+}
+```
+
+#### GET /auth/device/verify
+
+Verification page for users to enter device code (HTML form).
+
+#### POST /auth/token
+
+Poll for device flow tokens.
+
+**Request:**
+```json
+{
+  "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+  "device_code": "abc123...",
+  "client_id": "my-cli-app"
+}
+```
+
+**Response (pending):**
+```json
+{
+  "error": "authorization_pending"
+}
+```
+
+**Response (approved):**
+```json
+{
+  "access_token": "eyJhbGc...",
+  "refresh_token": "def50200...",
+  "expires_in": 900,
+  "token_type": "Bearer"
+}
+```
+
+### JWT Claims Code Generation
+
+The `@JwtSerializable()` annotation generates extension methods for serializing and deserializing claims:
+
+```dart
+// Your claims class
+@JwtSerializable()
+class UserClaims {
+  const UserClaims({required this.userId, required this.email});
+  final String userId;
+  final String email;
+}
+
+// Generated extension (in user_claims.g.dart)
+extension JwtAuthHandlerUserClaimsExtension on JwtAuthHandler<UserClaims> {
+  UserClaims parseClaimsFromJson(Map<String, dynamic> json) {
+    return UserClaims(
+      userId: json['userId'] as String,
+      email: json['email'] as String,
+    );
+  }
+  
+  Map<String, dynamic> claimsToJson(UserClaims claims) {
+    return {
+      'userId': claims.userId,
+      'email': claims.email,
+    };
+  }
+}
+```
+
+The extension methods are automatically used by the auth handler - no manual wiring needed!
+
+### Built-in StandardClaims
+
+For simple cases, use the pre-generated `StandardClaims` class:
+
+```dart
+final authHandler = JwtAuthHandler<StandardClaims, RefreshToken>(
+  secret: 'your-secret',
+  refreshTokenRepository: refreshTokenRepo,
+);
+
+// StandardClaims includes: sub, email, name
+```
+
+### Security Considerations
+
+**Signing Secrets:**
+- Use minimum 256 bits (32 bytes) for HMAC-SHA256
+- Store in environment variables, never in code
+- Rotate periodically (invalidates all tokens)
+
+**Token Lifetimes:**
+- Access tokens: Short-lived (15 minutes default)
+- Refresh tokens: Long-lived (7 days default) but revocable
+- Device codes: Very short (10 minutes)
+
+**HTTPS Required:**
+- Always use HTTPS in production
+- Tokens transmitted in Authorization header, not URL
+
+**Rate Limiting:**
+- Implement rate limiting on auth endpoints
+- Prevent brute force attacks on device codes
+- Consider CAPTCHA for repeated failures
+
+**Error Messages:**
+- Never expose signing secrets in errors
+- Keep error messages generic to prevent information leakage
+- Use RFC 7807 format for consistency
+
+### Client Library
+
+For CLI tools and applications, use `dddart_rest_client` for automatic token management:
+
+```dart
+import 'package:dddart_rest_client/dddart_rest_client.dart';
+
+final authProvider = DeviceFlowAuthProvider(
+  authUrl: 'https://api.example.com/auth',
+  clientId: 'my-cli-app',
+  credentialsPath: '/path/to/credentials.json',
+);
+
+await authProvider.login();  // Device flow
+
+final client = RestClient(
+  baseUrl: 'https://api.example.com',
+  authProvider: authProvider,
+);
+
+// Tokens automatically included and refreshed
+final response = await client.get('/users');
+```
+
+See the [dddart_rest_client documentation](../dddart_rest_client/README.md) for details.
 
 ## License
 

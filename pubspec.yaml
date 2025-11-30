@@ -9,6 +9,7 @@ workspace:
   - packages/dddart_serialization
   - packages/dddart_json
   - packages/dddart_rest
+  - packages/dddart_rest_client
   - packages/dddart_config
   - packages/dddart_repository_mongodb
   - packages/dddart_webhooks

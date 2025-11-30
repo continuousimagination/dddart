@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import 'package:dddart/dddart.dart';
+import 'package:dddart_rest/src/auth_handler.dart';
+import 'package:dddart_rest/src/auth_result.dart';
 import 'package:dddart_rest/src/error_mapper.dart';
 import 'package:dddart_rest/src/exceptions.dart';
 import 'package:dddart_rest/src/query_handler.dart';
@@ -14,31 +16,39 @@ import 'package:shelf/shelf.dart';
 /// with request handling logic for standard CRUD operations. Each instance is
 /// configured for a specific aggregate type and can be registered with an HTTP server.
 ///
-/// Example:
+/// Generic over [T] (aggregate type) and optional [TClaims] (authentication claims type).
+/// When [authHandler] is provided, all CRUD operations require authentication.
+///
+/// Example without authentication:
 /// ```dart
 /// final userResource = CrudResource<User>(
 ///   path: '/users',
 ///   repository: userRepository,
 ///   serializers: {
 ///     'application/json': jsonSerializer,
-///     'application/yaml': yamlSerializer,
 ///   },
-///   queryHandlers: {
-///     'firstName': firstNameHandler,
-///     'email': emailHandler,
-///   },
-///   defaultSkip: 0,
-///   defaultTake: 20,
-///   maxTake: 100,
 /// );
 /// ```
-class CrudResource<T extends AggregateRoot> {
+///
+/// Example with authentication:
+/// ```dart
+/// final userResource = CrudResource<User, UserClaims>(
+///   path: '/users',
+///   repository: userRepository,
+///   serializers: {
+///     'application/json': jsonSerializer,
+///   },
+///   authHandler: jwtAuthHandler,
+/// );
+/// ```
+class CrudResource<T extends AggregateRoot, TClaims> {
   /// Creates a CrudResource with the specified configuration
   ///
   /// Parameters:
   /// - [path]: The base path for this resource (e.g., '/users')
   /// - [repository]: Repository instance for persistence operations
   /// - [serializers]: Map of content types to serializers for content negotiation
+  /// - [authHandler]: Optional authentication handler. When provided, all CRUD operations require authentication
   /// - [queryHandlers]: Map of query parameter names to handler functions
   /// - [customExceptionHandlers]: Map of exception types to error response handlers
   /// - [defaultSkip]: Default skip value for pagination (defaults to 0)
@@ -52,6 +62,7 @@ class CrudResource<T extends AggregateRoot> {
     required this.path,
     required this.repository,
     required this.serializers,
+    this.authHandler,
     this.queryHandlers = const {},
     this.customExceptionHandlers = const {},
     this.defaultSkip = 0,
@@ -87,6 +98,13 @@ class CrudResource<T extends AggregateRoot> {
   /// At least one serializer must be provided
   final Map<String, Serializer<T>> serializers;
 
+  /// Optional authentication handler
+  ///
+  /// When provided, all CRUD operations will require authentication.
+  /// The handler is invoked before any repository operations.
+  /// If authentication fails, a 401 Unauthorized response is returned.
+  final AuthHandler<TClaims>? authHandler;
+
   /// Map of query parameter names to handler functions
   ///
   /// Key: the query parameter name (e.g., 'firstName')
@@ -117,10 +135,38 @@ class CrudResource<T extends AggregateRoot> {
   /// Logger instance for REST API request/response logging
   final Logger _logger = Logger('dddart.rest');
 
+  /// Authenticates a request if auth handler is configured
+  ///
+  /// Returns null if authentication succeeds or auth handler is not configured.
+  /// Returns a 401 Response if authentication fails.
+  ///
+  /// Parameters:
+  /// - [request]: The HTTP request to authenticate
+  ///
+  /// Returns: null if authenticated or no auth required, 401 Response if auth fails
+  Future<({Response? response, AuthResult<TClaims>? authResult})> _authenticate(
+      Request request,) async {
+    if (authHandler == null) {
+      return (response: null, authResult: null);
+    }
+
+    final authResult = await authHandler!.authenticate(request);
+    if (!authResult.isAuthenticated) {
+      final response = _responseBuilder.unauthorized(
+        authResult.errorMessage ?? 'Authentication required',
+      );
+      return (response: response, authResult: null);
+    }
+
+    return (response: null, authResult: authResult);
+  }
+
   /// Handles GET /resource/:id
   ///
   /// Parses the ID, calls repository.getById(), and returns serialized aggregate
   /// Uses Accept header for content negotiation
+  ///
+  /// If auth handler is configured, authenticates the request first.
   ///
   /// Parameters:
   /// - [request]: The HTTP request
@@ -130,6 +176,13 @@ class CrudResource<T extends AggregateRoot> {
   Future<Response> handleGetById(Request request, String id) async {
     _logger.info('GET /$path/$id - Retrieving $T');
     try {
+      // Authenticate if handler is configured
+      final authCheck = await _authenticate(request);
+      if (authCheck.response != null) {
+        _logger.fine('GET /$path/$id - ${authCheck.response!.statusCode}');
+        return authCheck.response!;
+      }
+
       final uuid = UuidValue.fromString(id);
       final aggregate = await repository.getById(uuid);
       final serializerEntry = _selectSerializer(request.headers['accept']);
@@ -151,6 +204,9 @@ class CrudResource<T extends AggregateRoot> {
   /// - One query param: looks up and invokes corresponding query handler
   /// - Multiple query params: returns 400 error
   ///
+  /// If auth handler is configured, authenticates the request first and passes
+  /// auth result to query handlers.
+  ///
   /// Parameters:
   /// - [request]: The HTTP request
   ///
@@ -160,6 +216,14 @@ class CrudResource<T extends AggregateRoot> {
         request.url.query.isEmpty ? '' : '?${request.url.query}';
     _logger.info('GET /$path$queryString - Querying $T');
     try {
+      // Authenticate if handler is configured
+      final authCheck = await _authenticate(request);
+      if (authCheck.response != null) {
+        _logger
+            .fine('GET /$path$queryString - ${authCheck.response!.statusCode}');
+        return authCheck.response!;
+      }
+
       final queryParams = request.url.queryParameters;
       final pagination = _parsePagination(queryParams);
 
@@ -198,6 +262,7 @@ class CrudResource<T extends AggregateRoot> {
           filterParams,
           pagination.skip,
           pagination.take,
+          authCheck.authResult,
         );
       }
 
@@ -220,6 +285,8 @@ class CrudResource<T extends AggregateRoot> {
   /// Deserializes request body using Content-Type header, calls repository.save(),
   /// returns created aggregate. Uses Accept header for response content negotiation.
   ///
+  /// If auth handler is configured, authenticates the request first.
+  ///
   /// Parameters:
   /// - [request]: The HTTP request
   ///
@@ -227,6 +294,13 @@ class CrudResource<T extends AggregateRoot> {
   Future<Response> handleCreate(Request request) async {
     _logger.info('POST /$path - Creating $T');
     try {
+      // Authenticate if handler is configured
+      final authCheck = await _authenticate(request);
+      if (authCheck.response != null) {
+        _logger.fine('POST /$path - ${authCheck.response!.statusCode}');
+        return authCheck.response!;
+      }
+
       final contentTypeHeader =
           request.headers['content-type'] ?? serializers.keys.first;
       // Extract media type, removing charset and other parameters
@@ -286,6 +360,8 @@ class CrudResource<T extends AggregateRoot> {
   /// Deserializes request body using Content-Type header, calls repository.save(),
   /// returns updated aggregate. Uses Accept header for response content negotiation.
   ///
+  /// If auth handler is configured, authenticates the request first.
+  ///
   /// Parameters:
   /// - [request]: The HTTP request
   /// - [id]: The ID string from the URL path
@@ -294,6 +370,13 @@ class CrudResource<T extends AggregateRoot> {
   Future<Response> handleUpdate(Request request, String id) async {
     _logger.info('PUT /$path/$id - Updating $T');
     try {
+      // Authenticate if handler is configured
+      final authCheck = await _authenticate(request);
+      if (authCheck.response != null) {
+        _logger.fine('PUT /$path/$id - ${authCheck.response!.statusCode}');
+        return authCheck.response!;
+      }
+
       final contentTypeHeader =
           request.headers['content-type'] ?? serializers.keys.first;
       // Extract media type, removing charset and other parameters
@@ -352,6 +435,8 @@ class CrudResource<T extends AggregateRoot> {
   ///
   /// Parses ID, calls repository.deleteById(), returns 204 No Content
   ///
+  /// If auth handler is configured, authenticates the request first.
+  ///
   /// Parameters:
   /// - [request]: The HTTP request
   /// - [id]: The ID string from the URL path
@@ -360,6 +445,13 @@ class CrudResource<T extends AggregateRoot> {
   Future<Response> handleDelete(Request request, String id) async {
     _logger.info('DELETE /$path/$id - Deleting $T');
     try {
+      // Authenticate if handler is configured
+      final authCheck = await _authenticate(request);
+      if (authCheck.response != null) {
+        _logger.fine('DELETE /$path/$id - ${authCheck.response!.statusCode}');
+        return authCheck.response!;
+      }
+
       final uuid = UuidValue.fromString(id);
       await repository.deleteById(uuid);
       final response = _responseBuilder.noContent();

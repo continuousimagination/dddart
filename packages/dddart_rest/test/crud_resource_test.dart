@@ -116,13 +116,13 @@ Request createRequest({
 void main() {
   late MockRepository repository;
   late TestUserSerializer serializer;
-  late CrudResource<TestUser> resource;
+  late CrudResource<TestUser, dynamic> resource;
   late TestUser testUser;
 
   setUp(() {
     repository = MockRepository();
     serializer = TestUserSerializer();
-    resource = CrudResource<TestUser>(
+    resource = CrudResource<TestUser, dynamic>(
       path: '/users',
       repository: repository,
       serializers: {
@@ -230,7 +230,7 @@ void main() {
 
     test('exception handling via _handleException()', () async {
       // Arrange - create resource with custom exception handler
-      final customResource = CrudResource<TestUser>(
+      final customResource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: repository,
         serializers: {'application/json': serializer},
@@ -295,7 +295,7 @@ void main() {
       await inMemoryRepo.save(user2);
       await inMemoryRepo.save(user3);
 
-      final inMemoryResource = CrudResource<TestUser>(
+      final inMemoryResource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: inMemoryRepo,
         serializers: {'application/json': serializer},
@@ -323,7 +323,7 @@ void main() {
       final inMemoryRepo = InMemoryRepository<TestUser>();
       await inMemoryRepo.save(testUser);
 
-      final inMemoryResource = CrudResource<TestUser>(
+      final inMemoryResource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: inMemoryRepo,
         serializers: {'application/json': serializer},
@@ -347,7 +347,7 @@ void main() {
       final inMemoryRepo = InMemoryRepository<TestUser>();
       await inMemoryRepo.save(testUser);
 
-      final inMemoryResource = CrudResource<TestUser>(
+      final inMemoryResource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: inMemoryRepo,
         serializers: {'application/json': serializer},
@@ -368,7 +368,7 @@ void main() {
       final inMemoryRepo = InMemoryRepository<TestUser>();
       await inMemoryRepo.save(testUser);
 
-      final inMemoryResource = CrudResource<TestUser>(
+      final inMemoryResource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: inMemoryRepo,
         serializers: {'application/json': serializer},
@@ -399,6 +399,7 @@ void main() {
         Map<String, String> params,
         int skip,
         int take,
+        dynamic authResult,
       ) async {
         handlerCalled = true;
         receivedParams = params;
@@ -407,7 +408,7 @@ void main() {
         return QueryResult<TestUser>([testUser], totalCount: 1);
       }
 
-      final resourceWithHandler = CrudResource<TestUser>(
+      final resourceWithHandler = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: repository,
         serializers: {'application/json': serializer},
@@ -437,13 +438,14 @@ void main() {
         Map<String, String> params,
         int skip,
         int take,
+        dynamic authResult,
       ) async {
         receivedSkip = skip;
         receivedTake = take;
         return QueryResult<TestUser>([testUser], totalCount: 1);
       }
 
-      final resourceWithHandler = CrudResource<TestUser>(
+      final resourceWithHandler = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: repository,
         serializers: {'application/json': serializer},
@@ -462,7 +464,7 @@ void main() {
 
     test('400 response when handler not found', () async {
       // Arrange
-      final resourceWithoutHandler = CrudResource<TestUser>(
+      final resourceWithoutHandler = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: repository,
         serializers: {'application/json': serializer},
@@ -497,11 +499,12 @@ void main() {
         Map<String, String> params,
         int skip,
         int take,
+        dynamic authResult,
       ) async {
         return QueryResult<TestUser>([filteredUser], totalCount: 1);
       }
 
-      final resourceWithHandler = CrudResource<TestUser>(
+      final resourceWithHandler = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: repository,
         serializers: {'application/json': serializer},
@@ -548,7 +551,7 @@ void main() {
       final inMemoryRepo = InMemoryRepository<TestUser>();
       await inMemoryRepo.save(testUser);
 
-      final inMemoryResource = CrudResource<TestUser>(
+      final inMemoryResource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: inMemoryRepo,
         serializers: {'application/json': serializer},
@@ -1069,7 +1072,7 @@ void main() {
     test('_selectSerializer() with various Accept headers', () async {
       // Arrange - create resource with multiple serializers
       final yamlSerializer = TestUserSerializer(); // Using same for simplicity
-      final multiSerializerResource = CrudResource<TestUser>(
+      final multiSerializerResource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: repository,
         serializers: {
@@ -1175,7 +1178,7 @@ void main() {
         await inMemoryRepo.save(user);
       }
 
-      final inMemoryResource = CrudResource<TestUser>(
+      final inMemoryResource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: inMemoryRepo,
         serializers: {'application/json': serializer},
@@ -1199,7 +1202,7 @@ void main() {
       final inMemoryRepo = InMemoryRepository<TestUser>();
       await inMemoryRepo.save(testUser);
 
-      final inMemoryResource = CrudResource<TestUser>(
+      final inMemoryResource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: inMemoryRepo,
         serializers: {'application/json': serializer},
@@ -1232,7 +1235,7 @@ void main() {
         await inMemoryRepo.save(user);
       }
 
-      final inMemoryResource = CrudResource<TestUser>(
+      final inMemoryResource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: inMemoryRepo,
         serializers: {'application/json': serializer},
@@ -1258,7 +1261,7 @@ void main() {
       // Arrange
       var customHandlerCalled = false;
 
-      final customResource = CrudResource<TestUser>(
+      final customResource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: repository,
         serializers: {'application/json': serializer},
@@ -1292,7 +1295,7 @@ void main() {
 
     test('fallback to ErrorMapper when no custom handler found', () async {
       // Arrange
-      final customResource = CrudResource<TestUser>(
+      final customResource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: repository,
         serializers: {'application/json': serializer},
@@ -1324,7 +1327,7 @@ void main() {
       // Create a custom repository that throws CustomDomainException
       final customRepo = MockRepository();
 
-      final customResource = CrudResource<TestUser>(
+      final customResource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: customRepo,
         serializers: {'application/json': serializer},

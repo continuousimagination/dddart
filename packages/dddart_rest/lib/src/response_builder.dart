@@ -186,4 +186,37 @@ class ResponseBuilder<T extends AggregateRoot> {
       }),
     );
   }
+
+  /// Builds a 401 Unauthorized response using RFC 7807 format
+  ///
+  /// Creates a standardized error response following RFC 7807 Problem Details
+  /// format with type, title, status, and detail fields.
+  ///
+  /// This method ensures that error messages do not expose sensitive
+  /// information such as signing secrets, expected signatures, or internal
+  /// system details.
+  ///
+  /// Parameters:
+  /// - [message]: Human-readable explanation of the authentication failure
+  ///
+  /// Returns: A [Response] with status 401 and RFC 7807 formatted JSON body
+  ///
+  /// Example:
+  /// ```dart
+  /// final response = responseBuilder.unauthorized(
+  ///   'Token has expired',
+  /// );
+  /// ```
+  Response unauthorized(String message) {
+    return Response(
+      401,
+      headers: {'Content-Type': 'application/problem+json'},
+      body: jsonEncode({
+        'type': 'about:blank',
+        'title': 'Unauthorized',
+        'status': 401,
+        'detail': message,
+      }),
+    );
+  }
 }

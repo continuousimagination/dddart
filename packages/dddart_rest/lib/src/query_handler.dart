@@ -36,6 +36,7 @@ class QueryResult<T extends AggregateRoot> {
 /// - [queryParams]: All query parameters from the request (excluding skip/take)
 /// - [skip]: Number of items to skip (for pagination)
 /// - [take]: Number of items to return (for pagination)
+/// - [authResult]: Optional authentication result if auth handler is configured
 ///
 /// Returns: QueryResult containing the filtered items and optional total count
 ///
@@ -44,7 +45,8 @@ class QueryResult<T extends AggregateRoot> {
 /// final firstNameHandler = (Repository<User> repository,
 ///                           Map<String, String> queryParams,
 ///                           int skip,
-///                           int take) async {
+///                           int take,
+///                           AuthResult? authResult) async {
 ///   final firstName = queryParams['firstName']!;
 ///   final allMatches = await repository.getByFirstName(firstName);
 ///   return QueryResult(
@@ -58,4 +60,5 @@ typedef QueryHandler<T extends AggregateRoot> = Future<QueryResult<T>> Function(
   Map<String, String> queryParams,
   int skip,
   int take,
+  dynamic authResult,
 );
