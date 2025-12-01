@@ -1,0 +1,7 @@
+targets:
+  $default:
+    builders:
+      dddart_json|json_serializer:
+        enabled: true
+      dddart_repository_sqlite|sqlite_repository:
+        enabled: true

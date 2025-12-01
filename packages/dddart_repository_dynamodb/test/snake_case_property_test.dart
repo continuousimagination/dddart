@@ -1,4 +1,4 @@
-@Tags(['property'])
+@Tags(['property-test'])
 library;
 
 import 'dart:math';

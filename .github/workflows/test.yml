@@ -10,7 +10,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     
-    # Add MongoDB and DynamoDB Local services for integration tests
+    # Add MongoDB, DynamoDB Local, and MySQL services for integration tests
     services:
       mongodb:
         image: mongo:latest
@@ -26,6 +26,19 @@ jobs:
         image: amazon/dynamodb-local:latest
         ports:
           - 8000:8000
+      
+      mysql:
+        image: mysql:8.0
+        ports:
+          - 3307:3306
+        env:
+          MYSQL_ROOT_PASSWORD: test_password
+          MYSQL_DATABASE: test_db
+        options: >-
+          --health-cmd "mysqladmin ping -h localhost"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     
     strategy:
       matrix:
@@ -37,6 +50,9 @@ jobs:
           - dddart_config
           - dddart_repository_mongodb
           - dddart_repository_dynamodb
+          - dddart_repository_sql
+          - dddart_repository_sqlite
+          - dddart_repository_mysql
           - dddart_webhooks
           - dddart_webhooks_slack
     
@@ -79,5 +95,8 @@ jobs:
         working-directory: packages/${{ matrix.package }}
       
       - name: Run tests
-        run: dart test --run-skipped
+        run: |
+          # Run all tests including integration tests with service containers
+          # MongoDB, DynamoDB, and MySQL services are available in CI
+          dart test
         working-directory: packages/${{ matrix.package }}

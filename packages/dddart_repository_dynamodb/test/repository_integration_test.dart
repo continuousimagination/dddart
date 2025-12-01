@@ -5,8 +5,8 @@
 ///   docker run -d -p 8000:8000 amazon/dynamodb-local
 ///
 /// Or skip these tests if DynamoDB Local is not available:
-///   dart test --exclude-tags=requires-dynamodb-local
-@Tags(['requires-dynamodb-local'])
+///   dart test --exclude-tags=requires-dynamodb
+@Tags(['requires-dynamodb'])
 library;
 
 import 'package:aws_dynamodb_api/dynamodb-2012-08-10.dart';
