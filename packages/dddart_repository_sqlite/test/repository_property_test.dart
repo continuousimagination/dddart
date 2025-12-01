@@ -1,4 +1,5 @@
 /// Property-based tests for SQLite repository operations.
+@Tags(['property-test'])
 library;
 
 import 'dart:math';

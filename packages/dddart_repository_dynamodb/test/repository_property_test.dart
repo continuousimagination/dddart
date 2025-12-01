@@ -1,5 +1,5 @@
 /// Property-based tests for DynamoDB repository operations.
-@Tags(['property', 'requires-dynamodb-local'])
+@Tags(['property-test', 'requires-dynamodb'])
 library;
 
 import 'dart:math';

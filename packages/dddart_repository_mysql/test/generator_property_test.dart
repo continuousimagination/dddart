@@ -1,0 +1,462 @@
+/// Property-based tests for MySQL repository generator.
+@Tags(['generator'])
+library;
+
+import 'package:analyzer/dart/element/element.dart';
+import 'package:build/build.dart';
+import 'package:build_test/build_test.dart';
+import 'package:dddart_repository_mysql/src/generators/mysql_repository_generator.dart';
+import 'package:source_gen/source_gen.dart';
+import 'package:test/test.dart';
+
+void main() {
+  group('MysqlRepositoryGenerator Property Tests', () {
+    late MysqlRepositoryGenerator generator;
+
+    setUp(() {
+      generator = MysqlRepositoryGenerator();
+    });
+
+    tearDown(() async {
+      // Give the build system time to clean up file handles
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+
+    // **Feature: mysql-repository, Property 1: Repository generation completeness**
+    // **Validates: Requirements 1.1, 1.2, 1.3**
+    group('Property 1: Repository generation completeness', () {
+      test('should generate valid Dart code for any valid aggregate root',
+          () async {
+        // Test with a simple aggregate
+        final library = await resolveSource(
+          '''
+library test;
+
+import 'package:dddart/dddart.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
+import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
+
+@Serializable()
+@GenerateMysqlRepository()
+class SimpleAggregate extends AggregateRoot {
+  SimpleAggregate({required this.name}) : super();
+  
+  final String name;
+}
+''',
+          (resolver) async => (await resolver.findLibraryByName('test'))!,
+        );
+
+        final classElement = library.topLevelElements
+            .whereType<ClassElement>()
+            .firstWhere((e) => e.name == 'SimpleAggregate');
+
+        final annotation = classElement.metadata.firstWhere(
+          (a) =>
+              a.element is ConstructorElement &&
+              (a.element! as ConstructorElement).enclosingElement.name ==
+                  'GenerateMysqlRepository',
+        );
+
+        final generated = generator.generateForAnnotatedElement(
+          classElement,
+          ConstantReader(annotation.computeConstantValue()),
+          _mockBuildStep(),
+        );
+
+        // Verify generated code contains required elements
+        expect(generated, contains('class SimpleAggregateMysqlRepository'));
+        expect(generated, contains('implements Repository<SimpleAggregate>'));
+        expect(generated, contains('Future<void> createTables()'));
+        expect(generated, contains('Future<SimpleAggregate> getById'));
+        expect(generated, contains('Future<void> save(SimpleAggregate'));
+        expect(generated, contains('Future<void> deleteById'));
+        expect(generated, contains('MysqlConnection _connection'));
+        expect(generated, contains('MysqlDialect'));
+        expect(generated, contains('SimpleAggregateJsonSerializer'));
+      });
+
+      test('should generate code with value objects embedded', () async {
+        final library = await resolveSource(
+          '''
+library test;
+
+import 'package:dddart/dddart.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
+import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
+
+@Serializable()
+class Money extends Value {
+  const Money({required this.amount, required this.currency});
+  
+  final double amount;
+  final String currency;
+}
+
+@Serializable()
+@GenerateMysqlRepository()
+class Order extends AggregateRoot {
+  Order({required this.total}) : super();
+  
+  final Money total;
+}
+''',
+          (resolver) async => (await resolver.findLibraryByName('test'))!,
+        );
+
+        final classElement = library.topLevelElements
+            .whereType<ClassElement>()
+            .firstWhere((e) => e.name == 'Order');
+
+        final annotation = classElement.metadata.firstWhere(
+          (a) =>
+              a.element is ConstructorElement &&
+              (a.element! as ConstructorElement).enclosingElement.name ==
+                  'GenerateMysqlRepository',
+        );
+
+        final generated = generator.generateForAnnotatedElement(
+          classElement,
+          ConstantReader(annotation.computeConstantValue()),
+          _mockBuildStep(),
+        );
+
+        // Verify value object embedding
+        expect(generated, contains('_flattenForTable'));
+        expect(generated, contains('_rowToJson'));
+        // Value objects should be embedded, not have separate tables
+        expect(generated, isNot(contains('CREATE TABLE IF NOT EXISTS money')));
+      });
+
+      test('should generate code with entities in separate tables', () async {
+        final library = await resolveSource(
+          '''
+library test;
+
+import 'package:dddart/dddart.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
+import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
+
+@Serializable()
+class OrderItem extends Entity {
+  OrderItem({required this.productId, required this.quantity}) : super();
+  
+  final UuidValue productId;
+  final int quantity;
+}
+
+@Serializable()
+@GenerateMysqlRepository()
+class Order extends AggregateRoot {
+  Order({required this.items}) : super();
+  
+  final List<OrderItem> items;
+}
+''',
+          (resolver) async => (await resolver.findLibraryByName('test'))!,
+        );
+
+        final classElement = library.topLevelElements
+            .whereType<ClassElement>()
+            .firstWhere((e) => e.name == 'Order');
+
+        final annotation = classElement.metadata.firstWhere(
+          (a) =>
+              a.element is ConstructorElement &&
+              (a.element! as ConstructorElement).enclosingElement.name ==
+                  'GenerateMysqlRepository',
+        );
+
+        final generated = generator.generateForAnnotatedElement(
+          classElement,
+          ConstantReader(annotation.computeConstantValue()),
+          _mockBuildStep(),
+        );
+
+        // Verify entity table creation
+        expect(generated, contains('CREATE TABLE IF NOT EXISTS order_item'));
+        expect(generated, contains('FOREIGN KEY'));
+        expect(generated, contains('ON DELETE CASCADE'));
+        expect(generated, contains('_saveOrderItem'));
+        expect(generated, contains('_loadOrderItem'));
+      });
+
+      test('should use custom table name when specified', () async {
+        final library = await resolveSource(
+          '''
+library test;
+
+import 'package:dddart/dddart.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
+import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
+
+@Serializable()
+@GenerateMysqlRepository(tableName: 'custom_orders')
+class Order extends AggregateRoot {
+  Order({required this.total}) : super();
+  
+  final double total;
+}
+''',
+          (resolver) async => (await resolver.findLibraryByName('test'))!,
+        );
+
+        final classElement = library.topLevelElements
+            .whereType<ClassElement>()
+            .firstWhere((e) => e.name == 'Order');
+
+        final annotation = classElement.metadata.firstWhere(
+          (a) =>
+              a.element is ConstructorElement &&
+              (a.element! as ConstructorElement).enclosingElement.name ==
+                  'GenerateMysqlRepository',
+        );
+
+        final generated = generator.generateForAnnotatedElement(
+          classElement,
+          ConstantReader(annotation.computeConstantValue()),
+          _mockBuildStep(),
+        );
+
+        // Verify custom table name is used
+        expect(generated, contains("tableName => 'custom_orders'"));
+        expect(
+          generated,
+          contains('CREATE TABLE IF NOT EXISTS custom_orders'),
+        );
+      });
+    });
+
+    // **Feature: mysql-repository, Property 27: Multiple aggregate independence**
+    // **Validates: Requirements 1.5**
+    group('Property 27: Multiple aggregate independence', () {
+      test('should generate independent repositories for multiple aggregates',
+          () async {
+        // Generate for first aggregate
+        final library1 = await resolveSource(
+          '''
+library test1;
+
+import 'package:dddart/dddart.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
+import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
+
+@Serializable()
+@GenerateMysqlRepository()
+class Order extends AggregateRoot {
+  Order({required this.total}) : super();
+  
+  final double total;
+}
+''',
+          (resolver) async => (await resolver.findLibraryByName('test1'))!,
+        );
+
+        final class1 = library1.topLevelElements
+            .whereType<ClassElement>()
+            .firstWhere((e) => e.name == 'Order');
+
+        final annotation1 = class1.metadata.firstWhere(
+          (a) =>
+              a.element is ConstructorElement &&
+              (a.element! as ConstructorElement).enclosingElement.name ==
+                  'GenerateMysqlRepository',
+        );
+
+        final generated1 = generator.generateForAnnotatedElement(
+          class1,
+          ConstantReader(annotation1.computeConstantValue()),
+          _mockBuildStep(),
+        );
+
+        // Generate for second aggregate
+        final library2 = await resolveSource(
+          '''
+library test2;
+
+import 'package:dddart/dddart.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
+import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
+
+@Serializable()
+@GenerateMysqlRepository()
+class Customer extends AggregateRoot {
+  Customer({required this.name}) : super();
+  
+  final String name;
+}
+''',
+          (resolver) async => (await resolver.findLibraryByName('test2'))!,
+        );
+
+        final class2 = library2.topLevelElements
+            .whereType<ClassElement>()
+            .firstWhere((e) => e.name == 'Customer');
+
+        final annotation2 = class2.metadata.firstWhere(
+          (a) =>
+              a.element is ConstructorElement &&
+              (a.element! as ConstructorElement).enclosingElement.name ==
+                  'GenerateMysqlRepository',
+        );
+
+        final generated2 = generator.generateForAnnotatedElement(
+          class2,
+          ConstantReader(annotation2.computeConstantValue()),
+          _mockBuildStep(),
+        );
+
+        // Verify independence
+        expect(generated1, contains('OrderMysqlRepository'));
+        expect(generated1, contains('OrderJsonSerializer'));
+        expect(generated1, isNot(contains('Customer')));
+
+        expect(generated2, contains('CustomerMysqlRepository'));
+        expect(generated2, contains('CustomerJsonSerializer'));
+        expect(generated2, isNot(contains('Order')));
+      });
+    });
+
+    group('Generator Validation', () {
+      test('should throw error when annotating non-class element', () async {
+        final library = await resolveSource(
+          '''
+library test;
+
+import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
+
+@GenerateMysqlRepository()
+void notAClass() {}
+''',
+          (resolver) async => (await resolver.findLibraryByName('test'))!,
+        );
+
+        final function = library.topLevelElements
+            .whereType<FunctionElement>()
+            .firstWhere((e) => e.name == 'notAClass');
+
+        expect(
+          () => generator.generateForAnnotatedElement(
+            function,
+            ConstantReader(null),
+            _mockBuildStep(),
+          ),
+          throwsA(
+            isA<InvalidGenerationSourceError>().having(
+              (e) => e.message,
+              'message',
+              contains('Only classes can be annotated'),
+            ),
+          ),
+        );
+      });
+
+      test('should throw error when class does not extend AggregateRoot',
+          () async {
+        final library = await resolveSource(
+          '''
+library test;
+
+import 'package:dddart_serialization/dddart_serialization.dart';
+import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
+
+@Serializable()
+@GenerateMysqlRepository()
+class NotAnAggregate {
+  NotAnAggregate();
+}
+''',
+          (resolver) async => (await resolver.findLibraryByName('test'))!,
+        );
+
+        final classElement = library.topLevelElements
+            .whereType<ClassElement>()
+            .firstWhere((e) => e.name == 'NotAnAggregate');
+
+        final annotation = classElement.metadata.firstWhere(
+          (a) =>
+              a.element is ConstructorElement &&
+              (a.element! as ConstructorElement).enclosingElement.name ==
+                  'GenerateMysqlRepository',
+        );
+
+        expect(
+          () => generator.generateForAnnotatedElement(
+            classElement,
+            ConstantReader(annotation.computeConstantValue()),
+            _mockBuildStep(),
+          ),
+          throwsA(
+            isA<InvalidGenerationSourceError>().having(
+              (e) => e.message,
+              'message',
+              contains('must extend AggregateRoot'),
+            ),
+          ),
+        );
+      });
+
+      test('should throw error when class is missing @Serializable annotation',
+          () async {
+        final library = await resolveSource(
+          '''
+library test;
+
+import 'package:dddart/dddart.dart';
+import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
+
+@GenerateMysqlRepository()
+class MissingSerializable extends AggregateRoot {
+  MissingSerializable() : super();
+}
+''',
+          (resolver) async => (await resolver.findLibraryByName('test'))!,
+        );
+
+        final classElement = library.topLevelElements
+            .whereType<ClassElement>()
+            .firstWhere((e) => e.name == 'MissingSerializable');
+
+        final annotation = classElement.metadata.firstWhere(
+          (a) =>
+              a.element is ConstructorElement &&
+              (a.element! as ConstructorElement).enclosingElement.name ==
+                  'GenerateMysqlRepository',
+        );
+
+        expect(
+          () => generator.generateForAnnotatedElement(
+            classElement,
+            ConstantReader(annotation.computeConstantValue()),
+            _mockBuildStep(),
+          ),
+          throwsA(
+            isA<InvalidGenerationSourceError>().having(
+              (e) => e.message,
+              'message',
+              contains('must be annotated with @Serializable()'),
+            ),
+          ),
+        );
+      });
+    });
+  });
+}
+
+/// Creates a stub BuildStep for testing.
+/// Note: BuildStep is sealed, so we use a workaround for testing.
+/// The generator doesn't actually use the BuildStep in these tests.
+BuildStep _mockBuildStep() {
+  // Since BuildStep is sealed, we can't implement it.
+  // We use a stub that will throw if actually used.
+  // ignore: subtype_of_sealed_class
+  return _StubBuildStep();
+}
+
+// ignore: subtype_of_sealed_class
+class _StubBuildStep implements BuildStep {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
+        'BuildStep method called in test - this should not happen',
+      );
+}

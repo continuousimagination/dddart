@@ -29,6 +29,7 @@ PACKAGES=(
   "dddart_repository_dynamodb"
   "dddart_repository_sql"
   "dddart_repository_sqlite"
+  "dddart_repository_mysql"
   "dddart_webhooks"
   "dddart_webhooks_slack"
 )
@@ -80,10 +81,10 @@ check_package() {
   fi
   echo -e "  ${GREEN}✓ Formatting check passed${NC}"
   
-  # Run tests (excluding MongoDB and DynamoDB integration tests)
+  # Run tests (excluding MongoDB, DynamoDB, and MySQL integration tests)
   # Note: Integration tests run in CI with service containers
   echo "  🧪 Running tests..."
-  if ! dart test --exclude-tags=requires-mongo --exclude-tags=requires-dynamodb-local; then
+  if ! dart test --exclude-tags=requires-mongo --exclude-tags=requires-dynamodb --exclude-tags=requires-mysql; then
     echo -e "  ${RED}✗ Tests failed${NC}"
     cd - > /dev/null
     return 1

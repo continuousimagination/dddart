@@ -1,0 +1,14 @@
+targets:
+  $default:
+    builders:
+      dddart_repository_mysql:mysql_repository:
+        enabled: true
+
+builders:
+  mysql_repository:
+    import: "package:dddart_repository_mysql/src/generators/mysql_repository_generator.dart"
+    builder_factories: ["mysqlRepositoryBuilder"]
+    build_extensions: {".dart": [".mysql_repository.g.part"]}
+    auto_apply: dependents
+    build_to: cache
+    applies_builders: ["source_gen|combining_builder"]
