@@ -1,3 +1,6 @@
+@Tags(['property-test'])
+library;
+
 import 'dart:math';
 
 import 'package:dddart/dddart.dart';

@@ -7,7 +7,7 @@ tags:
     timeout: 2x
   
   # Property-based tests
-  property:
+  property-test:
     timeout: 2x
   
   # Tests that require DynamoDB Local to be running

@@ -1,0 +1,11 @@
+targets:
+  $default:
+    builders:
+      dddart_json|json_serializer:
+        enabled: true
+        generate_for:
+          - lib/domain/*.dart
+      dddart_repository_mysql|mysql_repository:
+        enabled: true
+        generate_for:
+          - lib/domain/*.dart

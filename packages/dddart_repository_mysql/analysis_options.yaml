@@ -1,0 +1,20 @@
+include: package:very_good_analysis/analysis_options.yaml
+
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.g.part"
+    - "**/*.mysql_repository.g.part"
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
+
+linter:
+  rules:
+    # Allow cascades to be optional in generator code (code generation patterns)
+    cascade_invocations: false
+    # Allow print in test helpers (used for Docker container management)
+    avoid_print: false
+    # Allow longer lines in generated code and complex examples
+    lines_longer_than_80_chars: false

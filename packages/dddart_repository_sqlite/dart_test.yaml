@@ -1,0 +1,6 @@
+# Test configuration for dddart_repository_sqlite
+
+tags:
+  # Property-based tests
+  property-test:
+    timeout: 2x
