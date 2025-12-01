@@ -1,0 +1,16 @@
+name: dddart_rest_client
+description: Client library for dddart_rest APIs with automatic authentication and token management
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: '>=3.5.0 <4.0.0'
+
+dependencies:
+  http: ^1.2.0
+  path: ^1.9.0
+
+dev_dependencies:
+  test: ^1.24.0
+  very_good_analysis: ^6.0.0

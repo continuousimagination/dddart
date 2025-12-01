@@ -1,8 +1,64 @@
-# dddart_rest Example
+# dddart_rest Examples
 
-This example demonstrates how to use the `dddart_rest` package to create a RESTful CRUD API for aggregate roots using Domain-Driven Design principles.
+This directory contains examples demonstrating how to use the `dddart_rest` package to create RESTful CRUD APIs with Domain-Driven Design principles.
 
-## What This Example Demonstrates
+## Available Examples
+
+### 1. Basic CRUD API (`main.dart`)
+
+Complete example showing:
+- **Domain-Driven Design Patterns**: Aggregate Root, Child Entity, Value Object
+- **HTTP CRUD API Features**: RESTful endpoints, custom query handlers, pagination
+- **Error Handling**: Custom exception handlers, RFC 7807 error responses
+
+**Run:** `dart run main.dart`
+
+### 2. Self-Hosted Authentication (`self_hosted_auth_example.dart`)
+
+Demonstrates JWT authentication with in-memory storage:
+- Custom JWT claims
+- Login, refresh, logout endpoints
+- Device flow for CLI tools
+- Protected resources with authentication
+- In-memory repositories (quick start)
+
+**Run:** `dart run self_hosted_auth_example.dart`
+
+### 3. Self-Hosted Auth with MongoDB (`self_hosted_auth_mongodb_example.dart`)
+
+Production-ready authentication setup:
+- MongoDB persistence for refresh tokens
+- Extending RefreshToken and DeviceCode
+- Code generation for repositories
+- Production security considerations
+
+**Note:** Conceptual example showing structure. Requires MongoDB setup.
+
+### 4. OAuth/OIDC Authentication (`oauth_auth_example.dart`)
+
+Demonstrates OAuth authentication with AWS Cognito:
+- JWT validation using JWKS
+- Cognito claims extraction
+- No auth endpoints needed (Cognito handles authentication)
+- Auto-creating users from OAuth claims
+
+**Run:** `dart run oauth_auth_example.dart`
+
+**Note:** Requires AWS Cognito configuration.
+
+### 5. Custom Routes (`custom_routes_example.dart`)
+
+Shows how to add custom routes alongside CRUD resources:
+- Health checks
+- Metrics endpoints
+- Webhook handlers
+- Mixed public and protected routes
+
+**Run:** `dart run custom_routes_example.dart`
+
+## Quick Start - Basic CRUD
+
+### What This Example Demonstrates
 
 This is a complete, working example that shows:
 

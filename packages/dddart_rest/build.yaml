@@ -1,0 +1,14 @@
+targets:
+  $default:
+    builders:
+      dddart_rest:jwt_claims:
+        enabled: true
+
+builders:
+  jwt_claims:
+    import: "package:dddart_rest/src/generators/jwt_claims_generator.dart"
+    builder_factories: ["jwtClaimsBuilder"]
+    build_extensions: {".dart": [".jwt_claims.g.part"]}
+    auto_apply: dependents
+    build_to: cache
+    applies_builders: ["source_gen|combining_builder"]

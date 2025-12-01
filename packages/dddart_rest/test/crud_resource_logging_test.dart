@@ -116,14 +116,14 @@ Request createRequest({
 void main() {
   late MockRepository repository;
   late TestUserSerializer serializer;
-  late CrudResource<TestUser> resource;
+  late CrudResource<TestUser, dynamic> resource;
   late TestUser testUser;
   late List<LogRecord> logRecords;
 
   setUp(() {
     repository = MockRepository();
     serializer = TestUserSerializer();
-    resource = CrudResource<TestUser>(
+    resource = CrudResource<TestUser, dynamic>(
       path: 'users',
       repository: repository,
       serializers: {
@@ -250,7 +250,7 @@ void main() {
       final inMemoryRepo = InMemoryRepository<TestUser>();
       await inMemoryRepo.save(testUser);
 
-      final inMemoryResource = CrudResource<TestUser>(
+      final inMemoryResource = CrudResource<TestUser, dynamic>(
         path: 'users',
         repository: inMemoryRepo,
         serializers: {'application/json': serializer},
@@ -376,7 +376,7 @@ void main() {
     test('logs 400 response at FINE level for bad request', () async {
       // Arrange
       final inMemoryRepo = InMemoryRepository<TestUser>();
-      final inMemoryResource = CrudResource<TestUser>(
+      final inMemoryResource = CrudResource<TestUser, dynamic>(
         path: 'users',
         repository: inMemoryRepo,
         serializers: {'application/json': serializer},
@@ -398,7 +398,7 @@ void main() {
   group('CrudResource Logging - Deserialization Failures', () {
     test('logs deserialization failure at WARNING level in POST', () async {
       // Arrange
-      final failingResource = CrudResource<TestUser>(
+      final failingResource = CrudResource<TestUser, dynamic>(
         path: 'users',
         repository: repository,
         serializers: {
@@ -424,7 +424,7 @@ void main() {
 
     test('logs deserialization failure at WARNING level in PUT', () async {
       // Arrange
-      final failingResource = CrudResource<TestUser>(
+      final failingResource = CrudResource<TestUser, dynamic>(
         path: 'users',
         repository: repository,
         serializers: {
@@ -451,7 +451,7 @@ void main() {
 
     test('warning log includes error details', () async {
       // Arrange
-      final failingResource = CrudResource<TestUser>(
+      final failingResource = CrudResource<TestUser, dynamic>(
         path: 'users',
         repository: repository,
         serializers: {

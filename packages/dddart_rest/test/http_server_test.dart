@@ -94,7 +94,7 @@ void main() {
       final server = HttpServer(port: 8081);
       final repository = InMemoryRepository<TestUser>();
       final serializer = TestUserSerializer();
-      final resource = CrudResource<TestUser>(
+      final resource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: repository,
         serializers: {'application/json': serializer},
@@ -126,7 +126,7 @@ void main() {
 
       final userRepository = InMemoryRepository<TestUser>();
       final userSerializer = TestUserSerializer();
-      final userResource = CrudResource<TestUser>(
+      final userResource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: userRepository,
         serializers: {'application/json': userSerializer},
@@ -134,7 +134,7 @@ void main() {
 
       final productRepository = InMemoryRepository<TestProduct>();
       final productSerializer = TestProductSerializer();
-      final productResource = CrudResource<TestProduct>(
+      final productResource = CrudResource<TestProduct, dynamic>(
         path: '/products',
         repository: productRepository,
         serializers: {'application/json': productSerializer},
@@ -172,7 +172,7 @@ void main() {
       final server = HttpServer(port: 8083);
       final repository = InMemoryRepository<TestUser>();
       final serializer = TestUserSerializer();
-      final resource = CrudResource<TestUser>(
+      final resource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: repository,
         serializers: {'application/json': serializer},
@@ -199,7 +199,7 @@ void main() {
       final server = HttpServer(port: 8084);
       final repository = InMemoryRepository<TestUser>();
       final serializer = TestUserSerializer();
-      final resource = CrudResource<TestUser>(
+      final resource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: repository,
         serializers: {'application/json': serializer},
@@ -245,7 +245,7 @@ void main() {
       final server = HttpServer(port: 8085);
       final repository = InMemoryRepository<TestUser>();
       final serializer = TestUserSerializer();
-      final resource = CrudResource<TestUser>(
+      final resource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: repository,
         serializers: {'application/json': serializer},
@@ -305,7 +305,7 @@ void main() {
       );
       await repository.save(testUser);
 
-      final resource = CrudResource<TestUser>(
+      final resource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: repository,
         serializers: {'application/json': serializer},
@@ -383,7 +383,7 @@ void main() {
       );
       await userRepository.save(testUser);
 
-      final userResource = CrudResource<TestUser>(
+      final userResource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: userRepository,
         serializers: {'application/json': userSerializer},
@@ -401,7 +401,7 @@ void main() {
       );
       await productRepository.save(testProduct);
 
-      final productResource = CrudResource<TestProduct>(
+      final productResource = CrudResource<TestProduct, dynamic>(
         path: '/products',
         repository: productRepository,
         serializers: {'application/json': productSerializer},
@@ -465,7 +465,7 @@ void main() {
       );
       await repository.save(testUser);
 
-      final resource = CrudResource<TestUser>(
+      final resource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: repository,
         serializers: {'application/json': serializer},

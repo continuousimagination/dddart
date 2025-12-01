@@ -168,7 +168,7 @@ void main() {
       server = HttpServer(port: port);
 
       server.registerResource(
-        CrudResource<TestUser>(
+        CrudResource<TestUser, dynamic>(
           path: '/users',
           repository: repository,
           serializers: {
@@ -317,14 +317,14 @@ void main() {
 
       // Register custom query handler
       server.registerResource(
-        CrudResource<TestUser>(
+        CrudResource<TestUser, dynamic>(
           path: '/users',
           repository: repository,
           serializers: {
             'application/json': serializer,
           },
           queryHandlers: {
-            'name': (repo, params, skip, take) async {
+            'name': (repo, params, skip, take, authResult) async {
               final name = params['name']!;
               final allUsers = (repo as InMemoryRepository<TestUser>).getAll();
               final filtered = allUsers.where((u) => u.name == name).toList();
@@ -422,7 +422,7 @@ void main() {
       server = HttpServer(port: port);
 
       server.registerResource(
-        CrudResource<TestUser>(
+        CrudResource<TestUser, dynamic>(
           path: '/users',
           repository: repository,
           serializers: {
@@ -583,14 +583,14 @@ void main() {
       server = HttpServer(port: port);
 
       server.registerResource(
-        CrudResource<TestUser>(
+        CrudResource<TestUser, dynamic>(
           path: '/users',
           repository: repository,
           serializers: {
             'application/json': serializer,
           },
           queryHandlers: {
-            'name': (repo, params, skip, take) async {
+            'name': (repo, params, skip, take, authResult) async {
               final name = params['name']!;
               final allUsers = (repo as InMemoryRepository<TestUser>).getAll();
               final filtered = allUsers.where((u) => u.name == name).toList();
@@ -731,7 +731,7 @@ void main() {
       server = HttpServer(port: port);
 
       server.registerResource(
-        CrudResource<TestUser>(
+        CrudResource<TestUser, dynamic>(
           path: '/users',
           repository: repository,
           serializers: {
@@ -827,14 +827,14 @@ void main() {
       server = HttpServer(port: port);
 
       server.registerResource(
-        CrudResource<TestUser>(
+        CrudResource<TestUser, dynamic>(
           path: '/users',
           repository: repository,
           serializers: {
             'application/json': serializer,
           },
           queryHandlers: {
-            'name': (repo, params, skip, take) async {
+            'name': (repo, params, skip, take, authResult) async {
               final name = params['name']!;
               final allUsers = (repo as InMemoryRepository<TestUser>).getAll();
               final filtered = allUsers.where((u) => u.name == name).toList();

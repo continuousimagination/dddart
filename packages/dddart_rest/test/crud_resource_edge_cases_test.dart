@@ -76,7 +76,7 @@ void main() {
     test('empty serializers map throws ArgumentError', () {
       // Act & Assert
       expect(
-        () => CrudResource<TestUser>(
+        () => CrudResource<TestUser, dynamic>(
           path: '/users',
           repository: repository,
           serializers: {}, // Empty map
@@ -94,7 +94,7 @@ void main() {
     test('empty path throws ArgumentError', () {
       // Act & Assert
       expect(
-        () => CrudResource<TestUser>(
+        () => CrudResource<TestUser, dynamic>(
           path: '', // Empty path
           repository: repository,
           serializers: {'application/json': serializer},
@@ -124,7 +124,7 @@ void main() {
         await repository.save(user);
       }
 
-      final resource = CrudResource<TestUser>(
+      final resource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: repository,
         serializers: {'application/json': serializer},
@@ -158,7 +158,7 @@ void main() {
         await repository.save(user);
       }
 
-      final resource = CrudResource<TestUser>(
+      final resource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: repository,
         serializers: {'application/json': serializer},
@@ -192,7 +192,7 @@ void main() {
         await repository.save(user);
       }
 
-      final resource = CrudResource<TestUser>(
+      final resource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: repository,
         serializers: {'application/json': serializer},
@@ -227,7 +227,7 @@ void main() {
         await repository.save(user);
       }
 
-      final resource = CrudResource<TestUser>(
+      final resource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: repository,
         serializers: {'application/json': serializer},
@@ -266,7 +266,7 @@ void main() {
 
       await repository.save(testUser);
 
-      final resource = CrudResource<TestUser>(
+      final resource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: repository,
         serializers: {
@@ -300,7 +300,7 @@ void main() {
         updatedAt: DateTime.now(),
       );
 
-      final resource = CrudResource<TestUser>(
+      final resource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: repository,
         serializers: {'application/json': serializer},
@@ -336,7 +336,7 @@ void main() {
         updatedAt: DateTime.now(),
       );
 
-      final resource = CrudResource<TestUser>(
+      final resource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: repository,
         serializers: {'application/json': serializer},
@@ -377,12 +377,13 @@ void main() {
         Map<String, String> params,
         int skip,
         int take,
+        dynamic authResult,
       ) async {
         // Return result with null totalCount
         return QueryResult<TestUser>([testUser]);
       }
 
-      final resource = CrudResource<TestUser>(
+      final resource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: repository,
         serializers: {'application/json': serializer},
@@ -406,12 +407,13 @@ void main() {
         Map<String, String> params,
         int skip,
         int take,
+        dynamic authResult,
       ) async {
         // Return empty result
         return QueryResult<TestUser>([], totalCount: 0);
       }
 
-      final resource = CrudResource<TestUser>(
+      final resource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: repository,
         serializers: {'application/json': serializer},
