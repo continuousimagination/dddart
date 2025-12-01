@@ -1,0 +1,14 @@
+targets:
+  $default:
+    builders:
+      dddart_repository_sqlite:sqlite_repository:
+        enabled: true
+
+builders:
+  sqlite_repository:
+    import: "package:dddart_repository_sqlite/src/generators/sqlite_repository_generator.dart"
+    builder_factories: ["sqliteRepositoryBuilder"]
+    build_extensions: {".dart": [".sqlite_repository.g.part"]}
+    auto_apply: dependents
+    build_to: cache
+    applies_builders: ["source_gen|combining_builder"]

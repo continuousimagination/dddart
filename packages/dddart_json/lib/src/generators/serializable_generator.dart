@@ -49,10 +49,10 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
       case ClassType.value:
         return _generateValueSerialization(classElement, classAnalysis, config);
       case ClassType.entity:
-        throw InvalidGenerationSourceError(
-          'Entity classes cannot be directly serialized. Only AggregateRoot and Value classes are supported. '
-          'Entities should be serialized as part of their containing AggregateRoot.',
-          element: element,
+        return _generateEntitySerialization(
+          classElement,
+          classAnalysis,
+          config,
         );
       case ClassType.invalid:
         throw InvalidGenerationSourceError(
@@ -94,6 +94,32 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
     // Generate the basic toJson and fromJson method bodies
     final toJsonBody = _generateValueToJson(analysis, config);
     final fromJsonBody = _generateValueFromJson(analysis, config);
+
+    // Generate the complete JsonSerializer class
+    return _generateJsonSerializerClass(
+      className,
+      toJsonBody,
+      fromJsonBody,
+      analysis,
+    );
+  }
+
+  /// Generates serialization code for Entity classes.
+  ///
+  /// Entities are similar to AggregateRoots but are serialized as part of
+  /// their containing aggregate. They have id, createdAt, and updatedAt fields
+  /// from the Entity base class.
+  String _generateEntitySerialization(
+    ClassElement classElement,
+    ClassAnalysis analysis,
+    SerializationConfig config,
+  ) {
+    final className = analysis.className;
+
+    // Generate the basic toJson and fromJson method bodies
+    // Entities are serialized like AggregateRoots (they have id, timestamps)
+    final toJsonBody = _generateAggregateRootToJson(analysis, config);
+    final fromJsonBody = _generateAggregateRootFromJson(analysis, config);
 
     // Generate the complete JsonSerializer class
     return _generateJsonSerializerClass(
@@ -170,14 +196,43 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
   ) {
     final fields = <FieldInfo>[];
 
+    // For Entity classes, we need to explicitly include the inherited fields
+    // from the Entity base class (id, createdAt, updatedAt) since they're needed
+    // for persistence
+    if (classType == ClassType.entity) {
+      // Add Entity base class fields
+      final supertype = classElement.supertype;
+      if (supertype != null) {
+        for (final field in supertype.element.fields) {
+          if (['id', 'createdAt', 'updatedAt'].contains(field.name) &&
+              !field.isStatic &&
+              !field.isSynthetic) {
+            final fieldType = field.type;
+            final isNullable =
+                fieldType.nullabilitySuffix == NullabilitySuffix.question;
+            fields.add(
+              FieldInfo(
+                name: field.name,
+                type: fieldType,
+                isNullable: isNullable,
+              ),
+            );
+          }
+        }
+      }
+    }
+
     // Get all fields from the class (excluding inherited ones from DDDart base classes)
     for (final field in classElement.fields) {
       // Skip static fields and synthetic fields
       if (field.isStatic || field.isSynthetic) continue;
 
       // Skip fields that are part of the DDDart base classes
+      // For AggregateRoot, skip id, createdAt, updatedAt (handled specially)
+      // For Entity, we already added these above
       if (['id', 'createdAt', 'updatedAt'].contains(field.name) &&
-          classType == ClassType.aggregateRoot) {
+          (classType == ClassType.aggregateRoot ||
+              classType == ClassType.entity)) {
         continue;
       }
 

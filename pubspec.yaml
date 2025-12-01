@@ -12,5 +12,8 @@ workspace:
   - packages/dddart_config
   - packages/dddart_repository_mongodb
   - packages/dddart_repository_dynamodb
+  - packages/dddart_repository_sql
+  - packages/dddart_repository_sqlite
+  - packages/dddart_repository_sqlite/example
   - packages/dddart_webhooks
   - packages/dddart_webhooks_slack
