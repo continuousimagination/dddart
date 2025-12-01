@@ -145,7 +145,8 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   ///
   /// Returns: null if authenticated or no auth required, 401 Response if auth fails
   Future<({Response? response, AuthResult<TClaims>? authResult})> _authenticate(
-      Request request,) async {
+    Request request,
+  ) async {
     if (authHandler == null) {
       return (response: null, authResult: null);
     }

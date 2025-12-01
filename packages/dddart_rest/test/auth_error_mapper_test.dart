@@ -11,7 +11,9 @@ void main() {
 
       expect(response.statusCode, equals(401));
       expect(
-          response.headers['Content-Type'], equals('application/problem+json'),);
+        response.headers['Content-Type'],
+        equals('application/problem+json'),
+      );
 
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString) as Map<String, dynamic>;

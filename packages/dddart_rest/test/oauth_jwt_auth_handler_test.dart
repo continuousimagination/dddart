@@ -130,8 +130,10 @@ void main() {
         var jwksFetchCount = 0;
         final mockClient = MockClient((request) async {
           jwksFetchCount++;
-          expect(request.url.toString(),
-              equals('https://example.com/.well-known/jwks.json'),);
+          expect(
+            request.url.toString(),
+            equals('https://example.com/.well-known/jwks.json'),
+          );
           return http.Response(jsonEncode(createMockJwks()), 200);
         });
 
@@ -142,8 +144,11 @@ void main() {
         );
 
         // Create a token with kid
-        final header = base64Url.encode(utf8.encode(
-            jsonEncode({'alg': 'RS256', 'typ': 'JWT', 'kid': 'test-key-id'}),),);
+        final header = base64Url.encode(
+          utf8.encode(
+            jsonEncode({'alg': 'RS256', 'typ': 'JWT', 'kid': 'test-key-id'}),
+          ),
+        );
         final payload =
             base64Url.encode(utf8.encode(jsonEncode({'sub': 'user123'})));
         final signature = base64Url.encode(utf8.encode('fake-signature'));
@@ -176,8 +181,11 @@ void main() {
         );
 
         // Create a token with kid
-        final header = base64Url.encode(utf8.encode(
-            jsonEncode({'alg': 'RS256', 'typ': 'JWT', 'kid': 'test-key-id'}),),);
+        final header = base64Url.encode(
+          utf8.encode(
+            jsonEncode({'alg': 'RS256', 'typ': 'JWT', 'kid': 'test-key-id'}),
+          ),
+        );
         final payload =
             base64Url.encode(utf8.encode(jsonEncode({'sub': 'user123'})));
         final signature = base64Url.encode(utf8.encode('fake-signature'));
@@ -219,8 +227,11 @@ void main() {
         );
 
         // Create a token with kid
-        final header = base64Url.encode(utf8.encode(
-            jsonEncode({'alg': 'RS256', 'typ': 'JWT', 'kid': 'test-key-id'}),),);
+        final header = base64Url.encode(
+          utf8.encode(
+            jsonEncode({'alg': 'RS256', 'typ': 'JWT', 'kid': 'test-key-id'}),
+          ),
+        );
         final payload =
             base64Url.encode(utf8.encode(jsonEncode({'sub': 'user123'})));
         final signature = base64Url.encode(utf8.encode('fake-signature'));
@@ -262,8 +273,11 @@ void main() {
         );
 
         // Create a token with kid
-        final header = base64Url.encode(utf8.encode(
-            jsonEncode({'alg': 'RS256', 'typ': 'JWT', 'kid': 'test-key-id'}),),);
+        final header = base64Url.encode(
+          utf8.encode(
+            jsonEncode({'alg': 'RS256', 'typ': 'JWT', 'kid': 'test-key-id'}),
+          ),
+        );
         final payload =
             base64Url.encode(utf8.encode(jsonEncode({'sub': 'user123'})));
         final signature = base64Url.encode(utf8.encode('fake-signature'));
@@ -309,8 +323,11 @@ void main() {
         );
 
         // Create a token with kid that doesn't match
-        final header = base64Url.encode(utf8.encode(
-            jsonEncode({'alg': 'RS256', 'typ': 'JWT', 'kid': 'test-key-id'}),),);
+        final header = base64Url.encode(
+          utf8.encode(
+            jsonEncode({'alg': 'RS256', 'typ': 'JWT', 'kid': 'test-key-id'}),
+          ),
+        );
         final payload =
             base64Url.encode(utf8.encode(jsonEncode({'sub': 'user123'})));
         final signature = base64Url.encode(utf8.encode('fake-signature'));
@@ -340,8 +357,11 @@ void main() {
         );
 
         // Create a token with kid
-        final header = base64Url.encode(utf8.encode(
-            jsonEncode({'alg': 'RS256', 'typ': 'JWT', 'kid': 'test-key-id'}),),);
+        final header = base64Url.encode(
+          utf8.encode(
+            jsonEncode({'alg': 'RS256', 'typ': 'JWT', 'kid': 'test-key-id'}),
+          ),
+        );
         final payload =
             base64Url.encode(utf8.encode(jsonEncode({'sub': 'user123'})));
         final signature = base64Url.encode(utf8.encode('fake-signature'));

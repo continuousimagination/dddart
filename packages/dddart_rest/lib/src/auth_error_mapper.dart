@@ -137,15 +137,19 @@ class AuthErrorMapper {
 
     // Remove anything that looks like a secret or key
     sanitized = sanitized.replaceAll(
-        RegExp(r'secret[:\s=]+[^\s]+', caseSensitive: false),
-        'secret: [REDACTED]',);
+      RegExp(r'secret[:\s=]+[^\s]+', caseSensitive: false),
+      'secret: [REDACTED]',
+    );
     sanitized = sanitized.replaceAll(
-        RegExp(r'key[:\s=]+[^\s]+', caseSensitive: false), 'key: [REDACTED]',);
+      RegExp(r'key[:\s=]+[^\s]+', caseSensitive: false),
+      'key: [REDACTED]',
+    );
 
     // Remove anything that looks like a signature
     sanitized = sanitized.replaceAll(
-        RegExp(r'signature[:\s=]+[^\s]+', caseSensitive: false),
-        'signature: [REDACTED]',);
+      RegExp(r'signature[:\s=]+[^\s]+', caseSensitive: false),
+      'signature: [REDACTED]',
+    );
 
     // Remove file paths
     sanitized = sanitized.replaceAll(RegExp(r'(/[^\s]+)+'), '[PATH]');

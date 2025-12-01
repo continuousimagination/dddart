@@ -306,7 +306,9 @@ class JwtAuthHandler<TClaims, TRefreshToken extends RefreshToken>
   String _generateRefreshToken() {
     // Generate 32 random bytes and encode as base64
     final bytes = List<int>.generate(
-        32, (i) => DateTime.now().microsecondsSinceEpoch % 256,);
+      32,
+      (i) => DateTime.now().microsecondsSinceEpoch % 256,
+    );
     final hash = sha256.convert(bytes);
     return base64Url.encode(hash.bytes);
   }

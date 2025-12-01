@@ -244,7 +244,9 @@ void main() {
 
         expect(newTokens.accessToken, isNotEmpty);
         expect(
-            newTokens.accessToken, isNot(equals(originalTokens.accessToken)),);
+          newTokens.accessToken,
+          isNot(equals(originalTokens.accessToken)),
+        );
         expect(newTokens.refreshToken, equals(originalTokens.refreshToken));
       });
 
