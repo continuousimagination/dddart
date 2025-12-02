@@ -257,6 +257,12 @@ void main() {
     });
 
     group('multiple aggregates', () {
+      setUp(() async {
+        // Ensure clean state for each test in this group
+        await helper.clearTable('test_users');
+        await helper.clearTable('custom_products');
+      });
+
       test('should handle multiple aggregates independently', () async {
         final userRepo = TestUserDynamoRepository(helper.connection);
         final productRepo = TestProductDynamoRepository(helper.connection);

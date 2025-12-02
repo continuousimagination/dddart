@@ -1,9 +1,12 @@
 # Test configuration for dddart_repository_mysql
 
+# Run all tests serially to avoid MySQL database conflicts
+concurrency: 1
+
 tags:
   # Tests that require a running MySQL instance
   requires-mysql:
-    skip: "MySQL not available. Start MySQL with: docker run -d -p 3307:3306 -e MYSQL_ROOT_PASSWORD=test_password -e MYSQL_DATABASE=test_db mysql:8.0"
+    timeout: 2x
   
   # Property-based tests
   property-test:
@@ -11,3 +14,4 @@ tags:
   
   # Integration tests
   integration:
+    timeout: 2x

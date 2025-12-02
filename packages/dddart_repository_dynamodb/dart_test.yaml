@@ -1,5 +1,8 @@
 # Test configuration for dddart_repository_dynamodb
 
+# Run all tests serially to avoid DynamoDB table conflicts
+concurrency: 1
+
 # Define test tags
 tags:
   # Generator tests that use build_test (can hit file descriptor limits)
@@ -11,6 +14,9 @@ tags:
     timeout: 2x
   
   # Tests that require DynamoDB Local to be running
+  requires-dynamodb:
+    timeout: 2x
+  
   requires-dynamodb-local:
     skip: "DynamoDB Local must be running on localhost:8000"
 

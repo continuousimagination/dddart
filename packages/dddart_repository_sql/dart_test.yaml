@@ -1,0 +1,9 @@
+# Test configuration for dddart_repository_sql
+
+# Run all tests serially to avoid database conflicts
+concurrency: 1
+
+tags:
+  # Property-based tests
+  property-test:
+    timeout: 2x
