@@ -22,32 +22,37 @@ void main() {
     var mysqlAvailable = false;
 
     setUpAll(() async {
+      // Test if MySQL is available
       final testHelper = createTestHelper();
       try {
         await testHelper.connect();
         mysqlAvailable = true;
-        helper = testHelper;
+        await testHelper.disconnect();
       } catch (e) {
         // MySQL not available - tests will be skipped
         mysqlAvailable = false;
       }
     });
 
-    setUp(() {
+    setUp(() async {
       if (!mysqlAvailable) {
         markTestSkipped('MySQL not available on localhost:3307');
+        return;
       }
+      // Create fresh connection for each test
+      helper = createTestHelper();
+      await helper!.connect();
     });
 
     tearDown(() async {
-      if (mysqlAvailable && helper != null && helper!.isConnected) {
-        // Clean up all tables
-        await helper!.dropAllTables();
-      }
-    });
-
-    tearDownAll(() async {
-      if (mysqlAvailable && helper != null && helper!.isConnected) {
+      if (helper != null && helper!.isConnected) {
+        try {
+          // Clean up all tables
+          await helper!.dropAllTables();
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+        // Always disconnect to avoid connection leaks
         await helper!.disconnect();
       }
     });
