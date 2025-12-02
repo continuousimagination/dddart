@@ -80,12 +80,16 @@ jobs:
       - name: Get dependencies (workspace)
         run: dart pub get
       
-      - name: Run code generation (if needed)
+      - name: Run code generation for all packages (if needed)
         run: |
-          if grep -q "build_runner" pubspec.yaml; then
-            dart run build_runner build --delete-conflicting-outputs
-          fi
-        working-directory: packages/${{ matrix.package }}
+          for pkg in packages/*/; do
+            if [ -f "$pkg/pubspec.yaml" ] && grep -q "build_runner" "$pkg/pubspec.yaml"; then
+              echo "Running code generation for $pkg"
+              cd "$pkg"
+              dart run build_runner build --delete-conflicting-outputs || true
+              cd - > /dev/null
+            fi
+          done
         continue-on-error: true
       
       - name: Analyze code
