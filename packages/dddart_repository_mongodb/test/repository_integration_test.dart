@@ -26,21 +26,34 @@ void main() {
       try {
         await helper.connect();
         mongoAvailable = true;
+        // Clear all collections at start
+        if (mongoAvailable) {
+          await helper.clearCollection('test_users');
+          await helper.clearCollection('custom_products');
+          await helper.clearCollection('test_orders');
+          await helper.clearCollection('test_accounts');
+        }
       } catch (e) {
         // MongoDB not available - tests will be skipped
         mongoAvailable = false;
       }
     });
 
-    setUp(() {
+    setUp(() async {
       if (!mongoAvailable) {
         markTestSkipped('MongoDB not available on localhost:27017');
+        return;
       }
+      // Clear all collections before each test
+      await helper.clearCollection('test_users');
+      await helper.clearCollection('custom_products');
+      await helper.clearCollection('test_orders');
+      await helper.clearCollection('test_accounts');
     });
 
     tearDown(() async {
       if (mongoAvailable && helper.isConnected) {
-        // Clean up test collections
+        // Clean up test collections after each test
         await helper.clearCollection('test_users');
         await helper.clearCollection('custom_products');
         await helper.clearCollection('test_orders');
@@ -50,6 +63,11 @@ void main() {
 
     tearDownAll(() async {
       if (mongoAvailable && helper.isConnected) {
+        // Final cleanup of all collections
+        await helper.clearCollection('test_users');
+        await helper.clearCollection('custom_products');
+        await helper.clearCollection('test_orders');
+        await helper.clearCollection('test_accounts');
         await helper.disconnect();
       }
     });
@@ -245,6 +263,12 @@ void main() {
     });
 
     group('multiple aggregates', () {
+      setUp(() async {
+        // Ensure clean state for each test in this group
+        await helper.clearCollection('test_users');
+        await helper.clearCollection('custom_products');
+      });
+
       test('should handle multiple aggregates independently', () async {
         final userRepo = TestUserMongoRepository(helper.database);
         final productRepo = TestProductMongoRepository(helper.database);

@@ -7,6 +7,9 @@
 # Or exclude them if MongoDB is not available:
 #   dart test --exclude-tags=requires-mongo
 
+# Run all tests serially to avoid MongoDB collection conflicts
+concurrency: 1
+
 # Define test tags
 tags:
   # Generator tests that use build_test (can hit file descriptor limits)

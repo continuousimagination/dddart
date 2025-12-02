@@ -20,6 +20,10 @@ void main() {
       try {
         await helper.connect();
         mongoAvailable = true;
+        // Clear collection once at start
+        if (mongoAvailable) {
+          await helper.clearCollection('test_users');
+        }
       } catch (e) {
         // MongoDB not available - tests will be skipped
         mongoAvailable = false;
@@ -32,19 +36,21 @@ void main() {
         return;
       }
       repository = TestUserMongoRepository(helper.database);
-      // Clear any existing test data
-      await helper.clearCollection('test_user');
+      // Clear any existing test data before each test
+      await helper.clearCollection('test_users');
     });
 
     tearDown(() async {
       if (mongoAvailable && helper.isConnected) {
-        // Clean up test data
-        await helper.clearCollection('test_user');
+        // Clean up test data after each test
+        await helper.clearCollection('test_users');
       }
     });
 
     tearDownAll(() async {
       if (mongoAvailable && helper.isConnected) {
+        // Final cleanup
+        await helper.clearCollection('test_users');
         await helper.disconnect();
       }
     });
