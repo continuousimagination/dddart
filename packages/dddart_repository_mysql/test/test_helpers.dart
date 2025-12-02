@@ -95,30 +95,41 @@ class TestMysqlHelper {
   ///
   /// Useful for cleaning up between tests.
   Future<void> dropAllTables() async {
-    if (!isConnected) {
-      throw StateError('Not connected. Call connect() first.');
+    // Check if connection is still valid, reconnect if needed
+    if (_connection == null || !_connection!.isOpen) {
+      try {
+        await connect();
+      } catch (e) {
+        // If we can't reconnect, silently return - database might be gone
+        return;
+      }
     }
 
-    // Disable foreign key checks temporarily
-    await _connection!.execute('SET FOREIGN_KEY_CHECKS = 0');
-
     try {
-      // Get all tables - use uppercase TABLE_NAME as that's what MySQL returns
-      final tables = await _connection!.query(
-        'SELECT TABLE_NAME FROM information_schema.tables '
-        "WHERE table_schema = '$database'",
-      );
+      // Disable foreign key checks temporarily
+      await _connection!.execute('SET FOREIGN_KEY_CHECKS = 0');
 
-      // Drop each table
-      for (final row in tables) {
-        final tableName = row['TABLE_NAME'];
-        if (tableName != null) {
-          await _connection!.execute('DROP TABLE IF EXISTS `$tableName`');
+      try {
+        // Get all tables - use uppercase TABLE_NAME as that's what MySQL returns
+        final tables = await _connection!.query(
+          'SELECT TABLE_NAME FROM information_schema.tables '
+          "WHERE table_schema = '$database'",
+        );
+
+        // Drop each table
+        for (final row in tables) {
+          final tableName = row['TABLE_NAME'];
+          if (tableName != null) {
+            await _connection!.execute('DROP TABLE IF EXISTS `$tableName`');
+          }
         }
+      } finally {
+        // Re-enable foreign key checks
+        await _connection!.execute('SET FOREIGN_KEY_CHECKS = 1');
       }
-    } finally {
-      // Re-enable foreign key checks
-      await _connection!.execute('SET FOREIGN_KEY_CHECKS = 1');
+    } catch (e) {
+      // Ignore errors during cleanup - connection might be closed
+      // This is acceptable in test teardown
     }
   }
 
@@ -209,12 +220,18 @@ Future<void> withMysqlConnection(
 
     await testFn(connection);
   } finally {
-    // Clean up all tables
+    // Clean up all tables - ignore any errors during cleanup
     try {
       await helper.dropAllTables();
     } catch (e) {
-      // Ignore cleanup errors
+      // Silently ignore cleanup errors - connection might be closed
     }
-    await helper.disconnect();
+    
+    // Disconnect - ignore any errors
+    try {
+      await helper.disconnect();
+    } catch (e) {
+      // Silently ignore disconnect errors
+    }
   }
 }
