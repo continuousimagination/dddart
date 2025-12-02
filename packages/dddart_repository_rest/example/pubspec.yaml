@@ -1,0 +1,24 @@
+name: dddart_repository_rest_example
+description: Examples for dddart_repository_rest package
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: '>=3.5.0 <4.0.0'
+
+dependencies:
+  dddart:
+    resolution: workspace
+  dddart_json:
+    resolution: workspace
+  dddart_repository_rest:
+    resolution: workspace
+  dddart_rest:
+    resolution: workspace
+  dddart_rest_client:
+    resolution: workspace
+  dddart_serialization:
+    resolution: workspace
+
+dev_dependencies:
+  build_runner: ^2.4.0
