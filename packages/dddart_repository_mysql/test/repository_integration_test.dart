@@ -1,9 +1,9 @@
 /// Integration tests for generated MySQL repositories.
 ///
-/// These tests require a running MySQL instance on localhost:3306.
+/// These tests require a running MySQL instance on localhost:3307.
 /// You can use Docker to run MySQL:
-///   docker run -d -p 3306:3306 -e MYSQL_ROOT_PASSWORD=test_password \
-///     -e MYSQL_DATABASE=test_dddart_mysql mysql:8.0
+///   docker run -d -p 3307:3306 -e MYSQL_ROOT_PASSWORD=test_password \
+///     -e MYSQL_DATABASE=test_db mysql:8.0
 ///
 /// Or skip these tests if MySQL is not available:
 ///   dart test --exclude-tags=requires-mysql
@@ -18,14 +18,15 @@ import 'test_helpers.dart';
 
 void main() {
   group('Generated MySQL Repository Integration Tests', () {
-    late TestMysqlHelper helper;
+    TestMysqlHelper? helper;
     var mysqlAvailable = false;
 
     setUpAll(() async {
-      helper = createTestHelper();
+      final testHelper = createTestHelper();
       try {
-        await helper.connect();
+        await testHelper.connect();
         mysqlAvailable = true;
+        helper = testHelper;
       } catch (e) {
         // MySQL not available - tests will be skipped
         mysqlAvailable = false;
@@ -34,26 +35,26 @@ void main() {
 
     setUp(() {
       if (!mysqlAvailable) {
-        markTestSkipped('MySQL not available on localhost:3306');
+        markTestSkipped('MySQL not available on localhost:3307');
       }
     });
 
     tearDown(() async {
-      if (mysqlAvailable && helper.isConnected) {
+      if (mysqlAvailable && helper != null && helper!.isConnected) {
         // Clean up all tables
-        await helper.dropAllTables();
+        await helper!.dropAllTables();
       }
     });
 
     tearDownAll(() async {
-      if (mysqlAvailable && helper.isConnected) {
-        await helper.disconnect();
+      if (mysqlAvailable && helper != null && helper!.isConnected) {
+        await helper!.disconnect();
       }
     });
 
     group('CRUD operations', () {
       test('should save and retrieve an aggregate', () async {
-        final repo = SimpleProductMysqlRepository(helper.connection);
+        final repo = SimpleProductMysqlRepository(helper!.connection);
         await repo.createTables();
 
         final product = SimpleProduct(
@@ -73,7 +74,7 @@ void main() {
       });
 
       test('should update an existing aggregate', () async {
-        final repo = SimpleProductMysqlRepository(helper.connection);
+        final repo = SimpleProductMysqlRepository(helper!.connection);
         await repo.createTables();
 
         final product = SimpleProduct(
@@ -102,7 +103,7 @@ void main() {
       });
 
       test('should delete an aggregate by ID', () async {
-        final repo = SimpleProductMysqlRepository(helper.connection);
+        final repo = SimpleProductMysqlRepository(helper!.connection);
         await repo.createTables();
 
         final product = SimpleProduct(
@@ -135,7 +136,7 @@ void main() {
 
       test('should throw RepositoryException.notFound for non-existent ID',
           () async {
-        final repo = SimpleProductMysqlRepository(helper.connection);
+        final repo = SimpleProductMysqlRepository(helper!.connection);
         await repo.createTables();
 
         final nonExistentId = UuidValue.generate();
@@ -155,7 +156,7 @@ void main() {
 
     group('complex object graphs with entities', () {
       test('should save and retrieve aggregate with entities', () async {
-        final repo = OrderMysqlRepository(helper.connection);
+        final repo = OrderMysqlRepository(helper!.connection);
         await repo.createTables();
 
         final order = Order(
@@ -191,7 +192,7 @@ void main() {
       });
 
       test('should update entities in aggregate', () async {
-        final repo = OrderMysqlRepository(helper.connection);
+        final repo = OrderMysqlRepository(helper!.connection);
         await repo.createTables();
 
         final order = Order(
@@ -224,7 +225,7 @@ void main() {
       });
 
       test('should handle empty entity collections', () async {
-        final repo = OrderMysqlRepository(helper.connection);
+        final repo = OrderMysqlRepository(helper!.connection);
         await repo.createTables();
 
         final order = Order(
@@ -242,7 +243,7 @@ void main() {
 
     group('value object embedding', () {
       test('should embed and reconstruct value objects', () async {
-        final repo = CustomerMysqlRepository(helper.connection);
+        final repo = CustomerMysqlRepository(helper!.connection);
         await repo.createTables();
 
         final customer = Customer(
@@ -270,7 +271,7 @@ void main() {
       });
 
       test('should handle nullable value objects', () async {
-        final repo = CustomerMysqlRepository(helper.connection);
+        final repo = CustomerMysqlRepository(helper!.connection);
         await repo.createTables();
 
         final customer = Customer(
@@ -294,7 +295,7 @@ void main() {
       });
 
       test('should handle non-null nullable value objects', () async {
-        final repo = CustomerMysqlRepository(helper.connection);
+        final repo = CustomerMysqlRepository(helper!.connection);
         await repo.createTables();
 
         final customer = Customer(
@@ -328,7 +329,7 @@ void main() {
     group('foreign key CASCADE DELETE', () {
       test('should cascade delete entities when aggregate is deleted',
           () async {
-        final repo = OrderMysqlRepository(helper.connection);
+        final repo = OrderMysqlRepository(helper!.connection);
         await repo.createTables();
 
         final order = Order(
@@ -342,19 +343,19 @@ void main() {
         await repo.save(order);
 
         // Verify items exist in database
-        final itemCount = await helper.countRows('order_item');
+        final itemCount = await helper!.countRows('order_item');
         expect(itemCount, equals(2));
 
         // Delete order
         await repo.deleteById(order.id);
 
         // Verify items were cascade deleted
-        final itemCountAfter = await helper.countRows('order_item');
+        final itemCountAfter = await helper!.countRows('order_item');
         expect(itemCountAfter, equals(0));
       });
 
       test('should not affect other aggregates when deleting one', () async {
-        final repo = OrderMysqlRepository(helper.connection);
+        final repo = OrderMysqlRepository(helper!.connection);
         await repo.createTables();
 
         final order1 = Order(
@@ -386,7 +387,7 @@ void main() {
 
     group('custom repository interfaces', () {
       test('should support custom repository methods', () async {
-        final repo = CustomProductRepositoryImpl(helper.connection);
+        final repo = CustomProductRepositoryImpl(helper!.connection);
         await repo.createTables();
 
         // Save products
@@ -406,7 +407,7 @@ void main() {
       });
 
       test('should use same transaction context for custom queries', () async {
-        final repo = CustomProductRepositoryImpl(helper.connection);
+        final repo = CustomProductRepositoryImpl(helper!.connection);
         await repo.createTables();
 
         // Save a product

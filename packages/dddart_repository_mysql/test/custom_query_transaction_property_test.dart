@@ -10,30 +10,37 @@ import 'test_helpers.dart';
 
 void main() {
   group('Custom Query Transaction Property Tests', () {
-    late TestMysqlHelper helper;
+    TestMysqlHelper? helper;
     var mysqlAvailable = false;
 
     setUpAll(() async {
-      helper = createTestHelper();
+      final testHelper = createTestHelper();
       try {
-        await helper.connect();
+        await testHelper.connect();
         mysqlAvailable = true;
+        helper = testHelper;
       } catch (e) {
         // MySQL not available - tests will be skipped
         mysqlAvailable = false;
       }
     });
 
+    setUp(() {
+      if (!mysqlAvailable) {
+        markTestSkipped('MySQL not available on localhost:3307');
+      }
+    });
+
     tearDown(() async {
-      if (mysqlAvailable && helper.isConnected) {
+      if (mysqlAvailable && helper != null && helper!.isConnected) {
         // Clean up all tables
-        await helper.dropAllTables();
+        await helper!.dropAllTables();
       }
     });
 
     tearDownAll(() async {
-      if (mysqlAvailable && helper.isConnected) {
-        await helper.disconnect();
+      if (mysqlAvailable && helper != null && helper!.isConnected) {
+        await helper!.disconnect();
       }
     });
 
@@ -47,7 +54,7 @@ void main() {
           final random = Random(100);
 
           for (var i = 0; i < 10; i++) {
-            final repo = CustomProductRepositoryImpl(helper.connection);
+            final repo = CustomProductRepositoryImpl(helper!.connection);
             await repo.createTables();
 
             // Generate random products
@@ -60,7 +67,7 @@ void main() {
             );
 
             // Execute within transaction
-            await helper.connection.transaction(() async {
+            await helper!.connection.transaction(() async {
               // Save products using standard method
               for (final product in products) {
                 await repo.save(product);
@@ -86,7 +93,7 @@ void main() {
             );
 
             // Clean up for next iteration
-            await helper.dropAllTables();
+            await helper!.dropAllTables();
           }
         },
         tags: ['requires-mysql', 'property-test'],
@@ -98,7 +105,7 @@ void main() {
           final random = Random(101);
 
           for (var i = 0; i < 10; i++) {
-            final repo = CustomProductRepositoryImpl(helper.connection);
+            final repo = CustomProductRepositoryImpl(helper!.connection);
             await repo.createTables();
 
             // Generate random products
@@ -113,7 +120,7 @@ void main() {
             // Execute transaction that will fail
             var exceptionThrown = false;
             try {
-              await helper.connection.transaction(() async {
+              await helper!.connection.transaction(() async {
                 // Save products using standard method
                 for (final product in products) {
                   await repo.save(product);
@@ -151,7 +158,7 @@ void main() {
             );
 
             // Clean up for next iteration
-            await helper.dropAllTables();
+            await helper!.dropAllTables();
           }
         },
         tags: ['requires-mysql', 'property-test'],
@@ -163,7 +170,7 @@ void main() {
           final random = Random(102);
 
           for (var i = 0; i < 10; i++) {
-            final repo = CustomProductRepositoryImpl(helper.connection);
+            final repo = CustomProductRepositoryImpl(helper!.connection);
             await repo.createTables();
 
             // Generate random products with varying prices
@@ -186,7 +193,7 @@ void main() {
             final allProducts = [...lowPriceProducts, ...highPriceProducts];
 
             // Execute transaction with mixed operations
-            await helper.connection.transaction(() async {
+            await helper!.connection.transaction(() async {
               // Save all products using standard method
               for (final product in allProducts) {
                 await repo.save(product);
@@ -236,7 +243,7 @@ void main() {
             );
 
             // Clean up for next iteration
-            await helper.dropAllTables();
+            await helper!.dropAllTables();
           }
         },
         tags: ['requires-mysql', 'property-test'],
@@ -248,7 +255,7 @@ void main() {
           final random = Random(103);
 
           for (var i = 0; i < 10; i++) {
-            final repo = CustomProductRepositoryImpl(helper.connection);
+            final repo = CustomProductRepositoryImpl(helper!.connection);
             await repo.createTables();
 
             final outerProducts = List.generate(
@@ -268,7 +275,7 @@ void main() {
             );
 
             // Execute nested transactions
-            await helper.connection.transaction(() async {
+            await helper!.connection.transaction(() async {
               // Save outer products
               for (final product in outerProducts) {
                 await repo.save(product);
@@ -283,7 +290,7 @@ void main() {
               );
 
               // Inner transaction
-              await helper.connection.transaction(() async {
+              await helper!.connection.transaction(() async {
                 // Save inner products
                 for (final product in innerProducts) {
                   await repo.save(product);
@@ -318,7 +325,7 @@ void main() {
             );
 
             // Clean up for next iteration
-            await helper.dropAllTables();
+            await helper!.dropAllTables();
           }
         },
         tags: ['requires-mysql', 'property-test'],
@@ -331,7 +338,7 @@ void main() {
           final random = Random(104);
 
           for (var i = 0; i < 10; i++) {
-            final repo = CustomProductRepositoryImpl(helper.connection);
+            final repo = CustomProductRepositoryImpl(helper!.connection);
             await repo.createTables();
 
             final outerProducts = List.generate(
@@ -353,7 +360,7 @@ void main() {
             // Execute nested transactions with failure
             var exceptionThrown = false;
             try {
-              await helper.connection.transaction(() async {
+              await helper!.connection.transaction(() async {
                 // Save outer products
                 for (final product in outerProducts) {
                   await repo.save(product);
@@ -368,7 +375,7 @@ void main() {
                 );
 
                 // Inner transaction that fails
-                await helper.connection.transaction(() async {
+                await helper!.connection.transaction(() async {
                   // Save inner products
                   for (final product in innerProducts) {
                     await repo.save(product);
@@ -405,7 +412,7 @@ void main() {
             );
 
             // Clean up for next iteration
-            await helper.dropAllTables();
+            await helper!.dropAllTables();
           }
         },
         tags: ['requires-mysql', 'property-test'],

@@ -11,8 +11,8 @@ class TestMysqlHelper {
   /// Creates a test MySQL helper.
   TestMysqlHelper({
     this.host = 'localhost',
-    this.port = 3306,
-    this.database = 'test_dddart_mysql',
+    this.port = 3307,
+    this.database = 'test_db',
     this.user = 'root',
     this.password = 'test_password',
   });
