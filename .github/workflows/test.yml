@@ -35,10 +35,11 @@ jobs:
           MYSQL_ROOT_PASSWORD: test_password
           MYSQL_DATABASE: test_db
         options: >-
-          --health-cmd "mysqladmin ping -h localhost"
+          --health-cmd "mysqladmin ping -h localhost -ptest_password"
           --health-interval 10s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 10
+          --health-start-period 30s
     
     strategy:
       matrix:
@@ -93,6 +94,23 @@ jobs:
       - name: Format check
         run: dart format --output=none --set-exit-if-changed .
         working-directory: packages/${{ matrix.package }}
+      
+      - name: Wait for MySQL to be ready
+        if: matrix.package == 'dddart_repository_mysql'
+        run: |
+          echo "Waiting for MySQL to be fully ready..."
+          for i in {1..30}; do
+            if mysqladmin ping -h 127.0.0.1 -P 3307 -u root -ptest_password --silent; then
+              echo "MySQL is ready!"
+              # Give it a few more seconds to fully initialize
+              sleep 5
+              exit 0
+            fi
+            echo "Waiting for MySQL... ($i/30)"
+            sleep 2
+          done
+          echo "MySQL failed to become ready"
+          exit 1
       
       - name: Run tests
         run: |

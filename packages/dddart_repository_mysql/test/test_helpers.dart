@@ -37,6 +37,7 @@ class TestMysqlHelper {
   /// Opens a connection to the test database.
   ///
   /// Returns the connection instance for use in tests.
+  /// Retries up to 3 times to handle transient connection issues.
   Future<MysqlConnection> connect() async {
     if (_connection != null && _connection!.isOpen) {
       return _connection!;
@@ -50,8 +51,23 @@ class TestMysqlHelper {
       password: password,
     );
 
-    await _connection!.open();
-    return _connection!;
+    // Retry connection up to 3 times to handle transient issues
+    var lastError;
+    for (var attempt = 1; attempt <= 3; attempt++) {
+      try {
+        await _connection!.open();
+        return _connection!;
+      } catch (e) {
+        lastError = e;
+        if (attempt < 3) {
+          // Wait a bit before retrying
+          await Future.delayed(Duration(milliseconds: 100 * attempt));
+        }
+      }
+    }
+    
+    // If all retries failed, throw the last error
+    throw lastError;
   }
 
   /// Closes the connection to the test database.
