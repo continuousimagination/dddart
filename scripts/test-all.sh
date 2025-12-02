@@ -55,6 +55,7 @@ PACKAGES=(
   "dddart_config"
   "dddart_repository_mongodb"
   "dddart_repository_dynamodb"
+  "dddart_repository_rest"
   "dddart_repository_sql"
   "dddart_repository_sqlite"
   "dddart_repository_mysql"

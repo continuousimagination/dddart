@@ -1,0 +1,14 @@
+targets:
+  $default:
+    builders:
+      dddart_repository_rest:rest_repository:
+        enabled: true
+
+builders:
+  rest_repository:
+    import: "package:dddart_repository_rest/src/generators/rest_repository_generator.dart"
+    builder_factories: ["restRepositoryBuilder"]
+    build_extensions: {".dart": [".rest_repository.g.part"]}
+    auto_apply: dependents
+    build_to: cache
+    applies_builders: ["source_gen|combining_builder"]
