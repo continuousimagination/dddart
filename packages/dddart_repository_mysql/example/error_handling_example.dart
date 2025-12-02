@@ -17,8 +17,8 @@ import 'lib/domain/order_item.dart';
 ///
 /// Prerequisites:
 /// - MySQL running on localhost:3306 for successful connection test
-/// - MySQL NOT running on localhost:3307 for connection error test
 /// - Database 'dddart_example' created
+/// - Port 3307 should be unused (for connection error demonstration)
 Future<void> main() async {
   print('=== Error Handling Example ===\n');
 

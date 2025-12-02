@@ -1,9 +1,9 @@
 /// Integration tests for generated MySQL repositories.
 ///
-/// These tests require a running MySQL instance on localhost:3307.
-/// To run these tests, ensure MySQL is running:
-///   docker run -d -p 3307:3306 -e MYSQL_ROOT_PASSWORD=test_password \
-///     -e MYSQL_DATABASE=test_db mysql:8.0
+/// These tests require a running MySQL instance on localhost:3306.
+/// You can use Docker to run MySQL:
+///   docker run -d -p 3306:3306 -e MYSQL_ROOT_PASSWORD=test_password \
+///     -e MYSQL_DATABASE=test_dddart_mysql mysql:8.0
 ///
 /// Or skip these tests if MySQL is not available:
 ///   dart test --exclude-tags=requires-mysql
@@ -34,7 +34,7 @@ void main() {
 
     setUp(() {
       if (!mysqlAvailable) {
-        markTestSkipped('MySQL not available on localhost:3307');
+        markTestSkipped('MySQL not available on localhost:3306');
       }
     });
 

@@ -1,149 +1,7 @@
 /// Test helpers and utilities for MySQL repository testing.
 library;
 
-import 'dart:io';
-
 import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
-
-/// Helper class for managing MySQL Docker container for testing.
-///
-/// Provides utilities for starting/stopping a MySQL container and
-/// creating test connections.
-class MysqlTestContainer {
-  /// Container name for the test MySQL instance.
-  static const String containerName = 'dddart_mysql_test';
-
-  /// Port to expose MySQL on (non-standard to avoid conflicts).
-  static const int port = 3307;
-
-  /// MySQL root password for testing.
-  static const String password = 'test_password';
-
-  /// Test database name.
-  static const String database = 'test_db';
-
-  /// Starts MySQL container if not already running.
-  ///
-  /// This method is idempotent - it will reuse an existing running container.
-  /// If the container exists but is stopped, it will be removed and recreated.
-  static Future<void> start() async {
-    // Check if container exists and is running
-    final checkResult = await Process.run('docker', [
-      'ps',
-      '-a',
-      '--filter',
-      'name=$containerName',
-      '--format',
-      '{{.Status}}',
-    ]);
-
-    final status = checkResult.stdout.toString().trim();
-
-    if (status.startsWith('Up')) {
-      print('MySQL container already running');
-      return;
-    }
-
-    // Remove old container if exists
-    if (status.isNotEmpty) {
-      print('Removing old MySQL container...');
-      await Process.run('docker', ['rm', '-f', containerName]);
-    }
-
-    // Start new container
-    print('Starting MySQL test container...');
-    final startResult = await Process.run('docker', [
-      'run',
-      '--name',
-      containerName,
-      '-e',
-      'MYSQL_ROOT_PASSWORD=$password',
-      '-e',
-      'MYSQL_DATABASE=$database',
-      '-p',
-      '$port:3306',
-      '-d',
-      'mysql:8.0',
-      '--default-authentication-plugin=mysql_native_password',
-    ]);
-
-    if (startResult.exitCode != 0) {
-      throw Exception(
-        'Failed to start MySQL container: ${startResult.stderr}',
-      );
-    }
-
-    // Wait for MySQL to be ready
-    await _waitForMysql();
-  }
-
-  /// Waits for MySQL to be ready to accept connections.
-  ///
-  /// Retries up to 30 times with 1 second delay between attempts.
-  static Future<void> _waitForMysql() async {
-    print('Waiting for MySQL to be ready...');
-
-    for (var i = 0; i < 30; i++) {
-      try {
-        final connection = createConnection();
-        await connection.open();
-        await connection.close();
-        print('MySQL is ready!');
-        return;
-      } catch (e) {
-        await Future<void>.delayed(const Duration(seconds: 1));
-      }
-    }
-
-    throw Exception('MySQL failed to start within 30 seconds');
-  }
-
-  /// Stops and removes the MySQL container.
-  static Future<void> stop() async {
-    print('Stopping MySQL container...');
-    await Process.run('docker', ['stop', containerName]);
-    await Process.run('docker', ['rm', containerName]);
-  }
-
-  /// Creates a test connection to the MySQL container.
-  ///
-  /// Returns a [MysqlConnection] configured to connect to the test container.
-  static MysqlConnection createConnection() {
-    return MysqlConnection(
-      host: 'localhost',
-      port: port,
-      database: database,
-      user: 'root',
-      password: password,
-    );
-  }
-
-  /// Checks if Docker is available on the system.
-  ///
-  /// Returns true if the docker command is available, false otherwise.
-  static Future<bool> isDockerAvailable() async {
-    try {
-      final result = await Process.run('docker', ['--version']);
-      return result.exitCode == 0;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  /// Checks if the MySQL container is running.
-  static Future<bool> isRunning() async {
-    final checkResult = await Process.run('docker', [
-      'ps',
-      '--filter',
-      'name=$containerName',
-      '--format',
-      '{{.Status}}',
-    ]);
-
-    final status = checkResult.stdout.toString().trim();
-    return status.startsWith('Up');
-  }
-}
 
 /// Helper class for managing test MySQL connections and database cleanup.
 ///
@@ -153,10 +11,10 @@ class TestMysqlHelper {
   /// Creates a test MySQL helper.
   TestMysqlHelper({
     this.host = 'localhost',
-    this.port = MysqlTestContainer.port,
-    this.database = MysqlTestContainer.database,
+    this.port = 3306,
+    this.database = 'test_dddart_mysql',
     this.user = 'root',
-    this.password = MysqlTestContainer.password,
+    this.password = 'test_password',
   });
 
   /// MySQL host.
