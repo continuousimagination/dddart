@@ -52,22 +52,24 @@ class TestMysqlHelper {
     );
 
     // Retry connection up to 3 times to handle transient issues
-    var lastError;
+    Object? lastError;
+    StackTrace? lastStackTrace;
     for (var attempt = 1; attempt <= 3; attempt++) {
       try {
         await _connection!.open();
         return _connection!;
-      } catch (e) {
+      } catch (e, stackTrace) {
         lastError = e;
+        lastStackTrace = stackTrace;
         if (attempt < 3) {
           // Wait a bit before retrying
-          await Future.delayed(Duration(milliseconds: 100 * attempt));
+          await Future<void>.delayed(Duration(milliseconds: 100 * attempt));
         }
       }
     }
-    
-    // If all retries failed, throw the last error
-    throw lastError;
+
+    // If all retries failed, rethrow the last error with its stack trace
+    Error.throwWithStackTrace(lastError!, lastStackTrace!);
   }
 
   /// Closes the connection to the test database.
