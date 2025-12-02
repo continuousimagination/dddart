@@ -1,0 +1,12 @@
+name: dddart_rest_client_example
+description: Examples demonstrating DDDart REST client usage
+version: 0.1.0
+resolution: workspace
+
+environment:
+  sdk: '>=3.5.0 <4.0.0'
+
+dependencies:
+  dddart_rest_client:
+    resolution: workspace
+  path: ^1.8.0
