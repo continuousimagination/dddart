@@ -18,6 +18,34 @@ NC='\033[0m' # No Color
 # Track overall status
 FAILED=0
 
+# Check and adjust ulimit if needed
+ORIGINAL_ULIMIT=$(ulimit -n)
+REQUIRED_ULIMIT=4096
+ULIMIT_ADJUSTED=0
+
+if [ "$ORIGINAL_ULIMIT" -lt "$REQUIRED_ULIMIT" ]; then
+  echo -e "${YELLOW}⚠ File descriptor limit is low ($ORIGINAL_ULIMIT)${NC}"
+  echo "  Temporarily increasing to $REQUIRED_ULIMIT for tests..."
+  if ulimit -n "$REQUIRED_ULIMIT" 2>/dev/null; then
+    ULIMIT_ADJUSTED=1
+    echo -e "${GREEN}✓ Limit increased to $(ulimit -n)${NC}"
+  else
+    echo -e "${YELLOW}⚠ Could not increase limit (may need sudo or system config)${NC}"
+    echo "  Tests may fail. Consider running: ulimit -n $REQUIRED_ULIMIT"
+  fi
+  echo ""
+fi
+
+# Function to restore ulimit on exit
+restore_ulimit() {
+  if [ "$ULIMIT_ADJUSTED" -eq 1 ]; then
+    ulimit -n "$ORIGINAL_ULIMIT" 2>/dev/null || true
+  fi
+}
+
+# Set trap to restore ulimit on exit (success, error, or interrupt)
+trap restore_ulimit EXIT INT TERM
+
 # List of packages to test
 PACKAGES=(
   "dddart"
