@@ -226,7 +226,7 @@ Future<void> withMysqlConnection(
     } catch (e) {
       // Silently ignore cleanup errors - connection might be closed
     }
-    
+
     // Disconnect - ignore any errors
     try {
       await helper.disconnect();
