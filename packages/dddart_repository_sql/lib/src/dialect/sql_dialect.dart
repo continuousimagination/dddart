@@ -21,6 +21,14 @@ abstract class SqlDialect {
   /// SQL type for boolean columns (e.g., INTEGER, BOOLEAN).
   String get booleanColumnType;
 
+  /// SQL type for DateTime columns (e.g., TEXT, DATETIME).
+  ///
+  /// Different databases use different native types for datetime:
+  /// - SQLite: TEXT (ISO8601 format)
+  /// - MySQL: DATETIME (native datetime type)
+  /// - PostgreSQL: TIMESTAMP (native timestamp type)
+  String get dateTimeColumnType;
+
   /// Encodes a [UuidValue] to database format.
   Object? encodeUuid(UuidValue uuid);
 

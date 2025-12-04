@@ -28,10 +28,25 @@ void main() {
       });
     });
 
+    group('CollectionKind enum', () {
+      test('should have list type', () {
+        expect(CollectionKind.list, isNotNull);
+      });
+
+      test('should have set type', () {
+        expect(CollectionKind.set, isNotNull);
+      });
+
+      test('should have map type', () {
+        expect(CollectionKind.map, isNotNull);
+      });
+    });
+
     // Note: Full integration tests for analyzeAggregate, getRelationshipType,
-    // isValueObject, isEntity, and isAggregateRoot require a complete
-    // analysis context with real Dart code. These are tested through
-    // the generator integration tests in the sqlite package.
+    // isValueObject, isEntity, isAggregateRoot, isCollection, getCollectionKind,
+    // getElementType, and getMapTypes require a complete analysis context with
+    // real Dart code. These are tested through the generator integration tests
+    // in the sqlite and mysql packages.
     //
     // The methods work correctly as evidenced by the successful code
     // generation in tasks 1-8, which rely on these methods.

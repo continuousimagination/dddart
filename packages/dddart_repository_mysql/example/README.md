@@ -67,6 +67,9 @@ dart run error_handling_example.dart
 
 # Connection lifecycle management
 dart run connection_management_example.dart
+
+# Collection support (List, Set, Map)
+dart run collection_examples.dart
 ```
 
 ## Examples Overview
@@ -131,6 +134,41 @@ Covers connection lifecycle and advanced features:
 - Transaction boundaries
 - Concurrent access
 - Resource cleanup
+
+### collection_examples.dart
+
+Comprehensive demonstration of collection support in MySQL repositories:
+- Primitive collections (List, Set, Map with int, String, DateTime, etc.)
+- Value object collections (List, Set, Map with embedded value objects)
+- Entity collections (List, Set, Map with entities)
+- Nullable collections and empty collections
+- Cascade delete behavior
+- Order preservation for lists
+- Uniqueness enforcement for sets
+- Key-value mappings for maps
+
+**Key concepts:**
+- Junction table generation for collections
+- Position columns for ordered lists
+- UNIQUE constraints for sets and map keys
+- Value object flattening in junction tables
+- CASCADE DELETE for collection items
+- DateTime storage as DATETIME (UTC)
+- Boolean storage as TINYINT(1)
+
+**Domain Models:**
+- `User`: Aggregate with primitive collections (favoriteNumbers, tags, scoresByGame)
+- `Order`: Aggregate with value object collections (payments, deliveryLocations, discountsByCode)
+- `ShoppingCart`: Aggregate with entity collections (items, appliedDiscounts, savedItems)
+- `Product`: Aggregate demonstrating nullable collections
+
+**Collection Types Demonstrated:**
+- `List<int>`, `Set<String>`, `Map<String, int>` - Primitive collections
+- `List<Money>`, `Set<Address>`, `Map<String, Money>` - Value object collections
+- `List<CartItem>`, `Set<Discount>`, `Map<String, CartItem>` - Entity collections
+- `List<DateTime>` - DateTime collections with DATETIME storage
+- `List<int?>` - Nullable element collections
+- `Set<String>?` - Nullable collection fields
 
 ## Domain Models
 

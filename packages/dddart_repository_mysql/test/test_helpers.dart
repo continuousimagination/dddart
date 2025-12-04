@@ -1,6 +1,8 @@
 /// Test helpers and utilities for MySQL repository testing.
 library;
 
+import 'dart:io';
+
 import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
 
 /// Helper class for managing test MySQL connections and database cleanup.
@@ -9,13 +11,29 @@ import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
 /// connections and tables.
 class TestMysqlHelper {
   /// Creates a test MySQL helper.
+  ///
+  /// Connection settings can be overridden via environment variables:
+  /// - MYSQL_HOST (default: localhost)
+  /// - MYSQL_PORT (default: 3307)
+  /// - MYSQL_DATABASE (default: test_db)
+  /// - MYSQL_USER (default: root)
+  /// - MYSQL_PASSWORD (default: test_password)
   TestMysqlHelper({
-    this.host = 'localhost',
-    this.port = 3307,
-    this.database = 'test_db',
-    this.user = 'root',
-    this.password = 'test_password',
-  });
+    String? host,
+    int? port,
+    String? database,
+    String? user,
+    String? password,
+  })  : host = host ?? Platform.environment['MYSQL_HOST'] ?? 'localhost',
+        port = port ??
+            int.tryParse(Platform.environment['MYSQL_PORT'] ?? '') ??
+            3307,
+        database =
+            database ?? Platform.environment['MYSQL_DATABASE'] ?? 'test_db',
+        user = user ?? Platform.environment['MYSQL_USER'] ?? 'root',
+        password = password ??
+            Platform.environment['MYSQL_PASSWORD'] ??
+            'test_password';
 
   /// MySQL host.
   final String host;

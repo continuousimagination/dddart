@@ -29,6 +29,9 @@ class SqliteDialect implements SqlDialect {
   String get booleanColumnType => 'INTEGER';
 
   @override
+  String get dateTimeColumnType => 'TEXT';
+
+  @override
   Object? encodeUuid(UuidValue uuid) {
     // Convert UUID string to 16-byte BLOB for efficient storage
     final uuidString = uuid.uuid.replaceAll('-', '');
@@ -73,8 +76,8 @@ class SqliteDialect implements SqlDialect {
 
   @override
   Object? encodeDateTime(DateTime dateTime) {
-    // Store as milliseconds since epoch for precision
-    return dateTime.millisecondsSinceEpoch;
+    // Store as ISO8601 string in UTC for SQLite TEXT column
+    return dateTime.toUtc().toIso8601String();
   }
 
   @override
@@ -83,25 +86,25 @@ class SqliteDialect implements SqlDialect {
       throw ArgumentError('Cannot decode null as DateTime');
     }
 
-    if (value is! int) {
+    if (value is! String) {
       throw ArgumentError(
-        'Expected int for DateTime, got ${value.runtimeType}',
+        'Expected String for DateTime, got ${value.runtimeType}',
       );
     }
 
-    return DateTime.fromMillisecondsSinceEpoch(value);
+    return DateTime.parse(value).toUtc();
   }
 
   @override
   String createTableIfNotExists(TableDefinition table) {
     final buffer = StringBuffer();
-    buffer.writeln('CREATE TABLE IF NOT EXISTS ${table.tableName} (');
+    buffer.writeln('CREATE TABLE IF NOT EXISTS "${table.tableName}" (');
 
     // Add columns
     final columnDefs = <String>[];
     for (final column in table.columns) {
       final parts = <String>[
-        column.name,
+        '"${column.name}"',
         column.sqlType,
       ];
 
@@ -125,8 +128,8 @@ class SqliteDialect implements SqlDialect {
       for (final fk in table.foreignKeys) {
         final onDelete = _cascadeActionToSql(fk.onDelete);
         fkDefs.add(
-          '  FOREIGN KEY (${fk.columnName}) '
-          'REFERENCES ${fk.referencedTable}(${fk.referencedColumn}) '
+          '  FOREIGN KEY ("${fk.columnName}") '
+          'REFERENCES "${fk.referencedTable}"("${fk.referencedColumn}") '
           'ON DELETE $onDelete',
         );
       }
@@ -152,7 +155,8 @@ class SqliteDialect implements SqlDialect {
   @override
   String insertOrReplace(String tableName, List<String> columns) {
     final placeholders = List.filled(columns.length, '?').join(', ');
-    return 'INSERT OR REPLACE INTO $tableName (${columns.join(', ')}) '
+    final quotedColumns = columns.map((c) => '"$c"').join(', ');
+    return 'INSERT OR REPLACE INTO "$tableName" ($quotedColumns) '
         'VALUES ($placeholders)';
   }
 
@@ -166,15 +170,15 @@ class SqliteDialect implements SqlDialect {
     // Build column list with table prefixes
     final columns = <String>[];
     for (final column in rootTable.columns) {
-      columns.add('${rootTable.tableName}.${column.name}');
+      columns.add('"${rootTable.tableName}"."${column.name}"');
     }
 
-    buffer.write('SELECT ${columns.join(', ')} FROM ${rootTable.tableName}');
+    buffer.write('SELECT ${columns.join(', ')} FROM "${rootTable.tableName}"');
 
     // Add JOIN clauses
     for (final join in joins) {
       final joinType = _joinTypeToSql(join.type);
-      buffer.write(' $joinType ${join.table} ON ${join.onCondition}');
+      buffer.write(' $joinType "${join.table}" ON ${join.onCondition}');
     }
 
     return buffer.toString();
@@ -195,6 +199,6 @@ class SqliteDialect implements SqlDialect {
 
   @override
   String delete(String tableName) {
-    return 'DELETE FROM $tableName WHERE id = ?';
+    return 'DELETE FROM "$tableName" WHERE "id" = ?';
   }
 }

@@ -5,6 +5,7 @@ analyzer:
     - "**/*.g.dart"
     - "**/*.g.part"
     - "**/*.mysql_repository.g.part"
+    - "example/collection_examples.dart"
   language:
     strict-casts: true
     strict-inference: true

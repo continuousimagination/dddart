@@ -1,48 +1,104 @@
-import 'package:dddart_repository_sql/src/schema/type_mapper.dart';
+import 'package:dddart/dddart.dart';
+import 'package:dddart_repository_sql/dddart_repository_sql.dart';
 import 'package:test/test.dart';
+
+/// Mock SQL dialect for testing.
+class MockDialect implements SqlDialect {
+  const MockDialect();
+
+  @override
+  String get uuidColumnType => 'BLOB';
+
+  @override
+  String get textColumnType => 'TEXT';
+
+  @override
+  String get integerColumnType => 'INTEGER';
+
+  @override
+  String get realColumnType => 'REAL';
+
+  @override
+  String get booleanColumnType => 'INTEGER';
+
+  @override
+  String get dateTimeColumnType => 'INTEGER';
+
+  @override
+  Object? encodeUuid(UuidValue uuid) => throw UnimplementedError();
+
+  @override
+  UuidValue decodeUuid(Object? value) => throw UnimplementedError();
+
+  @override
+  Object? encodeDateTime(DateTime dateTime) => throw UnimplementedError();
+
+  @override
+  DateTime decodeDateTime(Object? value) => throw UnimplementedError();
+
+  @override
+  String createTableIfNotExists(TableDefinition table) =>
+      throw UnimplementedError();
+
+  @override
+  String insertOrReplace(String tableName, List<String> columns) =>
+      throw UnimplementedError();
+
+  @override
+  String selectWithJoins(
+    TableDefinition rootTable,
+    List<JoinClause> joins,
+  ) =>
+      throw UnimplementedError();
+
+  @override
+  String delete(String tableName) => throw UnimplementedError();
+}
 
 void main() {
   group('TypeMapper', () {
     late TypeMapper mapper;
+    late SqlDialect dialect;
 
     setUp(() {
       mapper = const TypeMapper();
+      dialect = const MockDialect();
     });
 
     group('getSqlType', () {
-      test('should return TEXT for String type', () {
-        expect(mapper.getSqlType('String'), equals('TEXT'));
+      test('should return dialect text type for String', () {
+        expect(mapper.getSqlType('String', dialect), equals('TEXT'));
       });
 
-      test('should return INTEGER for int type', () {
-        expect(mapper.getSqlType('int'), equals('INTEGER'));
+      test('should return dialect integer type for int', () {
+        expect(mapper.getSqlType('int', dialect), equals('INTEGER'));
       });
 
-      test('should return REAL for double type', () {
-        expect(mapper.getSqlType('double'), equals('REAL'));
+      test('should return dialect real type for double', () {
+        expect(mapper.getSqlType('double', dialect), equals('REAL'));
       });
 
-      test('should return INTEGER for bool type', () {
-        expect(mapper.getSqlType('bool'), equals('INTEGER'));
+      test('should return dialect boolean type for bool', () {
+        expect(mapper.getSqlType('bool', dialect), equals('INTEGER'));
       });
 
-      test('should return INTEGER for DateTime type', () {
-        expect(mapper.getSqlType('DateTime'), equals('INTEGER'));
+      test('should return dialect datetime type for DateTime', () {
+        expect(mapper.getSqlType('DateTime', dialect), equals('INTEGER'));
       });
 
-      test('should return BLOB for UuidValue type', () {
-        expect(mapper.getSqlType('UuidValue'), equals('BLOB'));
+      test('should return dialect uuid type for UuidValue', () {
+        expect(mapper.getSqlType('UuidValue', dialect), equals('BLOB'));
       });
 
       test('should return null for custom class types', () {
-        expect(mapper.getSqlType('CustomClass'), isNull);
-        expect(mapper.getSqlType('Order'), isNull);
-        expect(mapper.getSqlType('Money'), isNull);
+        expect(mapper.getSqlType('CustomClass', dialect), isNull);
+        expect(mapper.getSqlType('Order', dialect), isNull);
+        expect(mapper.getSqlType('Money', dialect), isNull);
       });
 
       test('should return null for List types', () {
-        expect(mapper.getSqlType('List<String>'), isNull);
-        expect(mapper.getSqlType('List<int>'), isNull);
+        expect(mapper.getSqlType('List<String>', dialect), isNull);
+        expect(mapper.getSqlType('List<int>', dialect), isNull);
       });
     });
 
