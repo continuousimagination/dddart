@@ -731,11 +731,11 @@ $fromJsonWithConfigBody
 
       // Handle nullable collections
       if (typeName.startsWith('List<') || typeName.startsWith('Set<')) {
-        return '$fieldRef != null ? ${_generateCollectionSerialization(field, fieldRef)} : null';
+        return '$fieldRef != null ? ${_generateCollectionSerialization(field, '$fieldRef!')} : null';
       }
 
       if (typeName.startsWith('Map<')) {
-        return '$fieldRef != null ? ${_generateMapSerialization(field, fieldRef)} : null';
+        return '$fieldRef != null ? ${_generateMapSerialization(field, '$fieldRef!')} : null';
       }
 
       // Handle nullable DDDart types
@@ -922,6 +922,8 @@ $fromJsonWithConfigBody
 
     final itemType = typeArgs.first;
     final itemTypeName = itemType.getDisplayString(withNullability: false);
+    final itemTypeNameWithNull =
+        itemType.getDisplayString(withNullability: true);
     final isSet = typeName.startsWith('Set<');
     final collectionMethod = isSet ? 'toSet()' : 'toList()';
 
@@ -941,7 +943,7 @@ $fromJsonWithConfigBody
 
     // Handle primitive types
     if (_isPrimitiveType(itemTypeName)) {
-      return "(json['$jsonKey'] as List).map((item) => item as $itemTypeName).$collectionMethod";
+      return "(json['$jsonKey'] as List).map((item) => item as $itemTypeNameWithNull).$collectionMethod";
     }
 
     // Default case
@@ -1009,6 +1011,8 @@ $fromJsonWithConfigBody
 
     final itemType = typeArgs.first;
     final itemTypeName = itemType.getDisplayString(withNullability: false);
+    final itemTypeNameWithNull =
+        itemType.getDisplayString(withNullability: true);
     final isSet = typeName.startsWith('Set<');
     final collectionMethod = isSet ? 'toSet()' : 'toList()';
 
@@ -1028,7 +1032,7 @@ $fromJsonWithConfigBody
 
     // Handle primitive types
     if (_isPrimitiveType(itemTypeName)) {
-      return '($jsonAccess as List).map((item) => item as $itemTypeName).$collectionMethod';
+      return '($jsonAccess as List).map((item) => item as $itemTypeNameWithNull).$collectionMethod';
     }
 
     // Default case

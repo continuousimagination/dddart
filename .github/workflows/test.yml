@@ -40,6 +40,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
           --health-start-period 30s
+        # Used by dddart_repository_mysql for integration tests including collection support
     
     strategy:
       matrix:
@@ -130,5 +131,13 @@ jobs:
         run: |
           # Run all tests including integration tests with service containers
           # MongoDB, DynamoDB, and MySQL services are available in CI
+          # Collection tests for MySQL are included (tagged with requires-mysql)
           dart test
         working-directory: packages/${{ matrix.package }}
+        env:
+          # MySQL connection settings for integration tests
+          MYSQL_HOST: 127.0.0.1
+          MYSQL_PORT: 3307
+          MYSQL_USER: root
+          MYSQL_PASSWORD: test_password
+          MYSQL_DATABASE: test_db

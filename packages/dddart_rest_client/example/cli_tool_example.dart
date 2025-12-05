@@ -86,7 +86,8 @@ void _printUsage() {
   print('Examples:');
   print('  dart run example/cli_tool_example.dart login');
   print('  dart run example/cli_tool_example.dart list-users');
-  print('  dart run example/cli_tool_example.dart create-user alice alice@example.com');
+  print(
+      '  dart run example/cli_tool_example.dart create-user alice alice@example.com');
   print('  dart run example/cli_tool_example.dart me');
 }
 
@@ -116,7 +117,8 @@ class UserCLI {
   }
 
   String _getCredentialsPath() {
-    final home = Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'];
+    final home =
+        Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'];
 
     if (home == null) {
       throw Exception('Cannot determine home directory');
@@ -135,7 +137,8 @@ class UserCLI {
 
     if (await authProvider.isAuthenticated()) {
       print('Already logged in!');
-      print('Run "logout" first if you want to login with a different account.');
+      print(
+          'Run "logout" first if you want to login with a different account.');
       return;
     }
 

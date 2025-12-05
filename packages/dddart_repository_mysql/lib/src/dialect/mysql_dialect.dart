@@ -29,6 +29,9 @@ class MysqlDialect implements SqlDialect {
   String get booleanColumnType => 'TINYINT(1)';
 
   @override
+  String get dateTimeColumnType => 'DATETIME';
+
+  @override
   Object? encodeUuid(UuidValue uuid) {
     // Convert UUID string to 16-byte BINARY for efficient storage
     final uuidString = uuid.uuid.replaceAll('-', '');
@@ -74,8 +77,15 @@ class MysqlDialect implements SqlDialect {
 
   @override
   Object? encodeDateTime(DateTime dateTime) {
-    // Store as milliseconds since epoch (INTEGER in MySQL)
-    return dateTime.millisecondsSinceEpoch;
+    // MySQL DATETIME format: 'YYYY-MM-DD HH:MM:SS' (no timezone, no milliseconds)
+    // mysql_client driver expects this string format for DATETIME columns
+    final utc = dateTime.toUtc();
+    return '${utc.year.toString().padLeft(4, '0')}-'
+        '${utc.month.toString().padLeft(2, '0')}-'
+        '${utc.day.toString().padLeft(2, '0')} '
+        '${utc.hour.toString().padLeft(2, '0')}:'
+        '${utc.minute.toString().padLeft(2, '0')}:'
+        '${utc.second.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -84,16 +94,24 @@ class MysqlDialect implements SqlDialect {
       throw ArgumentError('Cannot decode null as DateTime');
     }
 
-    if (value is int) {
-      return DateTime.fromMillisecondsSinceEpoch(value);
+    if (value is DateTime) {
+      return value.toUtc();
     }
 
-    if (value is DateTime) {
-      return value;
+    if (value is String) {
+      try {
+        // MySQL DATETIME is stored in UTC but doesn't have timezone info
+        // Parse it as UTC explicitly
+        return DateTime.parse('${value}Z').toUtc();
+      } catch (e) {
+        throw ArgumentError(
+          'Invalid DateTime string format: $value',
+        );
+      }
     }
 
     throw ArgumentError(
-      'Expected int or DateTime for DateTime, got ${value.runtimeType}',
+      'Expected DateTime or String for DateTime, got ${value.runtimeType}',
     );
   }
 

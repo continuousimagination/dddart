@@ -3,6 +3,18 @@
 # Usage: ./scripts/test-all.sh
 #
 # This script is also called by the git pre-push hook
+#
+# Note: This script excludes tests that require external services:
+# - MongoDB tests (requires-mongo tag)
+# - DynamoDB tests (requires-dynamodb tag)
+# - MySQL tests (requires-mysql tag) - includes collection integration tests
+#
+# To run MySQL collection tests locally:
+#   1. Start MySQL: docker run -d -p 3307:3306 -e MYSQL_ROOT_PASSWORD=test_password -e MYSQL_DATABASE=test_db mysql:8.0
+#   2. Run: cd packages/dddart_repository_mysql && dart test
+#
+# To run SQLite collection tests locally (no external service needed):
+#   cd packages/dddart_repository_sqlite && dart test
 
 set -e  # Exit on first error
 
@@ -111,7 +123,7 @@ check_package() {
   echo -e "  ${GREEN}✓ Formatting check passed${NC}"
   
   # Run tests (excluding MongoDB, DynamoDB, and MySQL integration tests)
-  # Note: Integration tests run in CI with service containers
+  # Note: Integration tests (including collection tests) run in CI with service containers
   echo "  🧪 Running tests..."
   if ! dart test --exclude-tags=requires-mongo --exclude-tags=requires-dynamodb --exclude-tags=requires-mysql; then
     echo -e "  ${RED}✗ Tests failed${NC}"

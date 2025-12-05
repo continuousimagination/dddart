@@ -1,38 +1,42 @@
+import 'package:dddart_repository_sql/src/dialect/sql_dialect.dart';
+
 /// Maps between Dart types and SQL column types.
 ///
 /// This class provides the mapping logic for converting Dart primitive types
-/// to their corresponding SQL column types. The mapping is database-agnostic
-/// and uses common SQL types.
+/// to their corresponding SQL column types. The mapping can be database-specific
+/// when a SqlDialect is provided, allowing for native database types like
+/// DATETIME for MySQL or TEXT for SQLite DateTime fields.
 ///
-/// Type Mapping Table:
-/// | Dart Type | SQL Type | Storage Format |
-/// |-----------|----------|----------------|
-/// | String    | TEXT     | UTF-8 text     |
-/// | int       | INTEGER  | 64-bit integer |
-/// | double    | REAL     | 64-bit float   |
-/// | bool      | INTEGER  | 0 or 1         |
-/// | DateTime  | INTEGER  | Milliseconds since epoch |
-/// | UuidValue | BLOB     | 16 bytes       |
+/// Type Mapping Table (with dialect):
+/// | Dart Type | SQL Type (SQLite) | SQL Type (MySQL) |
+/// |-----------|-------------------|------------------|
+/// | String    | TEXT              | VARCHAR(255)     |
+/// | int       | INTEGER           | BIGINT           |
+/// | double    | REAL              | DOUBLE           |
+/// | bool      | INTEGER           | TINYINT(1)       |
+/// | DateTime  | TEXT              | DATETIME         |
+/// | UuidValue | BLOB              | BINARY(16)       |
 ///
 /// Example:
 /// ```dart
 /// final mapper = TypeMapper();
-/// final sqlType = mapper.getSqlType('String'); // 'TEXT'
+/// final sqlType = mapper.getSqlType('String', sqliteDialect); // 'TEXT'
 /// final isNullable = mapper.isNullable('String?'); // true
 /// ```
 class TypeMapper {
   /// Creates a type mapper.
   const TypeMapper();
 
-  /// Gets the SQL type for a Dart type.
+  /// Gets the SQL type for a Dart type using the specified dialect.
   ///
-  /// Returns the SQL column type for primitive Dart types:
-  /// - `String` → `TEXT`
-  /// - `int` → `INTEGER`
-  /// - `double` → `REAL`
-  /// - `bool` → `INTEGER` (stored as 0 or 1)
-  /// - `DateTime` → `INTEGER` (milliseconds since epoch)
-  /// - `UuidValue` → `BLOB` (16 bytes)
+  /// Returns the SQL column type for primitive Dart types, using
+  /// database-specific types from the provided [dialect]:
+  /// - `String` → dialect.textColumnType
+  /// - `int` → dialect.integerColumnType
+  /// - `double` → dialect.realColumnType
+  /// - `bool` → dialect.booleanColumnType
+  /// - `DateTime` → dialect.dateTimeColumnType
+  /// - `UuidValue` → dialect.uuidColumnType
   ///
   /// Returns `null` if [dartType] is not a primitive type.
   /// Non-primitive types (custom classes) require special handling:
@@ -41,24 +45,24 @@ class TypeMapper {
   ///
   /// Example:
   /// ```dart
-  /// mapper.getSqlType('String'); // 'TEXT'
-  /// mapper.getSqlType('int'); // 'INTEGER'
-  /// mapper.getSqlType('Order'); // null (not primitive)
+  /// mapper.getSqlType('String', sqliteDialect); // 'TEXT'
+  /// mapper.getSqlType('DateTime', mysqlDialect); // 'DATETIME'
+  /// mapper.getSqlType('Order', dialect); // null (not primitive)
   /// ```
-  String? getSqlType(String dartType) {
+  String? getSqlType(String dartType, SqlDialect dialect) {
     switch (dartType) {
       case 'String':
-        return 'TEXT';
+        return dialect.textColumnType;
       case 'int':
-        return 'INTEGER';
+        return dialect.integerColumnType;
       case 'double':
-        return 'REAL';
+        return dialect.realColumnType;
       case 'bool':
-        return 'INTEGER'; // 0 or 1
+        return dialect.booleanColumnType;
       case 'DateTime':
-        return 'INTEGER'; // Milliseconds since epoch
+        return dialect.dateTimeColumnType;
       case 'UuidValue':
-        return 'BLOB'; // 16 bytes
+        return dialect.uuidColumnType;
       default:
         return null; // Not a primitive type
     }

@@ -16,6 +16,7 @@ Then run any example:
 dart run basic_crud_example.dart
 dart run complex_aggregate_example.dart
 dart run custom_repository_example.dart
+dart run collection_examples.dart
 ```
 
 ## Examples
@@ -62,6 +63,34 @@ Demonstrates how to extend generated repositories with custom query methods.
 - Custom SQL queries
 - JOIN operations
 - Access to protected connection and serializer members
+
+### 4. Collection Examples (`collection_examples.dart`)
+
+Comprehensive demonstration of collection support in SQLite repositories.
+
+**Features:**
+- Primitive collections (List, Set, Map with int, String, DateTime, etc.)
+- Value object collections (List, Set, Map with embedded value objects)
+- Entity collections (List, Set, Map with entities)
+- Nullable collections and empty collections
+- Cascade delete behavior
+- Order preservation for lists
+- Uniqueness enforcement for sets
+- Key-value mappings for maps
+
+**Domain Models:**
+- `User`: Aggregate with primitive collections (favoriteNumbers, tags, scoresByGame)
+- `Order`: Aggregate with value object collections (payments, deliveryLocations, discountsByCode)
+- `ShoppingCart`: Aggregate with entity collections (items, appliedDiscounts, savedItems)
+- `Product`: Aggregate demonstrating nullable collections
+
+**Collection Types Demonstrated:**
+- `List<int>`, `Set<String>`, `Map<String, int>` - Primitive collections
+- `List<Money>`, `Set<Address>`, `Map<String, Money>` - Value object collections
+- `List<CartItem>`, `Set<Discount>`, `Map<String, CartItem>` - Entity collections
+- `List<DateTime>` - DateTime collections with ISO8601 storage
+- `List<int?>` - Nullable element collections
+- `Set<String>?` - Nullable collection fields
 
 ## Domain Models
 

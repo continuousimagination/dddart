@@ -86,10 +86,15 @@ void main() {
           // Decode the DateTime
           final decoded = dialect.decodeDateTime(encoded);
 
-          // Verify equivalence (within millisecond precision)
+          // Verify equivalence (MySQL DATETIME has second precision only)
+          // Truncate original to seconds for comparison
+          final originalTruncated = DateTime.fromMillisecondsSinceEpoch(
+            (originalDateTime.millisecondsSinceEpoch / 1000).floor() * 1000,
+            isUtc: true,
+          );
           expect(
             decoded.millisecondsSinceEpoch,
-            equals(originalDateTime.millisecondsSinceEpoch),
+            equals(originalTruncated.millisecondsSinceEpoch),
             reason: 'Iteration $i: DateTime should round-trip correctly',
           );
         }
@@ -113,10 +118,15 @@ void main() {
           final encoded = dialect.encodeDateTime(originalDateTime);
           final decoded = dialect.decodeDateTime(encoded);
 
-          // Verify equivalence (within millisecond precision)
+          // Verify equivalence (MySQL DATETIME has second precision only)
+          // Truncate original to seconds for comparison
+          final originalTruncated = DateTime.fromMillisecondsSinceEpoch(
+            (originalDateTime.millisecondsSinceEpoch / 1000).floor() * 1000,
+            isUtc: true,
+          );
           expect(
             decoded.millisecondsSinceEpoch,
-            equals(originalDateTime.millisecondsSinceEpoch),
+            equals(originalTruncated.millisecondsSinceEpoch),
             reason: 'Test case $i: DateTime should round-trip correctly',
           );
         }

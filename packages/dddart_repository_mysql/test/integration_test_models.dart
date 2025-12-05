@@ -175,3 +175,156 @@ class CustomProductRepositoryImpl extends ProductMysqlRepositoryBase
     return result.first['count']! as int;
   }
 }
+
+// ============================================================================
+// Collection Testing Models
+// ============================================================================
+
+/// Value object representing money with amount and currency.
+@Serializable()
+class Money extends Value {
+  /// Creates a money value object.
+  const Money({
+    required this.amount,
+    required this.currency,
+  });
+
+  /// The monetary amount.
+  final double amount;
+
+  /// The currency code (e.g., 'USD', 'EUR').
+  final String currency;
+
+  @override
+  List<Object?> get props => [amount, currency];
+}
+
+/// Aggregate with primitive collections for testing.
+@Serializable()
+@GenerateMysqlRepository(tableName: 'test_primitive_collections')
+class TestPrimitiveCollections extends AggregateRoot {
+  /// Creates a test aggregate with primitive collections.
+  TestPrimitiveCollections({
+    required this.name,
+    required this.favoriteNumbers,
+    required this.tags,
+    required this.scoresByGame,
+    super.id,
+    super.createdAt,
+    super.updatedAt,
+  });
+
+  /// Name field.
+  final String name;
+
+  /// List of favorite numbers.
+  final List<int> favoriteNumbers;
+
+  /// Set of tags.
+  final Set<String> tags;
+
+  /// Map of scores by game name.
+  final Map<String, int> scoresByGame;
+}
+
+/// Aggregate with value object collections for testing.
+@Serializable()
+@GenerateMysqlRepository(tableName: 'test_value_collections')
+class TestValueCollections extends AggregateRoot {
+  /// Creates a test aggregate with value object collections.
+  TestValueCollections({
+    required this.name,
+    required this.payments,
+    required this.addresses,
+    required this.pricesByProduct,
+    super.id,
+    super.createdAt,
+    super.updatedAt,
+  });
+
+  /// Name field.
+  final String name;
+
+  /// List of payments.
+  final List<Money> payments;
+
+  /// Set of addresses.
+  final Set<Address> addresses;
+
+  /// Map of prices by product name.
+  final Map<String, Money> pricesByProduct;
+}
+
+// Note: Entity collections are not yet fully supported in MySQL
+// Commenting out for now until implementation is complete
+//
+// /// Simple entity for collection testing.
+// @Serializable()
+// class TestItem extends Entity {
+//   /// Creates a test item entity.
+//   TestItem({
+//     required this.name,
+//     required this.quantity,
+//     super.id,
+//     super.createdAt,
+//     super.updatedAt,
+//   });
+//
+//   /// Item name.
+//   final String name;
+//
+//   /// Item quantity.
+//   final int quantity;
+// }
+//
+// /// Aggregate with entity collections for testing.
+// @Serializable()
+// @GenerateMysqlRepository(tableName: 'test_entity_collections')
+// class TestEntityCollections extends AggregateRoot {
+//   /// Creates a test aggregate with entity collections.
+//   TestEntityCollections({
+//     required this.name,
+//     required this.uniqueItems,
+//     required this.itemsByCategory,
+//     super.id,
+//     super.createdAt,
+//     super.updatedAt,
+//   });
+//
+//   /// Name field.
+//   final String name;
+//
+//   /// Set of unique items.
+//   final Set<TestItem> uniqueItems;
+//
+//   /// Map of items by category.
+//   final Map<String, TestItem> itemsByCategory;
+// }
+
+/// Aggregate with nullable collections for testing null handling.
+@Serializable()
+@GenerateMysqlRepository(tableName: 'test_nullable_collections')
+class TestNullableCollections extends AggregateRoot {
+  /// Creates a test aggregate with nullable collections.
+  TestNullableCollections({
+    required this.name,
+    this.optionalNumbers,
+    this.optionalTags,
+    this.optionalScores,
+    super.id,
+    super.createdAt,
+    super.updatedAt,
+  });
+
+  /// Name field.
+  final String name;
+
+  /// Optional list of numbers.
+  final List<int>? optionalNumbers;
+
+  /// Optional set of tags.
+  final Set<String>? optionalTags;
+
+  /// Optional map of scores.
+  final Map<String, int>? optionalScores;
+}

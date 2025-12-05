@@ -3,10 +3,11 @@ library;
 
 // ignore_for_file: deprecated_member_use, avoid_redundant_argument_values
 
-import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/dart/element/element.dart' hide ElementKind;
 import 'package:analyzer/dart/element/type.dart';
 import 'package:build/build.dart';
 import 'package:dddart_repository_mysql/src/annotations/generate_mysql_repository.dart';
+import 'package:dddart_repository_mysql/src/dialect/mysql_dialect.dart';
 import 'package:dddart_repository_sql/dddart_repository_sql.dart';
 import 'package:source_gen/source_gen.dart';
 
@@ -212,19 +213,48 @@ class MysqlRepositoryGenerator
   ) {
     // Clear the entity-to-field mapping for this aggregate
     _entityToFieldName.clear();
+    _collectionFields.clear();
 
-    const analyzer = RelationshipAnalyzer();
+    _analyzer = const RelationshipAnalyzer();
+    const collectionAnalyzer = CollectionAnalyzer();
     const typeMapper = TypeMapper();
+    const dialect = MysqlDialect();
 
     // Discover all types in dependency order
-    final discoveredTypes = analyzer.analyzeAggregate(aggregateRoot);
+    final discoveredTypes = _analyzer.analyzeAggregate(aggregateRoot);
+
+    // Discover collection fields in the aggregate root
+    for (final field in aggregateRoot.fields) {
+      if (field.isStatic || field.isSynthetic) continue;
+
+      // Validate collection types before analyzing
+      try {
+        collectionAnalyzer.validateCollectionType(field.type);
+      } catch (e) {
+        if (e is UnsupportedError) {
+          throw InvalidGenerationSourceError(
+            'Unsupported collection type in field "${field.name}":\n${e.message}',
+            element: field,
+          );
+        }
+        rethrow;
+      }
+
+      final collectionInfo = collectionAnalyzer.analyzeCollection(field);
+      if (collectionInfo != null) {
+        // Skip entity collections - they're handled by the relationship analyzer
+        if (collectionInfo.elementKind != ElementKind.entity) {
+          _collectionFields[field.name] = collectionInfo;
+        }
+      }
+    }
 
     // Generate table definitions for each type
     final tables = <String, TableDefinition>{};
 
     for (final classElement in discoveredTypes) {
       // Skip value objects - they are embedded, not stored in separate tables
-      if (analyzer.isValueObject(classElement)) {
+      if (_analyzer.isValueObject(classElement)) {
         continue;
       }
 
@@ -235,21 +265,28 @@ class MysqlRepositoryGenerator
 
       final tableDef = _generateTableDefinition(
         classElement,
-        analyzer,
+        _analyzer,
         typeMapper,
+        dialect,
         tableName,
       );
       tables[classElement.name] = tableDef;
     }
 
     // Add parent foreign keys to entity tables
-    _addParentForeignKeys(tables, aggregateRoot, aggregateTableName, analyzer);
+    _addParentForeignKeys(tables, aggregateRoot, aggregateTableName, _analyzer);
 
     return tables;
   }
 
   /// Maps entity class names to their JSON field names in the aggregate.
   final _entityToFieldName = <String, String>{};
+
+  /// Maps collection field names to their collection information.
+  final _collectionFields = <String, CollectionInfo>{};
+
+  /// The relationship analyzer instance.
+  late RelationshipAnalyzer _analyzer;
 
   /// Adds parent foreign key columns to entity tables.
   ///
@@ -269,7 +306,7 @@ class MysqlRepositoryGenerator
         if (elementType is InterfaceType) {
           final entityClass = elementType.element;
           if (entityClass is ClassElement &&
-              !analyzer.isValueObject(entityClass)) {
+              !_analyzer.isValueObject(entityClass)) {
             // Store the mapping from entity class to field name
             _entityToFieldName[entityClass.name] = field.name;
 
@@ -366,6 +403,7 @@ class MysqlRepositoryGenerator
     ClassElement classElement,
     RelationshipAnalyzer analyzer,
     TypeMapper typeMapper,
+    SqlDialect dialect,
     String tableName,
   ) {
     final columns = <ColumnDefinition>[];
@@ -390,7 +428,7 @@ class MysqlRepositoryGenerator
 
       // Check if it's a value object
       final referencedClass = _getReferencedClass(fieldType);
-      if (referencedClass != null && analyzer.isValueObject(referencedClass)) {
+      if (referencedClass != null && _analyzer.isValueObject(referencedClass)) {
         // Special case: UuidValue should be stored as BINARY(16), not embedded
         if (referencedClass.name == 'UuidValue') {
           final column = ColumnDefinition(
@@ -411,6 +449,7 @@ class MysqlRepositoryGenerator
           fieldName,
           referencedClass,
           typeMapper,
+          dialect,
           fieldType.nullabilitySuffix.toString().contains('question'),
         );
         columns.addAll(embeddedColumns);
@@ -419,8 +458,8 @@ class MysqlRepositoryGenerator
 
       // Check if it's an entity or aggregate reference
       if (referencedClass != null &&
-          (analyzer.isEntity(referencedClass) ||
-              analyzer.isAggregateRoot(referencedClass))) {
+          (_analyzer.isEntity(referencedClass) ||
+              _analyzer.isAggregateRoot(referencedClass))) {
         // Add foreign key column
         final fkColumn = ColumnDefinition(
           name: '${fieldName}_id',
@@ -434,7 +473,7 @@ class MysqlRepositoryGenerator
         columns.add(fkColumn);
 
         // Add foreign key constraint
-        final cascadeAction = analyzer.isAggregateRoot(referencedClass)
+        final cascadeAction = _analyzer.isAggregateRoot(referencedClass)
             ? CascadeAction.restrict // Don't cascade across aggregates
             : CascadeAction.cascade; // Cascade within aggregate
 
@@ -451,12 +490,7 @@ class MysqlRepositoryGenerator
 
       // Handle primitive types
       final dartTypeName = fieldType.getDisplayString(withNullability: false);
-      var sqlType = typeMapper.getSqlType(dartTypeName);
-
-      // MySQL-specific: DateTime needs BIGINT for milliseconds since epoch
-      if (dartTypeName == 'DateTime' && sqlType == 'INTEGER') {
-        sqlType = 'BIGINT';
-      }
+      final sqlType = typeMapper.getSqlType(dartTypeName, dialect);
 
       if (sqlType != null) {
         columns.add(
@@ -493,7 +527,7 @@ class MysqlRepositoryGenerator
       className: classElement.name,
       columns: columns,
       foreignKeys: foreignKeys,
-      isAggregateRoot: analyzer.isAggregateRoot(classElement),
+      isAggregateRoot: _analyzer.isAggregateRoot(classElement),
     );
   }
 
@@ -504,6 +538,7 @@ class MysqlRepositoryGenerator
     String prefix,
     ClassElement valueObjectClass,
     TypeMapper typeMapper,
+    SqlDialect dialect,
     bool isNullable,
   ) {
     final columns = <ColumnDefinition>[];
@@ -513,12 +548,7 @@ class MysqlRepositoryGenerator
 
       final fieldType = field.type;
       final dartTypeName = fieldType.getDisplayString(withNullability: false);
-      var sqlType = typeMapper.getSqlType(dartTypeName);
-
-      // MySQL-specific: DateTime needs BIGINT for milliseconds since epoch
-      if (dartTypeName == 'DateTime' && sqlType == 'INTEGER') {
-        sqlType = 'BIGINT';
-      }
+      final sqlType = typeMapper.getSqlType(dartTypeName, dialect);
 
       if (sqlType != null) {
         columns.add(
@@ -613,7 +643,7 @@ class MysqlRepositoryGenerator
     buffer.writeln();
 
     // Generate createTables method
-    buffer.writeln(_generateCreateTablesMethod(tables));
+    buffer.writeln(_generateCreateTablesMethod(tables, className));
     buffer.writeln();
 
     // Generate CRUD methods
@@ -687,7 +717,7 @@ class MysqlRepositoryGenerator
     buffer.writeln();
 
     // Generate createTables method
-    buffer.writeln(_generateCreateTablesMethod(tables));
+    buffer.writeln(_generateCreateTablesMethod(tables, className));
     buffer.writeln();
 
     // Generate CRUD methods
@@ -725,7 +755,10 @@ class MysqlRepositoryGenerator
   }
 
   /// Generates the createTables method.
-  String _generateCreateTablesMethod(Map<String, TableDefinition> tables) {
+  String _generateCreateTablesMethod(
+    Map<String, TableDefinition> tables,
+    String className,
+  ) {
     final buffer = StringBuffer();
 
     buffer.writeln('  /// Creates all tables for this aggregate.');
@@ -766,8 +799,217 @@ class MysqlRepositoryGenerator
       buffer.writeln();
     }
 
+    // Generate CREATE TABLE statements for collection junction tables
+    for (final entry in _collectionFields.entries) {
+      final fieldName = entry.key;
+      final collectionInfo = entry.value;
+      final junctionTableName =
+          '${aggregateTable.tableName}_${fieldName}_items';
+
+      buffer
+          .writeln('      // Create junction table for collection: $fieldName');
+      buffer.writeln('      await _connection.execute(');
+      buffer.writeln("        '''");
+      buffer.writeln(
+        _generateCollectionTableSql(
+          junctionTableName,
+          aggregateTable.tableName,
+          collectionInfo,
+          className,
+        ),
+      );
+      buffer.writeln("        ''',");
+      buffer.writeln('      );');
+      buffer.writeln();
+    }
+
     buffer.writeln('    });');
     buffer.writeln('  }');
+
+    return buffer.toString();
+  }
+
+  /// Generates CREATE TABLE SQL for a collection junction table.
+  String _generateCollectionTableSql(
+    String tableName,
+    String parentTableName,
+    CollectionInfo collectionInfo,
+    String className,
+  ) {
+    const dialect = MysqlDialect();
+    const typeMapper = TypeMapper();
+
+    final buffer = StringBuffer();
+    buffer.writeln('CREATE TABLE IF NOT EXISTS $tableName (');
+
+    final columnDefs = <String>[];
+
+    // Add parent foreign key column (use full table name with underscores)
+    final parentFkColumn = '${parentTableName}_id';
+    columnDefs.add('  $parentFkColumn BINARY(16) NOT NULL');
+
+    // Add position column for lists
+    if (collectionInfo.kind == CollectionKind.list) {
+      columnDefs.add('  position INT NOT NULL');
+    }
+
+    // Add map_key column for maps
+    if (collectionInfo.kind == CollectionKind.map) {
+      // Get the key type from the collection info
+      final keyType = collectionInfo.keyType;
+      if (keyType != null) {
+        final keyTypeName = keyType.getDisplayString(withNullability: false);
+        final keySqlType =
+            typeMapper.getSqlType(keyTypeName, dialect) ?? 'VARCHAR(255)';
+        columnDefs.add('  map_key $keySqlType NOT NULL');
+      }
+    }
+
+    // Add value column(s) based on element kind
+    switch (collectionInfo.elementKind) {
+      case ElementKind.primitive:
+        // Single value column for primitives
+        final elementTypeName =
+            collectionInfo.elementType.getDisplayString(withNullability: false);
+        final sqlType =
+            typeMapper.getSqlType(elementTypeName, dialect) ?? 'VARCHAR(255)';
+        // Check if element type is nullable
+        final isElementNullable = collectionInfo.elementType.nullabilitySuffix
+            .toString()
+            .contains('question');
+        columnDefs.add(
+          '  value $sqlType${isElementNullable ? '' : ' NOT NULL'}',
+        );
+
+      case ElementKind.value:
+        // Flattened value object fields
+        if (collectionInfo.elementType is InterfaceType) {
+          final interfaceType = collectionInfo.elementType as InterfaceType;
+          final valueClass = interfaceType.element;
+          if (valueClass is ClassElement) {
+            for (final field in valueClass.fields) {
+              // Skip static fields, synthetic fields, and the props getter
+              if (field.isStatic ||
+                  field.isSynthetic ||
+                  field.name == 'props') {
+                continue;
+              }
+              final fieldTypeName =
+                  field.type.getDisplayString(withNullability: false);
+              final sqlType = typeMapper.getSqlType(fieldTypeName, dialect) ??
+                  'VARCHAR(255)';
+              final isNullable =
+                  field.type.nullabilitySuffix.toString().contains('question');
+              columnDefs.add(
+                '  ${field.name} $sqlType${isNullable ? '' : ' NOT NULL'}',
+              );
+            }
+          }
+        }
+
+      case ElementKind.entity:
+        // Entity fields (similar to value objects but with id)
+        if (collectionInfo.elementType is InterfaceType) {
+          final interfaceType = collectionInfo.elementType as InterfaceType;
+          final entityClass = interfaceType.element;
+          if (entityClass is ClassElement) {
+            // Add id column first
+            columnDefs.add('  id BINARY(16) PRIMARY KEY NOT NULL');
+
+            // Get all fields including inherited ones
+            final allFields = _getAllFields(entityClass);
+
+            // Add other entity fields
+            for (final field in allFields) {
+              // Skip static fields, id, and props getter
+              if (field.isStatic ||
+                  field.name == 'id' ||
+                  field.name == 'props') {
+                continue;
+              }
+
+              // Check if field is a value object that needs flattening
+              final fieldType = field.type;
+              if (fieldType is InterfaceType) {
+                final fieldClass = fieldType.element;
+                if (fieldClass is ClassElement &&
+                    _analyzer.isValueObject(fieldClass)) {
+                  // Special case: UuidValue should be stored as BINARY(16), not flattened
+                  if (fieldClass.name == 'UuidValue') {
+                    final isNullable = field.type.nullabilitySuffix
+                        .toString()
+                        .contains('question');
+                    columnDefs.add(
+                      '  ${field.name} BINARY(16)${isNullable ? '' : ' NOT NULL'}',
+                    );
+                    continue;
+                  }
+
+                  // Flatten value object fields with prefix
+                  for (final valueField in fieldClass.fields) {
+                    if (valueField.isStatic ||
+                        valueField.isSynthetic ||
+                        valueField.name == 'props') {
+                      continue;
+                    }
+                    final valueFieldTypeName = valueField.type
+                        .getDisplayString(withNullability: false);
+                    final sqlType =
+                        typeMapper.getSqlType(valueFieldTypeName, dialect) ??
+                            'VARCHAR(255)';
+                    final isNullable = valueField.type.nullabilitySuffix
+                        .toString()
+                        .contains('question');
+                    columnDefs.add(
+                      '  ${field.name}_${valueField.name} $sqlType${isNullable ? '' : ' NOT NULL'}',
+                    );
+                  }
+                  continue;
+                }
+              }
+
+              // Regular field (not a value object)
+              final fieldTypeName =
+                  field.type.getDisplayString(withNullability: false);
+              final sqlType = typeMapper.getSqlType(fieldTypeName, dialect) ??
+                  'VARCHAR(255)';
+              final isNullable =
+                  field.type.nullabilitySuffix.toString().contains('question');
+              columnDefs.add(
+                '  ${field.name} $sqlType${isNullable ? '' : ' NOT NULL'}',
+              );
+            }
+          }
+        }
+    }
+
+    buffer.write(columnDefs.join(',\n'));
+
+    // Add foreign key constraint
+    buffer.writeln(',');
+    buffer.write(
+      '  FOREIGN KEY ($parentFkColumn) '
+      'REFERENCES `$parentTableName`(id) '
+      'ON DELETE CASCADE',
+    );
+
+    // Add unique constraints
+    if (collectionInfo.kind == CollectionKind.list) {
+      // List: unique on (parent_id, position)
+      buffer.writeln(',');
+      buffer.write('  UNIQUE ($parentFkColumn, position)');
+    } else if (collectionInfo.kind == CollectionKind.set &&
+        collectionInfo.elementKind == ElementKind.primitive) {
+      // Set of primitives: unique on (parent_id, value)
+      buffer.writeln(',');
+      buffer.write('  UNIQUE ($parentFkColumn, value)');
+    } else if (collectionInfo.kind == CollectionKind.map) {
+      // Map: unique on (parent_id, map_key)
+      buffer.writeln(',');
+      buffer.write('  UNIQUE ($parentFkColumn, map_key)');
+    }
+
+    buffer.write('\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
 
     return buffer.toString();
   }
@@ -806,7 +1048,7 @@ class MysqlRepositoryGenerator
         final onDelete = _cascadeActionToSql(fk.onDelete);
         fkDefs.add(
           '  FOREIGN KEY (${fk.columnName}) '
-          'REFERENCES ${fk.referencedTable}(${fk.referencedColumn}) '
+          'REFERENCES `${fk.referencedTable}`(${fk.referencedColumn}) '
           'ON DELETE $onDelete',
         );
       }
@@ -887,6 +1129,17 @@ class MysqlRepositoryGenerator
       buffer.writeln();
     }
 
+    // Generate load logic for collections (if any)
+    if (_collectionFields.isNotEmpty) {
+      buffer.writeln('        // Load collections');
+      for (final fieldName in _collectionFields.keys) {
+        buffer.writeln(
+          "        json['$fieldName'] = await _load${_toPascalCase(fieldName)}(id);",
+        );
+      }
+      buffer.writeln();
+    }
+
     buffer.writeln('        return _serializer.fromJson(json);');
     buffer.writeln('      } on RepositoryException {');
     buffer.writeln('        rethrow;');
@@ -918,11 +1171,20 @@ class MysqlRepositoryGenerator
     final entityTables =
         tables.values.where((t) => t.tableName != tableName).toList();
 
+    // Build exclude keys list (entity fields + collection fields)
+    final excludeKeys = <String>[];
+    for (final entityTable in entityTables) {
+      excludeKeys.add("'${_findJsonKeyForTable(entityTable)}'");
+    }
+    for (final fieldName in _collectionFields.keys) {
+      excludeKeys.add("'$fieldName'");
+    }
+
     buffer.writeln(
       '        // Save aggregate root first (required for foreign key constraints)',
     );
     buffer.writeln(
-      '        final rootData = _flattenForTable(json, [${entityTables.map((t) => "'${_findJsonKeyForTable(t)}'").join(', ')}]);',
+      '        final rootData = _flattenForTable(json, [${excludeKeys.join(', ')}]);',
     );
     buffer.writeln('        final columns = rootData.keys.toList();');
     buffer.writeln(
@@ -949,6 +1211,17 @@ class MysqlRepositoryGenerator
       for (final entityTable in entityTables) {
         buffer.writeln(
           '        await _save${_toPascalCase(entityTable.tableName)}(aggregate, json);',
+        );
+      }
+    }
+
+    // Add collection save calls
+    if (_collectionFields.isNotEmpty) {
+      buffer.writeln();
+      buffer.writeln('        // Save collections to their junction tables');
+      for (final fieldName in _collectionFields.keys) {
+        buffer.writeln(
+          "        await _save${_toPascalCase(fieldName)}(aggregate.id, json['$fieldName']);",
         );
       }
     }
@@ -1060,6 +1333,12 @@ class MysqlRepositoryGenerator
   ) {
     final buffer = StringBuffer();
 
+    // Get the root table by className (tables are keyed by class name)
+    final rootTable = tables[className];
+    if (rootTable == null) {
+      throw StateError('Root table for $className not found in tables map');
+    }
+
     // Generate helper methods for each entity table
     final entityTables =
         tables.values.where((t) => t.tableName != rootTableName).toList();
@@ -1071,10 +1350,16 @@ class MysqlRepositoryGenerator
       buffer.writeln();
     }
 
+    // Generate collection save and load methods
+    buffer.writeln(_generateCollectionSaveMethods(className, rootTableName));
+    buffer.writeln(_generateCollectionLoadMethods(className, rootTableName));
+
     // Generate utility methods (always generate for consistency)
     buffer.writeln(_generateFlattenForTableMethod());
     buffer.writeln();
     buffer.writeln(_generateRowToJsonMethod());
+    buffer.writeln();
+    buffer.writeln(_generateFieldTypeMapMethod(rootTable));
     buffer.writeln();
     buffer.writeln(_generateEncodeValueMethod());
     buffer.writeln();
@@ -1253,6 +1538,22 @@ class MysqlRepositoryGenerator
   }''';
   }
 
+  /// Generates a map of field names to their Dart types.
+  String _generateFieldTypeMapMethod(TableDefinition rootTable) {
+    final buffer = StringBuffer();
+    buffer.writeln(
+      '  /// Maps field names to their Dart types for type-aware encoding/decoding.',
+    );
+    buffer.writeln('  static const Map<String, String> _fieldTypes = {');
+
+    for (final column in rootTable.columns) {
+      buffer.writeln("    '${column.name}': '${column.dartType}',");
+    }
+
+    buffer.writeln('  };');
+    return buffer.toString();
+  }
+
   /// Generates the _encodeValue helper method.
   String _generateEncodeValueMethod() {
     return '''
@@ -1293,23 +1594,20 @@ class MysqlRepositoryGenerator
   dynamic _decodeValue(Object? value, String fieldName) {
     if (value == null) return null;
 
+    // Get the Dart type for this field
+    final dartType = _fieldTypes[fieldName];
+
     // UUIDs are returned as strings from BIN_TO_UUID()
     // No special decoding needed for UUID fields
-    
-    // Decode DateTimes (stored as BIGINT milliseconds since epoch)
-    if (fieldName.endsWith('At') && value is int) {
-      return DateTime.fromMillisecondsSinceEpoch(value).toIso8601String();
-    }
 
-    // Decode DateTimes (TIMESTAMP)
-    if (value is DateTime || (value is String && fieldName.endsWith('At'))) {
+    // Decode DateTimes (DATETIME format)
+    if (dartType == 'DateTime') {
       try {
         if (value is DateTime) {
           return value.toIso8601String();
         }
-        final dateTime = DateTime.tryParse(value as String);
-        if (dateTime != null) {
-          return dateTime.toIso8601String();
+        if (value is String) {
+          return _dialect.decodeDateTime(value).toIso8601String();
         }
       } catch (_) {
         return value;
@@ -1317,15 +1615,7 @@ class MysqlRepositoryGenerator
     }
 
     // Decode booleans (TINYINT(1))
-    // Common boolean field name patterns
-    if (value is int && 
-        (fieldName.startsWith('is') || 
-         fieldName.startsWith('has') || 
-         fieldName.startsWith('can') ||
-         fieldName.startsWith('should') ||
-         fieldName.endsWith('Enabled') ||
-         fieldName.endsWith('Active') ||
-         fieldName.endsWith('Valid'))) {
+    if (dartType == 'bool' && value is int) {
       return value != 0;
     }
 
@@ -1383,5 +1673,629 @@ class MysqlRepositoryGenerator
     }).join(', ');
 
     return '$returnType ${method.name}($params)';
+  }
+
+  /// Generates collection save methods for discovered collection fields.
+  String _generateCollectionSaveMethods(String className, String tableName) {
+    if (_collectionFields.isEmpty) {
+      return '';
+    }
+
+    final buffer = StringBuffer();
+
+    for (final entry in _collectionFields.entries) {
+      final fieldName = entry.key;
+      final collectionInfo = entry.value;
+
+      buffer.writeln(
+        _generateCollectionSaveMethod(
+          fieldName,
+          collectionInfo,
+          className,
+          tableName,
+        ),
+      );
+      buffer.writeln();
+    }
+
+    return buffer.toString();
+  }
+
+  /// Generates collection load methods for discovered collection fields.
+  String _generateCollectionLoadMethods(String className, String tableName) {
+    if (_collectionFields.isEmpty) {
+      return '';
+    }
+
+    final buffer = StringBuffer();
+
+    for (final entry in _collectionFields.entries) {
+      final fieldName = entry.key;
+      final collectionInfo = entry.value;
+
+      buffer.writeln(
+        _generateCollectionLoadMethod(
+          fieldName,
+          collectionInfo,
+          className,
+          tableName,
+        ),
+      );
+      buffer.writeln();
+    }
+
+    return buffer.toString();
+  }
+
+  /// Generates a save method for a specific collection field.
+  String _generateCollectionSaveMethod(
+    String fieldName,
+    CollectionInfo collectionInfo,
+    String className,
+    String aggregateTableName,
+  ) {
+    final methodName = '_save${_toPascalCase(fieldName)}';
+    final tableName = '${aggregateTableName}_${fieldName}_items';
+    final parentFkColumn = '${aggregateTableName}_id';
+
+    final buffer = StringBuffer();
+    buffer.writeln('  /// Saves the $fieldName collection.');
+    buffer.writeln('  Future<void> $methodName(');
+    buffer.writeln('    UuidValue aggregateId,');
+    buffer.writeln('    dynamic collectionValue,');
+    buffer.writeln('  ) async {');
+    buffer.writeln('    // Delete existing items');
+    buffer.writeln('    await _connection.execute(');
+    buffer.writeln("      'DELETE FROM $tableName WHERE $parentFkColumn = ?',");
+    buffer.writeln('      [_dialect.encodeUuid(aggregateId)],');
+    buffer.writeln('    );');
+    buffer.writeln();
+    buffer.writeln('    // Handle null or empty collections');
+    buffer.writeln('    if (collectionValue == null) return;');
+    buffer.writeln();
+
+    // Generate save logic based on collection kind
+    switch (collectionInfo.kind) {
+      case CollectionKind.list:
+        buffer.writeln(
+          _generateListSaveLogic(
+            tableName,
+            parentFkColumn,
+            collectionInfo,
+          ),
+        );
+      case CollectionKind.set:
+        buffer.writeln(
+          _generateSetSaveLogic(
+            tableName,
+            parentFkColumn,
+            collectionInfo,
+          ),
+        );
+      case CollectionKind.map:
+        buffer.writeln(
+          _generateMapSaveLogic(
+            tableName,
+            parentFkColumn,
+            collectionInfo,
+          ),
+        );
+    }
+
+    buffer.writeln('  }');
+
+    return buffer.toString();
+  }
+
+  /// Generates save logic for List collections.
+  String _generateListSaveLogic(
+    String tableName,
+    String parentFkColumn,
+    CollectionInfo collectionInfo,
+  ) {
+    final buffer = StringBuffer();
+    buffer.writeln('    final items = collectionValue as List;');
+    buffer.writeln('    if (items.isEmpty) return;');
+    buffer.writeln();
+    buffer.writeln('    for (var i = 0; i < items.length; i++) {');
+    buffer.writeln('      final item = items[i];');
+    buffer.writeln('      final values = <Object?>[');
+    buffer.writeln('        _dialect.encodeUuid(aggregateId),');
+    buffer.writeln('        i, // position');
+
+    switch (collectionInfo.elementKind) {
+      case ElementKind.primitive:
+        buffer.writeln('        _encodeValue(item),');
+        buffer.writeln('      ];');
+        buffer.writeln();
+        buffer.writeln('      await _connection.execute(');
+        buffer.writeln(
+          "        'INSERT INTO $tableName ($parentFkColumn, position, value) VALUES (?, ?, ?)',",
+        );
+        buffer.writeln('        values,');
+        buffer.writeln('      );');
+      case ElementKind.value:
+        buffer.writeln('      ];');
+        buffer.writeln();
+        buffer.writeln('      // Flatten value object fields');
+        buffer.writeln('      if (item is Map<String, dynamic>) {');
+        buffer.writeln('        final columns = [');
+        buffer.writeln("          '$parentFkColumn',");
+        buffer.writeln("          'position',");
+        buffer.writeln('        ];');
+        buffer.writeln('        for (final key in item.keys) {');
+        buffer.writeln('          columns.add(key);');
+        buffer.writeln('          values.add(_encodeValue(item[key]));');
+        buffer.writeln('        }');
+        buffer.writeln();
+        buffer.writeln(
+          "        final placeholders = List.filled(columns.length, '?').join(', ');",
+        );
+        buffer.writeln('        await _connection.execute(');
+        buffer.writeln(
+          "          'INSERT INTO $tableName (\${columns.join(', ')}) VALUES (\$placeholders)',",
+        );
+        buffer.writeln('          values,');
+        buffer.writeln('        );');
+        buffer.writeln('      }');
+      case ElementKind.entity:
+        buffer.writeln('      ];');
+        buffer.writeln();
+        buffer.writeln('      // Add entity fields');
+        buffer.writeln('      if (item is Map<String, dynamic>) {');
+        buffer.writeln('        // Flatten nested value objects in the entity');
+        buffer.writeln('        final flattened = _flattenForTable(item, []);');
+        buffer.writeln('        final columns = [');
+        buffer.writeln("          '$parentFkColumn',");
+        buffer.writeln("          'position',");
+        buffer.writeln('        ];');
+        buffer.writeln('        for (final entry in flattened.entries) {');
+        buffer.writeln('          columns.add(entry.key);');
+        buffer.writeln('          values.add(_encodeValue(entry.value));');
+        buffer.writeln('        }');
+        buffer.writeln();
+        buffer.writeln(
+          "        final placeholders = List.filled(columns.length, '?').join(', ');",
+        );
+        buffer.writeln('        await _connection.execute(');
+        buffer.writeln(
+          "          'INSERT INTO $tableName (\${columns.join(', ')}) VALUES (\$placeholders)',",
+        );
+        buffer.writeln('          values,');
+        buffer.writeln('        );');
+        buffer.writeln('      }');
+    }
+
+    buffer.writeln('    }');
+
+    return buffer.toString();
+  }
+
+  /// Generates save logic for Set collections.
+  String _generateSetSaveLogic(
+    String tableName,
+    String parentFkColumn,
+    CollectionInfo collectionInfo,
+  ) {
+    final buffer = StringBuffer();
+    // Sets are serialized as Lists in JSON, so accept either
+    buffer.writeln(
+      '    final items = collectionValue is Set ? collectionValue as Set : (collectionValue as List).toSet();',
+    );
+    buffer.writeln('    if (items.isEmpty) return;');
+    buffer.writeln();
+    buffer.writeln('    for (final item in items) {');
+    buffer.writeln('      final values = <Object?>[');
+    buffer.writeln('        _dialect.encodeUuid(aggregateId),');
+
+    switch (collectionInfo.elementKind) {
+      case ElementKind.primitive:
+        buffer.writeln('        _encodeValue(item),');
+        buffer.writeln('      ];');
+        buffer.writeln();
+        buffer.writeln('      await _connection.execute(');
+        buffer.writeln(
+          "        'INSERT INTO $tableName ($parentFkColumn, value) VALUES (?, ?)',",
+        );
+        buffer.writeln('        values,');
+        buffer.writeln('      );');
+      case ElementKind.value:
+        buffer.writeln('      ];');
+        buffer.writeln();
+        buffer.writeln('      // Flatten value object fields');
+        buffer.writeln('      if (item is Map<String, dynamic>) {');
+        buffer.writeln("        final columns = ['$parentFkColumn'];");
+        buffer.writeln('        for (final key in item.keys) {');
+        buffer.writeln('          columns.add(key);');
+        buffer.writeln('          values.add(_encodeValue(item[key]));');
+        buffer.writeln('        }');
+        buffer.writeln();
+        buffer.writeln(
+          "        final placeholders = List.filled(columns.length, '?').join(', ');",
+        );
+        buffer.writeln('        await _connection.execute(');
+        buffer.writeln(
+          "          'INSERT INTO $tableName (\${columns.join(', ')}) VALUES (\$placeholders)',",
+        );
+        buffer.writeln('        values,');
+        buffer.writeln('        );');
+        buffer.writeln('      }');
+      case ElementKind.entity:
+        buffer.writeln('      ];');
+        buffer.writeln();
+        buffer.writeln('      // Add entity fields');
+        buffer.writeln('      if (item is Map<String, dynamic>) {');
+        buffer.writeln('        // Flatten nested value objects in the entity');
+        buffer.writeln('        final flattened = _flattenForTable(item, []);');
+        buffer.writeln("        final columns = ['$parentFkColumn'];");
+        buffer.writeln('        for (final entry in flattened.entries) {');
+        buffer.writeln('          columns.add(entry.key);');
+        buffer.writeln('          values.add(_encodeValue(entry.value));');
+        buffer.writeln('        }');
+        buffer.writeln();
+        buffer.writeln(
+          "        final placeholders = List.filled(columns.length, '?').join(', ');",
+        );
+        buffer.writeln('        await _connection.execute(');
+        buffer.writeln(
+          "          'INSERT INTO $tableName (\${columns.join(', ')}) VALUES (\$placeholders)',",
+        );
+        buffer.writeln('          values,');
+        buffer.writeln('        );');
+        buffer.writeln('      }');
+    }
+
+    buffer.writeln('    }');
+
+    return buffer.toString();
+  }
+
+  /// Generates save logic for Map collections.
+  String _generateMapSaveLogic(
+    String tableName,
+    String parentFkColumn,
+    CollectionInfo collectionInfo,
+  ) {
+    final buffer = StringBuffer();
+    buffer.writeln('    final map = collectionValue as Map;');
+    buffer.writeln('    if (map.isEmpty) return;');
+    buffer.writeln();
+    buffer.writeln('    for (final entry in map.entries) {');
+    buffer.writeln('      final key = entry.key;');
+    buffer.writeln('      final value = entry.value;');
+    buffer.writeln('      final values = <Object?>[');
+    buffer.writeln('        _dialect.encodeUuid(aggregateId),');
+    buffer.writeln('        _encodeValue(key), // map_key');
+
+    switch (collectionInfo.elementKind) {
+      case ElementKind.primitive:
+        buffer.writeln('        _encodeValue(value),');
+        buffer.writeln('      ];');
+        buffer.writeln();
+        buffer.writeln('      await _connection.execute(');
+        buffer.writeln(
+          "        'INSERT INTO $tableName ($parentFkColumn, map_key, value) VALUES (?, ?, ?)',",
+        );
+        buffer.writeln('        values,');
+        buffer.writeln('      );');
+      case ElementKind.value:
+        buffer.writeln('      ];');
+        buffer.writeln();
+        buffer.writeln('      // Flatten value object fields');
+        buffer.writeln('      if (value is Map<String, dynamic>) {');
+        buffer.writeln('        final columns = [');
+        buffer.writeln("          '$parentFkColumn',");
+        buffer.writeln("          'map_key',");
+        buffer.writeln('        ];');
+        buffer.writeln('        for (final valueKey in value.keys) {');
+        buffer.writeln('          columns.add(valueKey);');
+        buffer.writeln('          values.add(_encodeValue(value[valueKey]));');
+        buffer.writeln('        }');
+        buffer.writeln();
+        buffer.writeln(
+          "        final placeholders = List.filled(columns.length, '?').join(', ');",
+        );
+        buffer.writeln('        await _connection.execute(');
+        buffer.writeln(
+          "          'INSERT INTO $tableName (\${columns.join(', ')}) VALUES (\$placeholders)',",
+        );
+        buffer.writeln('          values,');
+        buffer.writeln('        );');
+        buffer.writeln('      }');
+      case ElementKind.entity:
+        buffer.writeln('      ];');
+        buffer.writeln();
+        buffer.writeln('      // Add entity fields');
+        buffer.writeln('      if (value is Map<String, dynamic>) {');
+        buffer.writeln('        // Flatten nested value objects in the entity');
+        buffer
+            .writeln('        final flattened = _flattenForTable(value, []);');
+        buffer.writeln('        final columns = [');
+        buffer.writeln("          '$parentFkColumn',");
+        buffer.writeln("          'map_key',");
+        buffer.writeln('        ];');
+        buffer.writeln('        for (final valueEntry in flattened.entries) {');
+        buffer.writeln('          columns.add(valueEntry.key);');
+        buffer.writeln('          values.add(_encodeValue(valueEntry.value));');
+        buffer.writeln('        }');
+        buffer.writeln();
+        buffer.writeln(
+          "        final placeholders = List.filled(columns.length, '?').join(', ');",
+        );
+        buffer.writeln('        await _connection.execute(');
+        buffer.writeln(
+          "          'INSERT INTO $tableName (\${columns.join(', ')}) VALUES (\$placeholders)',",
+        );
+        buffer.writeln('          values,');
+        buffer.writeln('        );');
+        buffer.writeln('      }');
+    }
+
+    buffer.writeln('    }');
+
+    return buffer.toString();
+  }
+
+  /// Builds SELECT clause for collection queries, avoiding binary UUID columns.
+  String _buildCollectionSelectClause(
+    CollectionInfo collectionInfo,
+    String parentFkColumn,
+  ) {
+    final columns = <String>[];
+
+    // Add position for lists
+    if (collectionInfo.kind == CollectionKind.list) {
+      columns.add('position');
+    }
+
+    // Add map_key for maps
+    if (collectionInfo.kind == CollectionKind.map) {
+      columns.add('map_key');
+    }
+
+    // Add value column for primitives
+    if (collectionInfo.elementKind == ElementKind.primitive) {
+      columns.add('value');
+    } else if (collectionInfo.elementKind == ElementKind.value) {
+      // For value objects, explicitly list the value object fields
+      if (collectionInfo.elementType is InterfaceType) {
+        final interfaceType = collectionInfo.elementType as InterfaceType;
+        final valueClass = interfaceType.element;
+        if (valueClass is ClassElement) {
+          for (final field in valueClass.fields) {
+            if (field.isStatic || field.isSynthetic || field.name == 'props') {
+              continue;
+            }
+            columns.add(field.name);
+          }
+        }
+      }
+    } else {
+      // For entities, use * (will need to handle binary columns)
+      return '*';
+    }
+
+    return columns.isEmpty ? '*' : columns.join(', ');
+  }
+
+  /// Generates a load method for a specific collection field.
+  String _generateCollectionLoadMethod(
+    String fieldName,
+    CollectionInfo collectionInfo,
+    String className,
+    String aggregateTableName,
+  ) {
+    final methodName = '_load${_toPascalCase(fieldName)}';
+    final tableName = '${aggregateTableName}_${fieldName}_items';
+    final parentFkColumn = '${aggregateTableName}_id';
+
+    final buffer = StringBuffer();
+    buffer.writeln('  /// Loads the $fieldName collection.');
+    buffer.writeln(
+      '  Future<dynamic> $methodName(UuidValue aggregateId) async {',
+    );
+
+    // Build ORDER BY clause for lists
+    final orderBy =
+        collectionInfo.kind == CollectionKind.list ? ' ORDER BY position' : '';
+
+    // Build SELECT clause - convert UUID columns to strings
+    final selectClause =
+        _buildCollectionSelectClause(collectionInfo, parentFkColumn);
+
+    buffer.writeln('    final rows = await _connection.query(');
+    buffer.writeln(
+      "      'SELECT $selectClause FROM $tableName WHERE $parentFkColumn = ?$orderBy',",
+    );
+    buffer.writeln('      [_dialect.encodeUuid(aggregateId)],');
+    buffer.writeln('    );');
+    buffer.writeln();
+    buffer.writeln('    if (rows.isEmpty) {');
+
+    // Return appropriate empty collection (Sets are serialized as Lists in JSON)
+    switch (collectionInfo.kind) {
+      case CollectionKind.list:
+        buffer.writeln('      return <dynamic>[];');
+      case CollectionKind.set:
+        buffer.writeln(
+          '      return <dynamic>[]; // Sets are serialized as Lists',
+        );
+      case CollectionKind.map:
+        buffer.writeln('      return <dynamic, dynamic>{};');
+    }
+
+    buffer.writeln('    }');
+    buffer.writeln();
+
+    // Generate reconstruction logic based on collection kind
+    switch (collectionInfo.kind) {
+      case CollectionKind.list:
+        buffer.writeln(_generateListLoadLogic(collectionInfo));
+      case CollectionKind.set:
+        buffer.writeln(_generateSetLoadLogic(collectionInfo));
+      case CollectionKind.map:
+        buffer.writeln(_generateMapLoadLogic(collectionInfo));
+    }
+
+    buffer.writeln('  }');
+
+    return buffer.toString();
+  }
+
+  /// Generates load logic for List collections.
+  String _generateListLoadLogic(CollectionInfo collectionInfo) {
+    final buffer = StringBuffer();
+    buffer.writeln('    final items = <dynamic>[];');
+    buffer.writeln('    for (final row in rows) {');
+
+    switch (collectionInfo.elementKind) {
+      case ElementKind.primitive:
+        buffer.writeln("      items.add(_decodeValue(row['value'], 'value'));");
+      case ElementKind.value:
+        buffer.writeln(
+          '      // Reconstruct value object from flattened columns',
+        );
+        buffer.writeln('      final valueObject = <String, dynamic>{};');
+        buffer.writeln('      for (final entry in row.entries) {');
+        buffer.writeln(
+          '        // Skip position, map_key, and binary UUID columns (parent FK)',
+        );
+        buffer.writeln(
+          "        if (entry.key != 'position' && entry.key != 'map_key' && ",
+        );
+        buffer.writeln("            !entry.key.endsWith('_id') && ");
+        buffer.writeln(
+          "            entry.value.runtimeType.toString() != 'Uint8List') {",
+        );
+        buffer.writeln(
+          '          valueObject[entry.key] = _decodeValue(entry.value, entry.key);',
+        );
+        buffer.writeln('        }');
+        buffer.writeln('      }');
+        buffer.writeln('      items.add(valueObject);');
+      case ElementKind.entity:
+        buffer.writeln('      // Reconstruct entity from columns');
+        buffer.writeln('      // Filter out position and foreign key columns');
+        buffer.writeln('      final filtered = <String, Object?>{};');
+        buffer.writeln('      for (final entry in row.entries) {');
+        buffer.writeln(
+          "        if (entry.key != 'position' && !entry.key.endsWith('_id')) {",
+        );
+        buffer.writeln('          filtered[entry.key] = entry.value;');
+        buffer.writeln('        }');
+        buffer.writeln('      }');
+        buffer.writeln('      // Reconstruct flattened value objects');
+        buffer.writeln('      items.add(_rowToJson(filtered));');
+    }
+
+    buffer.writeln('    }');
+    buffer.writeln('    return items;');
+
+    return buffer.toString();
+  }
+
+  /// Generates load logic for Set collections.
+  String _generateSetLoadLogic(CollectionInfo collectionInfo) {
+    final buffer = StringBuffer();
+    buffer.writeln('    final items = <dynamic>{};');
+    buffer.writeln('    for (final row in rows) {');
+
+    switch (collectionInfo.elementKind) {
+      case ElementKind.primitive:
+        buffer.writeln("      items.add(_decodeValue(row['value'], 'value'));");
+      case ElementKind.value:
+        buffer.writeln(
+          '      // Reconstruct value object from flattened columns',
+        );
+        buffer.writeln('      final valueObject = <String, dynamic>{};');
+        buffer.writeln('      for (final entry in row.entries) {');
+        buffer.writeln(
+          '        // Skip binary UUID columns (parent FK)',
+        );
+        buffer.writeln("        if (!entry.key.endsWith('_id') && ");
+        buffer.writeln(
+          "            entry.value.runtimeType.toString() != 'Uint8List') {",
+        );
+        buffer.writeln(
+          '          valueObject[entry.key] = _decodeValue(entry.value, entry.key);',
+        );
+        buffer.writeln('        }');
+        buffer.writeln('      }');
+        buffer.writeln('      items.add(valueObject);');
+      case ElementKind.entity:
+        buffer.writeln('      // Reconstruct entity from columns');
+        buffer.writeln('      // Filter out foreign key columns');
+        buffer.writeln('      final filtered = <String, Object?>{};');
+        buffer.writeln('      for (final entry in row.entries) {');
+        buffer.writeln("        if (!entry.key.endsWith('_id')) {");
+        buffer.writeln('          filtered[entry.key] = entry.value;');
+        buffer.writeln('        }');
+        buffer.writeln('      }');
+        buffer.writeln('      // Reconstruct flattened value objects');
+        buffer.writeln('      items.add(_rowToJson(filtered));');
+    }
+
+    buffer.writeln('    }');
+    buffer.writeln(
+      '    return items.toList(); // Convert to List for JSON serialization',
+    );
+
+    return buffer.toString();
+  }
+
+  /// Generates load logic for Map collections.
+  String _generateMapLoadLogic(CollectionInfo collectionInfo) {
+    final buffer = StringBuffer();
+    buffer.writeln('    final map = <dynamic, dynamic>{};');
+    buffer.writeln('    for (final row in rows) {');
+    buffer
+        .writeln("      final key = _decodeValue(row['map_key'], 'map_key');");
+
+    switch (collectionInfo.elementKind) {
+      case ElementKind.primitive:
+        buffer.writeln(
+          "      final value = _decodeValue(row['value'], 'value');",
+        );
+        buffer.writeln('      map[key] = value;');
+      case ElementKind.value:
+        buffer.writeln(
+          '      // Reconstruct value object from flattened columns',
+        );
+        buffer.writeln('      final valueObject = <String, dynamic>{};');
+        buffer.writeln('      for (final entry in row.entries) {');
+        buffer.writeln(
+          '        // Skip map_key and binary UUID columns (parent FK)',
+        );
+        buffer.writeln(
+          "        if (entry.key != 'map_key' && !entry.key.endsWith('_id') && ",
+        );
+        buffer.writeln(
+          "            entry.value.runtimeType.toString() != 'Uint8List') {",
+        );
+        buffer.writeln(
+          '          valueObject[entry.key] = _decodeValue(entry.value, entry.key);',
+        );
+        buffer.writeln('        }');
+        buffer.writeln('      }');
+        buffer.writeln('      map[key] = valueObject;');
+      case ElementKind.entity:
+        buffer.writeln('      // Reconstruct entity from columns');
+        buffer.writeln('      // Filter out map_key and foreign key columns');
+        buffer.writeln('      final filtered = <String, Object?>{};');
+        buffer.writeln('      for (final entry in row.entries) {');
+        buffer.writeln(
+          "        if (entry.key != 'map_key' && !entry.key.endsWith('_id')) {",
+        );
+        buffer.writeln('          filtered[entry.key] = entry.value;');
+        buffer.writeln('        }');
+        buffer.writeln('      }');
+        buffer.writeln('      // Reconstruct flattened value objects');
+        buffer.writeln('      map[key] = _rowToJson(filtered);');
+    }
+
+    buffer.writeln('    }');
+    buffer.writeln('    return map;');
+
+    return buffer.toString();
   }
 }

@@ -35,7 +35,9 @@ export 'src/query/join_builder.dart';
 export 'src/query/query_builder.dart';
 
 // Schema
-export 'src/schema/relationship_analyzer.dart';
+export 'src/schema/collection_analyzer.dart';
+export 'src/schema/relationship_analyzer.dart'
+    hide CollectionKind; // Use CollectionKind from collection_analyzer
 export 'src/schema/schema_generator.dart';
 export 'src/schema/table_definition.dart';
 export 'src/schema/type_mapper.dart';

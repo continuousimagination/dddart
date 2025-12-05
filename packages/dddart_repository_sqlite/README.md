@@ -8,10 +8,12 @@ SQLite repository implementation for DDDart aggregate roots with automatic code 
 - 🔄 **Automatic Schema Generation**: Tables created from aggregate root definitions
 - 💎 **Value Object Embedding**: Value objects flattened into parent tables with prefixed columns
 - 🔗 **Relationship Mapping**: Automatic foreign key generation and JOIN handling
+- 📦 **Collection Support**: Full support for List, Set, and Map collections with primitives, value objects, and entities
 - 🔒 **Transaction Support**: Multi-table operations wrapped in transactions
 - 🎯 **Type Safety**: Compile-time code generation ensures type-safe operations
 - 📱 **Cross-Platform**: Works on iOS, Android, Windows, macOS, Linux, and Web
 - 🚀 **Zero Boilerplate**: Annotate your aggregate roots and generate repositories
+- 📅 **Native DateTime**: DateTime fields stored as TEXT in ISO8601 format for human readability
 
 ## Installation
 
@@ -517,6 +519,382 @@ try {
   print('Stack trace: ${e.stackTrace}');
 }
 ```
+
+## Collection Support
+
+DDDart SQLite repositories provide comprehensive support for collections in your aggregate roots. Collections are automatically persisted to junction tables with proper ordering, uniqueness constraints, and cascade delete behavior.
+
+### Supported Collection Types
+
+**Primitives:**
+- `List<int>`, `List<String>`, `List<double>`, `List<bool>`, `List<DateTime>`, `List<UuidValue>`
+- `Set<int>`, `Set<String>`, `Set<double>`, `Set<bool>`, `Set<DateTime>`, `Set<UuidValue>`
+- `Map<String, int>`, `Map<int, String>`, and other primitive key-value combinations
+
+**Value Objects:**
+- `List<ValueObject>` - Ordered collections of value objects
+- `Set<ValueObject>` - Unique collections of value objects
+- `Map<primitive, ValueObject>` - Key-value mappings with value object values
+
+**Entities:**
+- `List<Entity>` - Ordered collections of entities (existing support)
+- `Set<Entity>` - Unique collections of entities
+- `Map<primitive, Entity>` - Key-value mappings with entity values
+
+### Collection Examples
+
+#### Primitive Collections
+
+```dart
+@Serializable()
+@GenerateSqliteRepository()
+class User extends AggregateRoot {
+  User({
+    required UuidValue id,
+    required this.name,
+    required this.favoriteNumbers,
+    required this.tags,
+    required this.scoresByGame,
+  }) : super(id);
+
+  final String name;
+  final List<int> favoriteNumbers;      // Ordered list
+  final Set<String> tags;               // Unique set
+  final Map<String, int> scoresByGame;  // Key-value map
+}
+
+// Usage
+final user = User(
+  id: UuidValue.generate(),
+  name: 'Alice',
+  favoriteNumbers: [7, 13, 42],
+  tags: {'developer', 'dart', 'ddd'},
+  scoresByGame: {'chess': 1200, 'go': 1500},
+);
+
+await repository.save(user);
+final loaded = await repository.getById(user.id);
+print(loaded.favoriteNumbers); // [7, 13, 42] - order preserved
+print(loaded.tags);            // {developer, dart, ddd} - unique values
+print(loaded.scoresByGame);    // {chess: 1200, go: 1500}
+```
+
+**Generated Schema:**
+```sql
+-- List maintains order with position column
+CREATE TABLE users_favoriteNumbers_items (
+  users_id BLOB NOT NULL,
+  position INTEGER NOT NULL,
+  value INTEGER NOT NULL,
+  FOREIGN KEY (users_id) REFERENCES users(id) ON DELETE CASCADE,
+  UNIQUE (users_id, position)
+);
+
+-- Set enforces uniqueness
+CREATE TABLE users_tags_items (
+  users_id BLOB NOT NULL,
+  value TEXT NOT NULL,
+  FOREIGN KEY (users_id) REFERENCES users(id) ON DELETE CASCADE,
+  UNIQUE (users_id, value)
+);
+
+-- Map stores key-value pairs
+CREATE TABLE users_scoresByGame_items (
+  users_id BLOB NOT NULL,
+  map_key TEXT NOT NULL,
+  value INTEGER NOT NULL,
+  FOREIGN KEY (users_id) REFERENCES users(id) ON DELETE CASCADE,
+  UNIQUE (users_id, map_key)
+);
+```
+
+#### Value Object Collections
+
+```dart
+@Serializable()
+class Money {
+  Money({required this.amount, required this.currency});
+  final double amount;
+  final String currency;
+}
+
+@Serializable()
+class Address {
+  Address({required this.street, required this.city, required this.country});
+  final String street;
+  final String city;
+  final String country;
+}
+
+@Serializable()
+@GenerateSqliteRepository()
+class Order extends AggregateRoot {
+  Order({
+    required UuidValue id,
+    required this.payments,
+    required this.deliveryLocations,
+    required this.discountsByCode,
+  }) : super(id);
+
+  final List<Money> payments;                    // Ordered payments
+  final Set<Address> deliveryLocations;          // Unique addresses
+  final Map<String, Money> discountsByCode;      // Discounts by code
+}
+
+// Usage
+final order = Order(
+  id: UuidValue.generate(),
+  payments: [
+    Money(amount: 50.0, currency: 'USD'),
+    Money(amount: 49.99, currency: 'USD'),
+  ],
+  deliveryLocations: {
+    Address(street: '123 Main St', city: 'NYC', country: 'USA'),
+    Address(street: '456 Oak Ave', city: 'LA', country: 'USA'),
+  },
+  discountsByCode: {
+    'SAVE10': Money(amount: 10.0, currency: 'USD'),
+    'SAVE20': Money(amount: 20.0, currency: 'USD'),
+  },
+);
+
+await repository.save(order);
+```
+
+**Generated Schema:**
+```sql
+-- Value objects are flattened into junction table columns
+CREATE TABLE orders_payments_items (
+  orders_id BLOB NOT NULL,
+  position INTEGER NOT NULL,
+  amount REAL NOT NULL,
+  currency TEXT NOT NULL,
+  FOREIGN KEY (orders_id) REFERENCES orders(id) ON DELETE CASCADE,
+  UNIQUE (orders_id, position)
+);
+
+CREATE TABLE orders_deliveryLocations_items (
+  orders_id BLOB NOT NULL,
+  street TEXT NOT NULL,
+  city TEXT NOT NULL,
+  country TEXT NOT NULL,
+  FOREIGN KEY (orders_id) REFERENCES orders(id) ON DELETE CASCADE,
+  UNIQUE (orders_id, street, city, country)
+);
+
+CREATE TABLE orders_discountsByCode_items (
+  orders_id BLOB NOT NULL,
+  map_key TEXT NOT NULL,
+  amount REAL NOT NULL,
+  currency TEXT NOT NULL,
+  FOREIGN KEY (orders_id) REFERENCES orders(id) ON DELETE CASCADE,
+  UNIQUE (orders_id, map_key)
+);
+```
+
+#### Entity Collections
+
+```dart
+@Serializable()
+class CartItem extends Entity {
+  CartItem({
+    required UuidValue id,
+    required this.productId,
+    required this.quantity,
+  }) : super(id);
+
+  final UuidValue productId;
+  final int quantity;
+}
+
+@Serializable()
+class Discount extends Entity {
+  Discount({
+    required UuidValue id,
+    required this.code,
+    required this.percentage,
+  }) : super(id);
+
+  final String code;
+  final double percentage;
+}
+
+@Serializable()
+@GenerateSqliteRepository()
+class ShoppingCart extends AggregateRoot {
+  ShoppingCart({
+    required UuidValue id,
+    required this.items,
+    required this.appliedDiscounts,
+    required this.savedItems,
+  }) : super(id);
+
+  final List<CartItem> items;                    // Ordered items (existing support)
+  final Set<Discount> appliedDiscounts;          // Unique discounts
+  final Map<String, CartItem> savedItems;        // Named saved items
+}
+
+// Usage
+final cart = ShoppingCart(
+  id: UuidValue.generate(),
+  items: [
+    CartItem(id: UuidValue.generate(), productId: UuidValue.generate(), quantity: 2),
+    CartItem(id: UuidValue.generate(), productId: UuidValue.generate(), quantity: 1),
+  ],
+  appliedDiscounts: {
+    Discount(id: UuidValue.generate(), code: 'SAVE10', percentage: 10.0),
+  },
+  savedItems: {
+    'wishlist': CartItem(id: UuidValue.generate(), productId: UuidValue.generate(), quantity: 1),
+  },
+);
+
+await repository.save(cart);
+```
+
+**Generated Schema:**
+```sql
+-- Entities get their own tables with foreign keys
+CREATE TABLE cart_items (
+  id BLOB PRIMARY KEY NOT NULL,
+  shopping_cart_id BLOB NOT NULL,
+  position INTEGER,  -- Only for List<Entity>
+  productId BLOB NOT NULL,
+  quantity INTEGER NOT NULL,
+  FOREIGN KEY (shopping_cart_id) REFERENCES shopping_carts(id) ON DELETE CASCADE
+);
+
+CREATE TABLE discounts (
+  id BLOB PRIMARY KEY NOT NULL,
+  shopping_cart_id BLOB NOT NULL,
+  code TEXT NOT NULL,
+  percentage REAL NOT NULL,
+  FOREIGN KEY (shopping_cart_id) REFERENCES shopping_carts(id) ON DELETE CASCADE
+);
+
+CREATE TABLE saved_cart_items (
+  id BLOB PRIMARY KEY NOT NULL,
+  shopping_cart_id BLOB NOT NULL,
+  map_key TEXT NOT NULL,
+  productId BLOB NOT NULL,
+  quantity INTEGER NOT NULL,
+  FOREIGN KEY (shopping_cart_id) REFERENCES shopping_carts(id) ON DELETE CASCADE,
+  UNIQUE (shopping_cart_id, map_key)
+);
+```
+
+### Collection Behavior
+
+**Order Preservation:**
+- `List<T>` collections maintain insertion order using a `position` column
+- Position values start at 0 and increment by 1
+- Order is preserved across save/load cycles
+
+**Uniqueness:**
+- `Set<T>` collections enforce uniqueness via UNIQUE constraints
+- Duplicate values are automatically filtered during save
+- For value objects, uniqueness is based on all fields
+
+**Map Keys:**
+- Map keys are stored in a `map_key` column
+- Keys must be primitive types (String, int, etc.)
+- UNIQUE constraint on (parent_id, map_key) prevents duplicate keys
+
+**Cascade Delete:**
+- All collection items are automatically deleted when the parent aggregate is deleted
+- Implemented via `ON DELETE CASCADE` foreign key constraints
+- No orphaned collection items remain in the database
+
+**Null Handling:**
+- Nullable collection fields (`List<int>?`) are treated as empty collections
+- Saving null deletes all existing collection items
+- Loading returns empty collections, never null
+- Nullable elements (`List<int?>`) are supported
+
+### DateTime and Boolean Type Improvements
+
+**DateTime Storage:**
+- DateTime fields are stored as TEXT in ISO8601 format
+- Example: `2024-12-04T10:30:00.000Z`
+- Human-readable in database tools
+- Supports all DateTime fields, not just those ending in "At"
+- Automatic UTC conversion for consistency
+
+```dart
+@Serializable()
+@GenerateSqliteRepository()
+class Event extends AggregateRoot {
+  Event({
+    required UuidValue id,
+    required this.scheduledFor,
+    required this.birthday,
+    required this.timestamps,
+  }) : super(id);
+
+  final DateTime scheduledFor;  // Stored as TEXT (ISO8601)
+  final DateTime birthday;      // Stored as TEXT (ISO8601)
+  final List<DateTime> timestamps;  // Each stored as TEXT (ISO8601)
+}
+```
+
+**Boolean Storage:**
+- Boolean fields are stored as INTEGER (0 or 1)
+- `true` → 1, `false` → 0
+- Efficient storage and indexing
+- Works in collections and embedded value objects
+
+```dart
+@Serializable()
+@GenerateSqliteRepository()
+class Task extends AggregateRoot {
+  Task({
+    required UuidValue id,
+    required this.completed,
+    required this.flags,
+  }) : super(id);
+
+  final bool completed;        // Stored as INTEGER (0/1)
+  final List<bool> flags;      // Each stored as INTEGER (0/1)
+}
+```
+
+### Migration Guide
+
+If you have existing databases using the old INTEGER-based DateTime storage, you can migrate to the new TEXT-based format:
+
+```dart
+Future<void> migrateDateTimeColumns(SqliteConnection connection) async {
+  // Migrate DateTime columns from INTEGER (Unix timestamp) to TEXT (ISO8601)
+  await connection.execute('''
+    UPDATE users SET 
+      birthday = datetime(birthday / 1000, 'unixepoch')
+    WHERE typeof(birthday) = 'integer'
+  ''');
+  
+  await connection.execute('''
+    UPDATE events SET 
+      scheduledFor = datetime(scheduledFor / 1000, 'unixepoch')
+    WHERE typeof(scheduledFor) = 'integer'
+  ''');
+  
+  // Repeat for other tables with DateTime columns
+}
+
+// Run migration once
+final connection = SqliteConnection.file('app.db');
+await connection.open();
+await migrateDateTimeColumns(connection);
+await connection.close();
+```
+
+**Migration Steps:**
+1. Backup your database before migration
+2. Run the migration script to convert INTEGER to TEXT
+3. Regenerate repository code with `dart run build_runner build`
+4. Test thoroughly with your application
+5. Deploy the updated application
+
+**Note:** The new format is more human-readable and works better with SQLite's datetime functions.
 
 ## Requirements
 

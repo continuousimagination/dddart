@@ -8,11 +8,13 @@ MySQL database repository implementation for DDDart aggregate roots with automat
 - 🔄 **Automatic Schema Generation**: Tables created with InnoDB engine and utf8mb4 charset
 - 💎 **Value Object Embedding**: Value objects flattened into parent tables with prefixed columns
 - 🔗 **Relationship Mapping**: Automatic foreign key generation with CASCADE DELETE
+- 📦 **Collection Support**: Full support for List, Set, and Map collections with primitives, value objects, and entities
 - 🔒 **Transaction Support**: Multi-table operations with nested transaction handling
 - 🔌 **Connection Pooling**: Configurable connection pool for concurrent operations
 - 🎯 **Type Safety**: Compile-time code generation ensures type-safe operations
 - 🚀 **Zero Boilerplate**: Annotate your aggregate roots and generate repositories
 - 🔐 **Efficient UUID Storage**: UUIDs stored as BINARY(16) for optimal performance
+- 📅 **Native DateTime**: DateTime fields stored as DATETIME in UTC for database-native operations
 - 🌐 **Production Ready**: Built for MySQL 5.7+ with best practices
 
 ## Installation
@@ -730,6 +732,429 @@ await mysqlConn.close();
 - Value object embedding strategy
 - Transaction handling
 - Error handling patterns
+
+## Collection Support
+
+DDDart MySQL repositories provide comprehensive support for collections in your aggregate roots. Collections are automatically persisted to junction tables with proper ordering, uniqueness constraints, and cascade delete behavior.
+
+### Supported Collection Types
+
+**Primitives:**
+- `List<int>`, `List<String>`, `List<double>`, `List<bool>`, `List<DateTime>`, `List<UuidValue>`
+- `Set<int>`, `Set<String>`, `Set<double>`, `Set<bool>`, `Set<DateTime>`, `Set<UuidValue>`
+- `Map<String, int>`, `Map<int, String>`, and other primitive key-value combinations
+
+**Value Objects:**
+- `List<ValueObject>` - Ordered collections of value objects
+- `Set<ValueObject>` - Unique collections of value objects
+- `Map<primitive, ValueObject>` - Key-value mappings with value object values
+
+**Entities:**
+- `List<Entity>` - Ordered collections of entities (existing support)
+- `Set<Entity>` - Unique collections of entities
+- `Map<primitive, Entity>` - Key-value mappings with entity values
+
+### Collection Examples
+
+#### Primitive Collections
+
+```dart
+@Serializable()
+@GenerateMysqlRepository(tableName: 'users')
+class User extends AggregateRoot {
+  User({
+    required UuidValue id,
+    required this.name,
+    required this.favoriteNumbers,
+    required this.tags,
+    required this.scoresByGame,
+  }) : super(id);
+
+  final String name;
+  final List<int> favoriteNumbers;      // Ordered list
+  final Set<String> tags;               // Unique set
+  final Map<String, int> scoresByGame;  // Key-value map
+}
+
+// Usage
+final user = User(
+  id: UuidValue.generate(),
+  name: 'Alice',
+  favoriteNumbers: [7, 13, 42],
+  tags: {'developer', 'dart', 'ddd'},
+  scoresByGame: {'chess': 1200, 'go': 1500},
+);
+
+await repository.save(user);
+final loaded = await repository.getById(user.id);
+print(loaded.favoriteNumbers); // [7, 13, 42] - order preserved
+print(loaded.tags);            // {developer, dart, ddd} - unique values
+print(loaded.scoresByGame);    // {chess: 1200, go: 1500}
+```
+
+**Generated Schema:**
+```sql
+-- List maintains order with position column
+CREATE TABLE IF NOT EXISTS users_favoriteNumbers_items (
+  users_id BINARY(16) NOT NULL,
+  position BIGINT NOT NULL,
+  value BIGINT NOT NULL,
+  FOREIGN KEY (users_id) REFERENCES users(id) ON DELETE CASCADE,
+  UNIQUE (users_id, position)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Set enforces uniqueness
+CREATE TABLE IF NOT EXISTS users_tags_items (
+  users_id BINARY(16) NOT NULL,
+  value VARCHAR(255) NOT NULL,
+  FOREIGN KEY (users_id) REFERENCES users(id) ON DELETE CASCADE,
+  UNIQUE (users_id, value)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Map stores key-value pairs
+CREATE TABLE IF NOT EXISTS users_scoresByGame_items (
+  users_id BINARY(16) NOT NULL,
+  map_key VARCHAR(255) NOT NULL,
+  value BIGINT NOT NULL,
+  FOREIGN KEY (users_id) REFERENCES users(id) ON DELETE CASCADE,
+  UNIQUE (users_id, map_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+#### Value Object Collections
+
+```dart
+@Serializable()
+class Money {
+  Money({required this.amount, required this.currency});
+  final double amount;
+  final String currency;
+}
+
+@Serializable()
+class Address {
+  Address({required this.street, required this.city, required this.country});
+  final String street;
+  final String city;
+  final String country;
+}
+
+@Serializable()
+@GenerateMysqlRepository(tableName: 'orders')
+class Order extends AggregateRoot {
+  Order({
+    required UuidValue id,
+    required this.payments,
+    required this.deliveryLocations,
+    required this.discountsByCode,
+  }) : super(id);
+
+  final List<Money> payments;                    // Ordered payments
+  final Set<Address> deliveryLocations;          // Unique addresses
+  final Map<String, Money> discountsByCode;      // Discounts by code
+}
+
+// Usage
+final order = Order(
+  id: UuidValue.generate(),
+  payments: [
+    Money(amount: 50.0, currency: 'USD'),
+    Money(amount: 49.99, currency: 'USD'),
+  ],
+  deliveryLocations: {
+    Address(street: '123 Main St', city: 'NYC', country: 'USA'),
+    Address(street: '456 Oak Ave', city: 'LA', country: 'USA'),
+  },
+  discountsByCode: {
+    'SAVE10': Money(amount: 10.0, currency: 'USD'),
+    'SAVE20': Money(amount: 20.0, currency: 'USD'),
+  },
+);
+
+await repository.save(order);
+```
+
+**Generated Schema:**
+```sql
+-- Value objects are flattened into junction table columns
+CREATE TABLE IF NOT EXISTS orders_payments_items (
+  orders_id BINARY(16) NOT NULL,
+  position BIGINT NOT NULL,
+  amount DOUBLE NOT NULL,
+  currency VARCHAR(255) NOT NULL,
+  FOREIGN KEY (orders_id) REFERENCES orders(id) ON DELETE CASCADE,
+  UNIQUE (orders_id, position)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS orders_deliveryLocations_items (
+  orders_id BINARY(16) NOT NULL,
+  street VARCHAR(255) NOT NULL,
+  city VARCHAR(255) NOT NULL,
+  country VARCHAR(255) NOT NULL,
+  FOREIGN KEY (orders_id) REFERENCES orders(id) ON DELETE CASCADE,
+  UNIQUE (orders_id, street, city, country)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS orders_discountsByCode_items (
+  orders_id BINARY(16) NOT NULL,
+  map_key VARCHAR(255) NOT NULL,
+  amount DOUBLE NOT NULL,
+  currency VARCHAR(255) NOT NULL,
+  FOREIGN KEY (orders_id) REFERENCES orders(id) ON DELETE CASCADE,
+  UNIQUE (orders_id, map_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+#### Entity Collections
+
+```dart
+@Serializable()
+class CartItem extends Entity {
+  CartItem({
+    required UuidValue id,
+    required this.productId,
+    required this.quantity,
+  }) : super(id);
+
+  final UuidValue productId;
+  final int quantity;
+}
+
+@Serializable()
+class Discount extends Entity {
+  Discount({
+    required UuidValue id,
+    required this.code,
+    required this.percentage,
+  }) : super(id);
+
+  final String code;
+  final double percentage;
+}
+
+@Serializable()
+@GenerateMysqlRepository(tableName: 'shopping_carts')
+class ShoppingCart extends AggregateRoot {
+  ShoppingCart({
+    required UuidValue id,
+    required this.items,
+    required this.appliedDiscounts,
+    required this.savedItems,
+  }) : super(id);
+
+  final List<CartItem> items;                    // Ordered items (existing support)
+  final Set<Discount> appliedDiscounts;          // Unique discounts
+  final Map<String, CartItem> savedItems;        // Named saved items
+}
+
+// Usage
+final cart = ShoppingCart(
+  id: UuidValue.generate(),
+  items: [
+    CartItem(id: UuidValue.generate(), productId: UuidValue.generate(), quantity: 2),
+    CartItem(id: UuidValue.generate(), productId: UuidValue.generate(), quantity: 1),
+  ],
+  appliedDiscounts: {
+    Discount(id: UuidValue.generate(), code: 'SAVE10', percentage: 10.0),
+  },
+  savedItems: {
+    'wishlist': CartItem(id: UuidValue.generate(), productId: UuidValue.generate(), quantity: 1),
+  },
+);
+
+await repository.save(cart);
+```
+
+**Generated Schema:**
+```sql
+-- Entities get their own tables with foreign keys
+CREATE TABLE IF NOT EXISTS cart_items (
+  id BINARY(16) PRIMARY KEY NOT NULL,
+  shopping_cart_id BINARY(16) NOT NULL,
+  position BIGINT,  -- Only for List<Entity>
+  productId BINARY(16) NOT NULL,
+  quantity BIGINT NOT NULL,
+  FOREIGN KEY (shopping_cart_id) REFERENCES shopping_carts(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS discounts (
+  id BINARY(16) PRIMARY KEY NOT NULL,
+  shopping_cart_id BINARY(16) NOT NULL,
+  code VARCHAR(255) NOT NULL,
+  percentage DOUBLE NOT NULL,
+  FOREIGN KEY (shopping_cart_id) REFERENCES shopping_carts(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS saved_cart_items (
+  id BINARY(16) PRIMARY KEY NOT NULL,
+  shopping_cart_id BINARY(16) NOT NULL,
+  map_key VARCHAR(255) NOT NULL,
+  productId BINARY(16) NOT NULL,
+  quantity BIGINT NOT NULL,
+  FOREIGN KEY (shopping_cart_id) REFERENCES shopping_carts(id) ON DELETE CASCADE,
+  UNIQUE (shopping_cart_id, map_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+### Collection Behavior
+
+**Order Preservation:**
+- `List<T>` collections maintain insertion order using a `position` column
+- Position values start at 0 and increment by 1
+- Order is preserved across save/load cycles
+
+**Uniqueness:**
+- `Set<T>` collections enforce uniqueness via UNIQUE constraints
+- Duplicate values are automatically filtered during save
+- For value objects, uniqueness is based on all fields
+
+**Map Keys:**
+- Map keys are stored in a `map_key` column
+- Keys must be primitive types (String, int, etc.)
+- UNIQUE constraint on (parent_id, map_key) prevents duplicate keys
+
+**Cascade Delete:**
+- All collection items are automatically deleted when the parent aggregate is deleted
+- Implemented via `ON DELETE CASCADE` foreign key constraints
+- InnoDB engine enforces referential integrity
+- No orphaned collection items remain in the database
+
+**Null Handling:**
+- Nullable collection fields (`List<int>?`) are treated as empty collections
+- Saving null deletes all existing collection items
+- Loading returns empty collections, never null
+- Nullable elements (`List<int?>`) are supported
+
+### DateTime and Boolean Type Improvements
+
+**DateTime Storage:**
+- DateTime fields are stored as DATETIME in UTC
+- Example: `2024-12-04 10:30:00`
+- Supports MySQL datetime functions (DATE_ADD, DATE_SUB, etc.)
+- Supports all DateTime fields, not just those ending in "At"
+- Automatic UTC conversion for consistency
+
+```dart
+@Serializable()
+@GenerateMysqlRepository(tableName: 'events')
+class Event extends AggregateRoot {
+  Event({
+    required UuidValue id,
+    required this.scheduledFor,
+    required this.birthday,
+    required this.timestamps,
+  }) : super(id);
+
+  final DateTime scheduledFor;  // Stored as DATETIME (UTC)
+  final DateTime birthday;      // Stored as DATETIME (UTC)
+  final List<DateTime> timestamps;  // Each stored as DATETIME (UTC)
+}
+
+// Query with MySQL datetime functions
+final rows = await connection.query('''
+  SELECT * FROM events 
+  WHERE scheduledFor > DATE_ADD(NOW(), INTERVAL 1 DAY)
+''');
+```
+
+**Boolean Storage:**
+- Boolean fields are stored as TINYINT(1)
+- `true` → 1, `false` → 0
+- Efficient storage and indexing
+- Works in collections and embedded value objects
+
+```dart
+@Serializable()
+@GenerateMysqlRepository(tableName: 'tasks')
+class Task extends AggregateRoot {
+  Task({
+    required UuidValue id,
+    required this.completed,
+    required this.flags,
+  }) : super(id);
+
+  final bool completed;        // Stored as TINYINT(1)
+  final List<bool> flags;      // Each stored as TINYINT(1)
+}
+```
+
+### Migration Guide
+
+If you have existing databases using the old BIGINT-based DateTime storage, you can migrate to the new DATETIME format:
+
+```dart
+Future<void> migrateDateTimeColumns(MysqlConnection connection) async {
+  // Migrate DateTime columns from BIGINT (Unix timestamp) to DATETIME
+  await connection.execute('''
+    UPDATE users SET 
+      birthday = FROM_UNIXTIME(birthday / 1000)
+    WHERE birthday > 1000000000000
+  ''');
+  
+  await connection.execute('''
+    UPDATE events SET 
+      scheduledFor = FROM_UNIXTIME(scheduledFor / 1000)
+    WHERE scheduledFor > 1000000000000
+  ''');
+  
+  // Repeat for other tables with DateTime columns
+  
+  // Optionally, alter column types (requires table lock)
+  await connection.execute('''
+    ALTER TABLE users 
+    MODIFY COLUMN birthday DATETIME NOT NULL
+  ''');
+  
+  await connection.execute('''
+    ALTER TABLE events 
+    MODIFY COLUMN scheduledFor DATETIME NOT NULL
+  ''');
+}
+
+// Run migration once
+final connection = MysqlConnection(
+  host: 'localhost',
+  port: 3306,
+  database: 'myapp',
+  user: 'migration_user',
+  password: 'secure_password',
+);
+await connection.open();
+await migrateDateTimeColumns(connection);
+await connection.close();
+```
+
+**Migration Steps:**
+1. Backup your database before migration
+2. Run the migration script to convert BIGINT to DATETIME
+3. Optionally alter column types (requires table lock - plan for downtime)
+4. Regenerate repository code with `dart run build_runner build`
+5. Test thoroughly with your application
+6. Deploy the updated application
+
+**Note:** The new format enables MySQL's powerful datetime functions and improves query performance.
+
+### Dialect Consistency
+
+Collection support works identically in both SQLite and MySQL repositories:
+
+**Same Domain Model:**
+```dart
+// Works with both @GenerateSqliteRepository() and @GenerateMysqlRepository()
+@Serializable()
+class Order extends AggregateRoot {
+  final List<int> itemIds;
+  final Set<String> tags;
+  final Map<String, double> prices;
+}
+```
+
+**Database-Specific SQL:**
+- SQLite: `BLOB` for UUIDs, `TEXT` for DateTime, `INTEGER` for booleans
+- MySQL: `BINARY(16)` for UUIDs, `DATETIME` for DateTime, `TINYINT(1)` for booleans
+- Junction table structure is identical
+- Save/load behavior is identical
+- No code changes needed when switching databases
 
 ## Requirements
 

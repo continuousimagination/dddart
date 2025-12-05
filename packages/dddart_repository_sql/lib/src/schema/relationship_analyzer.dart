@@ -224,26 +224,30 @@ class RelationshipAnalyzer {
   ///
   /// Handles both direct class references and generic types like List<T>.
   ClassElement? _getReferencedClass(DartType type) {
-    // Handle List<T> - extract T
-    if (type is InterfaceType && type.isDartCoreList) {
-      final typeArgs = type.typeArguments;
-      if (typeArgs.isNotEmpty) {
-        final elementType = typeArgs.first;
-        if (elementType is InterfaceType) {
-          final element = elementType.element;
-          // InterfaceElement can be ClassElement or other types
-          if (element is ClassElement) {
-            return element;
+    // Skip collection types - they're handled by CollectionAnalyzer
+    if (type is InterfaceType) {
+      if (type.isDartCoreList || type.isDartCoreSet || type.isDartCoreMap) {
+        // Extract element type from collection
+        final typeArgs = type.typeArguments;
+        if (typeArgs.isNotEmpty) {
+          // For List<T> and Set<T>, use first type argument
+          // For Map<K, V>, use second type argument (value type)
+          final elementType = type.isDartCoreMap && typeArgs.length > 1
+              ? typeArgs[1]
+              : typeArgs.first;
+
+          if (elementType is InterfaceType) {
+            final element = elementType.element;
+            if (element is ClassElement) {
+              return element;
+            }
           }
         }
+        return null;
       }
-      return null;
-    }
 
-    // Handle direct class reference
-    if (type is InterfaceType) {
+      // Handle direct class reference
       final element = type.element;
-      // InterfaceElement can be ClassElement or other types
       if (element is ClassElement) {
         return element;
       }
@@ -266,6 +270,101 @@ class RelationshipAnalyzer {
         name == 'Type' || // Dart built-in type
         name == 'Object'; // Dart built-in type
   }
+
+  /// Determines if a field is a collection type.
+  ///
+  /// Returns `true` if the field is a List, Set, or Map.
+  ///
+  /// Example:
+  /// ```dart
+  /// // For field: List<int> favoriteNumbers
+  /// analyzer.isCollection(field); // true
+  /// // For field: String name
+  /// analyzer.isCollection(field); // false
+  /// ```
+  bool isCollection(FieldElement field) {
+    final type = field.type;
+    return type.isDartCoreList || type.isDartCoreSet || type.isDartCoreMap;
+  }
+
+  /// Gets the collection kind (List, Set, Map).
+  ///
+  /// Returns the kind of collection, or `null` if not a collection.
+  ///
+  /// Example:
+  /// ```dart
+  /// // For field: List<int> favoriteNumbers
+  /// analyzer.getCollectionKind(field.type); // CollectionKind.list
+  /// // For field: Set<String> tags
+  /// analyzer.getCollectionKind(field.type); // CollectionKind.set
+  /// ```
+  CollectionKind? getCollectionKind(DartType type) {
+    if (type.isDartCoreList) {
+      return CollectionKind.list;
+    } else if (type.isDartCoreSet) {
+      return CollectionKind.set;
+    } else if (type.isDartCoreMap) {
+      return CollectionKind.map;
+    }
+    return null;
+  }
+
+  /// Extracts element type from List<T> or Set<T>.
+  ///
+  /// Returns the type argument T from a List<T> or Set<T> type.
+  /// Returns `null` if the type is not a List or Set, or has no type arguments.
+  ///
+  /// Example:
+  /// ```dart
+  /// // For type: List<int>
+  /// analyzer.getElementType(listType); // int type
+  /// // For type: Set<String>
+  /// analyzer.getElementType(setType); // String type
+  /// ```
+  DartType? getElementType(DartType collectionType) {
+    if (collectionType is InterfaceType) {
+      if (collectionType.isDartCoreList || collectionType.isDartCoreSet) {
+        final typeArgs = collectionType.typeArguments;
+        if (typeArgs.isNotEmpty) {
+          return typeArgs.first;
+        }
+      }
+    }
+    return null;
+  }
+
+  /// Extracts key and value types from Map<K, V>.
+  ///
+  /// Returns a tuple of (keyType, valueType) from a Map<K, V> type.
+  /// Returns `(null, null)` if the type is not a Map or has insufficient type arguments.
+  ///
+  /// Example:
+  /// ```dart
+  /// // For type: Map<String, int>
+  /// final (keyType, valueType) = analyzer.getMapTypes(mapType);
+  /// // keyType is String, valueType is int
+  /// ```
+  (DartType?, DartType?) getMapTypes(DartType mapType) {
+    if (mapType is InterfaceType && mapType.isDartCoreMap) {
+      final typeArgs = mapType.typeArguments;
+      if (typeArgs.length >= 2) {
+        return (typeArgs[0], typeArgs[1]);
+      }
+    }
+    return (null, null);
+  }
+}
+
+/// Types of collections.
+enum CollectionKind {
+  /// List collection (ordered, allows duplicates).
+  list,
+
+  /// Set collection (unordered, unique elements).
+  set,
+
+  /// Map collection (key-value pairs).
+  map,
 }
 
 /// Types of relationships between classes.
