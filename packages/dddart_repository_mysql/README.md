@@ -320,14 +320,14 @@ final connection = MysqlConnection(
 For secure connections to MySQL:
 
 ```dart
-// Note: SSL support depends on mysql1 package configuration
+// Note: SSL support depends on mysql_client package configuration
 final connection = MysqlConnection(
   host: 'secure-db.example.com',
   port: 3306,
   database: 'myapp',
   user: 'myapp_user',
   password: 'secure_password',
-  // SSL configuration via mysql1 package
+  // SSL configuration via mysql_client package
 );
 ```
 
@@ -1159,10 +1159,115 @@ class Order extends AggregateRoot {
 ## Requirements
 
 - Dart SDK >=3.5.0
-- MySQL 5.7+ (MySQL 8.0+ recommended)
+- **MySQL 5.7+ (MySQL 8.0+ recommended)**
+  - Full support for MySQL 8.0+ default authentication (caching_sha2_password)
+  - No legacy authentication plugins required
+  - InnoDB storage engine
 - Aggregate roots must extend `AggregateRoot`
 - Aggregate roots must have `@Serializable()` annotation
 - Run `build_runner` to generate repository code
+
+## Version 2.0 Migration Guide
+
+### What's New in 2.0
+
+Version 2.0 migrates from the `mysql1` driver to `mysql_client`, providing:
+
+- ✅ **Native MySQL 8.0+ Support**: Full support for `caching_sha2_password` authentication
+- ✅ **Improved Stability**: Fixes connection issues and "packets out of order" errors
+- ✅ **Better Error Handling**: Enhanced error messages with more context
+- ✅ **No Workarounds Needed**: No need for `mysql_native_password` plugin
+
+### Breaking Changes
+
+**Driver Change:**
+- The underlying MySQL driver has changed from `mysql1` to `mysql_client`
+- This is a major version bump (2.0.0) to indicate the driver change
+
+**Minimum MySQL Version:**
+- MySQL 5.7+ is required (MySQL 8.0+ recommended)
+- MySQL 8.0 with default authentication is fully supported
+
+### Migration Steps
+
+For most users, upgrading is simple:
+
+**1. Update your `pubspec.yaml`:**
+```yaml
+dependencies:
+  dddart_repository_mysql: ^2.0.0  # Update from ^1.x
+```
+
+**2. Run pub get:**
+```bash
+dart pub get
+```
+
+**3. Test your application:**
+- Run your existing tests
+- Verify database operations work correctly
+- No code changes should be required
+
+**4. Remove MySQL 8.0 workarounds (if any):**
+
+If you were using MySQL 8.0 with the legacy authentication workaround, you can now remove it:
+
+```sql
+-- You can remove this workaround:
+-- ALTER USER 'myapp_user'@'%' IDENTIFIED WITH mysql_native_password BY 'password';
+
+-- MySQL 8.0 default authentication now works:
+CREATE USER 'myapp_user'@'%' IDENTIFIED BY 'password';
+```
+
+### What Stays the Same
+
+- ✅ All public APIs remain unchanged
+- ✅ Generated repository code is compatible
+- ✅ SQL generation produces identical output
+- ✅ Transaction semantics are identical
+- ✅ Error handling patterns are the same
+- ✅ No regeneration of code required
+
+### Custom Repository Implementations
+
+If you have custom repository implementations that directly import or use `mysql1` types:
+
+**1. Check for direct mysql1 imports:**
+```dart
+// If you have this:
+import 'package:mysql1/mysql1.dart';
+
+// You may need to update to:
+import 'package:mysql_client/mysql_client.dart';
+```
+
+**2. Update mysql1-specific type references (if any)**
+
+**3. Test thoroughly:**
+- Run all custom repository tests
+- Verify custom queries work correctly
+
+### Troubleshooting
+
+**Connection Issues:**
+- Ensure MySQL 5.7+ or 8.0+ is running
+- Verify connection parameters (host, port, user, password)
+- Check that the database exists and user has proper permissions
+
+**Authentication Issues:**
+- MySQL 8.0 default authentication (caching_sha2_password) is now fully supported
+- No need to use mysql_native_password plugin
+
+**Test Failures:**
+- Run `dart test` to verify all tests pass
+- Check that MySQL server is accessible
+- Verify test database configuration
+
+**Need Help?**
+- Check the [CHANGELOG](CHANGELOG.md) for detailed changes
+- Review the [example code](./example) for updated patterns
+- Open an issue on GitHub if you encounter problems
 
 ## Documentation
 

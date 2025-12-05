@@ -33,9 +33,9 @@ void main() {
         }
       });
 
-      // **Feature: mysql-repository, Property 2: Object graph**
-      // **persistence round-trip**
-      // **Validates: Requirements 1.4, 6.4, 6.5**
+      // **Feature: mysql-driver-migration, Property 2: Object graph**
+      // **round-trip preservation**
+      // **Validates: Requirements 1.4**
       group('Property 2: Object graph persistence round-trip', () {
         test(
           'should preserve aggregate with entities when saving then loading',

@@ -16,7 +16,7 @@ dependencies:
     resolution: workspace
   dddart_serialization:
     resolution: workspace
-  mysql1: ^0.20.0
+  mysql_client: ^0.0.27
   source_gen: ^1.4.0
 
 dev_dependencies:
