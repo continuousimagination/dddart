@@ -41,7 +41,6 @@ void main() {
                 user: 'root',
                 password: 'password',
               );
-              break;
 
             case 1:
               // Invalid port
@@ -55,7 +54,6 @@ void main() {
                 user: 'root',
                 password: 'password',
               );
-              break;
 
             case 2:
               // Invalid credentials
@@ -69,7 +67,6 @@ void main() {
                 user: 'invalid_user_${random.nextInt(1000)}',
                 password: 'invalid_password',
               );
-              break;
 
             case 3:
               // Invalid database
@@ -83,7 +80,6 @@ void main() {
                 user: 'root',
                 password: 'test_password',
               );
-              break;
           }
 
           // Attempt to connect
@@ -122,7 +118,8 @@ void main() {
               message.contains(expectedHost.toLowerCase()) ||
                   message.contains('host'),
               isTrue,
-              reason: 'Iteration $iteration (scenario $scenario): Error message '
+              reason:
+                  'Iteration $iteration (scenario $scenario): Error message '
                   'should contain host information. Message: ${exception.message}',
             );
 
@@ -131,7 +128,8 @@ void main() {
               message.contains(expectedPort.toString()) ||
                   message.contains('port'),
               isTrue,
-              reason: 'Iteration $iteration (scenario $scenario): Error message '
+              reason:
+                  'Iteration $iteration (scenario $scenario): Error message '
                   'should contain port information. Message: ${exception.message}',
             );
 
@@ -291,7 +289,8 @@ void main() {
           expect(
             message.contains('connection') || message.contains('error'),
             isTrue,
-            reason: 'Attempt $i: Error message should indicate connection error',
+            reason:
+                'Attempt $i: Error message should indicate connection error',
           );
 
           // Should contain connection parameters

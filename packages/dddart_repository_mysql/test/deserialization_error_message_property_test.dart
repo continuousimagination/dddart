@@ -56,7 +56,6 @@ void main() {
       'Property 14: For any deserialization failure, the error message should '
       'contain the entity type name and the field name that caused the issue',
       () async {
-        final random = Random(55);
         final repo = SimpleProductMysqlRepository(helper!.connection);
         await repo.createTables();
 
@@ -68,7 +67,6 @@ void main() {
             case 0:
               // Corrupt data: Insert invalid data directly into database
               // that will fail deserialization
-              final corruptId = random.nextInt(100000);
               try {
                 // Insert row with NULL in required field
                 await helper!.connection.execute(
@@ -92,7 +90,8 @@ void main() {
                     expect(
                       row['name'],
                       isNull,
-                      reason: 'Name should be NULL to trigger deserialization issue',
+                      reason:
+                          'Name should be NULL to trigger deserialization issue',
                     );
                   }
                 } catch (e) {
@@ -102,21 +101,21 @@ void main() {
                     expect(
                       e.message,
                       isNotEmpty,
-                      reason: 'Iteration $iteration: Error message should not be empty',
+                      reason:
+                          'Iteration $iteration: Error message should not be empty',
                     );
                   }
                 }
               } catch (e) {
                 // Expected - constraint violation or other error
               }
-              break;
 
             case 1:
               // Type mismatch: Insert string where number expected
               try {
                 // Try to insert invalid price type
                 await helper!.connection.execute(
-                  "INSERT INTO simple_product (id, name, price, createdAt, updatedAt) "
+                  'INSERT INTO simple_product (id, name, price, createdAt, updatedAt) '
                   "VALUES (UUID_TO_BIN(?), ?, 'invalid_price', NOW(), NOW())",
                   [UuidValue.generate().toString(), 'Test Product'],
                 );
@@ -125,17 +124,18 @@ void main() {
                 expect(
                   e,
                   isA<RepositoryException>(),
-                  reason: 'Iteration $iteration: Should throw RepositoryException',
+                  reason:
+                      'Iteration $iteration: Should throw RepositoryException',
                 );
 
                 final exception = e as RepositoryException;
                 expect(
                   exception.message,
                   isNotEmpty,
-                  reason: 'Iteration $iteration: Error message should not be empty',
+                  reason:
+                      'Iteration $iteration: Error message should not be empty',
                 );
               }
-              break;
 
             case 2:
               // Missing required field
@@ -151,14 +151,16 @@ void main() {
                 expect(
                   e,
                   isA<RepositoryException>(),
-                  reason: 'Iteration $iteration: Should throw RepositoryException',
+                  reason:
+                      'Iteration $iteration: Should throw RepositoryException',
                 );
 
                 final exception = e as RepositoryException;
                 expect(
                   exception.message,
                   isNotEmpty,
-                  reason: 'Iteration $iteration: Error message should not be empty',
+                  reason:
+                      'Iteration $iteration: Error message should not be empty',
                 );
 
                 // Error should indicate field issue
@@ -173,7 +175,6 @@ void main() {
                       'field issue',
                 );
               }
-              break;
           }
 
           // Clean up for next iteration
@@ -311,7 +312,6 @@ void main() {
       'Property 14 (edge case): Not found errors should clearly indicate '
       'entity was not found',
       () async {
-        final random = Random(56);
         final repo = SimpleProductMysqlRepository(helper!.connection);
         await repo.createTables();
 
