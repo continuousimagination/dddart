@@ -189,7 +189,7 @@ class Invoice extends AggregateRoot {
 
         // Verify foreign key with CASCADE
         expect(generated, contains('FOREIGN KEY'));
-        expect(generated, contains('REFERENCES invoice'));
+        expect(generated, contains('REFERENCES `invoice`'));
         expect(generated, contains('ON DELETE CASCADE'));
       });
     });

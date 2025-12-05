@@ -242,7 +242,10 @@ class MysqlRepositoryGenerator
 
       final collectionInfo = collectionAnalyzer.analyzeCollection(field);
       if (collectionInfo != null) {
-        _collectionFields[field.name] = collectionInfo;
+        // Skip entity collections - they're handled by the relationship analyzer
+        if (collectionInfo.elementKind != ElementKind.entity) {
+          _collectionFields[field.name] = collectionInfo;
+        }
       }
     }
 
@@ -800,7 +803,8 @@ class MysqlRepositoryGenerator
     for (final entry in _collectionFields.entries) {
       final fieldName = entry.key;
       final collectionInfo = entry.value;
-      final junctionTableName = '${_toSnakeCase(className)}_${fieldName}_items';
+      final junctionTableName =
+          '${aggregateTable.tableName}_${fieldName}_items';
 
       buffer
           .writeln('      // Create junction table for collection: $fieldName');
@@ -809,7 +813,7 @@ class MysqlRepositoryGenerator
       buffer.writeln(
         _generateCollectionTableSql(
           junctionTableName,
-          _toSnakeCase(className),
+          aggregateTable.tableName,
           collectionInfo,
           className,
         ),
@@ -1347,8 +1351,8 @@ class MysqlRepositoryGenerator
     }
 
     // Generate collection save and load methods
-    buffer.writeln(_generateCollectionSaveMethods(className));
-    buffer.writeln(_generateCollectionLoadMethods(className));
+    buffer.writeln(_generateCollectionSaveMethods(className, rootTableName));
+    buffer.writeln(_generateCollectionLoadMethods(className, rootTableName));
 
     // Generate utility methods (always generate for consistency)
     buffer.writeln(_generateFlattenForTableMethod());
@@ -1672,7 +1676,7 @@ class MysqlRepositoryGenerator
   }
 
   /// Generates collection save methods for discovered collection fields.
-  String _generateCollectionSaveMethods(String className) {
+  String _generateCollectionSaveMethods(String className, String tableName) {
     if (_collectionFields.isEmpty) {
       return '';
     }
@@ -1688,6 +1692,7 @@ class MysqlRepositoryGenerator
           fieldName,
           collectionInfo,
           className,
+          tableName,
         ),
       );
       buffer.writeln();
@@ -1697,7 +1702,7 @@ class MysqlRepositoryGenerator
   }
 
   /// Generates collection load methods for discovered collection fields.
-  String _generateCollectionLoadMethods(String className) {
+  String _generateCollectionLoadMethods(String className, String tableName) {
     if (_collectionFields.isEmpty) {
       return '';
     }
@@ -1713,6 +1718,7 @@ class MysqlRepositoryGenerator
           fieldName,
           collectionInfo,
           className,
+          tableName,
         ),
       );
       buffer.writeln();
@@ -1726,10 +1732,11 @@ class MysqlRepositoryGenerator
     String fieldName,
     CollectionInfo collectionInfo,
     String className,
+    String aggregateTableName,
   ) {
     final methodName = '_save${_toPascalCase(fieldName)}';
-    final tableName = '${_toSnakeCase(className)}_${fieldName}_items';
-    final parentFkColumn = '${_toSnakeCase(className)}_id';
+    final tableName = '${aggregateTableName}_${fieldName}_items';
+    final parentFkColumn = '${aggregateTableName}_id';
 
     final buffer = StringBuffer();
     buffer.writeln('  /// Saves the $fieldName collection.');
@@ -2035,17 +2042,17 @@ class MysqlRepositoryGenerator
     String parentFkColumn,
   ) {
     final columns = <String>[];
-    
+
     // Add position for lists
     if (collectionInfo.kind == CollectionKind.list) {
       columns.add('position');
     }
-    
+
     // Add map_key for maps
     if (collectionInfo.kind == CollectionKind.map) {
       columns.add('map_key');
     }
-    
+
     // Add value column for primitives
     if (collectionInfo.elementKind == ElementKind.primitive) {
       columns.add('value');
@@ -2067,7 +2074,7 @@ class MysqlRepositoryGenerator
       // For entities, use * (will need to handle binary columns)
       return '*';
     }
-    
+
     return columns.isEmpty ? '*' : columns.join(', ');
   }
 
@@ -2076,10 +2083,11 @@ class MysqlRepositoryGenerator
     String fieldName,
     CollectionInfo collectionInfo,
     String className,
+    String aggregateTableName,
   ) {
     final methodName = '_load${_toPascalCase(fieldName)}';
-    final tableName = '${_toSnakeCase(className)}_${fieldName}_items';
-    final parentFkColumn = '${_toSnakeCase(className)}_id';
+    final tableName = '${aggregateTableName}_${fieldName}_items';
+    final parentFkColumn = '${aggregateTableName}_id';
 
     final buffer = StringBuffer();
     buffer.writeln('  /// Loads the $fieldName collection.');
@@ -2092,7 +2100,8 @@ class MysqlRepositoryGenerator
         collectionInfo.kind == CollectionKind.list ? ' ORDER BY position' : '';
 
     // Build SELECT clause - convert UUID columns to strings
-    final selectClause = _buildCollectionSelectClause(collectionInfo, parentFkColumn);
+    final selectClause =
+        _buildCollectionSelectClause(collectionInfo, parentFkColumn);
 
     buffer.writeln('    final rows = await _connection.query(');
     buffer.writeln(
@@ -2108,7 +2117,9 @@ class MysqlRepositoryGenerator
       case CollectionKind.list:
         buffer.writeln('      return <dynamic>[];');
       case CollectionKind.set:
-        buffer.writeln('      return <dynamic>[]; // Sets are serialized as Lists');
+        buffer.writeln(
+          '      return <dynamic>[]; // Sets are serialized as Lists',
+        );
       case CollectionKind.map:
         buffer.writeln('      return <dynamic, dynamic>{};');
     }
@@ -2147,13 +2158,15 @@ class MysqlRepositoryGenerator
         buffer.writeln('      final valueObject = <String, dynamic>{};');
         buffer.writeln('      for (final entry in row.entries) {');
         buffer.writeln(
-          "        // Skip position, map_key, and binary UUID columns (parent FK)",
+          '        // Skip position, map_key, and binary UUID columns (parent FK)',
         );
         buffer.writeln(
           "        if (entry.key != 'position' && entry.key != 'map_key' && ",
         );
         buffer.writeln("            !entry.key.endsWith('_id') && ");
-        buffer.writeln("            entry.value.runtimeType.toString() != 'Uint8List') {");
+        buffer.writeln(
+          "            entry.value.runtimeType.toString() != 'Uint8List') {",
+        );
         buffer.writeln(
           '          valueObject[entry.key] = _decodeValue(entry.value, entry.key);',
         );
@@ -2197,10 +2210,12 @@ class MysqlRepositoryGenerator
         buffer.writeln('      final valueObject = <String, dynamic>{};');
         buffer.writeln('      for (final entry in row.entries) {');
         buffer.writeln(
-          "        // Skip binary UUID columns (parent FK)",
+          '        // Skip binary UUID columns (parent FK)',
         );
         buffer.writeln("        if (!entry.key.endsWith('_id') && ");
-        buffer.writeln("            entry.value.runtimeType.toString() != 'Uint8List') {");
+        buffer.writeln(
+          "            entry.value.runtimeType.toString() != 'Uint8List') {",
+        );
         buffer.writeln(
           '          valueObject[entry.key] = _decodeValue(entry.value, entry.key);',
         );
@@ -2249,12 +2264,14 @@ class MysqlRepositoryGenerator
         buffer.writeln('      final valueObject = <String, dynamic>{};');
         buffer.writeln('      for (final entry in row.entries) {');
         buffer.writeln(
-          "        // Skip map_key and binary UUID columns (parent FK)",
+          '        // Skip map_key and binary UUID columns (parent FK)',
         );
         buffer.writeln(
           "        if (entry.key != 'map_key' && !entry.key.endsWith('_id') && ",
         );
-        buffer.writeln("            entry.value.runtimeType.toString() != 'Uint8List') {");
+        buffer.writeln(
+          "            entry.value.runtimeType.toString() != 'Uint8List') {",
+        );
         buffer.writeln(
           '          valueObject[entry.key] = _decodeValue(entry.value, entry.key);',
         );

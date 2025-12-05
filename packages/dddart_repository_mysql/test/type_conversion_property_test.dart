@@ -86,7 +86,8 @@ void main() {
             expect(
               decoded.millisecondsSinceEpoch ~/ 1000,
               equals(originalDateTime.millisecondsSinceEpoch ~/ 1000),
-              reason: 'Iteration $i: DateTime should round-trip correctly (second precision)',
+              reason:
+                  'Iteration $i: DateTime should round-trip correctly (second precision)',
             );
           }
         },
@@ -147,7 +148,8 @@ void main() {
             expect(
               decoded.millisecondsSinceEpoch ~/ 1000,
               equals(originalDateTime.millisecondsSinceEpoch ~/ 1000),
-              reason: 'Test case $i: DateTime should round-trip correctly (second precision)',
+              reason:
+                  'Test case $i: DateTime should round-trip correctly (second precision)',
             );
           }
         },
