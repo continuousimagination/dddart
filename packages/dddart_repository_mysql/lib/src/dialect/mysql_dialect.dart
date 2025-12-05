@@ -77,7 +77,8 @@ class MysqlDialect implements SqlDialect {
 
   @override
   Object? encodeDateTime(DateTime dateTime) {
-    // Store as MySQL DATETIME format in UTC: 'YYYY-MM-DD HH:MM:SS'
+    // MySQL DATETIME format: 'YYYY-MM-DD HH:MM:SS' (no timezone, no milliseconds)
+    // mysql_client driver expects this string format for DATETIME columns
     final utc = dateTime.toUtc();
     return '${utc.year.toString().padLeft(4, '0')}-'
         '${utc.month.toString().padLeft(2, '0')}-'
@@ -98,9 +99,15 @@ class MysqlDialect implements SqlDialect {
     }
 
     if (value is String) {
-      // MySQL DATETIME is stored in UTC but doesn't have timezone info
-      // Parse it as UTC explicitly
-      return DateTime.parse('${value}Z').toUtc();
+      try {
+        // MySQL DATETIME is stored in UTC but doesn't have timezone info
+        // Parse it as UTC explicitly
+        return DateTime.parse('${value}Z').toUtc();
+      } catch (e) {
+        throw ArgumentError(
+          'Invalid DateTime string format: $value',
+        );
+      }
     }
 
     throw ArgumentError(

@@ -72,21 +72,21 @@ void main() {
             // Encode to MySQL format
             final encoded = dialect.encodeDateTime(originalDateTime);
 
-            // Verify encoded format
+            // Verify encoded format - MySQL expects string format
             expect(
               encoded,
-              isA<int>(),
-              reason: 'Iteration $i: Encoded DateTime should be int',
+              isA<String>(),
+              reason: 'Iteration $i: Encoded DateTime should be String',
             );
 
             // Decode back to DateTime
             final decoded = dialect.decodeDateTime(encoded);
 
-            // Verify round-trip preservation (millisecond precision)
+            // Verify round-trip preservation (second precision - MySQL DATETIME truncates milliseconds)
             expect(
-              decoded.millisecondsSinceEpoch,
-              equals(originalDateTime.millisecondsSinceEpoch),
-              reason: 'Iteration $i: DateTime should round-trip correctly',
+              decoded.millisecondsSinceEpoch ~/ 1000,
+              equals(originalDateTime.millisecondsSinceEpoch ~/ 1000),
+              reason: 'Iteration $i: DateTime should round-trip correctly (second precision)',
             );
           }
         },
@@ -143,11 +143,11 @@ void main() {
             final encoded = dialect.encodeDateTime(originalDateTime);
             final decoded = dialect.decodeDateTime(encoded);
 
-            // Verify equivalence (millisecond precision)
+            // Verify equivalence (second precision - MySQL DATETIME truncates milliseconds)
             expect(
-              decoded.millisecondsSinceEpoch,
-              equals(originalDateTime.millisecondsSinceEpoch),
-              reason: 'Test case $i: DateTime should round-trip correctly',
+              decoded.millisecondsSinceEpoch ~/ 1000,
+              equals(originalDateTime.millisecondsSinceEpoch ~/ 1000),
+              reason: 'Test case $i: DateTime should round-trip correctly (second precision)',
             );
           }
         },
@@ -279,24 +279,24 @@ void main() {
       );
 
       test(
-        'should handle DateTime decoding from int format',
+        'should handle DateTime decoding from string format',
         () {
           final random = Random(205);
 
           for (var i = 0; i < 100; i++) {
             final dateTime = _generateRandomDateTime(random);
 
-            // Encode to int
-            final encoded = dialect.encodeDateTime(dateTime)! as int;
+            // Encode to string
+            final encoded = dialect.encodeDateTime(dateTime)! as String;
 
-            // Decode from int
+            // Decode from string
             final decoded = dialect.decodeDateTime(encoded);
 
-            // Verify round-trip preservation
+            // Verify round-trip preservation (second precision)
             expect(
-              decoded.millisecondsSinceEpoch,
-              equals(dateTime.millisecondsSinceEpoch),
-              reason: 'Iteration $i: Should decode from int',
+              decoded.millisecondsSinceEpoch ~/ 1000,
+              equals(dateTime.millisecondsSinceEpoch ~/ 1000),
+              reason: 'Iteration $i: Should decode from string',
             );
           }
         },

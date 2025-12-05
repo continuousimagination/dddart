@@ -800,7 +800,7 @@ class MysqlRepositoryGenerator
     for (final entry in _collectionFields.entries) {
       final fieldName = entry.key;
       final collectionInfo = entry.value;
-      final junctionTableName = '${_toSnakeCase(className)}_${fieldName}';
+      final junctionTableName = '${_toSnakeCase(className)}_${fieldName}_items';
 
       buffer
           .writeln('      // Create junction table for collection: $fieldName');
@@ -1595,17 +1595,6 @@ class MysqlRepositoryGenerator
 
     // UUIDs are returned as strings from BIN_TO_UUID()
     // No special decoding needed for UUID fields
-    
-    // Decode Blob types (for TEXT fields that might be returned as Blob)
-    if (value is Blob) {
-      final bytes = value.toBytes();
-      return String.fromCharCodes(bytes);
-    }
-
-    // Decode DateTimes (stored as BIGINT milliseconds since epoch)
-    if (fieldName.endsWith('At') && value is int) {
-      return DateTime.fromMillisecondsSinceEpoch(value).toIso8601String();
-    }
 
     // Decode DateTimes (DATETIME format)
     if (dartType == 'DateTime') {
@@ -2040,6 +2029,48 @@ class MysqlRepositoryGenerator
     return buffer.toString();
   }
 
+  /// Builds SELECT clause for collection queries, avoiding binary UUID columns.
+  String _buildCollectionSelectClause(
+    CollectionInfo collectionInfo,
+    String parentFkColumn,
+  ) {
+    final columns = <String>[];
+    
+    // Add position for lists
+    if (collectionInfo.kind == CollectionKind.list) {
+      columns.add('position');
+    }
+    
+    // Add map_key for maps
+    if (collectionInfo.kind == CollectionKind.map) {
+      columns.add('map_key');
+    }
+    
+    // Add value column for primitives
+    if (collectionInfo.elementKind == ElementKind.primitive) {
+      columns.add('value');
+    } else if (collectionInfo.elementKind == ElementKind.value) {
+      // For value objects, explicitly list the value object fields
+      if (collectionInfo.elementType is InterfaceType) {
+        final interfaceType = collectionInfo.elementType as InterfaceType;
+        final valueClass = interfaceType.element;
+        if (valueClass is ClassElement) {
+          for (final field in valueClass.fields) {
+            if (field.isStatic || field.isSynthetic || field.name == 'props') {
+              continue;
+            }
+            columns.add(field.name);
+          }
+        }
+      }
+    } else {
+      // For entities, use * (will need to handle binary columns)
+      return '*';
+    }
+    
+    return columns.isEmpty ? '*' : columns.join(', ');
+  }
+
   /// Generates a load method for a specific collection field.
   String _generateCollectionLoadMethod(
     String fieldName,
@@ -2060,21 +2091,24 @@ class MysqlRepositoryGenerator
     final orderBy =
         collectionInfo.kind == CollectionKind.list ? ' ORDER BY position' : '';
 
+    // Build SELECT clause - convert UUID columns to strings
+    final selectClause = _buildCollectionSelectClause(collectionInfo, parentFkColumn);
+
     buffer.writeln('    final rows = await _connection.query(');
     buffer.writeln(
-      "      'SELECT * FROM $tableName WHERE $parentFkColumn = ?$orderBy',",
+      "      'SELECT $selectClause FROM $tableName WHERE $parentFkColumn = ?$orderBy',",
     );
     buffer.writeln('      [_dialect.encodeUuid(aggregateId)],');
     buffer.writeln('    );');
     buffer.writeln();
     buffer.writeln('    if (rows.isEmpty) {');
 
-    // Return appropriate empty collection
+    // Return appropriate empty collection (Sets are serialized as Lists in JSON)
     switch (collectionInfo.kind) {
       case CollectionKind.list:
         buffer.writeln('      return <dynamic>[];');
       case CollectionKind.set:
-        buffer.writeln('      return <dynamic>{};');
+        buffer.writeln('      return <dynamic>[]; // Sets are serialized as Lists');
       case CollectionKind.map:
         buffer.writeln('      return <dynamic, dynamic>{};');
     }
@@ -2113,9 +2147,13 @@ class MysqlRepositoryGenerator
         buffer.writeln('      final valueObject = <String, dynamic>{};');
         buffer.writeln('      for (final entry in row.entries) {');
         buffer.writeln(
-          "        if (entry.key != '${collectionInfo.kind == CollectionKind.list ? 'position' : ''}' && ",
+          "        // Skip position, map_key, and binary UUID columns (parent FK)",
         );
-        buffer.writeln("            !entry.key.endsWith('_id')) {");
+        buffer.writeln(
+          "        if (entry.key != 'position' && entry.key != 'map_key' && ",
+        );
+        buffer.writeln("            !entry.key.endsWith('_id') && ");
+        buffer.writeln("            entry.value.runtimeType.toString() != 'Uint8List') {");
         buffer.writeln(
           '          valueObject[entry.key] = _decodeValue(entry.value, entry.key);',
         );
@@ -2158,7 +2196,11 @@ class MysqlRepositoryGenerator
         );
         buffer.writeln('      final valueObject = <String, dynamic>{};');
         buffer.writeln('      for (final entry in row.entries) {');
-        buffer.writeln("        if (!entry.key.endsWith('_id')) {");
+        buffer.writeln(
+          "        // Skip binary UUID columns (parent FK)",
+        );
+        buffer.writeln("        if (!entry.key.endsWith('_id') && ");
+        buffer.writeln("            entry.value.runtimeType.toString() != 'Uint8List') {");
         buffer.writeln(
           '          valueObject[entry.key] = _decodeValue(entry.value, entry.key);',
         );
@@ -2207,8 +2249,12 @@ class MysqlRepositoryGenerator
         buffer.writeln('      final valueObject = <String, dynamic>{};');
         buffer.writeln('      for (final entry in row.entries) {');
         buffer.writeln(
-          "        if (entry.key != 'map_key' && !entry.key.endsWith('_id')) {",
+          "        // Skip map_key and binary UUID columns (parent FK)",
         );
+        buffer.writeln(
+          "        if (entry.key != 'map_key' && !entry.key.endsWith('_id') && ",
+        );
+        buffer.writeln("            entry.value.runtimeType.toString() != 'Uint8List') {");
         buffer.writeln(
           '          valueObject[entry.key] = _decodeValue(entry.value, entry.key);',
         );
