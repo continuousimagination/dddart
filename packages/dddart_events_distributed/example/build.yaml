@@ -1,0 +1,5 @@
+targets:
+  $default:
+    builders:
+      dddart_events_distributed:event_registry:
+        enabled: true

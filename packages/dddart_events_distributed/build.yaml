@@ -1,0 +1,14 @@
+targets:
+  $default:
+    builders:
+      dddart_events_distributed:event_registry:
+        enabled: true
+
+builders:
+  event_registry:
+    import: "package:dddart_events_distributed/src/generators/event_registry_generator.dart"
+    builder_factories: ["eventRegistryBuilder"]
+    build_extensions: {".dart": [".event_registry.g.part"]}
+    auto_apply: dependents
+    build_to: cache
+    applies_builders: ["source_gen|combining_builder"]

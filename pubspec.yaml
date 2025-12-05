@@ -25,3 +25,5 @@ workspace:
   - packages/dddart_repository_mysql/example
   - packages/dddart_webhooks
   - packages/dddart_webhooks_slack
+  - packages/dddart_events_distributed
+  - packages/dddart_events_distributed/example
