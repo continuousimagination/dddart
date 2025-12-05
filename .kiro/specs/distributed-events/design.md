@@ -98,38 +98,53 @@ Local Event Handlers
 ### StoredEvent (AggregateRoot)
 
 ```dart
+/// Stored event with common authorization fields.
+/// 
+/// This class provides standard authorization fields (userId, tenantId, sessionId)
+/// that cover most use cases. Developers can extend this class to add additional
+/// application-specific authorization fields if needed.
 @Serializable()
 class StoredEvent extends AggregateRoot {
   StoredEvent({
-    required super.id,        // DomainEvent.id
-    required super.createdAt, // DomainEvent.createdAt (when event occurred)
+    required super.id,
+    required super.createdAt,
     required this.aggregateId,
-    required this.eventType,  // Runtime type name (e.g., "UserCreatedEvent")
-    required this.eventJson,  // Serialized event-specific data
-    required this.context,
+    required this.eventType,
+    required this.eventJson,
+    this.userId,
+    this.tenantId,
+    this.sessionId,
   }) : super(updatedAt: createdAt); // Events never update
   
   /// Aggregate that raised this event
   final UuidValue aggregateId;
   
-  /// Event type name for deserialization
+  /// Event type name for deserialization (e.g., "UserCreatedEvent")
   final String eventType;
   
   /// Serialized event data as JSON string
   final String eventJson;
   
-  /// Event context for authorization/filtering
-  final Map<String, dynamic> context;
+  /// User identifier for user-specific event filtering
+  final String? userId;
+  
+  /// Tenant identifier for multi-tenant event filtering
+  final String? tenantId;
+  
+  /// Session identifier for session-specific event filtering
+  final String? sessionId;
   
   /// Creates StoredEvent from DomainEvent
   factory StoredEvent.fromDomainEvent(DomainEvent event) {
     return StoredEvent(
-      id: event.id,
-      createdAt: event.createdAt,
+      id: event.eventId,
+      createdAt: event.occurredAt,
       aggregateId: event.aggregateId,
       eventType: event.runtimeType.toString(),
       eventJson: jsonEncode(event.toJson()),
-      context: event.context,
+      userId: event.context['userId'] as String?,
+      tenantId: event.context['tenantId'] as String?,
+      sessionId: event.context['sessionId'] as String?,
     );
   }
   
@@ -140,8 +155,59 @@ class StoredEvent extends AggregateRoot {
     aggregateId,
     eventType,
     eventJson,
-    context,
+    userId,
+    tenantId,
+    sessionId,
   ];
+}
+```
+
+**Extended StoredEvent Example:**
+
+Developers can extend `StoredEvent` to add custom authorization fields, including collections:
+
+```dart
+/// Custom stored event with additional authorization fields
+@Serializable()
+@GenerateMysqlRepository()
+class MyStoredEvent extends StoredEvent {
+  MyStoredEvent({
+    required super.id,
+    required super.createdAt,
+    required super.aggregateId,
+    required super.eventType,
+    required super.eventJson,
+    super.userId,
+    super.tenantId,
+    super.sessionId,
+    this.userRoles,
+    this.organizationId,
+  });
+  
+  /// User roles for role-based authorization
+  final List<String>? userRoles;
+  
+  /// Organization identifier for organization-specific filtering
+  final String? organizationId;
+  
+  @override
+  List<Object?> get props => [...super.props, userRoles, organizationId];
+  
+  /// Extract authorization fields from DomainEvent.context
+  factory MyStoredEvent.fromDomainEvent(DomainEvent event) {
+    return MyStoredEvent(
+      id: event.eventId,
+      createdAt: event.occurredAt,
+      aggregateId: event.aggregateId,
+      eventType: event.runtimeType.toString(),
+      eventJson: jsonEncode(event.toJson()),
+      userId: event.context['userId'] as String?,
+      tenantId: event.context['tenantId'] as String?,
+      sessionId: event.context['sessionId'] as String?,
+      userRoles: (event.context['userRoles'] as List?)?.cast<String>(),
+      organizationId: event.context['organizationId'] as String?,
+    );
+  }
 }
 ```
 
@@ -175,7 +241,9 @@ class StoredEventMongo extends StoredEvent {
     required super.aggregateId,
     required super.eventType,
     required super.eventJson,
-    required super.context,
+    super.userId,
+    super.tenantId,
+    super.sessionId,
   });
 }
 
@@ -206,19 +274,21 @@ class StoredEventMongoRepository extends EventRepository<StoredEventMongo> {
 ```dart
 /// Server-side component that wraps EventBus with automatic persistence
 /// and HTTP endpoints for event distribution
-class EventBusServer {
+class EventBusServer<T extends StoredEvent> {
   EventBusServer({
     required this.localEventBus,
     required this.eventRepository,
     this.retentionDuration,
+    required this.storedEventFactory,
   }) {
     // Subscribe to all events and persist them
     _subscription = localEventBus.on<DomainEvent>().listen(_persistEvent);
   }
   
   final EventBus localEventBus;
-  final EventRepository<StoredEvent> eventRepository;
+  final EventRepository<T> eventRepository;
   final Duration? retentionDuration;
+  final T Function(DomainEvent) storedEventFactory;
   
   StreamSubscription<DomainEvent>? _subscription;
   final Logger _logger = Logger('dddart.events.server');
@@ -236,9 +306,9 @@ class EventBusServer {
   /// Persists event to repository
   Future<void> _persistEvent(DomainEvent event) async {
     try {
-      final stored = StoredEvent.fromDomainEvent(event);
+      final stored = storedEventFactory(event);
       await eventRepository.save(stored);
-      _logger.fine('Persisted event: ${event.runtimeType} (${event.id})');
+      _logger.fine('Persisted event: ${event.runtimeType} (${event.eventId})');
     } catch (e, stackTrace) {
       _logger.severe('Failed to persist event: ${event.runtimeType}', e, stackTrace);
     }
@@ -488,6 +558,28 @@ class EventHttpEndpoints {
 
 ## Data Models
 
+### Design Decision: Flat Authorization Fields
+
+The `StoredEvent` uses flat authorization fields rather than a nested context object or `Map<String, dynamic>` for the following reasons:
+
+1. **SQL Repository Compatibility**: Authorization fields are stored as direct columns, providing proper indexed storage for efficient queries.
+
+2. **Industry Standard**: Follows patterns from CloudEvents, AWS EventBridge, and Azure Event Grid which use flat metadata structures.
+
+3. **Type Safety**: Provides compile-time type checking for authorization fields.
+
+4. **Extensibility**: Developers can extend `StoredEvent` to add custom authorization fields (including collections like `List<String> userRoles`).
+
+5. **Query Performance**: Direct columns enable efficient indexed queries for authorization filtering (`WHERE userId = ?`).
+
+6. **No JSON Blobs**: Avoids storing unstructured JSON in SQL columns, which is an anti-pattern for queryable data.
+
+7. **Collections Support**: Collections work naturally at the aggregate level (e.g., `List<String> userRoles` creates a separate table automatically).
+
+The base `StoredEvent` provides common authorization fields (userId, tenantId, sessionId) that cover most use cases. Developers can use it directly or extend it for application-specific needs.
+
+**Note on DomainEvent Compatibility**: The base `DomainEvent` class in dddart uses `Map<String, dynamic> context` for flexibility. When creating a `StoredEvent`, the `fromDomainEvent` factory extracts authorization fields from the context map. This conversion happens at the boundary between local and distributed events, allowing the core dddart package to remain flexible while the distributed events package enforces proper storage patterns.
+
 ### StoredEvent JSON Format
 
 ```json
@@ -497,10 +589,9 @@ class EventHttpEndpoints {
   "aggregateId": "660e8400-e29b-41d4-a716-446655440000",
   "eventType": "UserCreatedEvent",
   "eventJson": "{\"email\":\"user@example.com\",\"name\":\"Alice\"}",
-  "context": {
-    "userId": "user-123",
-    "tenantId": "tenant-1"
-  }
+  "userId": "user-123",
+  "tenantId": "tenant-1",
+  "sessionId": null
 }
 ```
 
@@ -523,7 +614,9 @@ Response (200 OK):
     "aggregateId": "user-123",
     "eventType": "UserCreatedEvent",
     "eventJson": "{\"email\":\"user@example.com\"}",
-    "context": {"userId": "user-123"}
+    "userId": "user-123",
+    "tenantId": null,
+    "sessionId": null
   },
   {
     "id": "event-uuid-2",
@@ -531,7 +624,9 @@ Response (200 OK):
     "aggregateId": "order-456",
     "eventType": "OrderPurchasedEvent",
     "eventJson": "{\"amount\":99.99}",
-    "context": {"userId": "user-123"}
+    "userId": "user-123",
+    "tenantId": null,
+    "sessionId": null
   }
 ]
 ```
@@ -549,7 +644,9 @@ Content-Type: application/json
   "aggregateId": "user-789",
   "eventType": "UserUpdatedEvent",
   "eventJson": "{\"email\":\"newemail@example.com\"}",
-  "context": {"userId": "user-789"}
+  "userId": "user-789",
+  "tenantId": null,
+  "sessionId": null
 }
 ```
 

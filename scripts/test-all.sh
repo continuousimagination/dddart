@@ -73,6 +73,7 @@ PACKAGES=(
   "dddart_repository_mysql"
   "dddart_webhooks"
   "dddart_webhooks_slack"
+  "dddart_events_distributed"
 )
 
 # Get workspace dependencies first

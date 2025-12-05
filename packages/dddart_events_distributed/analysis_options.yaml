@@ -1,0 +1,23 @@
+include: package:very_good_analysis/analysis_options.yaml
+
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+
+linter:
+  rules:
+    # Allow print in example files
+    avoid_print: false
+    # Allow missing docs in example and test files
+    public_member_api_docs: false
+    # Allow longer lines in tests
+    lines_longer_than_80_chars: false
+    # Allow dynamic calls in tests (for JSON parsing)
+    avoid_dynamic_calls: false
+    # Allow cascade style preference
+    cascade_invocations: false
+    # Allow static methods instead of constructors
+    prefer_constructors_over_static_methods: false
+    # Allow unsorted dependencies
+    sort_pub_dependencies: false
