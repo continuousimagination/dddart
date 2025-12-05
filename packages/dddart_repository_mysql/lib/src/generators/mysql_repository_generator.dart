@@ -255,6 +255,7 @@ class MysqlRepositoryGenerator
   ///
   /// For each entity that's part of a List field in the aggregate,
   /// adds a foreign key column back to the parent aggregate.
+  /// Also adds a position column to preserve List order.
   void _addParentForeignKeys(
     Map<String, TableDefinition> tables,
     ClassElement aggregateRoot,
@@ -272,7 +273,7 @@ class MysqlRepositoryGenerator
             // Store the mapping from entity class to field name
             _entityToFieldName[entityClass.name] = field.name;
 
-            // This is an entity in a list - add parent FK
+            // This is an entity in a list - add parent FK and position column
             final entityTable = tables[entityClass.name];
             if (entityTable != null) {
               // Add foreign key column
@@ -287,6 +288,16 @@ class MysqlRepositoryGenerator
                 isForeignKey: true,
               );
 
+              // Add position column to preserve List order
+              const positionColumn = ColumnDefinition(
+                name: '_list_position',
+                sqlType: 'INTEGER',
+                dartType: 'int',
+                isNullable: false,
+                isPrimaryKey: false,
+                isForeignKey: false,
+              );
+
               // Add foreign key constraint
               final fk = ForeignKeyDefinition(
                 columnName: fkColumnName,
@@ -295,11 +306,11 @@ class MysqlRepositoryGenerator
                 onDelete: CascadeAction.cascade,
               );
 
-              // Create new table definition with added column and FK
+              // Create new table definition with added columns and FK
               final updatedTable = TableDefinition(
                 tableName: entityTable.tableName,
                 className: entityTable.className,
-                columns: [...entityTable.columns, fkColumn],
+                columns: [...entityTable.columns, fkColumn, positionColumn],
                 foreignKeys: [...entityTable.foreignKeys, fk],
                 isAggregateRoot: false,
               );
@@ -959,7 +970,7 @@ class MysqlRepositoryGenerator
       try {
         // Check if aggregate exists
         final rows = await _connection.query(
-          'SELECT id FROM $tableName WHERE id = ?',
+          'SELECT BIN_TO_UUID(id) as id FROM $tableName WHERE id = ?',
           [_dialect.encodeUuid(id)],
         );
 
@@ -1090,12 +1101,16 @@ class MysqlRepositoryGenerator
     final entitiesJson = json['$jsonKey'];
     if (entitiesJson == null || entitiesJson is! List) return;
 
-    // Save each entity
-    for (final entityJson in entitiesJson) {
+    // Save each entity with position to preserve List order
+    for (var i = 0; i < entitiesJson.length; i++) {
+      final entityJson = entitiesJson[i];
       if (entityJson is! Map<String, dynamic>) continue;
 
       // Add parent foreign key
       entityJson['${_findParentForeignKeyColumn(table)}'] = aggregate.id.toString();
+
+      // Add position to preserve List order
+      entityJson['_list_position'] = i;
 
       // Generate synthetic ID for entity if not present
       if (!entityJson.containsKey('id')) {
@@ -1139,14 +1154,15 @@ class MysqlRepositoryGenerator
   /// Loads ${table.tableName} entities for an aggregate.
   Future<List<Map<String, dynamic>>> $methodName(UuidValue aggregateId) async {
     final rows = await _connection.query(
-      'SELECT $selectClause FROM ${table.tableName} WHERE $parentFkColumn = ? ORDER BY createdAt',
+      'SELECT $selectClause FROM ${table.tableName} WHERE $parentFkColumn = ? ORDER BY _list_position',
       [_dialect.encodeUuid(aggregateId)],
     );
 
-    // Convert rows to JSON and remove the parent FK column
+    // Convert rows to JSON and remove the parent FK and position columns
     return rows.map((row) {
       final json = _rowToJson(row);
       json.remove('$parentFkColumn');
+      json.remove('_list_position');
       return json;
     }).toList();
   }''';
@@ -1283,12 +1299,6 @@ class MysqlRepositoryGenerator
     // Decode DateTimes (stored as BIGINT milliseconds since epoch)
     if (fieldName.endsWith('At') && value is int) {
       return DateTime.fromMillisecondsSinceEpoch(value).toIso8601String();
-    }
-    
-    // Decode Blob types (for TEXT fields that might be returned as Blob)
-    if (value is Blob) {
-      final bytes = value.toBytes();
-      return String.fromCharCodes(bytes);
     }
 
     // Decode DateTimes (TIMESTAMP)

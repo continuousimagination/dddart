@@ -7,7 +7,6 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_json/dddart_json.dart';
 import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
-import 'package:mysql1/mysql1.dart' show Blob;
 
 part 'integration_test_models.g.dart';
 
