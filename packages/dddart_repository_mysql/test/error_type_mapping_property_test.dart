@@ -90,7 +90,8 @@ void main() {
                 expect(
                   e,
                   isA<RepositoryException>(),
-                  reason: 'Iteration $iteration: Should throw RepositoryException',
+                  reason:
+                      'Iteration $iteration: Should throw RepositoryException',
                 );
 
                 final exception = e as RepositoryException;
@@ -103,19 +104,20 @@ void main() {
                 expect(
                   exception.message,
                   isNotEmpty,
-                  reason: 'Iteration $iteration: Error message should not be empty',
+                  reason:
+                      'Iteration $iteration: Error message should not be empty',
                 );
 
                 expect(
                   exception.cause,
                   isNotNull,
-                  reason: 'Iteration $iteration: Original cause should be preserved',
+                  reason:
+                      'Iteration $iteration: Original cause should be preserved',
                 );
               }
 
               // Clean up
               await helper!.connection.execute('DELETE FROM simple_product');
-              break;
 
             case 1:
               // Not found error -> RepositoryExceptionType.notFound
@@ -128,7 +130,8 @@ void main() {
                 expect(
                   e,
                   isA<RepositoryException>(),
-                  reason: 'Iteration $iteration: Should throw RepositoryException',
+                  reason:
+                      'Iteration $iteration: Should throw RepositoryException',
                 );
 
                 final exception = e as RepositoryException;
@@ -141,10 +144,10 @@ void main() {
                 expect(
                   exception.message,
                   isNotEmpty,
-                  reason: 'Iteration $iteration: Error message should not be empty',
+                  reason:
+                      'Iteration $iteration: Error message should not be empty',
                 );
               }
-              break;
 
             case 2:
               // Query error -> RepositoryExceptionType.unknown (or specific type)
@@ -157,7 +160,8 @@ void main() {
                 expect(
                   e,
                   isA<RepositoryException>(),
-                  reason: 'Iteration $iteration: Should throw RepositoryException',
+                  reason:
+                      'Iteration $iteration: Should throw RepositoryException',
                 );
 
                 final exception = e as RepositoryException;
@@ -175,16 +179,17 @@ void main() {
                 expect(
                   exception.message,
                   isNotEmpty,
-                  reason: 'Iteration $iteration: Error message should not be empty',
+                  reason:
+                      'Iteration $iteration: Error message should not be empty',
                 );
 
                 expect(
                   exception.cause,
                   isNotNull,
-                  reason: 'Iteration $iteration: Original cause should be preserved',
+                  reason:
+                      'Iteration $iteration: Original cause should be preserved',
                 );
               }
-              break;
 
             case 3:
               // Constraint violation -> RepositoryExceptionType.duplicate or unknown
@@ -214,7 +219,8 @@ void main() {
                 expect(
                   e,
                   isA<RepositoryException>(),
-                  reason: 'Iteration $iteration: Should throw RepositoryException',
+                  reason:
+                      'Iteration $iteration: Should throw RepositoryException',
                 );
 
                 final exception = e as RepositoryException;
@@ -225,26 +231,30 @@ void main() {
                     RepositoryExceptionType.unknown,
                     RepositoryExceptionType.constraint,
                   ]),
-                  reason: 'Iteration $iteration: Should map to appropriate type',
+                  reason:
+                      'Iteration $iteration: Should map to appropriate type',
                 );
 
                 expect(
                   exception.message,
                   isNotEmpty,
-                  reason: 'Iteration $iteration: Error message should not be empty',
+                  reason:
+                      'Iteration $iteration: Error message should not be empty',
                 );
 
                 expect(
                   exception.cause,
                   isNotNull,
-                  reason: 'Iteration $iteration: Original cause should be preserved',
+                  reason:
+                      'Iteration $iteration: Original cause should be preserved',
                 );
               }
 
               // Clean up
-              await helper!.connection.execute('DROP TABLE test_child_$iteration');
-              await helper!.connection.execute('DROP TABLE test_parent_$iteration');
-              break;
+              await helper!.connection
+                  .execute('DROP TABLE test_child_$iteration');
+              await helper!.connection
+                  .execute('DROP TABLE test_parent_$iteration');
           }
         }
 
@@ -440,7 +450,8 @@ void main() {
             expect(
               exception.cause,
               isNotNull,
-              reason: 'Iteration $iteration: Original cause should be preserved',
+              reason:
+                  'Iteration $iteration: Original cause should be preserved',
             );
 
             // Message should contain relevant information
@@ -450,7 +461,8 @@ void main() {
                   message.contains('key') ||
                   message.contains('error'),
               isTrue,
-              reason: 'Iteration $iteration: Message should contain error details',
+              reason:
+                  'Iteration $iteration: Message should contain error details',
             );
           }
 

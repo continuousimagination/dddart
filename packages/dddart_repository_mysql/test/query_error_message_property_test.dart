@@ -69,13 +69,11 @@ void main() {
               final tableName = 'nonexistent_table_${random.nextInt(10000)}';
               sql = 'SELECT * FROM $tableName';
               expectedKeyword = tableName;
-              break;
 
             case 1:
               // Syntax error
               sql = 'SELCT * FORM invalid_syntax_${random.nextInt(1000)}';
               expectedKeyword = 'syntax';
-              break;
 
             case 2:
               // Non-existent column
@@ -87,7 +85,6 @@ void main() {
               sql = 'SELECT nonexistent_column_${random.nextInt(1000)} '
                   'FROM test_query_error_$iteration';
               expectedKeyword = 'column';
-              break;
 
             case 3:
               // Invalid WHERE clause
@@ -99,7 +96,6 @@ void main() {
               sql = 'SELECT * FROM test_query_error_$iteration '
                   'WHERE invalid_column_${random.nextInt(1000)} = 1';
               expectedKeyword = 'column';
-              break;
 
             case 4:
               // Invalid function or aggregate error
@@ -112,7 +108,6 @@ void main() {
               sql = 'SELECT INVALID_FUNCTION_${random.nextInt(1000)}(id) '
                   'FROM test_query_error_$iteration';
               expectedKeyword = 'function';
-              break;
           }
 
           // Execute query and expect error
@@ -140,7 +135,8 @@ void main() {
                   message.contains('error') ||
                   message.contains(expectedKeyword.toLowerCase()),
               isTrue,
-              reason: 'Iteration $iteration (scenario $scenario): Error message '
+              reason:
+                  'Iteration $iteration (scenario $scenario): Error message '
                   'should contain query/SQL reference or error keyword. '
                   'Message: ${exception.message}',
             );
@@ -157,7 +153,8 @@ void main() {
             expect(
               exception.message,
               isNotEmpty,
-              reason: 'Iteration $iteration (scenario $scenario): Error message '
+              reason:
+                  'Iteration $iteration (scenario $scenario): Error message '
                   'should not be empty',
             );
           }
@@ -165,7 +162,8 @@ void main() {
           expect(
             exceptionThrown,
             isTrue,
-            reason: 'Iteration $iteration (scenario $scenario): Query should fail',
+            reason:
+                'Iteration $iteration (scenario $scenario): Query should fail',
           );
         }
       },
@@ -188,8 +186,10 @@ void main() {
 
         for (var iteration = 0; iteration < 50; iteration++) {
           // Try to insert with wrong parameter count
-          final sql = 'INSERT INTO test_param_error (id, value) VALUES (?, ?)';
-          final wrongParams = [random.nextInt(1000)]; // Only 1 param instead of 2
+          const sql = 'INSERT INTO test_param_error (id, value) VALUES (?, ?)';
+          final wrongParams = [
+            random.nextInt(1000),
+          ]; // Only 1 param instead of 2
 
           try {
             await helper!.connection.execute(sql, wrongParams);
@@ -234,7 +234,7 @@ void main() {
           "SELECT * FROM table_with_'quote'",
           'SELECT * FROM table_with_"doublequote"',
           'SELECT * FROM table_with_`backtick`',
-          'SELECT * FROM table_with_\\backslash',
+          r'SELECT * FROM table_with_\backslash',
           'SELECT * FROM table_with_\nnewline',
         ];
 
@@ -251,7 +251,8 @@ void main() {
             expect(
               exception.message,
               isNotEmpty,
-              reason: 'Query $i: Error message should handle special characters',
+              reason:
+                  'Query $i: Error message should handle special characters',
             );
 
             // Should indicate it's an error
