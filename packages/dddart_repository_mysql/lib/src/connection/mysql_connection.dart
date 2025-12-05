@@ -341,7 +341,7 @@ class MysqlConnection implements SqlConnection {
     // Handle SocketException
     if (error is SocketException) {
       return RepositoryException(
-        'Connection error during $operation to $host:$port: ${error.message}',
+        'Connection error during $operation to $host:$port/$database: ${error.message}',
         type: RepositoryExceptionType.connection,
         cause: error,
       );
