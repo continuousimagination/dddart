@@ -149,90 +149,51 @@ class MysqlConnection implements SqlConnection {
       // consistency with mysql1
       final resultList = <Map<String, Object?>>[];
 
-      // Try to iterate over rows - if this fails with FormatException,
-      // it means we're selecting binary columns that can't be decoded as UTF-8
-      try {
-        for (final row in result.rows) {
-          final rowMap = <String, Object?>{};
-          for (final column in result.cols) {
-            Object? value;
-            try {
-              value = row.colByName(column.name);
-            } catch (e) {
-              // If we get a FormatException, it's likely binary data that
-              // mysql_client is trying to decode as UTF-8. Try to get it as bytes.
-              if (e is FormatException) {
-                // For binary columns, mysql_client might fail to decode as string
-                // In this case, we'll get the raw bytes using colAt
-                final cols = result.cols.toList();
-                final columnIndex = cols.indexOf(column);
-                if (columnIndex >= 0) {
-                  try {
-                    value = row.colAt(columnIndex);
-                  } catch (_) {
-                    // If that also fails, set to null
-                    value = null;
+      for (final row in result.rows) {
+        final rowMap = <String, Object?>{};
+        for (final column in result.cols) {
+          Object? value = row.colByName(column.name);
+
+          // Convert string values to proper types based on heuristics
+          // This is needed because mysql_client returns numeric values as
+          // strings when using named parameters
+          if (value is String && value.isNotEmpty) {
+            final columnName = column.name.toLowerCase();
+
+            // Don't convert fields that are likely to be string identifiers
+            // even if they contain only digits (like zipCode, phone, etc.)
+            final isLikelyStringField = columnName.contains('code') ||
+                columnName.contains('zip') ||
+                columnName.contains('phone') ||
+                columnName.contains('ssn') ||
+                columnName.contains('id') && columnName != 'id';
+
+            if (!isLikelyStringField) {
+              // Only convert if it looks like a pure number
+              final isNumericString =
+                  RegExp(r'^-?(?:0|[1-9]\d*)(?:\.\d+)?$').hasMatch(value);
+
+              if (isNumericString) {
+                // Try to parse as int first (for BIGINT, INT, etc.)
+                if (!value.contains('.')) {
+                  final intValue = int.tryParse(value);
+                  if (intValue != null) {
+                    value = intValue;
                   }
                 } else {
-                  value = null;
-                }
-              } else {
-                rethrow;
-              }
-            }
-
-            // Convert string values to proper types based on heuristics
-            // This is needed because mysql_client returns numeric values as
-            // strings when using named parameters
-            if (value is String && value.isNotEmpty) {
-              final columnName = column.name.toLowerCase();
-
-              // Don't convert fields that are likely to be string identifiers
-              // even if they contain only digits (like zipCode, phone, etc.)
-              final isLikelyStringField = columnName.contains('code') ||
-                  columnName.contains('zip') ||
-                  columnName.contains('phone') ||
-                  columnName.contains('ssn') ||
-                  columnName.contains('id') && columnName != 'id';
-
-              if (!isLikelyStringField) {
-                // Only convert if it looks like a pure number
-                final isNumericString =
-                    RegExp(r'^-?(?:0|[1-9]\d*)(?:\.\d+)?$').hasMatch(value);
-
-                if (isNumericString) {
-                  // Try to parse as int first (for BIGINT, INT, etc.)
-                  if (!value.contains('.')) {
-                    final intValue = int.tryParse(value);
-                    if (intValue != null) {
-                      value = intValue;
-                    }
-                  } else {
-                    // Parse as double (for DOUBLE, FLOAT, DECIMAL)
-                    final doubleValue = double.tryParse(value);
-                    if (doubleValue != null) {
-                      value = doubleValue;
-                    }
+                  // Parse as double (for DOUBLE, FLOAT, DECIMAL)
+                  final doubleValue = double.tryParse(value);
+                  if (doubleValue != null) {
+                    value = doubleValue;
                   }
                 }
               }
             }
-
-            rowMap[column.name] = value;
           }
-          resultList.add(rowMap);
+
+          rowMap[column.name] = value;
         }
-      } catch (e) {
-        if (e is FormatException) {
-          // If we get a FormatException when iterating rows, it means we're
-          // selecting binary columns (like BINARY(16) for UUIDs) that can't
-          // be decoded as UTF-8. This is a known issue with the generated code
-          // that selects raw binary columns instead of using BIN_TO_UUID().
-          // For now, we'll return an empty result to indicate "not found"
-          // which is the typical use case for these queries.
-          return [];
-        }
-        rethrow;
+        resultList.add(rowMap);
       }
 
       return resultList;
