@@ -433,6 +433,11 @@ $fromJsonWithConfigBody
         return '$jsonAccess != null ? DateTime.parse($jsonAccess as String) : null';
       }
 
+      // Handle nullable enum types
+      if (_isEnumType(field.type)) {
+        return '$jsonAccess != null ? $typeName.values.byName($jsonAccess as String) : null';
+      }
+
       // Handle nullable DDDart types
       if (_isDDDartType(field.type)) {
         return '$jsonAccess != null ? ${typeName}JsonSerializer().fromJson($jsonAccess as Map<String, dynamic>, effectiveConfig) : null';
@@ -463,6 +468,11 @@ $fromJsonWithConfigBody
 
     if (typeName == 'DateTime') {
       return 'DateTime.parse($jsonAccess as String)';
+    }
+
+    // Handle non-nullable enum types
+    if (_isEnumType(field.type)) {
+      return '$typeName.values.byName($jsonAccess as String)';
     }
 
     // Handle non-nullable collections
@@ -694,6 +704,11 @@ $fromJsonWithConfigBody
       return '$fieldRef.toIso8601String()';
     }
 
+    // Handle enum types
+    if (_isEnumType(field.type)) {
+      return '$fieldRef!.name';
+    }
+
     // Handle collections
     if (typeName.startsWith('List<') || typeName.startsWith('Set<')) {
       return _generateCollectionSerialization(field, fieldRef);
@@ -729,6 +744,11 @@ $fromJsonWithConfigBody
         return '$fieldRef?.toIso8601String()';
       }
 
+      // Handle nullable enum types
+      if (_isEnumType(field.type)) {
+        return '$fieldRef?.name';
+      }
+
       // Handle nullable collections
       if (typeName.startsWith('List<') || typeName.startsWith('Set<')) {
         return '$fieldRef != null ? ${_generateCollectionSerialization(field, '$fieldRef!')} : null';
@@ -755,6 +775,11 @@ $fromJsonWithConfigBody
 
     if (typeName == 'DateTime') {
       return '$fieldRef.toIso8601String()';
+    }
+
+    // Handle non-nullable enum types
+    if (_isEnumType(field.type)) {
+      return '$fieldRef.name';
     }
 
     // Handle non-nullable collections
@@ -798,10 +823,20 @@ $fromJsonWithConfigBody
         return "json['$jsonKey'] != null ? DateTime.parse(json['$jsonKey'] as String) : null";
       }
 
+      // Handle nullable enum types
+      if (_isEnumType(field.type)) {
+        return "json['$jsonKey'] != null ? $typeName.values.byName(json['$jsonKey'] as String) : null";
+      }
+
       // Handle nullable DDDart types
       if (_isDDDartType(field.type)) {
         return "json['$jsonKey'] != null ? ${typeName}JsonSerializer().fromJson(json['$jsonKey'], effectiveConfig) : null";
       }
+    }
+
+    // Handle non-nullable enum types
+    if (_isEnumType(field.type)) {
+      return "$typeName.values.byName(json['$jsonKey'] as String)";
     }
 
     // Handle collections
@@ -844,6 +879,11 @@ $fromJsonWithConfigBody
 
     if (itemTypeName == 'DateTime') {
       return '$fieldRef.map((item) => item.toIso8601String()).toList()';
+    }
+
+    // Handle enum item types
+    if (_isEnumType(itemType)) {
+      return '$fieldRef.map((item) => item.name).toList()';
     }
 
     // Handle DDDart types
@@ -899,6 +939,11 @@ $fromJsonWithConfigBody
       return '$fieldRef.map((key, value) => MapEntry(key, value.toIso8601String()))';
     }
 
+    // Handle enum value types
+    if (_isEnumType(valueType)) {
+      return '$fieldRef.map((key, value) => MapEntry(key, value.name))';
+    }
+
     // Handle DDDart value types
     if (_isDDDartType(valueType)) {
       return '$fieldRef.map((key, value) => MapEntry(key, ${valueTypeName}JsonSerializer().toJson(value, effectiveConfig)))';
@@ -934,6 +979,11 @@ $fromJsonWithConfigBody
 
     if (itemTypeName == 'DateTime') {
       return "(json['$jsonKey'] as List).map((item) => DateTime.parse(item as String)).$collectionMethod";
+    }
+
+    // Handle enum item types
+    if (_isEnumType(itemType)) {
+      return "(json['$jsonKey'] as List).map((item) => $itemTypeName.values.byName(item as String)).$collectionMethod";
     }
 
     // Handle DDDart types
@@ -980,6 +1030,11 @@ $fromJsonWithConfigBody
       return "Map<String, dynamic>.from(json['$jsonKey'] as Map).map((key, value) => MapEntry(key, DateTime.parse(value as String)))";
     }
 
+    // Handle enum value types
+    if (_isEnumType(valueType)) {
+      return "Map<String, dynamic>.from(json['$jsonKey'] as Map).map((key, value) => MapEntry(key, $valueTypeName.values.byName(value as String)))";
+    }
+
     // Handle DDDart value types
     if (_isDDDartType(valueType)) {
       return "Map<String, dynamic>.from(json['$jsonKey'] as Map).map((key, value) => MapEntry(key, ${valueTypeName}JsonSerializer().fromJson(value, effectiveConfig)))";
@@ -1023,6 +1078,11 @@ $fromJsonWithConfigBody
 
     if (itemTypeName == 'DateTime') {
       return '($jsonAccess as List).map((item) => DateTime.parse(item as String)).$collectionMethod';
+    }
+
+    // Handle enum item types
+    if (_isEnumType(itemType)) {
+      return '($jsonAccess as List).map((item) => $itemTypeName.values.byName(item as String)).$collectionMethod';
     }
 
     // Handle DDDart types
@@ -1072,6 +1132,11 @@ $fromJsonWithConfigBody
       return 'Map<String, dynamic>.from($jsonAccess as Map).map((key, value) => MapEntry(key, DateTime.parse(value as String)))';
     }
 
+    // Handle enum value types
+    if (_isEnumType(valueType)) {
+      return 'Map<String, dynamic>.from($jsonAccess as Map).map((key, value) => MapEntry(key, $valueTypeName.values.byName(value as String)))';
+    }
+
     // Handle DDDart value types
     if (_isDDDartType(valueType)) {
       return 'Map<String, dynamic>.from($jsonAccess as Map).map((key, value) => MapEntry(key, ${valueTypeName}JsonSerializer().fromJson(value as Map<String, dynamic>, effectiveConfig)))';
@@ -1090,6 +1155,41 @@ $fromJsonWithConfigBody
   bool _isPrimitiveType(String typeName) {
     return ['String', 'int', 'double', 'bool', 'num', 'dynamic']
         .contains(typeName);
+  }
+
+  /// Checks if a type is an enum type.
+  bool _isEnumType(DartType type) {
+    final element = type.element;
+    if (element == null) return false;
+
+    // In newer analyzer versions, enums are represented by EnumElement
+    // Check the element's runtime type name since we might not have direct access to EnumElement
+    final elementTypeName = element.runtimeType.toString();
+    if (elementTypeName.contains('Enum')) {
+      return true;
+    }
+
+    // Fallback: Check if it's a ClassElement with Enum supertype
+    if (element is ClassElement) {
+      var currentElement = element;
+      while (true) {
+        final supertype = currentElement.supertype;
+        if (supertype == null) break;
+
+        // Check if the supertype is named 'Enum' (from dart:core)
+        final supertypeName = supertype.element.name;
+        if (supertypeName == 'Enum') {
+          return true;
+        }
+
+        // Move up the chain
+        final supertypeElement = supertype.element;
+        if (supertypeElement is! ClassElement) break;
+        currentElement = supertypeElement;
+      }
+    }
+
+    return false;
   }
 
   /// Checks if a type is a DDDart type (AggregateRoot, Entity, or Value).
