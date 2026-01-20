@@ -4,6 +4,7 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/src/auth_handler.dart';
 import 'package:dddart_rest/src/auth_result.dart';
 import 'package:dddart_rest/src/error_mapper.dart';
+import 'package:dddart_rest/src/etag_generator.dart';
 import 'package:dddart_rest/src/exceptions.dart';
 import 'package:dddart_rest/src/query_handler.dart';
 import 'package:dddart_rest/src/response_builder.dart';
@@ -54,6 +55,7 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   /// - [defaultSkip]: Default skip value for pagination (defaults to 0)
   /// - [defaultTake]: Default take value for pagination (defaults to 50)
   /// - [maxTake]: Maximum allowed take value to prevent excessive queries (defaults to 100)
+  /// - [etagStrategy]: Strategy for generating ETags (defaults to timestamp)
   ///
   /// Throws [ArgumentError] if:
   /// - [path] is null or empty
@@ -68,6 +70,7 @@ class CrudResource<T extends AggregateRoot, TClaims> {
     this.defaultSkip = 0,
     this.defaultTake = 50,
     this.maxTake = 100,
+    ETagStrategy etagStrategy = ETagStrategy.timestamp,
   }) {
     // Validate path is not null or empty
     if (path.isEmpty) {
@@ -80,6 +83,14 @@ class CrudResource<T extends AggregateRoot, TClaims> {
         'serializers map cannot be empty. At least one serializer must be provided.',
       );
     }
+
+    // Initialize ETag generator
+    _etagGenerator = ETagGenerator<T>(
+      strategy: etagStrategy,
+      serializer: etagStrategy == ETagStrategy.contentHash
+          ? serializers.values.first
+          : null,
+    );
   }
 
   /// The base path for this resource (e.g., '/users')
@@ -132,6 +143,9 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   /// ResponseBuilder instance for creating HTTP responses
   late final ResponseBuilder<T> _responseBuilder = ResponseBuilder<T>();
 
+  /// ETag generator for optimistic concurrency control
+  late final ETagGenerator<T> _etagGenerator;
+
   /// Logger instance for REST API request/response logging
   final Logger _logger = Logger('dddart.rest');
 
@@ -167,6 +181,8 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   /// Parses the ID, calls repository.getById(), and returns serialized aggregate
   /// Uses Accept header for content negotiation
   ///
+  /// Includes ETag header in response for optimistic concurrency control.
+  ///
   /// If auth handler is configured, authenticates the request first.
   ///
   /// Parameters:
@@ -187,10 +203,15 @@ class CrudResource<T extends AggregateRoot, TClaims> {
       final uuid = UuidValue.fromString(id);
       final aggregate = await repository.getById(uuid);
       final serializerEntry = _selectSerializer(request.headers['accept']);
+
+      // Generate ETag for the aggregate
+      final etag = _etagGenerator.generate(aggregate);
+
       final response = _responseBuilder.ok(
         aggregate,
         serializerEntry.serializer,
         serializerEntry.contentType,
+        etag: etag,
       );
       _logger.fine('GET /$path/$id - ${response.statusCode}');
       return response;
@@ -286,6 +307,8 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   /// Deserializes request body using Content-Type header, calls repository.save(),
   /// returns created aggregate. Uses Accept header for response content negotiation.
   ///
+  /// Includes ETag header in response for optimistic concurrency control.
+  ///
   /// If auth handler is configured, authenticates the request first.
   ///
   /// Parameters:
@@ -344,10 +367,15 @@ class CrudResource<T extends AggregateRoot, TClaims> {
 
       final responseSerializerEntry =
           _selectSerializer(request.headers['accept']);
+
+      // Generate ETag for the created aggregate
+      final etag = _etagGenerator.generate(aggregate);
+
       final response = _responseBuilder.created(
         aggregate,
         responseSerializerEntry.serializer,
         responseSerializerEntry.contentType,
+        etag: etag,
       );
       _logger.fine('POST /$path - ${response.statusCode}');
       return response;
@@ -360,6 +388,13 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   ///
   /// Deserializes request body using Content-Type header, calls repository.save(),
   /// returns updated aggregate. Uses Accept header for response content negotiation.
+  ///
+  /// Supports optimistic concurrency control via If-Match header:
+  /// - If If-Match header is present, validates ETag before updating
+  /// - If ETag doesn't match, returns 412 Precondition Failed
+  /// - If If-Match is not present, update proceeds without validation
+  ///
+  /// Includes ETag header in response.
   ///
   /// If auth handler is configured, authenticates the request first.
   ///
@@ -376,6 +411,37 @@ class CrudResource<T extends AggregateRoot, TClaims> {
       if (authCheck.response != null) {
         _logger.fine('PUT /$path/$id - ${authCheck.response!.statusCode}');
         return authCheck.response!;
+      }
+
+      final uuid = UuidValue.fromString(id);
+
+      // Check If-Match header for optimistic concurrency control
+      final ifMatch = request.headers['if-match'];
+      if (ifMatch != null) {
+        // Fetch current aggregate to validate ETag
+        final currentAggregate = await repository.getById(uuid);
+        final currentETag = _etagGenerator.generate(currentAggregate);
+
+        if (ifMatch != currentETag) {
+          // ETag mismatch - return 412 Precondition Failed
+          final response = Response(
+            412,
+            headers: {
+              'Content-Type': 'application/problem+json',
+              'ETag': currentETag,
+            },
+            body: jsonEncode({
+              'type': 'about:blank',
+              'title': 'Precondition Failed',
+              'status': 412,
+              'detail': 'Resource was modified by another client. '
+                  'The provided ETag does not match the current resource state.',
+            }),
+          );
+          _logger
+              .fine('PUT /$path/$id - ${response.statusCode} (ETag mismatch)');
+          return response;
+        }
       }
 
       final contentTypeHeader =
@@ -420,10 +486,15 @@ class CrudResource<T extends AggregateRoot, TClaims> {
 
       final responseSerializerEntry =
           _selectSerializer(request.headers['accept']);
+
+      // Generate ETag for the updated aggregate
+      final etag = _etagGenerator.generate(aggregate);
+
       final response = _responseBuilder.ok(
         aggregate,
         responseSerializerEntry.serializer,
         responseSerializerEntry.contentType,
+        etag: etag,
       );
       _logger.fine('PUT /$path/$id - ${response.statusCode}');
       return response;

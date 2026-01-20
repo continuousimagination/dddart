@@ -21,6 +21,7 @@ class ResponseBuilder<T extends AggregateRoot> {
   /// - [aggregate]: The aggregate root to serialize and return
   /// - [serializer]: The serializer to use for converting the aggregate
   /// - [contentType]: The MIME type to set in the Content-Type header
+  /// - [etag]: Optional ETag for optimistic concurrency control
   ///
   /// Returns: A [Response] with status 200 and serialized body
   ///
@@ -30,12 +31,22 @@ class ResponseBuilder<T extends AggregateRoot> {
   ///   user,
   ///   jsonSerializer,
   ///   'application/json',
+  ///   etag: '"2024-01-15T10:30:00.000Z"',
   /// );
   /// ```
-  Response ok(T aggregate, Serializer<T> serializer, String contentType) {
+  Response ok(
+    T aggregate,
+    Serializer<T> serializer,
+    String contentType, {
+    String? etag,
+  }) {
+    final headers = {'Content-Type': contentType};
+    if (etag != null) {
+      headers['ETag'] = etag;
+    }
     return Response.ok(
       serializer.serialize(aggregate),
-      headers: {'Content-Type': contentType},
+      headers: headers,
     );
   }
 
@@ -48,6 +59,7 @@ class ResponseBuilder<T extends AggregateRoot> {
   /// - [aggregate]: The newly created aggregate root to serialize and return
   /// - [serializer]: The serializer to use for converting the aggregate
   /// - [contentType]: The MIME type to set in the Content-Type header
+  /// - [etag]: Optional ETag for optimistic concurrency control
   ///
   /// Returns: A [Response] with status 201 and serialized body
   ///
@@ -57,13 +69,23 @@ class ResponseBuilder<T extends AggregateRoot> {
   ///   newUser,
   ///   jsonSerializer,
   ///   'application/json',
+  ///   etag: '"2024-01-15T10:30:00.000Z"',
   /// );
   /// ```
-  Response created(T aggregate, Serializer<T> serializer, String contentType) {
+  Response created(
+    T aggregate,
+    Serializer<T> serializer,
+    String contentType, {
+    String? etag,
+  }) {
+    final headers = {'Content-Type': contentType};
+    if (etag != null) {
+      headers['ETag'] = etag;
+    }
     return Response(
       201,
       body: serializer.serialize(aggregate),
-      headers: {'Content-Type': contentType},
+      headers: headers,
     );
   }
 

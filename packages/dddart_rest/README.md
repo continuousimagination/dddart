@@ -7,6 +7,7 @@ RESTful CRUD API framework for DDDart - Provides REST endpoints for aggregate ro
 ## Features
 
 - **Automatic CRUD endpoints** - Expose aggregate roots through REST APIs with a single configuration
+- **ETag concurrency control** - Optimistic locking with If-Match headers to prevent lost updates
 - **JWT Authentication** - Built-in support for self-hosted and OAuth/OIDC authentication
 - **Device Flow** - OAuth2 device flow for CLI tools and limited-input devices
 - **Content negotiation** - Support multiple serialization formats (JSON, YAML, etc.) via HTTP headers
@@ -472,6 +473,137 @@ All error responses use **RFC 7807 Problem Details** format with `Content-Type: 
 | Unsupported Content-Type | 415 | Unsupported Media Type |
 | Other exceptions | 500 | Internal Server Error |
 
+## ETag Concurrency Control
+
+ETags provide optimistic concurrency control to prevent lost updates when multiple clients modify the same resource concurrently.
+
+### How It Works
+
+1. **GET requests** include an `ETag` header with the resource version
+2. **PUT requests** can include an `If-Match` header with the ETag
+3. Server validates the ETag before updating
+4. If ETag doesn't match, returns `412 Precondition Failed`
+
+### Basic Usage
+
+```dart
+// Configure resource with ETag support (enabled by default)
+server.registerResource(
+  CrudResource<User>(
+    path: '/users',
+    repository: repository,
+    serializers: {'application/json': serializer},
+    etagStrategy: ETagStrategy.timestamp,  // Default
+  ),
+);
+```
+
+### Client Flow
+
+```bash
+# Step 1: Fetch resource (receives ETag)
+curl http://localhost:8080/users/123
+# Response includes: ETag: "2024-01-15T10:30:00.000Z"
+
+# Step 2: Update with If-Match header
+curl -X PUT http://localhost:8080/users/123 \
+  -H "Content-Type: application/json" \
+  -H "If-Match: \"2024-01-15T10:30:00.000Z\"" \
+  -d '{"id":"123","name":"Updated",...}'
+
+# Success: 200 OK with new ETag
+# Conflict: 412 Precondition Failed with current ETag
+```
+
+### ETag Strategies
+
+**Timestamp Strategy** (default):
+- Uses aggregate's `updatedAt` timestamp
+- Fast and efficient
+- Detects changes based on modification time
+
+```dart
+etagStrategy: ETagStrategy.timestamp
+```
+
+**Content Hash Strategy**:
+- Uses SHA-256 hash of serialized content
+- More precise - detects any content change
+- Slightly slower due to hashing
+
+```dart
+etagStrategy: ETagStrategy.contentHash
+```
+
+### Handling Conflicts
+
+When a `412 Precondition Failed` response is received:
+
+1. Response includes current ETag in header
+2. Client fetches latest version
+3. Client merges changes
+4. Client retries with new ETag
+
+**Example 412 Response:**
+```json
+{
+  "type": "about:blank",
+  "title": "Precondition Failed",
+  "status": 412,
+  "detail": "Resource was modified by another client"
+}
+```
+
+**Headers:**
+- `ETag: "2024-01-15T11:00:00.000Z"` - Current resource version
+
+### Backward Compatibility
+
+ETags are **optional** - the `If-Match` header is not required:
+
+- **With If-Match**: Validates ETag, returns 412 on mismatch
+- **Without If-Match**: Updates without validation (backward compatible)
+
+This allows gradual adoption without breaking existing clients.
+
+### Concurrent Update Example
+
+```dart
+// Client A fetches user
+final responseA = await client.get('/users/123');
+final etagA = responseA.headers['etag'];
+
+// Client B fetches user (same ETag)
+final responseB = await client.get('/users/123');
+final etagB = responseB.headers['etag'];
+
+// Client A updates successfully
+await client.put(
+  '/users/123',
+  headers: {'If-Match': etagA},
+  body: updatedDataA,
+);
+
+// Client B's update is rejected (stale ETag)
+final responseBUpdate = await client.put(
+  '/users/123',
+  headers: {'If-Match': etagB},  // Stale!
+  body: updatedDataB,
+);
+// Returns: 412 Precondition Failed
+
+// Client B fetches latest and retries
+final latestResponse = await client.get('/users/123');
+final latestETag = latestResponse.headers['etag'];
+await client.put(
+  '/users/123',
+  headers: {'If-Match': latestETag},
+  body: mergedData,
+);
+```
+
+See [example/etag_concurrency_example.dart](example/etag_concurrency_example.dart) for a complete working example.
+
 ## Complete Example
 
 See the [example application](example/main.dart) for a complete working implementation that demonstrates:
@@ -540,6 +672,7 @@ class CrudResource<T extends AggregateRoot> {
     int defaultSkip = 0,
     int defaultTake = 50,
     int maxTake = 100,
+    ETagStrategy etagStrategy = ETagStrategy.timestamp,
   });
 }
 ```
@@ -547,6 +680,13 @@ class CrudResource<T extends AggregateRoot> {
 **Parameters:**
 - `path` - Base URL path for the resource (e.g., '/users')
 - `repository` - Repository instance for persistence operations
+- `serializers` - Map of content types to serializer instances (first is default)
+- `queryHandlers` - Map of query parameter names to handler functions
+- `customExceptionHandlers` - Map of exception types to error response handlers
+- `defaultSkip` - Default skip value for pagination (default: 0)
+- `defaultTake` - Default take value for pagination (default: 50)
+- `maxTake` - Maximum allowed take value (default: 100)
+- `etagStrategy` - Strategy for generating ETags (default: timestamp)
 - `serializers` - Map of content types to serializer instances (first is default)
 - `queryHandlers` - Map of query parameter names to handler functions
 - `customExceptionHandlers` - Map of exception types to error response handlers
