@@ -101,6 +101,15 @@ void main() async {
     await authProvider.login();
   }
 
+  // Get user identity from ID token
+  final cognitoSub = await authProvider.getCognitoSub();
+  print('Logged in as user: $cognitoSub');
+
+  // Or get all claims from ID token
+  final claims = await authProvider.getIdTokenClaims();
+  print('Email: ${claims['email']}');
+  print('Email verified: ${claims['email_verified']}');
+
   final client = RestClient(
     baseUrl: 'https://api.example.com',
     authProvider: authProvider,
@@ -161,6 +170,35 @@ CognitoAuthProvider({
   required String credentialsPath, // Where to store credentials
   http.Client? httpClient,         // Optional HTTP client
 })
+```
+
+**Additional Methods:**
+- `getIdToken()` - Get the ID token (contains user identity claims)
+- `getCognitoSub()` - Extract the Cognito user ID (sub claim) from ID token
+- `getIdTokenClaims()` - Extract all claims from ID token (email, username, custom attributes, etc.)
+
+**Example - Extracting User Identity:**
+```dart
+final authProvider = CognitoAuthProvider(
+  cognitoDomain: 'https://mydomain.auth.us-east-1.amazoncognito.com',
+  clientId: 'your-cognito-client-id',
+  credentialsPath: credentialsPath,
+);
+
+await authProvider.login();
+
+// Get the Cognito user ID (stable identifier)
+final userId = await authProvider.getCognitoSub();
+print('User ID: $userId');
+
+// Get all user claims
+final claims = await authProvider.getIdTokenClaims();
+print('Email: ${claims['email']}');
+print('Email verified: ${claims['email_verified']}');
+print('Username: ${claims['cognito:username']}');
+
+// Use the user ID to link with your application's user records
+await createUserProfile(userId, claims['email']);
 ```
 
 ## Device Flow

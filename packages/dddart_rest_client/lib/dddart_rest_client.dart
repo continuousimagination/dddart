@@ -7,4 +7,7 @@ library dddart_rest_client;
 export 'src/auth_provider.dart';
 export 'src/cognito_auth_provider.dart';
 export 'src/device_flow_auth_provider.dart';
+export 'src/localhost_callback_strategy.dart';
+export 'src/manual_callback_strategy.dart';
+export 'src/oauth_callback_strategy.dart';
 export 'src/rest_client.dart';

@@ -115,7 +115,13 @@ class EventBusClient {
 
       if (response.statusCode == 200) {
         final eventsJson = jsonDecode(response.body) as List;
-        _logger.fine('Received ${eventsJson.length} events from server');
+
+        // Use FINEST for empty polls to reduce noise, FINE for actual events
+        if (eventsJson.isEmpty) {
+          _logger.finest('Received 0 events from server');
+        } else {
+          _logger.fine('Received ${eventsJson.length} events from server');
+        }
 
         for (final eventJson in eventsJson) {
           await _processEvent(eventJson as Map<String, dynamic>);
