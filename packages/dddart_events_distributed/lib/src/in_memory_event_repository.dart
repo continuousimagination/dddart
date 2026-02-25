@@ -19,8 +19,11 @@ class InMemoryEventRepository extends InMemoryRepository<StoredEvent>
   Future<List<StoredEvent>> findSince(DateTime timestamp) async {
     final allEvents = getAll();
     return allEvents
-        .where((event) => event.createdAt.isAfter(timestamp) ||
-            event.createdAt.isAtSameMomentAs(timestamp))
+        .where(
+          (event) =>
+              event.createdAt.isAfter(timestamp) ||
+              event.createdAt.isAtSameMomentAs(timestamp),
+        )
         .toList()
       ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
   }

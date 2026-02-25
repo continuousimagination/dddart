@@ -1,8 +1,5 @@
-import 'dart:convert';
-
 import 'package:dddart_rest/src/auth_handler.dart';
 import 'package:dddart_rest/src/auth_result.dart';
-import 'package:http/http.dart' as http;
 import 'package:jose/jose.dart';
 import 'package:shelf/shelf.dart';
 
@@ -31,9 +28,7 @@ class OAuthJwtAuthHandler<TClaims> extends AuthHandler<TClaims> {
     this.issuer,
     this.audience,
     this.cacheDuration = const Duration(hours: 1),
-    http.Client? httpClient,
-  })  : _parseClaimsFromJson = parseClaimsFromJson,
-        _httpClient = httpClient ?? http.Client() {
+  }) : _parseClaimsFromJson = parseClaimsFromJson {
     // Initialize the key store with the JWKS URI
     _keyStore = JsonWebKeyStore()..addKeySetUrl(Uri.parse(jwksUri));
   }
@@ -49,9 +44,6 @@ class OAuthJwtAuthHandler<TClaims> extends AuthHandler<TClaims> {
 
   /// How long to cache JWKS before refetching
   final Duration cacheDuration;
-
-  /// HTTP client for fetching JWKS
-  final http.Client _httpClient;
 
   /// Function to parse claims from JSON
   final TClaims Function(Map<String, dynamic>) _parseClaimsFromJson;
@@ -78,7 +70,7 @@ class OAuthJwtAuthHandler<TClaims> extends AuthHandler<TClaims> {
       JsonWebToken jwt;
       try {
         jwt = JsonWebToken.unverified(token);
-        
+
         // Verify signature
         final verified = await jwt.verify(_keyStore);
         if (!verified) {

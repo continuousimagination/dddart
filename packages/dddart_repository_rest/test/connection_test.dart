@@ -31,6 +31,9 @@ class MockAuthProvider implements AuthProvider {
   Future<String> getAccessToken() async => token;
 
   @override
+  Future<String> getIdToken() async => token;
+
+  @override
   Future<void> login() async {
     loginCalled = true;
   }
@@ -54,7 +57,6 @@ void main() {
 
         expect(connection.baseUrl, equals('https://api.example.com'));
         expect(connection.authProvider, isNull);
-        expect(connection.hasAuth, isFalse);
       });
 
       test('should create connection with auth provider', () {
@@ -66,7 +68,6 @@ void main() {
 
         expect(connection.baseUrl, equals('https://api.example.com'));
         expect(connection.authProvider, equals(authProvider));
-        expect(connection.hasAuth, isTrue);
       });
 
       test('should create connection with custom HTTP client', () {
@@ -77,7 +78,7 @@ void main() {
         );
 
         expect(connection.baseUrl, equals('https://api.example.com'));
-        expect(connection.httpClient, equals(mockClient));
+        expect(connection.client, equals(mockClient));
       });
 
       test('should create connection with auth provider and custom client', () {
@@ -91,7 +92,7 @@ void main() {
 
         expect(connection.baseUrl, equals('https://api.example.com'));
         expect(connection.authProvider, equals(authProvider));
-        expect(connection.hasAuth, isTrue);
+        expect(connection.authProvider != null, isTrue);
       });
     });
 
@@ -140,7 +141,7 @@ void main() {
           baseUrl: 'https://api.example.com',
         );
 
-        expect(connection.hasAuth, isFalse);
+        expect(connection.authProvider != null, isFalse);
       });
 
       test('should have hasAuth true when auth provider configured', () {
@@ -150,7 +151,7 @@ void main() {
           authProvider: authProvider,
         );
 
-        expect(connection.hasAuth, isTrue);
+        expect(connection.authProvider != null, isTrue);
       });
 
       test('should provide access to auth provider', () {
@@ -163,34 +164,24 @@ void main() {
         expect(connection.authProvider, equals(authProvider));
       });
 
-      test('should throw StateError when accessing client without auth', () {
+      test('should provide HTTP client when no auth provider', () {
         final connection = RestConnection(
           baseUrl: 'https://api.example.com',
         );
 
-        expect(
-          () => connection.client,
-          throwsA(isA<StateError>()),
-        );
+        expect(connection.client, isA<http.Client>());
+        expect(connection.client, isNot(isA<RestClient>()));
       });
 
-      test(
-          'should provide descriptive error when accessing client without auth',
-          () {
+      test('should provide basic HTTP client when no auth configured', () {
         final connection = RestConnection(
           baseUrl: 'https://api.example.com',
         );
 
-        expect(
-          () => connection.client,
-          throwsA(
-            isA<StateError>().having(
-              (e) => e.message,
-              'message',
-              contains('RestClient is not available'),
-            ),
-          ),
-        );
+        final client = connection.client;
+        expect(client, isA<http.Client>());
+        // Should be the basic HTTP client, not RestClient
+        expect(client, isNot(isA<RestClient>()));
       });
 
       test('should provide RestClient when auth provider configured', () {
@@ -210,7 +201,7 @@ void main() {
           baseUrl: 'https://api.example.com',
         );
 
-        expect(connection.httpClient, isA<http.Client>());
+        expect(connection.client, isA<http.Client>());
       });
 
       test('should provide custom HTTP client when provided', () {
@@ -220,7 +211,7 @@ void main() {
           httpClient: mockClient,
         );
 
-        expect(connection.httpClient, equals(mockClient));
+        expect(connection.client, equals(mockClient));
       });
     });
 
@@ -277,8 +268,8 @@ void main() {
         );
 
         // Simulate multiple repositories using the same connection
-        final httpClient1 = connection.httpClient;
-        final httpClient2 = connection.httpClient;
+        final httpClient1 = connection.client;
+        final httpClient2 = connection.client;
 
         expect(httpClient1, equals(httpClient2));
         expect(identical(httpClient1, httpClient2), isTrue);
@@ -320,12 +311,12 @@ void main() {
         );
 
         // Access multiple times
-        connection.httpClient;
-        connection.httpClient;
-        connection.httpClient;
+        connection.client;
+        connection.client;
+        connection.client;
 
         // Should still be the same client
-        expect(connection.httpClient, equals(mockClient));
+        expect(connection.client, equals(mockClient));
         expect(mockClient.isClosed, isFalse);
 
         // Dispose should affect all references

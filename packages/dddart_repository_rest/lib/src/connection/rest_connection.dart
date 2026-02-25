@@ -96,7 +96,7 @@ class RestConnection {
   ///
   /// Returns the authenticated [RestClient] if an auth provider is
   /// configured, otherwise returns the basic HTTP client.
-  /// 
+  ///
   /// Both implement [http.Client] interface, so callers don't need
   /// to know which one they're using.
   http.Client get client => _client ?? _httpClient;

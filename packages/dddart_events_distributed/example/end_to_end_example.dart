@@ -20,7 +20,6 @@ import 'package:shelf_router/shelf_router.dart';
 
 import 'lib/event_registry.dart';
 import 'lib/example_events.dart';
-import 'lib/in_memory_event_repository.dart';
 
 void main() async {
   print('=== End-to-End Distributed Events Example ===\n');

@@ -186,7 +186,7 @@ class EventBusClient {
       final storedEventJson = _domainEventToStoredEvent(event);
 
       final url = Uri.parse('$serverUrl/events');
-      
+
       // Build headers with optional authentication
       final headers = <String, String>{'Content-Type': 'application/json'};
       if (_authToken != null) {

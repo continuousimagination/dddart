@@ -5,6 +5,13 @@ analyzer:
     - "**/*.g.dart"
     - "**/*.freezed.dart"
     - "example/**"  # Examples don't need strict docs
+    - "test/cognito_token_debug_test.dart"  # Debug test file
+    - "test/jose_test.dart"  # Debug test file
+    - "test/rsa_jwt_test.dart"  # Debug test file
+    - "test/rsa_key_test.dart"  # Debug test file
+    - "test/pem_verification_test.dart"  # Debug test file
+    - "test/cognito_jwk_test.dart"  # Debug test file
+    - "test/oauth_integration_test.dart"  # Integration test with external dependencies
   language:
     strict-casts: false  # Too strict for tests with dynamic JSON
     strict-inference: false  # Too pedantic for examples and tests

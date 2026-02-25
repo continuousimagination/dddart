@@ -6,7 +6,6 @@ library;
 
 import 'package:dddart/dddart.dart';
 import 'package:dddart_events_distributed/dddart_events_distributed.dart';
-import 'package:dddart_events_distributed_example/in_memory_event_repository.dart';
 import 'package:test/test.dart';
 
 void main() {

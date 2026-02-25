@@ -10,7 +10,7 @@ class TestOrderRestRepository extends TestOrderRestRepositoryBase {
   @override
   Future<List<TestOrder>> findByCustomerId(String customerId) async {
     try {
-      final response = await _connection.httpClient.get(
+      final response = await _connection.client.get(
         Uri.parse(
           '${_connection.baseUrl}$_resourcePath?customerId=$customerId',
         ),
@@ -36,7 +36,7 @@ class TestOrderRestRepository extends TestOrderRestRepositoryBase {
   @override
   Future<TestOrder?> findByOrderNumber(String orderNumber) async {
     try {
-      final response = await _connection.httpClient.get(
+      final response = await _connection.client.get(
         Uri.parse(
           '${_connection.baseUrl}$_resourcePath?orderNumber=$orderNumber',
         ),

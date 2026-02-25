@@ -17,7 +17,6 @@ import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_router/shelf_router.dart';
 
 import 'lib/example_events.dart';
-import 'lib/in_memory_event_repository.dart';
 
 void main() async {
   print('Starting EventBusServer example...\n');

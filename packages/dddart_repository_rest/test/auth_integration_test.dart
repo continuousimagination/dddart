@@ -58,6 +58,11 @@ class TestAuthProvider implements AuthProvider {
     return accessToken;
   }
 
+  @override
+  Future<String> getIdToken() async {
+    return accessToken; // For testing, ID token same as access token
+  }
+
   Future<void> refreshAccessToken() async {
     refreshCallCount++;
     // Simulate token refresh by appending '-refreshed'
@@ -331,7 +336,7 @@ void main() {
         expect(userRepo2, isNotNull);
 
         // Verify connection has auth configured
-        expect(connection.hasAuth, isTrue);
+        expect(connection.authProvider != null, isTrue);
         expect(connection.authProvider, equals(authProvider));
       } finally {
         connection.dispose();

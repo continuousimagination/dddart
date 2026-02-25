@@ -22,8 +22,7 @@ void main() {
       jwksUri:
           'https://cognito-idp.us-east-1.amazonaws.com/us-east-1_hRCu4QkPm/.well-known/jwks.json',
       parseClaimsFromJson: (json) => json,
-      issuer:
-          'https://cognito-idp.us-east-1.amazonaws.com/us-east-1_hRCu4QkPm',
+      issuer: 'https://cognito-idp.us-east-1.amazonaws.com/us-east-1_hRCu4QkPm',
       audience: '5odo6bfe2reikrdjieu1f1b060',
     );
 

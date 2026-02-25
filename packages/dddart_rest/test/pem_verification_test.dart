@@ -26,8 +26,7 @@ void main() {
 
     // Find the key
     final key = keys.firstWhere(
-      (k) =>
-          k['kid'] == '1NJLVIpov771+nmbt4hbWicx3hvd7Nkoo7qiS5WNrpE=',
+      (k) => k['kid'] == '1NJLVIpov771+nmbt4hbWicx3hvd7Nkoo7qiS5WNrpE=',
     ) as Map<String, dynamic>;
 
     final n = key['n'] as String;
@@ -47,7 +46,8 @@ void main() {
       print('  Type: ${publicKey.runtimeType}');
 
       // Now try to verify a real token
-      final credFile = File('/tmp/silly-sentence-game-player1-credentials.json');
+      final credFile =
+          File('/tmp/silly-sentence-game-player1-credentials.json');
       if (await credFile.exists()) {
         final credJson =
             jsonDecode(await credFile.readAsString()) as Map<String, dynamic>;
@@ -63,15 +63,15 @@ void main() {
           print('  Has newlines: ${token.contains('\n')}');
           print('  First 50 chars: ${token.substring(0, 50)}');
           print('');
-          
+
           // Try creating a new RSAPublicKey directly from the PEM
           print('Creating fresh RSAPublicKey from PEM...');
           final freshPublicKey = RSAPublicKey(pem);
           print('✓ Fresh RSAPublicKey created');
-          
+
           print('');
           print('Attempting to verify real token...');
-          
+
           // First, let's check the token header
           try {
             final parts = tokenTrimmed.split('.');
@@ -84,7 +84,7 @@ void main() {
           } catch (e) {
             print('Could not decode header: $e');
           }
-          
+
           try {
             // Try with the fresh publicKey
             print('Trying JWT.verify(tokenTrimmed, freshPublicKey)...');
@@ -96,12 +96,12 @@ void main() {
           } on JWTInvalidException catch (e) {
             print('✗ JWTInvalidException: ${e.message}');
             print('  Error type: ${e.runtimeType}');
-            
+
             // The "not a jwt" error might mean the token string itself is invalid
             // Let's check if there are any hidden characters
             print('  Token bytes: ${tokenTrimmed.codeUnits.take(20).toList()}');
             print('  Token runes: ${tokenTrimmed.runes.take(20).toList()}');
-            
+
             // Try to decode without verification
             try {
               final parts = tokenTrimmed.split('.');
@@ -121,7 +121,7 @@ void main() {
             print('  publicKey type: ${freshPublicKey.runtimeType}');
             print('  Stack trace:');
             print(StackTrace.current);
-            
+
             // Try to decode without verification
             try {
               final parts = tokenTrimmed.split('.');

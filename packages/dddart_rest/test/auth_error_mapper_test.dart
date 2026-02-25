@@ -168,7 +168,7 @@ void main() {
         expect(
           response.headers['WWW-Authenticate'],
           equals('Bearer realm="API"'),
-          reason: 'Error "${error.toString()}" should include WWW-Authenticate',
+          reason: 'Error "$error" should include WWW-Authenticate',
         );
       }
     });

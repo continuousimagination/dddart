@@ -21,27 +21,26 @@ void main() {
 
     // Find the key with kid: 1NJLVIpov771+nmbt4hbWicx3hvd7Nkoo7qiS5WNrpE=
     final key = keys.firstWhere(
-      (k) =>
-          k['kid'] == '1NJLVIpov771+nmbt4hbWicx3hvd7Nkoo7qiS5WNrpE=',
+      (k) => k['kid'] == '1NJLVIpov771+nmbt4hbWicx3hvd7Nkoo7qiS5WNrpE=',
     ) as Map<String, dynamic>;
 
     print('Key found:');
     print('  kty: ${key['kty']}');
     print('  alg: ${key['alg']}');
     print('  use: ${key['use']}');
-    
+
     // Try to decode n and e
     final n = key['n'] as String;
     final e = key['e'] as String;
-    
+
     print('  n length: ${n.length}');
     print('  e length: ${e.length}');
     print('  n has newlines: ${n.contains('\n')}');
     print('  n has spaces: ${n.contains(' ')}');
-    
+
     // Check if n length is multiple of 4
     print('  n length % 4: ${n.length % 4}');
-    
+
     // Try decoding with proper padding
     var nPadded = n;
     while (nPadded.length % 4 != 0) {
@@ -56,7 +55,7 @@ void main() {
     } catch (e) {
       print('  base64Url.decode(n) failed: $e');
     }
-    
+
     try {
       final nBytes2 = base64Url.decode(nPadded);
       print('  base64Url.decode(nPadded) succeeded: ${nBytes2.length} bytes');

@@ -1,0 +1,5 @@
+# Test configuration for dddart_rest
+
+# Run tests from test directory
+paths:
+  - test/

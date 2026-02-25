@@ -23,6 +23,11 @@ class MockAuthProvider implements AuthProvider {
     return token;
   }
 
+  @override
+  Future<String> getIdToken() async {
+    return token; // For testing, ID token same as access token
+  }
+
   Future<void> refreshAccessToken() async {
     // No-op for testing
   }

@@ -1,10 +1,10 @@
-import 'dart:convert';
 import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 import 'package:test/test.dart';
 
 void main() {
   test('test RSAPublicKey constructors', () {
-    final pem = '''-----BEGIN PUBLIC KEY-----
+    const pem = '''
+-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAu80jTdiX7LaGqicP7g0F
 W6g4REPl1BIpIH7Elzk/NpvqN0t+zIEBmjTaGWEImskK7s9m6Wnflq6eRSeJKrYN
 BlDmuDaaRSJVeF3JoClo6K6x4syjlSbW9Wfh2eOzZl4onzQvDX0UvTEm+VqyVuY/
@@ -19,7 +19,7 @@ LQIDAQAB
       final key1 = RSAPublicKey(pem);
       print('✓ RSAPublicKey(pem) works');
       print('  Type: ${key1.runtimeType}');
-      print('  toString: ${key1.toString()}');
+      print('  toString: $key1');
     } catch (e) {
       print('✗ RSAPublicKey(pem) failed: $e');
     }
@@ -29,7 +29,7 @@ LQIDAQAB
     final key = RSAPublicKey(pem);
     print('  key is JWTKey: ${key is JWTKey}');
     print('  key.runtimeType: ${key.runtimeType}');
-    
+
     // Try to see what methods/properties are available
     print('\nTrying to inspect key...');
     try {

@@ -147,7 +147,8 @@ void main() {
         httpClient: mockClient,
       );
 
-      await client.getPath('/users', headers: {'X-Custom-Header': 'custom-value'});
+      await client
+          .getPath('/users', headers: {'X-Custom-Header': 'custom-value'});
     });
 
     test('should get token from auth provider', () async {

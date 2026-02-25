@@ -643,7 +643,7 @@ class $className extends AggregateRoot {
           // This proves they're accessible within the class
           expect(
             output,
-            contains('_connection.httpClient'),
+            contains('_connection.client'),
             reason: '_connection should be used in method implementations',
           );
 

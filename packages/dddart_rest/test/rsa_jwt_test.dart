@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 import 'package:test/test.dart';
 
@@ -7,11 +6,11 @@ void main() {
     // Create a simple HMAC token first to test the API
     final jwt = JWT({'sub': 'test-user'});
     final token = jwt.sign(SecretKey('secret'));
-    
+
     print('HMAC Token: $token');
     print('Token type: ${token.runtimeType}');
     print('Token is String: ${token is String}');
-    
+
     // Verify with string
     try {
       final verified = JWT.verify(token, SecretKey('secret'));
@@ -20,7 +19,7 @@ void main() {
     } catch (e) {
       print('✗ HMAC verification failed: $e');
     }
-    
+
     // Now test what happens if we pass something that's not a string
     print('\nTesting with non-string:');
     try {
@@ -31,7 +30,7 @@ void main() {
     } catch (e) {
       print('✗ Got unexpected error: $e');
     }
-    
+
     // Test with a token that has extra whitespace
     print('\nTesting with whitespace:');
     final tokenWithSpace = ' $token ';
@@ -43,7 +42,7 @@ void main() {
     } catch (e) {
       print('Got error: $e');
     }
-    
+
     // Test with token that has newline
     print('\nTesting with newline:');
     final tokenWithNewline = '$token\n';

@@ -35,7 +35,7 @@ class RestClient extends http.BaseClient {
     // Falls back to access token for non-OIDC providers
     final token = await authProvider.getIdToken();
     request.headers['Authorization'] = 'Bearer $token';
-    
+
     return _httpClient.send(request);
   }
 

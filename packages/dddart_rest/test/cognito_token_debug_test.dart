@@ -67,7 +67,7 @@ void main() {
       print('  PublicKey type: ${publicKey.runtimeType}');
 
       // Try with explicit String cast
-      final tokenString = token as String;
+      final tokenString = token;
       print('  After cast - Token type: ${tokenString.runtimeType}');
 
       // First, try decoding to get a JWT object
@@ -84,7 +84,7 @@ void main() {
         print('⚠ Token expired (this is OK)');
       } on JWTInvalidException catch (e) {
         print('✗ JWTInvalidException: ${e.message}');
-        
+
         // Maybe the issue is that we need to pass the decoded JWT?
         print('\n  Trying to verify the decoded JWT object...');
         try {
@@ -94,7 +94,7 @@ void main() {
         } catch (e3) {
           print('✗ That did not work either: $e3');
         }
-        
+
         // Check if maybe the issue is with the key
         print('\n  Trying with a fresh RSAPublicKey instance...');
         try {
@@ -104,7 +104,7 @@ void main() {
         } on JWTInvalidException catch (e2) {
           print('✗ Still failed: ${e2.message}');
         }
-        
+
         // Try JWT.decode to see if token is valid
         try {
           final decoded = JWT.decode(tokenString);

@@ -159,7 +159,7 @@ void main() {
       test('custom repository can access _connection', () async {
         // This test verifies that the custom repository implementation
         // can access the protected _connection member from the base class.
-        // The implementation in test_models_impl.dart uses _connection.httpClient
+        // The implementation in test_models_impl.dart uses _connection.client
         // which proves accessibility.
 
         final order = generateRandomTestOrder();
