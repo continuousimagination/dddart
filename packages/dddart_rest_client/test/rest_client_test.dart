@@ -14,6 +14,9 @@ class MockAuthProvider implements AuthProvider {
   Future<String> getAccessToken() async => token;
 
   @override
+  Future<String> getIdToken() async => token;
+
+  @override
   Future<bool> isAuthenticated() async => true;
 
   @override
@@ -46,7 +49,7 @@ void main() {
         httpClient: mockClient,
       );
 
-      await client.get('/users');
+      await client.getPath('/users');
     });
 
     test('should include Authorization header in POST requests', () async {
@@ -68,7 +71,7 @@ void main() {
         httpClient: mockClient,
       );
 
-      await client.post('/users', body: {'name': 'Alice'});
+      await client.postPath('/users', body: {'name': 'Alice'});
     });
 
     test('should include Authorization header in PUT requests', () async {
@@ -88,7 +91,7 @@ void main() {
         httpClient: mockClient,
       );
 
-      await client.put('/users/123', body: {'name': 'Alice Updated'});
+      await client.putPath('/users/123', body: {'name': 'Alice Updated'});
     });
 
     test('should include Authorization header in DELETE requests', () async {
@@ -108,7 +111,7 @@ void main() {
         httpClient: mockClient,
       );
 
-      await client.delete('/users/123');
+      await client.deletePath('/users/123');
     });
 
     test('should include Authorization header in PATCH requests', () async {
@@ -128,7 +131,7 @@ void main() {
         httpClient: mockClient,
       );
 
-      await client.patch('/users/123', body: {'email': 'new@example.com'});
+      await client.patchPath('/users/123', body: {'email': 'new@example.com'});
     });
 
     test('should allow custom headers', () async {
@@ -144,7 +147,7 @@ void main() {
         httpClient: mockClient,
       );
 
-      await client.get('/users', headers: {'X-Custom-Header': 'custom-value'});
+      await client.getPath('/users', headers: {'X-Custom-Header': 'custom-value'});
     });
 
     test('should get token from auth provider', () async {
@@ -166,7 +169,7 @@ void main() {
         httpClient: mockClient,
       );
 
-      await client.get('/users');
+      await client.getPath('/users');
       expect(tokenRequested, isTrue);
     });
   });

@@ -62,7 +62,7 @@ class RestConnection {
     this.authProvider,
     http.Client? httpClient,
   })  : _httpClient = httpClient ?? http.Client(),
-        _restClient = authProvider != null
+        _client = authProvider != null
             ? RestClient(
                 baseUrl: baseUrl,
                 authProvider: authProvider,
@@ -90,30 +90,16 @@ class RestConnection {
   /// The REST client for authenticated requests.
   ///
   /// Only created when an auth provider is configured.
-  final RestClient? _restClient;
+  final http.Client? _client;
 
   /// Gets the HTTP client for making requests.
   ///
   /// Returns the authenticated [RestClient] if an auth provider is
-  /// configured, otherwise returns a wrapper around the basic HTTP client.
-  http.Client get httpClient => _httpClient;
-
-  /// Gets the REST client for making authenticated requests.
-  ///
-  /// Returns the [RestClient] if an auth provider is configured.
-  /// Throws [StateError] if no auth provider is configured.
-  RestClient get client {
-    if (_restClient == null) {
-      throw StateError(
-        'RestClient is not available. '
-        'Configure an AuthProvider to use authenticated requests.',
-      );
-    }
-    return _restClient;
-  }
-
-  /// Checks if this connection has authentication configured.
-  bool get hasAuth => authProvider != null;
+  /// configured, otherwise returns the basic HTTP client.
+  /// 
+  /// Both implement [http.Client] interface, so callers don't need
+  /// to know which one they're using.
+  http.Client get client => _client ?? _httpClient;
 
   /// Disposes the connection and releases resources.
   ///
@@ -123,10 +109,6 @@ class RestConnection {
   /// All repositories using this connection should be considered
   /// disposed as well.
   void dispose() {
-    if (_restClient != null) {
-      _restClient.close();
-    } else {
-      _httpClient.close();
-    }
+    client.close();
   }
 }

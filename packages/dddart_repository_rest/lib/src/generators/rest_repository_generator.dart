@@ -354,7 +354,7 @@ class RestRepositoryGenerator
   @override
   Future<$className> getById(UuidValue id) async {
     try {
-      final response = await _connection.httpClient.get(
+      final response = await _connection.client.get(
         Uri.parse('\${_connection.baseUrl}\$_resourcePath/\${id.uuid}'),
       );
       
@@ -385,7 +385,7 @@ class RestRepositoryGenerator
       final json = _serializer.toJson(aggregate);
       final body = jsonEncode(json);
       
-      final response = await _connection.httpClient.put(
+      final response = await _connection.client.put(
         Uri.parse('\${_connection.baseUrl}\$_resourcePath/\${aggregate.id.uuid}'),
         body: body,
         headers: {'Content-Type': 'application/json'},
@@ -414,7 +414,7 @@ class RestRepositoryGenerator
   @override
   Future<void> deleteById(UuidValue id) async {
     try {
-      final response = await _connection.httpClient.delete(
+      final response = await _connection.client.delete(
         Uri.parse('\${_connection.baseUrl}\$_resourcePath/\${id.uuid}'),
       );
       
