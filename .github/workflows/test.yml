@@ -89,7 +89,10 @@ jobs:
             if [ -f "packages/dddart_rest/pubspec.yaml" ] && grep -q "build_runner" "packages/dddart_rest/pubspec.yaml"; then
               echo "Generating code for dependency: dddart_rest"
               cd packages/dddart_rest
-              dart run build_runner build --delete-conflicting-outputs
+              if ! dart run build_runner build --delete-conflicting-outputs; then
+                echo "Code generation failed for dddart_rest"
+                exit 1
+              fi
               cd - > /dev/null
             fi
           fi
@@ -97,7 +100,12 @@ jobs:
       - name: Run code generation (if needed)
         run: |
           if grep -q "build_runner" pubspec.yaml; then
-            dart run build_runner build --delete-conflicting-outputs
+            # Run code generation and capture exit code
+            # Warnings about analyzer version are expected and can be ignored
+            if ! dart run build_runner build --delete-conflicting-outputs; then
+              echo "Code generation failed with errors"
+              exit 1
+            fi
           fi
         working-directory: packages/${{ matrix.package }}
       
