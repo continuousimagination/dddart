@@ -45,6 +45,8 @@ class EventBusClient {
   /// [autoForward] enables automatic forwarding of local events to server.
   /// [initialTimestamp] sets the starting point for event retrieval.
   /// [httpClient] is optional and allows injecting a custom HTTP client.
+  /// [authToken] is an optional authentication token (e.g., JWT) to include
+  /// in requests as a Bearer token.
   EventBusClient({
     required this.localEventBus,
     required this.serverUrl,
@@ -53,7 +55,9 @@ class EventBusClient {
     this.autoForward = false,
     DateTime? initialTimestamp,
     http.Client? httpClient,
-  }) : _httpClient = httpClient ?? http.Client() {
+    String? authToken,
+  })  : _httpClient = httpClient ?? http.Client(),
+        _authToken = authToken {
     _lastTimestamp = initialTimestamp ?? DateTime.now();
     _logger.info('EventBusClient starting with lastTimestamp: $_lastTimestamp');
 
@@ -85,6 +89,9 @@ class EventBusClient {
   /// HTTP client for making requests.
   final http.Client _httpClient;
 
+  /// Optional authentication token for requests.
+  final String? _authToken;
+
   /// Timestamp of the last received event.
   late DateTime _lastTimestamp;
 
@@ -111,7 +118,13 @@ class EventBusClient {
 
       _logger.finest('Polling: $url');
 
-      final response = await _httpClient.get(url);
+      // Build headers with optional authentication
+      final headers = <String, String>{};
+      if (_authToken != null) {
+        headers['Authorization'] = 'Bearer $_authToken';
+      }
+
+      final response = await _httpClient.get(url, headers: headers);
 
       if (response.statusCode == 200) {
         final eventsJson = jsonDecode(response.body) as List;
@@ -173,9 +186,16 @@ class EventBusClient {
       final storedEventJson = _domainEventToStoredEvent(event);
 
       final url = Uri.parse('$serverUrl/events');
+      
+      // Build headers with optional authentication
+      final headers = <String, String>{'Content-Type': 'application/json'};
+      if (_authToken != null) {
+        headers['Authorization'] = 'Bearer $_authToken';
+      }
+
       final response = await _httpClient.post(
         url,
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
         body: jsonEncode(storedEventJson),
       );
 

@@ -14,6 +14,10 @@ void main() {
         response.headers['Content-Type'],
         equals('application/problem+json'),
       );
+      expect(
+        response.headers['WWW-Authenticate'],
+        equals('Bearer realm="API"'),
+      );
 
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString) as Map<String, dynamic>;
@@ -140,6 +144,33 @@ void main() {
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString) as Map<String, dynamic>;
       expect(body['detail'], equals('Authentication failed'));
+    });
+
+    test('all error responses include WWW-Authenticate header', () {
+      final errors = [
+        Exception('Missing authorization header'),
+        Exception('Invalid token format'),
+        Exception('Token has expired'),
+        Exception('Invalid token signature'),
+        Exception('Invalid token issuer'),
+        Exception('Invalid token audience'),
+        Exception('Invalid refresh token'),
+        Exception('Refresh token has expired'),
+        Exception('Refresh token has been revoked'),
+        Exception('Invalid device code'),
+        Exception('Device code has expired'),
+        Exception('Invalid credentials'),
+        Exception('Unknown error'),
+      ];
+
+      for (final error in errors) {
+        final response = AuthErrorMapper.mapToResponse(error);
+        expect(
+          response.headers['WWW-Authenticate'],
+          equals('Bearer realm="API"'),
+          reason: 'Error "${error.toString()}" should include WWW-Authenticate',
+        );
+      }
     });
 
     test('sanitizes error messages with secrets', () {

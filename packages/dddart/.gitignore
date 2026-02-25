@@ -24,3 +24,6 @@ doc/api/
 # Temporary files
 *.tmp
 *.temp
+
+# Log files
+*.log

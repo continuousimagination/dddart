@@ -14,10 +14,11 @@ dependencies:
   analyzer: ^6.0.0
   build: ^2.4.0
   crypto: ^3.0.3
-  dart_jsonwebtoken: ^2.13.0
+  dart_jsonwebtoken: ^2.17.0
   dddart: ^0.9.0
   dddart_serialization: ^0.9.0
   http: ^1.2.0
+  jose: ^0.3.4
   logging: ^1.2.0
   meta: ^1.15.0
   shelf: ^1.4.0

@@ -58,6 +58,12 @@ class DeviceFlowAuthProvider implements AuthProvider {
   }
 
   @override
+  Future<String> getIdToken() async {
+    // For device flow, the access token IS the JWT
+    return getAccessToken();
+  }
+
+  @override
   Future<void> login() async {
     // 1. Request device code
     final response = await _httpClient.post(

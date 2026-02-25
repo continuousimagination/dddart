@@ -8,9 +8,8 @@ import 'dart:async';
 
 import 'package:dddart/dddart.dart';
 import 'package:dddart_events_distributed/dddart_events_distributed.dart';
-// Import example events and repository
+// Import example events
 import 'package:dddart_events_distributed_example/example_events.dart';
-import 'package:dddart_events_distributed_example/in_memory_event_repository.dart';
 import 'package:test/test.dart';
 
 void main() {

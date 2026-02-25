@@ -9,22 +9,31 @@ import 'package:shelf/shelf.dart';
 /// HTTP endpoints for event distribution.
 ///
 /// Provides GET and POST endpoints for retrieving and submitting events
-/// via HTTP. Supports optional authorization filtering to control which
-/// events are delivered to specific clients.
+/// via HTTP. Supports optional authentication and authorization filtering
+/// to control access and event visibility.
 class EventHttpEndpoints<T extends StoredEvent> {
   /// Creates HTTP endpoints for event distribution.
   ///
   /// [eventRepository] is used to query and store events.
+  /// [authHandler] is an optional authentication handler that verifies
+  /// requests before allowing access to events.
   /// [authorizationFilter] is an optional function that determines whether
   /// a specific event should be delivered to a specific client based on
   /// the event data and HTTP request context.
   EventHttpEndpoints({
     required this.eventRepository,
+    this.authHandler,
     this.authorizationFilter,
   });
 
   /// Repository for querying and storing events.
   final EventRepository<T> eventRepository;
+
+  /// Optional authentication handler.
+  ///
+  /// If provided, requests must be authenticated before accessing events.
+  /// The handler verifies JWT tokens or other authentication credentials.
+  final Future<AuthResult> Function(Request)? authHandler;
 
   /// Optional authorization filter function.
   ///
@@ -38,15 +47,32 @@ class EventHttpEndpoints<T extends StoredEvent> {
   /// Handles GET /events?since=<ISO8601 timestamp> requests.
   ///
   /// Queries the event repository for all events since the provided timestamp
-  /// and returns them as a JSON array. Applies authorization filtering if
-  /// configured.
+  /// and returns them as a JSON array. Applies authentication and authorization
+  /// filtering if configured.
   ///
   /// Returns:
   /// - 200 OK with JSON array of events
   /// - 400 Bad Request if 'since' parameter is missing or invalid
+  /// - 401 Unauthorized if authentication fails
   /// - 500 Internal Server Error if query fails
   Future<Response> handleGetEvents(Request request) async {
     try {
+      // Check authentication if handler is configured
+      if (authHandler != null) {
+        final authResult = await authHandler!(request);
+        if (!authResult.isAuthenticated) {
+          _logger.warning('GET /events: authentication failed');
+          return Response(
+            401,
+            body: jsonEncode({'error': authResult.errorMessage}),
+            headers: {
+              'Content-Type': 'application/json',
+              'WWW-Authenticate': 'Bearer realm="API"',
+            },
+          );
+        }
+      }
+
       // Parse timestamp parameter
       final sinceParam = request.url.queryParameters['since'];
       if (sinceParam == null) {
@@ -115,17 +141,35 @@ class EventHttpEndpoints<T extends StoredEvent> {
   /// Handles POST /events requests.
   ///
   /// Accepts a JSON body containing a StoredEvent, saves it to the repository,
-  /// and returns the event ID and timestamp.
+  /// and returns the event ID and timestamp. Requires authentication if
+  /// auth handler is configured.
   ///
   /// Returns:
   /// - 201 Created with event ID and timestamp
   /// - 400 Bad Request if JSON is invalid or deserialization fails
+  /// - 401 Unauthorized if authentication fails
   /// - 500 Internal Server Error if save fails
   Future<Response> handlePostEvent(
     Request request,
     EventBusServer<T>? server,
   ) async {
     try {
+      // Check authentication if handler is configured
+      if (authHandler != null) {
+        final authResult = await authHandler!(request);
+        if (!authResult.isAuthenticated) {
+          _logger.warning('POST /events: authentication failed');
+          return Response(
+            401,
+            body: jsonEncode({'error': authResult.errorMessage}),
+            headers: {
+              'Content-Type': 'application/json',
+              'WWW-Authenticate': 'Bearer realm="API"',
+            },
+          );
+        }
+      }
+
       // Read and parse request body
       final body = await request.readAsString();
 
@@ -182,4 +226,31 @@ class EventHttpEndpoints<T extends StoredEvent> {
       );
     }
   }
+}
+
+/// Result of an authentication attempt.
+///
+/// Contains information about whether authentication succeeded and
+/// any associated error message.
+class AuthResult {
+  /// Creates an authentication result.
+  const AuthResult({
+    required this.isAuthenticated,
+    this.errorMessage,
+  });
+
+  /// Creates a successful authentication result.
+  factory AuthResult.success() => const AuthResult(isAuthenticated: true);
+
+  /// Creates a failed authentication result with an error message.
+  factory AuthResult.failure(String errorMessage) => AuthResult(
+        isAuthenticated: false,
+        errorMessage: errorMessage,
+      );
+
+  /// Whether the authentication succeeded.
+  final bool isAuthenticated;
+
+  /// Error message if authentication failed.
+  final String? errorMessage;
 }

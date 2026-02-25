@@ -109,7 +109,10 @@ class AuthErrorMapper {
   static Response _unauthorized(String detail) {
     return Response(
       401,
-      headers: {'Content-Type': 'application/problem+json'},
+      headers: {
+        'Content-Type': 'application/problem+json',
+        'WWW-Authenticate': 'Bearer realm="API"',
+      },
       body: jsonEncode({
         'type': 'about:blank',
         'title': 'Unauthorized',

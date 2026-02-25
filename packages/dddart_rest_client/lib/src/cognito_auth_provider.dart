@@ -216,12 +216,23 @@ class CognitoAuthProvider implements AuthProvider {
     }
   }
 
+  @override
   Future<String> getIdToken() async {
     final creds = await _loadCredentials();
-    if (creds == null || creds.isExpired) {
-      throw AuthenticationException('Not authenticated. Run login command.');
+    if (creds != null && !creds.isExpired) {
+      return creds.idToken;
     }
-    return creds.idToken;
+    if (creds?.refreshToken != null) {
+      try {
+        final newTokens = await _refresh(creds!.refreshToken);
+        await _saveCredentials(newTokens);
+        return newTokens.idToken;
+      } catch (e) {
+        // Refresh failed - rethrow the actual error
+        rethrow;
+      }
+    }
+    throw AuthenticationException('Not authenticated. Run login command.');
   }
 
   Future<String> getCognitoSub() async {
