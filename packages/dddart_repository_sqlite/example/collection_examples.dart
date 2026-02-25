@@ -3,6 +3,7 @@
 import 'package:dddart/dddart.dart';
 import 'package:dddart_json/dddart_json.dart';
 import 'package:dddart_repository_sqlite/dddart_repository_sqlite.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
 
 part 'collection_examples.g.dart';
 
@@ -102,7 +103,7 @@ Future<void> primitiveCollectionsExample() async {
 // ============================================================================
 
 @Serializable()
-class Money {
+class Money extends Value {
   Money({required this.amount, required this.currency});
 
   final double amount;
@@ -113,7 +114,7 @@ class Money {
 }
 
 @Serializable()
-class Address {
+class Address extends Value {
   Address({
     required this.street,
     required this.city,
@@ -129,7 +130,7 @@ class Address {
 }
 
 @Serializable()
-class Color {
+class Color extends Value {
   Color({required this.name, required this.hex});
 
   final String name;

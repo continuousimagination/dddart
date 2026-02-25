@@ -89,11 +89,10 @@ jobs:
             if [ -f "packages/dddart_rest/pubspec.yaml" ] && grep -q "build_runner" "packages/dddart_rest/pubspec.yaml"; then
               echo "Generating code for dependency: dddart_rest"
               cd packages/dddart_rest
-              dart run build_runner build --delete-conflicting-outputs || true
+              dart run build_runner build --delete-conflicting-outputs
               cd - > /dev/null
             fi
           fi
-        continue-on-error: true
       
       - name: Run code generation (if needed)
         run: |
@@ -101,7 +100,6 @@ jobs:
             dart run build_runner build --delete-conflicting-outputs
           fi
         working-directory: packages/${{ matrix.package }}
-        continue-on-error: true
       
       - name: Analyze code
         run: dart analyze --fatal-infos

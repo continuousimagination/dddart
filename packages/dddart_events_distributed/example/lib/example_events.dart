@@ -2,10 +2,8 @@
 library;
 
 import 'package:dddart/dddart.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
 
 /// Example event: User created.
-@Serializable()
 class UserCreatedEvent extends DomainEvent {
   UserCreatedEvent({
     required super.aggregateId,
@@ -43,7 +41,6 @@ class UserCreatedEvent extends DomainEvent {
 }
 
 /// Example event: Order placed.
-@Serializable()
 class OrderPlacedEvent extends DomainEvent {
   OrderPlacedEvent({
     required super.aggregateId,
@@ -81,7 +78,6 @@ class OrderPlacedEvent extends DomainEvent {
 }
 
 /// Example event: Order purchased.
-@Serializable()
 class OrderPurchasedEvent extends DomainEvent {
   OrderPurchasedEvent({
     required super.aggregateId,
@@ -119,7 +115,6 @@ class OrderPurchasedEvent extends DomainEvent {
 }
 
 /// Example event: Payment processed.
-@Serializable()
 class PaymentProcessedEvent extends DomainEvent {
   PaymentProcessedEvent({
     required super.aggregateId,
