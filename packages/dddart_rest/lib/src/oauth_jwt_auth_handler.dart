@@ -77,9 +77,20 @@ class OAuthJwtAuthHandler<TClaims> extends AuthHandler<TClaims> {
           return AuthResult.failure('Invalid token signature');
         }
       } on JoseException catch (e) {
-        return AuthResult.failure('Token verification failed: ${e.message}');
+        // Sanitize error message to avoid leaking token data
+        var errorMsg = e.message;
+        // Remove any quoted strings that might be tokens
+        errorMsg = errorMsg.replaceAll(RegExp(r'"[^"]*"'), '"[REDACTED]"');
+        return AuthResult.failure('Token verification failed: $errorMsg');
       } on Exception catch (e) {
-        return AuthResult.failure('Token verification failed: $e');
+        // Sanitize error message to avoid leaking token data
+        var errorMsg = e.toString();
+        // Remove any token-like strings (base64url patterns)
+        errorMsg = errorMsg.replaceAll(
+          RegExp(r'[A-Za-z0-9_-]{20,}'),
+          '[REDACTED]',
+        );
+        return AuthResult.failure('Token verification failed: $errorMsg');
       }
 
       // Verify issuer if configured
@@ -123,7 +134,16 @@ class OAuthJwtAuthHandler<TClaims> extends AuthHandler<TClaims> {
         claims: claims,
       );
     } catch (e) {
-      return AuthResult.failure('Invalid token: $e');
+      // Sanitize error message to avoid leaking token data
+      var errorMsg = e.toString();
+      // Remove any quoted strings that might contain tokens
+      errorMsg = errorMsg.replaceAll(RegExp(r'"[^"]*"'), '"[REDACTED]"');
+      // Remove any token-like strings (base64url patterns)
+      errorMsg = errorMsg.replaceAll(
+        RegExp(r'[A-Za-z0-9_-]{20,}'),
+        '[REDACTED]',
+      );
+      return AuthResult.failure('Invalid token: $errorMsg');
     }
   }
 }
