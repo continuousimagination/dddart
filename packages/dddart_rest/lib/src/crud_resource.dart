@@ -7,6 +7,7 @@ import 'package:dddart_rest/src/error_mapper.dart';
 import 'package:dddart_rest/src/etag_generator.dart';
 import 'package:dddart_rest/src/exceptions.dart';
 import 'package:dddart_rest/src/query_handler.dart';
+import 'package:dddart_rest/src/repository_query_support.dart';
 import 'package:dddart_rest/src/response_builder.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:shelf/shelf.dart';
@@ -666,9 +667,9 @@ class CrudResource<T extends AggregateRoot, TClaims> {
 
   /// Gets all items from the repository with pagination
   ///
-  /// Note: This method requires the repository to be an InMemoryRepository
-  /// or implement a getAll() method. For production use, consider implementing
-  /// a custom query handler instead.
+  /// Note: This method requires repository item-enumeration capability
+  /// (a `getAll()` implementation). For large datasets, prefer registering
+  /// dedicated query handlers.
   ///
   /// Parameters:
   /// - [skip]: Number of items to skip
@@ -676,24 +677,18 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   ///
   /// Returns: A QueryResult with paginated items and total count
   Future<QueryResult<T>> _getAllItems(int skip, int take) async {
-    // InMemoryRepository has a synchronous getAll() method
-    // For other repository types, you should register a query handler
-    if (repository is InMemoryRepository<T>) {
-      final allItems = (repository as InMemoryRepository<T>).getAll();
+    final allItems = requireQueryableItems(
+      repository,
+      operationName: 'collection query',
+    );
 
-      // Handle zero take - return empty array
-      if (take == 0) {
-        return QueryResult([], totalCount: allItems.length);
-      }
-
-      final paginatedItems = allItems.skip(skip).take(take).toList();
-      return QueryResult(paginatedItems, totalCount: allItems.length);
+    // Handle zero take - return empty array
+    if (take == 0) {
+      return QueryResult([], totalCount: allItems.length);
     }
 
-    throw UnsupportedError(
-      'Repository does not support getAll(). '
-      'Please register a query handler for collection queries.',
-    );
+    final paginatedItems = allItems.skip(skip).take(take).toList();
+    return QueryResult(paginatedItems, totalCount: allItems.length);
   }
 }
 

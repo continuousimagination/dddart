@@ -7,6 +7,7 @@ import 'package:dddart_rest/src/auth_error_mapper.dart';
 import 'package:dddart_rest/src/device_code.dart';
 import 'package:dddart_rest/src/jwt_auth_handler.dart';
 import 'package:dddart_rest/src/refresh_token.dart';
+import 'package:dddart_rest/src/repository_query_support.dart';
 import 'package:dddart_rest/src/security_utils.dart';
 import 'package:shelf/shelf.dart';
 import 'package:uuid/uuid.dart';
@@ -410,20 +411,10 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
         return _deviceVerifyError('Invalid credentials');
       }
 
-      // Look up device code by user code
-      DeviceCode? deviceCode;
-      if (deviceCodeRepository is InMemoryRepository<TDeviceCode>) {
-        final repo = deviceCodeRepository as InMemoryRepository<TDeviceCode>;
-        final all = repo.getAll();
-        try {
-          deviceCode = all.firstWhere((code) => code.userCode == userCode);
-        } catch (e) {
-          return _deviceVerifyError('Invalid user code');
-        }
-      } else {
-        throw UnsupportedError(
-          'Device code lookup requires InMemoryRepository or custom repository with query support',
-        );
+      // Look up device code by user code.
+      final deviceCode = _findDeviceCodeByUserCode(userCode);
+      if (deviceCode == null) {
+        return _deviceVerifyError('Invalid user code');
       }
 
       // Check if expired
@@ -601,24 +592,12 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
           );
         }
 
-        // Look up device code
-        DeviceCode? deviceCode;
-        if (deviceCodeRepository is InMemoryRepository<TDeviceCode>) {
-          final repo = deviceCodeRepository as InMemoryRepository<TDeviceCode>;
-          final all = repo.getAll();
-          try {
-            deviceCode = all.firstWhere(
-              (code) => code.deviceCode == deviceCodeString,
-            );
-          } catch (e) {
-            return _jsonResponse(
-              {'error': 'invalid_grant'},
-              statusCode: 400,
-            );
-          }
-        } else {
-          throw UnsupportedError(
-            'Device code lookup requires InMemoryRepository or custom repository with query support',
+        // Look up device code.
+        final deviceCode = _findDeviceCodeByDeviceCode(deviceCodeString);
+        if (deviceCode == null) {
+          return _jsonResponse(
+            {'error': 'invalid_grant'},
+            statusCode: 400,
           );
         }
 
@@ -712,6 +691,30 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
     }
 
     return code.toString();
+  }
+
+  DeviceCode? _findDeviceCodeByUserCode(String userCode) {
+    try {
+      return findFirstQueryableItem(
+        deviceCodeRepository,
+        (code) => code.userCode == userCode,
+        operationName: 'device verification',
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  DeviceCode? _findDeviceCodeByDeviceCode(String deviceCodeString) {
+    try {
+      return findFirstQueryableItem(
+        deviceCodeRepository,
+        (code) => code.deviceCode == deviceCodeString,
+        operationName: 'device token exchange',
+      );
+    } catch (_) {
+      return null;
+    }
   }
 
   /// Creates a JSON response

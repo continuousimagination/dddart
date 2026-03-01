@@ -20,10 +20,17 @@ class ManualCallbackStrategy implements OAuthCallbackStrategy {
   /// - [redirectUri]: The redirect URI configured in the OAuth provider
   ManualCallbackStrategy({
     required this.redirectUri,
-  });
+    this.onOutput,
+    String? Function()? readInput,
+  }) : _readInput = readInput ?? stdin.readLineSync;
 
   /// The redirect URI configured in the OAuth provider
   final String redirectUri;
+
+  /// Optional callback for user-facing output.
+  final void Function(String message)? onOutput;
+
+  final String? Function() _readInput;
 
   @override
   String getRedirectUri() => redirectUri;
@@ -33,18 +40,18 @@ class ManualCallbackStrategy implements OAuthCallbackStrategy {
     required String authorizationUrl,
     required String expectedState,
   }) async {
-    print('\n🔐 Manual Authentication Required');
-    print('=' * 60);
-    print('\n1. Open this URL in your browser:');
-    print('   $authorizationUrl\n');
-    print('2. After authenticating, you will be redirected to:');
-    print('   $redirectUri?code=...\n');
-    print('3. Copy the ENTIRE URL from your browser address bar');
-    print('   OR just the authorization code\n');
-    print('=' * 60);
-    print('\nPaste here and press Enter:');
+    onOutput?.call('\n🔐 Manual Authentication Required');
+    onOutput?.call('=' * 60);
+    onOutput?.call('\n1. Open this URL in your browser:');
+    onOutput?.call('   $authorizationUrl\n');
+    onOutput?.call('2. After authenticating, you will be redirected to:');
+    onOutput?.call('   $redirectUri?code=...\n');
+    onOutput?.call('3. Copy the ENTIRE URL from your browser address bar');
+    onOutput?.call('   OR just the authorization code\n');
+    onOutput?.call('=' * 60);
+    onOutput?.call('\nPaste here and press Enter:');
 
-    final input = stdin.readLineSync()?.trim() ?? '';
+    final input = _readInput()?.trim() ?? '';
 
     if (input.isEmpty) {
       throw AuthenticationException('No input provided');
