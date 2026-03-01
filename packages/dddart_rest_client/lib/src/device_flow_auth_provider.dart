@@ -19,6 +19,7 @@ class DeviceFlowAuthProvider implements AuthProvider {
     required this.authUrl,
     required this.clientId,
     required this.credentialsPath,
+    this.onOutput,
     http.Client? httpClient,
   }) : _httpClient = httpClient ?? http.Client();
 
@@ -30,6 +31,9 @@ class DeviceFlowAuthProvider implements AuthProvider {
 
   /// Path to credentials file
   final String credentialsPath;
+
+  /// Optional callback for user-facing output.
+  final void Function(String message)? onOutput;
 
   /// HTTP client
   final http.Client _httpClient;
@@ -83,16 +87,16 @@ class DeviceFlowAuthProvider implements AuthProvider {
     );
 
     // 2. Display to user
-    print('Visit: ${deviceCodeResponse.verificationUri}');
-    print('Enter code: ${deviceCodeResponse.userCode}');
-    print('\nWaiting for authorization...');
+    onOutput?.call('Visit: ${deviceCodeResponse.verificationUri}');
+    onOutput?.call('Enter code: ${deviceCodeResponse.userCode}');
+    onOutput?.call('\nWaiting for authorization...');
 
     // 3. Poll for tokens
     final tokens = await _pollForTokens(deviceCodeResponse);
 
     // 4. Save credentials
     await _saveCredentials(tokens);
-    print('✓ Successfully authenticated!');
+    onOutput?.call('✓ Successfully authenticated!');
   }
 
   Future<Tokens> _pollForTokens(DeviceCodeResponse deviceCode) async {

@@ -14,6 +14,7 @@ class CognitoAuthProvider implements AuthProvider {
     required this.credentialsPath,
     OAuthCallbackStrategy? callbackStrategy,
     List<String>? scopes,
+    this.onOutput,
     http.Client? httpClient,
   })  : callbackStrategy = callbackStrategy ?? LocalhostCallbackStrategy(),
         scopes = scopes ?? ['openid', 'email', 'profile'],
@@ -24,6 +25,7 @@ class CognitoAuthProvider implements AuthProvider {
   final String credentialsPath;
   final OAuthCallbackStrategy callbackStrategy;
   final List<String> scopes;
+  final void Function(String message)? onOutput;
   final http.Client _httpClient;
 
   @override
@@ -77,7 +79,7 @@ class CognitoAuthProvider implements AuthProvider {
 
     final tokens = await _exchangeCodeForTokens(result.code, codeVerifier);
     await _saveCredentials(tokens);
-    print('✓ Successfully authenticated!');
+    onOutput?.call('✓ Successfully authenticated!');
   }
 
   String _buildAuthorizationUrl({
