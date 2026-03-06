@@ -67,6 +67,17 @@ Demonstrates optimistic concurrency control using ETags:
 
 **Run:** `dart run etag_concurrency_example.dart`
 
+### 7. Authorization (`authorization_example.dart`)
+
+Demonstrates authorization with resource ownership:
+- Implementing AuthorizationHandler for ownership checks
+- Users can only modify their own resources
+- Admin users can modify any resource
+- Combining authentication and authorization
+- Different authorization rules per operation (create, update, delete, query)
+
+**Run:** `dart run authorization_example.dart`
+
 ## Quick Start - Basic CRUD
 
 ### What This Example Demonstrates

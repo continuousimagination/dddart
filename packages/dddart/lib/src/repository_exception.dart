@@ -45,6 +45,12 @@ enum RepositoryExceptionType {
   /// The operation timed out before completing.
   timeout,
 
+  /// Authentication is required or the authentication token has expired.
+  unauthorized,
+
+  /// The authenticated user does not have permission to perform this action.
+  forbidden,
+
   /// An unknown or unexpected error occurred.
   unknown,
 }

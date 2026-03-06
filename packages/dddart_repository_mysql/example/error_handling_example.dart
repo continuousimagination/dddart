@@ -200,6 +200,10 @@ Future<void> _demonstrateProperErrorHandling() async {
           print('   ✓ Handled: Duplicate key');
         case RepositoryExceptionType.constraint:
           print('   ✓ Handled: Constraint violation');
+        case RepositoryExceptionType.unauthorized:
+          print('   ✓ Handled: Unauthorized access');
+        case RepositoryExceptionType.forbidden:
+          print('   ✓ Handled: Forbidden operation');
         case RepositoryExceptionType.unknown:
           print('   ✓ Handled: Unknown error');
       }

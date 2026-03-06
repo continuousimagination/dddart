@@ -24,6 +24,7 @@ import '../models/user.dart';
 ///    - queryParams: All query parameters from the request (e.g., {'firstName': 'John'})
 ///    - skip: Pagination offset (from ?skip=N or default)
 ///    - take: Pagination limit (from ?take=M or default)
+///    - authResult: Optional authentication result if auth handler is configured
 ///
 /// 4. RETURN VALUE:
 ///    Returns QueryResult<User> containing:
@@ -44,6 +45,7 @@ Future<QueryResult<User>> firstNameQueryHandler(
   Map<String, String> queryParams,
   int skip,
   int take,
+  dynamic authResult,
 ) async {
   // Extract the firstName parameter from the query string
   final firstName = queryParams['firstName'];
@@ -114,6 +116,7 @@ Future<QueryResult<User>> emailQueryHandler(
   Map<String, String> queryParams,
   int skip,
   int take,
+  dynamic authResult,
 ) async {
   // Extract the email parameter from the query string
   final email = queryParams['email'];

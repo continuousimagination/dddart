@@ -1,5 +1,5 @@
-import 'package:dddart_rest/src/auth_handler.dart';
-import 'package:dddart_rest/src/auth_result.dart';
+import 'package:dddart_rest/src/authentication_handler.dart';
+import 'package:dddart_rest/src/authentication_result.dart';
 import 'package:jose/jose.dart';
 import 'package:shelf/shelf.dart';
 
@@ -20,7 +20,7 @@ import 'package:shelf/shelf.dart';
 ///   audience: 'my-client-id',
 /// );
 /// ```
-class OAuthJwtAuthHandler<TClaims> extends AuthHandler<TClaims> {
+class OAuthJwtAuthHandler<TClaims> extends AuthenticationHandler<TClaims> {
   /// Creates an OAuth JWT authentication handler
   OAuthJwtAuthHandler({
     required this.jwksUri,
@@ -52,16 +52,16 @@ class OAuthJwtAuthHandler<TClaims> extends AuthHandler<TClaims> {
   late final JsonWebKeyStore _keyStore;
 
   @override
-  Future<AuthResult<TClaims>> authenticate(Request request) async {
+  Future<AuthenticationResult<TClaims>> authenticate(Request request) async {
     try {
       // Extract Bearer token from Authorization header
       final authHeader = request.headers['authorization'];
       if (authHeader == null) {
-        return AuthResult.failure('Missing authorization header');
+        return AuthenticationResult.failure('Missing authorization header');
       }
 
       if (!authHeader.startsWith('Bearer ')) {
-        return AuthResult.failure('Invalid token format');
+        return AuthenticationResult.failure('Invalid token format');
       }
 
       final token = authHeader.substring(7).trim();
@@ -74,14 +74,16 @@ class OAuthJwtAuthHandler<TClaims> extends AuthHandler<TClaims> {
         // Verify signature
         final verified = await jwt.verify(_keyStore);
         if (!verified) {
-          return AuthResult.failure('Invalid token signature');
+          return AuthenticationResult.failure('Invalid token signature');
         }
       } on JoseException catch (e) {
         // Sanitize error message to avoid leaking token data
         var errorMsg = e.message;
         // Remove any quoted strings that might be tokens
         errorMsg = errorMsg.replaceAll(RegExp('"[^"]*"'), '"[REDACTED]"');
-        return AuthResult.failure('Token verification failed: $errorMsg');
+        return AuthenticationResult.failure(
+          'Token verification failed: $errorMsg',
+        );
       } on Exception catch (e) {
         // Sanitize error message to avoid leaking token data
         var errorMsg = e.toString();
@@ -90,14 +92,16 @@ class OAuthJwtAuthHandler<TClaims> extends AuthHandler<TClaims> {
           RegExp('[A-Za-z0-9_-]{20,}'),
           '[REDACTED]',
         );
-        return AuthResult.failure('Token verification failed: $errorMsg');
+        return AuthenticationResult.failure(
+          'Token verification failed: $errorMsg',
+        );
       }
 
       // Verify issuer if configured
       if (issuer != null) {
         final tokenIssuer = jwt.claims['iss'] as String?;
         if (tokenIssuer != issuer) {
-          return AuthResult.failure('Invalid token issuer');
+          return AuthenticationResult.failure('Invalid token issuer');
         }
       }
 
@@ -107,21 +111,21 @@ class OAuthJwtAuthHandler<TClaims> extends AuthHandler<TClaims> {
         // Audience can be a string or array of strings
         if (tokenAudience is String) {
           if (tokenAudience != audience) {
-            return AuthResult.failure('Invalid token audience');
+            return AuthenticationResult.failure('Invalid token audience');
           }
         } else if (tokenAudience is List) {
           if (!tokenAudience.contains(audience)) {
-            return AuthResult.failure('Invalid token audience');
+            return AuthenticationResult.failure('Invalid token audience');
           }
         } else {
-          return AuthResult.failure('Invalid token audience');
+          return AuthenticationResult.failure('Invalid token audience');
         }
       }
 
       // Extract user ID from sub claim
       final userId = jwt.claims['sub'] as String?;
       if (userId == null) {
-        return AuthResult.failure('Token missing subject');
+        return AuthenticationResult.failure('Token missing subject');
       }
 
       // Parse claims using provided callback
@@ -129,7 +133,7 @@ class OAuthJwtAuthHandler<TClaims> extends AuthHandler<TClaims> {
         jwt.claims.toJson().cast<String, dynamic>(),
       );
 
-      return AuthResult.success(
+      return AuthenticationResult.success(
         userId: userId,
         claims: claims,
       );
@@ -143,7 +147,7 @@ class OAuthJwtAuthHandler<TClaims> extends AuthHandler<TClaims> {
         RegExp('[A-Za-z0-9_-]{20,}'),
         '[REDACTED]',
       );
-      return AuthResult.failure('Invalid token: $errorMsg');
+      return AuthenticationResult.failure('Invalid token: $errorMsg');
     }
   }
 }

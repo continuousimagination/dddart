@@ -64,7 +64,7 @@ void main() async {
   final server = HttpServer(port: 8080);
 
   server.registerResource(
-    CrudResource<User, dynamic>(
+    CrudResource<User, void>(
       path: '/users',
       repository: repository,
       serializers: {'application/json': UserSerializer()},

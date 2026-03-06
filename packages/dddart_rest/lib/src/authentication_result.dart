@@ -1,9 +1,9 @@
 /// Result of authentication attempt
 ///
 /// Contains authentication status, user identity, and strongly-typed claims.
-class AuthResult<TClaims> {
+class AuthenticationResult<TClaims> {
   /// Creates an authentication result
-  const AuthResult({
+  const AuthenticationResult({
     required this.isAuthenticated,
     this.userId,
     this.claims,
@@ -11,11 +11,11 @@ class AuthResult<TClaims> {
   });
 
   /// Creates a successful authentication result
-  factory AuthResult.success({
+  factory AuthenticationResult.success({
     required String userId,
     TClaims? claims,
   }) {
-    return AuthResult<TClaims>(
+    return AuthenticationResult<TClaims>(
       isAuthenticated: true,
       userId: userId,
       claims: claims,
@@ -23,8 +23,8 @@ class AuthResult<TClaims> {
   }
 
   /// Creates a failed authentication result
-  factory AuthResult.failure(String errorMessage) {
-    return AuthResult<TClaims>(
+  factory AuthenticationResult.failure(String errorMessage) {
+    return AuthenticationResult<TClaims>(
       isAuthenticated: false,
       errorMessage: errorMessage,
     );

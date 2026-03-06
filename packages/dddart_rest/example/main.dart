@@ -32,7 +32,7 @@ void main() async {
 
   // Register CRUD resource with all features
   server.registerResource(
-    CrudResource<User>(
+    CrudResource<User, void>(
       path: '/users',
       repository: repository,
       serializers: {

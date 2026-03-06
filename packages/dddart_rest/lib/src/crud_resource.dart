@@ -1,8 +1,9 @@
 import 'dart:convert';
 
 import 'package:dddart/dddart.dart';
-import 'package:dddart_rest/src/auth_handler.dart';
-import 'package:dddart_rest/src/auth_result.dart';
+import 'package:dddart_rest/src/authentication_handler.dart';
+import 'package:dddart_rest/src/authentication_result.dart';
+import 'package:dddart_rest/src/authorization_handler.dart';
 import 'package:dddart_rest/src/error_mapper.dart';
 import 'package:dddart_rest/src/etag_generator.dart';
 import 'package:dddart_rest/src/exceptions.dart';
@@ -19,7 +20,7 @@ import 'package:shelf/shelf.dart';
 /// configured for a specific aggregate type and can be registered with an HTTP server.
 ///
 /// Generic over [T] (aggregate type) and optional [TClaims] (authentication claims type).
-/// When [authHandler] is provided, all CRUD operations require authentication.
+/// When [authenticationHandler] is provided, all CRUD operations require authentication.
 ///
 /// Example without authentication:
 /// ```dart
@@ -40,7 +41,7 @@ import 'package:shelf/shelf.dart';
 ///   serializers: {
 ///     'application/json': jsonSerializer,
 ///   },
-///   authHandler: jwtAuthHandler,
+///   authenticationHandler: jwtAuthHandler,
 /// );
 /// ```
 class CrudResource<T extends AggregateRoot, TClaims> {
@@ -50,13 +51,15 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   /// - [path]: The base path for this resource (e.g., '/users')
   /// - [repository]: Repository instance for persistence operations
   /// - [serializers]: Map of content types to serializers for content negotiation
-  /// - [authHandler]: Optional authentication handler. When provided, all CRUD operations require authentication
+  /// - [authenticationHandler]: Optional authentication handler. When provided, all CRUD operations require authentication
+  /// - [authorizationHandler]: Optional authorization handler. When provided, operations are authorized after authentication
   /// - [queryHandlers]: Map of query parameter names to handler functions
   /// - [customExceptionHandlers]: Map of exception types to error response handlers
   /// - [defaultSkip]: Default skip value for pagination (defaults to 0)
   /// - [defaultTake]: Default take value for pagination (defaults to 50)
   /// - [maxTake]: Maximum allowed take value to prevent excessive queries (defaults to 100)
   /// - [etagStrategy]: Strategy for generating ETags (defaults to timestamp)
+  /// - [preCreate]: Optional callback to modify aggregate before creation (e.g., set fields from auth context)
   ///
   /// Throws [ArgumentError] if:
   /// - [path] is null or empty
@@ -65,13 +68,15 @@ class CrudResource<T extends AggregateRoot, TClaims> {
     required this.path,
     required this.repository,
     required this.serializers,
-    this.authHandler,
+    this.authenticationHandler,
+    this.authorizationHandler,
     this.queryHandlers = const {},
     this.customExceptionHandlers = const {},
     this.defaultSkip = 0,
     this.defaultTake = 50,
     this.maxTake = 100,
     ETagStrategy etagStrategy = ETagStrategy.timestamp,
+    this.preCreate,
   }) {
     // Validate path is not null or empty
     if (path.isEmpty) {
@@ -115,7 +120,14 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   /// When provided, all CRUD operations will require authentication.
   /// The handler is invoked before any repository operations.
   /// If authentication fails, a 401 Unauthorized response is returned.
-  final AuthHandler<TClaims>? authHandler;
+  final AuthenticationHandler<TClaims>? authenticationHandler;
+
+  /// Optional authorization handler
+  ///
+  /// When provided, operations are authorized after authentication succeeds.
+  /// The handler is invoked after authentication but before executing the operation.
+  /// If authorization fails, a 403 Forbidden response is returned.
+  final AuthorizationHandler<T, TClaims>? authorizationHandler;
 
   /// Map of query parameter names to handler functions
   ///
@@ -141,6 +153,29 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   /// Maximum allowed take value to prevent excessive queries (defaults to 100)
   final int maxTake;
 
+  /// Optional callback to modify aggregate before creation
+  ///
+  /// This callback is invoked after deserialization but before authorization and saving.
+  /// It receives the deserialized aggregate and authentication result, and returns
+  /// a potentially modified aggregate.
+  ///
+  /// Common use cases:
+  /// - Setting fields from authentication context (e.g., userId, cognitoSub)
+  /// - Adding audit fields (e.g., createdBy)
+  /// - Applying default values based on user context
+  ///
+  /// Example:
+  /// ```dart
+  /// preCreate: (player, authResult) {
+  ///   return Player(
+  ///     ...player,
+  ///     cognitoSub: authResult?.claims?.sub,
+  ///   );
+  /// }
+  /// ```
+  final T Function(T aggregate, AuthenticationResult<TClaims>? authResult)?
+      preCreate;
+
   /// ResponseBuilder instance for creating HTTP responses
   late final ResponseBuilder<T> _responseBuilder = ResponseBuilder<T>();
 
@@ -159,14 +194,15 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   /// - [request]: The HTTP request to authenticate
   ///
   /// Returns: null if authenticated or no auth required, 401 Response if auth fails
-  Future<({Response? response, AuthResult<TClaims>? authResult})> _authenticate(
+  Future<({Response? response, AuthenticationResult<TClaims>? authResult})>
+      _authenticate(
     Request request,
   ) async {
-    if (authHandler == null) {
+    if (authenticationHandler == null) {
       return (response: null, authResult: null);
     }
 
-    final authResult = await authHandler!.authenticate(request);
+    final authResult = await authenticationHandler!.authenticate(request);
     if (!authResult.isAuthenticated) {
       final response = _responseBuilder.unauthorized(
         authResult.errorMessage ?? 'Authentication required',
@@ -229,6 +265,7 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   ///
   /// If auth handler is configured, authenticates the request first and passes
   /// auth result to query handlers.
+  /// If authorization handler is configured, authorizes filtered queries after authentication.
   ///
   /// Parameters:
   /// - [request]: The HTTP request
@@ -254,6 +291,30 @@ class CrudResource<T extends AggregateRoot, TClaims> {
       final filterParams = Map<String, String>.from(queryParams)
         ..remove('skip')
         ..remove('take');
+
+      // Authorize filtered queries if handler is configured
+      if (filterParams.isNotEmpty &&
+          authorizationHandler != null &&
+          authCheck.authResult != null) {
+        final authzResult = await authorizationHandler!.authorizeQuery(
+          filterParams,
+          authCheck.authResult!,
+        );
+        if (!authzResult.isAuthorized) {
+          final response = Response(
+            403,
+            headers: {'Content-Type': 'application/problem+json'},
+            body: jsonEncode({
+              'type': 'about:blank',
+              'title': 'Forbidden',
+              'status': 403,
+              'detail': authzResult.errorMessage ?? 'Access denied',
+            }),
+          );
+          _logger.fine('GET /$path$queryString - ${response.statusCode}');
+          return response;
+        }
+      }
 
       QueryResult<T> result;
 
@@ -311,6 +372,7 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   /// Includes ETag header in response for optimistic concurrency control.
   ///
   /// If auth handler is configured, authenticates the request first.
+  /// If authorization handler is configured, authorizes the request after authentication.
   ///
   /// Parameters:
   /// - [request]: The HTTP request
@@ -364,6 +426,34 @@ class CrudResource<T extends AggregateRoot, TClaims> {
         _logger.warning('POST /$path - Deserialization failed: $e');
         rethrow;
       }
+
+      // Apply preCreate callback if configured
+      if (preCreate != null) {
+        aggregate = preCreate!(aggregate, authCheck.authResult);
+      }
+
+      // Authorize if handler is configured
+      if (authorizationHandler != null && authCheck.authResult != null) {
+        final authzResult = await authorizationHandler!.authorizeCreate(
+          aggregate,
+          authCheck.authResult!,
+        );
+        if (!authzResult.isAuthorized) {
+          final response = Response(
+            403,
+            headers: {'Content-Type': 'application/problem+json'},
+            body: jsonEncode({
+              'type': 'about:blank',
+              'title': 'Forbidden',
+              'status': 403,
+              'detail': authzResult.errorMessage ?? 'Access denied',
+            }),
+          );
+          _logger.fine('POST /$path - ${response.statusCode}');
+          return response;
+        }
+      }
+
       await repository.save(aggregate);
 
       final responseSerializerEntry =
@@ -398,6 +488,7 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   /// Includes ETag header in response.
   ///
   /// If auth handler is configured, authenticates the request first.
+  /// If authorization handler is configured, authorizes the request after authentication.
   ///
   /// Parameters:
   /// - [request]: The HTTP request
@@ -483,6 +574,29 @@ class CrudResource<T extends AggregateRoot, TClaims> {
         _logger.warning('PUT /$path/$id - Deserialization failed: $e');
         rethrow;
       }
+
+      // Authorize if handler is configured
+      if (authorizationHandler != null && authCheck.authResult != null) {
+        final authzResult = await authorizationHandler!.authorizeUpdate(
+          aggregate,
+          authCheck.authResult!,
+        );
+        if (!authzResult.isAuthorized) {
+          final response = Response(
+            403,
+            headers: {'Content-Type': 'application/problem+json'},
+            body: jsonEncode({
+              'type': 'about:blank',
+              'title': 'Forbidden',
+              'status': 403,
+              'detail': authzResult.errorMessage ?? 'Access denied',
+            }),
+          );
+          _logger.fine('PUT /$path/$id - ${response.statusCode}');
+          return response;
+        }
+      }
+
       await repository.save(aggregate);
 
       final responseSerializerEntry =
@@ -509,6 +623,7 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   /// Parses ID, calls repository.deleteById(), returns 204 No Content
   ///
   /// If auth handler is configured, authenticates the request first.
+  /// If authorization handler is configured, authorizes the request after authentication.
   ///
   /// Parameters:
   /// - [request]: The HTTP request
@@ -526,6 +641,29 @@ class CrudResource<T extends AggregateRoot, TClaims> {
       }
 
       final uuid = UuidValue.fromString(id);
+
+      // Authorize if handler is configured
+      if (authorizationHandler != null && authCheck.authResult != null) {
+        final authzResult = await authorizationHandler!.authorizeDelete(
+          uuid,
+          authCheck.authResult!,
+        );
+        if (!authzResult.isAuthorized) {
+          final response = Response(
+            403,
+            headers: {'Content-Type': 'application/problem+json'},
+            body: jsonEncode({
+              'type': 'about:blank',
+              'title': 'Forbidden',
+              'status': 403,
+              'detail': authzResult.errorMessage ?? 'Access denied',
+            }),
+          );
+          _logger.fine('DELETE /$path/$id - ${response.statusCode}');
+          return response;
+        }
+      }
+
       await repository.deleteById(uuid);
       final response = _responseBuilder.noContent();
       _logger.fine('DELETE /$path/$id - ${response.statusCode}');

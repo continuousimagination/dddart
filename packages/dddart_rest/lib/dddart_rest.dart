@@ -7,8 +7,10 @@ library dddart_rest;
 
 export 'src/auth_endpoints.dart';
 export 'src/auth_error_mapper.dart';
-export 'src/auth_handler.dart';
-export 'src/auth_result.dart';
+export 'src/authentication_handler.dart';
+export 'src/authentication_result.dart';
+export 'src/authorization_handler.dart';
+export 'src/authorization_result.dart';
 export 'src/concurrency_exception.dart';
 export 'src/crud_resource.dart';
 export 'src/device_code.dart';

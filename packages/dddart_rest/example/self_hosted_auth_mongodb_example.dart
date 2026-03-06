@@ -219,7 +219,7 @@ void main() async {
       path: '/users',
       repository: userRepo,
       serializers: {'application/json': UserSerializer()},
-      authHandler: authHandler,
+      authenticationHandler: authHandler,
     ),
   );
 

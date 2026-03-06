@@ -1,6 +1,7 @@
 @Tags(['property'])
 library;
 
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:dddart/dddart.dart';
@@ -38,6 +39,28 @@ void main() {
               reason: '404 should map to notFound',
             );
             expect(exception.message, equals('Resource not found'));
+          } else if (statusCode == 401) {
+            expect(
+              exception.type,
+              equals(RepositoryExceptionType.unauthorized),
+              reason: '401 should map to unauthorized',
+            );
+            expect(
+              exception.message,
+              equals('Unauthorized: Authentication required or token expired'),
+            );
+          } else if (statusCode == 403) {
+            expect(
+              exception.type,
+              equals(RepositoryExceptionType.forbidden),
+              reason: '403 should map to forbidden',
+            );
+            expect(
+              exception.message,
+              equals(
+                'Forbidden: You do not have permission to perform this action',
+              ),
+            );
           } else if (statusCode == 409) {
             expect(
               exception.type,
@@ -82,6 +105,42 @@ void main() {
 
           expect(exception.type, equals(RepositoryExceptionType.notFound));
           expect(exception.message, equals('Resource not found'));
+        }
+      },
+    );
+
+    test(
+      'all 401 status codes consistently map to unauthorized',
+      () {
+        // Test 401 multiple times to ensure consistency
+        for (var i = 0; i < 100; i++) {
+          final body = 'Unauthorized message $i';
+          final exception = repository.testMapHttpException(401, body);
+
+          expect(exception.type, equals(RepositoryExceptionType.unauthorized));
+          expect(
+            exception.message,
+            equals('Unauthorized: Authentication required or token expired'),
+          );
+        }
+      },
+    );
+
+    test(
+      'all 403 status codes consistently map to forbidden',
+      () {
+        // Test 403 multiple times to ensure consistency
+        for (var i = 0; i < 100; i++) {
+          final body = 'Forbidden message $i';
+          final exception = repository.testMapHttpException(403, body);
+
+          expect(exception.type, equals(RepositoryExceptionType.forbidden));
+          expect(
+            exception.message,
+            equals(
+              'Forbidden: You do not have permission to perform this action',
+            ),
+          );
         }
       },
     );
@@ -149,8 +208,8 @@ void main() {
           100, 101, 102, // 1xx informational
           200, 201, 202, 203, 204, // 2xx success
           300, 301, 302, 303, 304, // 3xx redirection
-          400, 401, 402, 403, 405, 406, 407, 410, 411, 412, 413, 414, 415, 416,
-          417, 418, // 4xx client errors (excluding 404, 408, 409)
+          400, 402, 405, 406, 407, 410, 411, 412, 413, 414, 415, 416,
+          417, 418, // 4xx client errors (excluding 401, 403, 404, 408, 409)
         ];
 
         for (final statusCode in nonSpecialCodes) {
@@ -175,7 +234,11 @@ void main() {
         for (var i = 0; i < 100; i++) {
           // Generate random non-special status code
           final statusCode = random.nextInt(100) + 400; // 400-499
-          if (statusCode == 404 || statusCode == 408 || statusCode == 409) {
+          if (statusCode == 401 ||
+              statusCode == 403 ||
+              statusCode == 404 ||
+              statusCode == 408 ||
+              statusCode == 409) {
             continue;
           }
 
@@ -195,7 +258,7 @@ void main() {
       'exception type is deterministic for any given status code',
       () {
         // Test that the same status code always produces the same exception type
-        const testCodes = [200, 404, 408, 409, 500, 502, 504];
+        const testCodes = [200, 401, 403, 404, 408, 409, 500, 502, 504];
 
         for (final statusCode in testCodes) {
           final firstException =
@@ -216,6 +279,66 @@ void main() {
         }
       },
     );
+
+    test(
+      'RFC 7807 detail field is extracted when present',
+      () {
+        // Test that RFC 7807 Problem Details format is parsed correctly
+        const testCases = [
+          (401, 'Your session has expired'),
+          (403, 'You do not have permission to modify this player'),
+          (404, 'Player with ID abc123 not found'),
+          (409, 'A player with this alias already exists'),
+        ];
+
+        for (final (statusCode, detailMessage) in testCases) {
+          final rfc7807Body = jsonEncode({
+            'type': 'about:blank',
+            'title': 'Error',
+            'status': statusCode,
+            'detail': detailMessage,
+          });
+
+          final exception =
+              repository.testMapHttpException(statusCode, rfc7807Body);
+
+          expect(
+            exception.message,
+            equals(detailMessage),
+            reason:
+                'Should extract detail field from RFC 7807 response for status $statusCode',
+          );
+        }
+      },
+    );
+
+    test(
+      'falls back to default message when RFC 7807 parsing fails',
+      () {
+        // Test with invalid JSON
+        final exception401 =
+            repository.testMapHttpException(401, 'not valid json');
+        expect(
+          exception401.message,
+          equals('Unauthorized: Authentication required or token expired'),
+        );
+
+        final exception403 =
+            repository.testMapHttpException(403, 'not valid json');
+        expect(
+          exception403.message,
+          equals(
+            'Forbidden: You do not have permission to perform this action',
+          ),
+        );
+
+        // Test with JSON that doesn't have detail field
+        final jsonWithoutDetail = jsonEncode({'error': 'something'});
+        final exception404 =
+            repository.testMapHttpException(404, jsonWithoutDetail);
+        expect(exception404.message, equals('Resource not found'));
+      },
+    );
   });
 }
 
@@ -231,34 +354,54 @@ class _TestRepository {
 
   /// Maps HTTP status codes to RepositoryException types.
   ///
-  /// This is the same implementation that is generated by the
-  /// RestRepositoryGenerator for all repository classes.
+  /// Attempts to parse RFC 7807 Problem Details format from the response body
+  /// to extract the 'detail' field for more specific error messages.
   RepositoryException _mapHttpException(int statusCode, String body) {
+    // Try to parse RFC 7807 Problem Details format
+    String? detail;
+    try {
+      final json = jsonDecode(body) as Map<String, dynamic>;
+      detail = json['detail'] as String?;
+    } catch (_) {
+      // If parsing fails, use the raw body
+    }
+
     switch (statusCode) {
+      case 401:
+        return RepositoryException(
+          detail ?? 'Unauthorized: Authentication required or token expired',
+          type: RepositoryExceptionType.unauthorized,
+        );
+      case 403:
+        return RepositoryException(
+          detail ??
+              'Forbidden: You do not have permission to perform this action',
+          type: RepositoryExceptionType.forbidden,
+        );
       case 404:
-        return const RepositoryException(
-          'Resource not found',
+        return RepositoryException(
+          detail ?? 'Resource not found',
           type: RepositoryExceptionType.notFound,
         );
       case 409:
-        return const RepositoryException(
-          'Duplicate resource',
+        return RepositoryException(
+          detail ?? 'Duplicate resource',
           type: RepositoryExceptionType.duplicate,
         );
       case 408:
       case 504:
-        return const RepositoryException(
-          'Request timeout',
+        return RepositoryException(
+          detail ?? 'Request timeout',
           type: RepositoryExceptionType.timeout,
         );
       case >= 500:
         return RepositoryException(
-          'Server error: $statusCode',
+          detail ?? 'Server error: $statusCode',
           type: RepositoryExceptionType.connection,
         );
       default:
         return RepositoryException(
-          'HTTP error $statusCode: $body',
+          detail ?? 'HTTP error $statusCode: $body',
         );
     }
   }
