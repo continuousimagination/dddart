@@ -20,7 +20,7 @@ import 'package:shelf/shelf.dart';
 void main() async {
   // Set up CRUD resources
   final userRepository = InMemoryRepository<User>();
-  final userResource = CrudResource<User>(
+  final userResource = CrudResource<User, void>(
     path: '/users',
     repository: userRepository,
     serializers: {'application/json': UserSerializer()},

@@ -157,7 +157,7 @@ Future<AuthenticatedTestServer> createAuthenticatedTestServer({
       path: path,
       repository: userRepository,
       serializers: {'application/json': serializer},
-      authHandler: authHandler,
+      authenticationHandler: authHandler,
     ),
   );
 

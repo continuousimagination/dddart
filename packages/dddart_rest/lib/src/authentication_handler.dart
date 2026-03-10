@@ -1,4 +1,4 @@
-import 'package:dddart_rest/src/auth_result.dart';
+import 'package:dddart_rest/src/authentication_result.dart';
 import 'package:shelf/shelf.dart';
 
 /// Base class for authentication handlers
@@ -8,13 +8,13 @@ import 'package:shelf/shelf.dart';
 ///
 /// Generic over [TClaims] to support strongly-typed custom claims.
 // ignore: one_member_abstracts
-abstract class AuthHandler<TClaims> {
+abstract class AuthenticationHandler<TClaims> {
   /// Authenticates a request and returns authentication result
   ///
   /// Extracts credentials from the request (typically Authorization header),
   /// validates them, and returns user identity and claims.
   ///
-  /// Returns [AuthResult] with isAuthenticated true if validation succeeds,
+  /// Returns [AuthenticationResult] with isAuthenticated true if validation succeeds,
   /// or false with an error message if validation fails.
-  Future<AuthResult<TClaims>> authenticate(Request request);
+  Future<AuthenticationResult<TClaims>> authenticate(Request request);
 }

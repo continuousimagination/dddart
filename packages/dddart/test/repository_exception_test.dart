@@ -185,6 +185,24 @@ void main() {
         expect(exception.type, equals(RepositoryExceptionType.timeout));
       });
 
+      test('supports unauthorized type', () {
+        const exception = RepositoryException(
+          'Unauthorized',
+          type: RepositoryExceptionType.unauthorized,
+        );
+
+        expect(exception.type, equals(RepositoryExceptionType.unauthorized));
+      });
+
+      test('supports forbidden type', () {
+        const exception = RepositoryException(
+          'Forbidden',
+          type: RepositoryExceptionType.forbidden,
+        );
+
+        expect(exception.type, equals(RepositoryExceptionType.forbidden));
+      });
+
       test('supports unknown type', () {
         const exception = RepositoryException(
           'Unknown',
@@ -251,11 +269,13 @@ void main() {
       expect(values, contains(RepositoryExceptionType.constraint));
       expect(values, contains(RepositoryExceptionType.connection));
       expect(values, contains(RepositoryExceptionType.timeout));
+      expect(values, contains(RepositoryExceptionType.unauthorized));
+      expect(values, contains(RepositoryExceptionType.forbidden));
       expect(values, contains(RepositoryExceptionType.unknown));
     });
 
-    test('enum has exactly 6 values', () {
-      expect(RepositoryExceptionType.values.length, equals(6));
+    test('enum has exactly 8 values', () {
+      expect(RepositoryExceptionType.values.length, equals(8));
     });
   });
 }

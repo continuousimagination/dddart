@@ -1,8 +1,8 @@
 import 'dart:convert';
 
 import 'package:dddart/dddart.dart';
-import 'package:dddart_rest/src/auth_handler.dart';
-import 'package:dddart_rest/src/auth_result.dart';
+import 'package:dddart_rest/src/authentication_handler.dart';
+import 'package:dddart_rest/src/authentication_result.dart';
 import 'package:dddart_rest/src/crud_resource.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:shelf/shelf.dart';
@@ -86,7 +86,7 @@ class MockRepository implements Repository<TestUser> {
 }
 
 // Mock auth handler for testing
-class MockAuthHandler implements AuthHandler<String> {
+class MockAuthHandler implements AuthenticationHandler<String> {
   MockAuthHandler({
     this.shouldAuthenticate = true,
     this.errorMessage,
@@ -95,11 +95,16 @@ class MockAuthHandler implements AuthHandler<String> {
   final String? errorMessage;
 
   @override
-  Future<AuthResult<String>> authenticate(Request request) async {
+  Future<AuthenticationResult<String>> authenticate(Request request) async {
     if (shouldAuthenticate) {
-      return AuthResult.success(userId: 'test-user-123', claims: 'test-claim');
+      return AuthenticationResult.success(
+        userId: 'test-user-123',
+        claims: 'test-claim',
+      );
     } else {
-      return AuthResult.failure(errorMessage ?? 'Authentication failed');
+      return AuthenticationResult.failure(
+        errorMessage ?? 'Authentication failed',
+      );
     }
   }
 }
@@ -149,7 +154,7 @@ void main() {
         path: '/users',
         repository: repository,
         serializers: {'application/json': serializer},
-        authHandler: authHandler,
+        authenticationHandler: authHandler,
       );
       await repository.save(testUser);
       final request = createRequest(path: '/users/${testUser.id}');
@@ -173,7 +178,7 @@ void main() {
         path: '/users',
         repository: repository,
         serializers: {'application/json': serializer},
-        authHandler: authHandler,
+        authenticationHandler: authHandler,
       );
       await repository.save(testUser);
       final request = createRequest(path: '/users/${testUser.id}');
@@ -193,7 +198,7 @@ void main() {
         path: '/users',
         repository: repository,
         serializers: {'application/json': serializer},
-        authHandler: authHandler,
+        authenticationHandler: authHandler,
       );
       final request = createRequest(
         method: 'POST',
@@ -215,7 +220,7 @@ void main() {
         path: '/users',
         repository: repository,
         serializers: {'application/json': serializer},
-        authHandler: authHandler,
+        authenticationHandler: authHandler,
       );
       final request = createRequest(
         method: 'PUT',
@@ -239,7 +244,7 @@ void main() {
         path: '/users',
         repository: repository,
         serializers: {'application/json': serializer},
-        authHandler: authHandler,
+        authenticationHandler: authHandler,
       );
       await repository.save(testUser);
       final request = createRequest(
@@ -262,7 +267,7 @@ void main() {
         path: '/users',
         repository: repository,
         serializers: {'application/json': serializer},
-        authHandler: authHandler,
+        authenticationHandler: authHandler,
       );
       final request = createRequest();
 

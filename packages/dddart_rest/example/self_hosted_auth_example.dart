@@ -13,6 +13,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/dddart_rest.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:shelf/shelf.dart';
 
 // Domain model
@@ -66,10 +67,10 @@ class UserClaims {
 // Simple serializer for User
 class UserSerializer implements Serializer<User> {
   @override
-  User deserialize(String data) {
+  User deserialize(String data, [dynamic config]) {
     final json = jsonDecode(data) as Map<String, dynamic>;
     return User(
-      id: json['id'] as String,
+      id: UuidValue.fromString(json['id'] as String),
       username: json['username'] as String,
       email: json['email'] as String,
       passwordHash: json['passwordHash'] as String? ?? '',
@@ -78,9 +79,9 @@ class UserSerializer implements Serializer<User> {
   }
 
   @override
-  String serialize(User aggregate) {
+  String serialize(User aggregate, [dynamic config]) {
     return jsonEncode({
-      'id': aggregate.id,
+      'id': aggregate.id.toString(),
       'username': aggregate.username,
       'email': aggregate.email,
       'roles': aggregate.roles,
@@ -109,6 +110,8 @@ void main() async {
     audience: 'example-app',
     accessTokenDuration: const Duration(minutes: 15),
     refreshTokenDuration: const Duration(days: 7),
+    parseClaimsFromJson: UserClaims.fromJson,
+    claimsToJson: (claims) => claims.toJson(),
   );
 
   // Create auth endpoints
@@ -127,15 +130,15 @@ void main() async {
       // In production, use proper password hashing (bcrypt, argon2)
       // This is simplified for the example
       if (user.passwordHash == password) {
-        return user.id;
+        return user.id.toString();
       }
 
       return null;
     },
     claimsBuilder: (userId) async {
-      final user = await userRepo.getById(userId);
+      final user = await userRepo.getById(UuidValue.fromString(userId));
       return UserClaims(
-        userId: user.id,
+        userId: user.id.toString(),
         username: user.username,
         email: user.email,
         roles: user.roles,
@@ -161,14 +164,16 @@ void main() async {
       path: '/users',
       repository: userRepo,
       serializers: {'application/json': UserSerializer()},
-      authHandler: authHandler,
+      authenticationHandler: authHandler,
       queryHandlers: {
         'me': (repo, params, skip, take, authResult) async {
           // Return current user's data
           if (authResult == null) {
             throw Exception('Unauthorized');
           }
-          final user = await repo.getById(authResult.claims!.userId);
+          final user = await repo.getById(
+            UuidValue.fromString(authResult.claims!.userId),
+          );
           return QueryResult([user], totalCount: 1);
         },
       },
@@ -207,7 +212,7 @@ void main() async {
 
 Future<void> _seedUsers(Repository<User> repo) async {
   final alice = User(
-    id: UuidValue.generate().value,
+    id: UuidValue.generate(),
     username: 'alice',
     email: 'alice@example.com',
     passwordHash: 'password123', // In production, use proper hashing!
@@ -215,7 +220,7 @@ Future<void> _seedUsers(Repository<User> repo) async {
   );
 
   final bob = User(
-    id: UuidValue.generate().value,
+    id: UuidValue.generate(),
     username: 'bob',
     email: 'bob@example.com',
     passwordHash: 'password456',

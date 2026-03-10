@@ -23,6 +23,7 @@ class LocalhostCallbackStrategy implements OAuthCallbackStrategy {
   LocalhostCallbackStrategy({
     this.port = 8080,
     this.path = '/callback',
+    this.onOutput,
     Future<void> Function(String url)? openBrowser,
   }) : _openBrowser = openBrowser ?? _defaultOpenBrowser;
 
@@ -34,6 +35,9 @@ class LocalhostCallbackStrategy implements OAuthCallbackStrategy {
 
   /// Function to open browser
   final Future<void> Function(String url) _openBrowser;
+
+  /// Optional callback for user-facing output.
+  final void Function(String message)? onOutput;
 
   @override
   String getRedirectUri() => 'http://localhost:$port$path';
@@ -49,17 +53,17 @@ class LocalhostCallbackStrategy implements OAuthCallbackStrategy {
       server = await HttpServer.bind(InternetAddress.loopbackIPv4, port);
 
       // Open browser
-      print('\n🔐 Opening browser for authentication...');
-      print('If browser does not open, visit: $authorizationUrl\n');
+      onOutput?.call('\n🔐 Opening browser for authentication...');
+      onOutput?.call('If browser does not open, visit: $authorizationUrl\n');
 
       try {
         await _openBrowser(authorizationUrl);
       } catch (e) {
         // Browser opening failed, user will use printed URL
-        print('Could not open browser automatically: $e');
+        onOutput?.call('Could not open browser automatically: $e');
       }
 
-      print('Waiting for authentication...');
+      onOutput?.call('Waiting for authentication...');
 
       // Wait for callback
       await for (final request in server) {
