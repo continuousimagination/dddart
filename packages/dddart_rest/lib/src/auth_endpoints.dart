@@ -706,7 +706,8 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
   }
 
   Future<DeviceCode?> _findDeviceCodeByDeviceCode(
-      String deviceCodeString) async {
+    String deviceCodeString,
+  ) async {
     try {
       return await findFirstItem(
         deviceCodeRepository,

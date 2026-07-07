@@ -299,7 +299,7 @@ class DynamoRepositoryGenerator
       }
 
       return response.items!.map((item) {
-        final json = _dynamoToJson(item);
+        final json = AttributeValueConverter.attributeMapToJsonMap(item);
         return _serializer.fromJson(json);
       }).toList();
     } catch (e) {

@@ -256,7 +256,7 @@ class User extends AggregateRoot {
       );
 
       expect(output, contains('class UserDynamoRepository'));
-      expect(output, contains('implements Repository<User>'));
+      expect(output, contains('implements QueryableRepository<User>'));
       expect(output, contains('final DynamoConnection _connection'));
       expect(output, contains("tableName => 'users'"));
       expect(output, contains('final _serializer = UserJsonSerializer()'));
