@@ -284,6 +284,30 @@ class DynamoRepositoryGenerator
   }''';
   }
 
+  /// Generates the getAll method implementation (full table scan).
+  String _generateGetAllMethod(String className) {
+    return '''
+  @override
+  Future<List<$className>> getAll() async {
+    try {
+      final response = await _connection.client.scan(
+        tableName: tableName,
+      );
+
+      if (response.items == null || response.items!.isEmpty) {
+        return [];
+      }
+
+      return response.items!.map((item) {
+        final json = _dynamoToJson(item);
+        return _serializer.fromJson(json);
+      }).toList();
+    } catch (e) {
+      throw _mapDynamoException(e, 'getAll');
+    }
+  }''';
+  }
+
   /// Generates the DynamoDB exception mapping helper method.
   String _generateMapDynamoExceptionMethod() {
     return r'''
@@ -448,7 +472,7 @@ Resources:
   }) {
     final interfaceClause = implements != null
         ? 'implements ${implements.element.name}'
-        : 'implements Repository<$className>';
+        : 'implements QueryableRepository<$className>';
 
     final buffer = StringBuffer();
 
@@ -491,7 +515,8 @@ Resources:
 
     buffer.writeln(_generateDeleteByIdMethod(className));
     buffer.writeln();
-
+    buffer.writeln(_generateGetAllMethod(className));
+    buffer.writeln();
     // Generate exception mapping helper
     buffer.writeln(_generateMapDynamoExceptionMethod());
     buffer.writeln();
@@ -565,6 +590,9 @@ Resources:
     buffer.writeln();
 
     buffer.writeln(_generateDeleteByIdMethod(className));
+    buffer.writeln();
+
+    buffer.writeln(_generateGetAllMethod(className));
     buffer.writeln();
 
     // Generate exception mapping helper

@@ -1,41 +1,39 @@
 import 'package:dddart/dddart.dart';
 
-/// Returns all items when repository exposes enumeration support.
+/// Returns all items from a repository that implements [QueryableRepository].
 ///
-/// This is capability-based and does not require concrete repository types.
-List<T> requireQueryableItems<T extends AggregateRoot>(
+/// Throws [UnsupportedError] if the repository does not implement
+/// [QueryableRepository] — meaning it cannot enumerate all items.
+/// This provides a clear runtime error if the wrong repository type
+/// is wired in, rather than a cryptic NoSuchMethodError from dynamic
+/// dispatch.
+Future<List<T>> requireQueryableItems<T extends AggregateRoot>(
   Repository<T> repository, {
   required String operationName,
-}) {
-  try {
-    final dynamic dynamicRepository = repository;
-    final result = dynamicRepository.getAll();
-    if (result is List<T>) {
-      return result;
-    }
-    if (result is List) {
-      return result.cast<T>();
-    }
-  } catch (error) {
-    if (error is! NoSuchMethodError) {
-      rethrow;
-    }
-    // Fall through to unified unsupported error.
+}) async {
+  if (repository is QueryableRepository<T>) {
+    return repository.getAll();
   }
 
   throw UnsupportedError(
-    'Repository does not expose item enumeration for $operationName. '
-    'Provide a repository implementation with getAll().',
+    'Repository does not implement QueryableRepository<$T>. '
+    'The "$operationName" operation requires a repository that supports '
+    'item enumeration via getAll(). '
+    'Use InMemoryRepository or a DynamoDB repository (which supports Scan) '
+    'instead of a plain Repository<$T>.',
   );
 }
 
-/// Finds the first matching item from a repository that supports enumeration.
-T findFirstQueryableItem<T extends AggregateRoot>(
+/// Finds the first item matching [predicate] from a queryable repository.
+///
+/// Throws [UnsupportedError] if the repository doesn't implement
+/// [QueryableRepository]. Throws [StateError] if no matching item is found.
+Future<T> findFirstQueryableItem<T extends AggregateRoot>(
   Repository<T> repository,
   bool Function(T item) predicate, {
   required String operationName,
-}) {
-  final items = requireQueryableItems(
+}) async {
+  final items = await requireQueryableItems(
     repository,
     operationName: operationName,
   );
