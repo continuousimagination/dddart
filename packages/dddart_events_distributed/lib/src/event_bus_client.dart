@@ -58,7 +58,7 @@ class EventBusClient {
     String? authToken,
   })  : _httpClient = httpClient ?? http.Client(),
         _authToken = authToken {
-    _lastTimestamp = initialTimestamp ?? DateTime.now();
+    _lastTimestamp = initialTimestamp ?? DateTime.now().toUtc();
     _logger.info('EventBusClient starting with lastTimestamp: $_lastTimestamp');
 
     // Start polling
