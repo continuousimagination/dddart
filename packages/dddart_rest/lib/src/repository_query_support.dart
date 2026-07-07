@@ -4,10 +4,7 @@ import 'package:dddart/dddart.dart';
 ///
 /// Throws [UnsupportedError] if the repository does not implement
 /// [QueryableRepository] — meaning it cannot enumerate all items.
-/// This provides a clear runtime error if the wrong repository type
-/// is wired in, rather than a cryptic NoSuchMethodError from dynamic
-/// dispatch.
-Future<List<T>> requireQueryableItems<T extends AggregateRoot>(
+Future<List<T>> getAllItems<T extends AggregateRoot>(
   Repository<T> repository, {
   required String operationName,
 }) async {
@@ -28,14 +25,32 @@ Future<List<T>> requireQueryableItems<T extends AggregateRoot>(
 ///
 /// Throws [UnsupportedError] if the repository doesn't implement
 /// [QueryableRepository]. Throws [StateError] if no matching item is found.
-Future<T> findFirstQueryableItem<T extends AggregateRoot>(
+Future<T> findFirstItem<T extends AggregateRoot>(
   Repository<T> repository,
   bool Function(T item) predicate, {
   required String operationName,
 }) async {
-  final items = await requireQueryableItems(
+  final items = await getAllItems(
     repository,
     operationName: operationName,
   );
   return items.firstWhere(predicate);
 }
+
+/// Legacy aliases for backward compatibility during migration.
+/// TODO(cleanup): Remove these after all consumers are updated.
+
+/// @deprecated Use [getAllItems] instead.
+Future<List<T>> requireQueryableItems<T extends AggregateRoot>(
+  Repository<T> repository, {
+  required String operationName,
+}) =>
+    getAllItems(repository, operationName: operationName);
+
+/// @deprecated Use [findFirstItem] instead.
+Future<T> findFirstQueryableItem<T extends AggregateRoot>(
+  Repository<T> repository,
+  bool Function(T item) predicate, {
+  required String operationName,
+}) =>
+    findFirstItem(repository, predicate, operationName: operationName);

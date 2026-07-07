@@ -326,7 +326,7 @@ void main() {
           queryHandlers: {
             'name': (repo, params, skip, take, authResult) async {
               final name = params['name']!;
-              final allUsers = (repo as InMemoryRepository<TestUser>).getAll();
+              final allUsers = (repo as InMemoryRepository<TestUser>).getAllSync();
               final filtered = allUsers.where((u) => u.name == name).toList();
               return QueryResult(
                 filtered.skip(skip).take(take).toList(),
@@ -592,7 +592,7 @@ void main() {
           queryHandlers: {
             'name': (repo, params, skip, take, authResult) async {
               final name = params['name']!;
-              final allUsers = (repo as InMemoryRepository<TestUser>).getAll();
+              final allUsers = (repo as InMemoryRepository<TestUser>).getAllSync();
               final filtered = allUsers.where((u) => u.name == name).toList();
               return QueryResult(
                 filtered.skip(skip).take(take).toList(),
@@ -836,7 +836,7 @@ void main() {
           queryHandlers: {
             'name': (repo, params, skip, take, authResult) async {
               final name = params['name']!;
-              final allUsers = (repo as InMemoryRepository<TestUser>).getAll();
+              final allUsers = (repo as InMemoryRepository<TestUser>).getAllSync();
               final filtered = allUsers.where((u) => u.name == name).toList();
               return QueryResult(
                 filtered.skip(skip).take(take).toList(),

@@ -74,7 +74,7 @@ void main() {
         expect(json['token_type'], equals('Bearer'));
 
         // Verify refresh token was stored
-        final allTokens = refreshTokenRepo.getAll();
+        final allTokens = refreshTokenRepo.getAllSync();
         expect(allTokens.length, equals(1));
         expect(allTokens.first.userId, equals('user123'));
       });
@@ -236,7 +236,7 @@ void main() {
         expect(response.statusCode, equals(204));
 
         // Verify token was revoked
-        final allTokens = refreshTokenRepo.getAll();
+        final allTokens = refreshTokenRepo.getAllSync();
         expect(allTokens.first.revoked, isTrue);
       });
 
@@ -282,7 +282,7 @@ void main() {
         expect(userCode[4], equals('-'));
 
         // Verify device code was stored
-        final allCodes = deviceCodeRepo.getAll();
+        final allCodes = deviceCodeRepo.getAllSync();
         expect(allCodes.length, equals(1));
         expect(allCodes.first.status, equals(DeviceCodeStatus.pending));
       });
@@ -362,7 +362,7 @@ void main() {
         expect(body, contains('Device Verified'));
 
         // Verify device code was approved
-        final allCodes = deviceCodeRepo.getAll();
+        final allCodes = deviceCodeRepo.getAllSync();
         expect(allCodes.first.status, equals(DeviceCodeStatus.approved));
         expect(allCodes.first.userId, equals('user123'));
       });

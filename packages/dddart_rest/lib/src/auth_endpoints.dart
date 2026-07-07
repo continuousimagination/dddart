@@ -695,7 +695,7 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
 
   Future<DeviceCode?> _findDeviceCodeByUserCode(String userCode) async {
     try {
-      return await findFirstQueryableItem(
+      return await findFirstItem(
         deviceCodeRepository,
         (code) => code.userCode == userCode,
         operationName: 'device verification',
@@ -707,7 +707,7 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
 
   Future<DeviceCode?> _findDeviceCodeByDeviceCode(String deviceCodeString) async {
     try {
-      return await findFirstQueryableItem(
+      return await findFirstItem(
         deviceCodeRepository,
         (code) => code.deviceCode == deviceCodeString,
         operationName: 'device token exchange',
