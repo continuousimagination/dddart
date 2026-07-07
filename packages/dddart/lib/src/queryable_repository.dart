@@ -32,7 +32,7 @@ import 'package:dddart/src/repository.dart';
 ///
 /// See also:
 /// * [Repository] — the base CRUD interface
-/// * [InMemoryRepository] — an implementation that supports getAll()
+/// * `InMemoryRepository` — an implementation that supports getAll()
 abstract interface class QueryableRepository<T extends AggregateRoot>
     implements Repository<T> {
   /// Returns all aggregates currently in the repository.

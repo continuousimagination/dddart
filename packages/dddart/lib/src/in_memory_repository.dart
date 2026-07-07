@@ -1,5 +1,6 @@
 import 'package:dddart/src/aggregate_root.dart';
 import 'package:dddart/src/queryable_repository.dart';
+import 'package:dddart/src/repository.dart';
 import 'package:dddart/src/repository_exception.dart';
 import 'package:dddart/src/uuid_value.dart';
 import 'package:logging/logging.dart';

@@ -214,9 +214,9 @@ class HttpServer {
             (origin != null && _allowedOrigins.contains(origin));
 
         final corsHeaders = <String, String>{
-          if (isAllowed && origin != null) 'Access-Control-Allow-Origin': origin,
-          if (_allowedOrigins.contains('*'))
-            'Access-Control-Allow-Origin': '*',
+          if (isAllowed && origin != null)
+            'Access-Control-Allow-Origin': origin,
+          if (_allowedOrigins.contains('*')) 'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods':
               'GET, POST, PUT, DELETE, PATCH, OPTIONS',
           'Access-Control-Allow-Headers':

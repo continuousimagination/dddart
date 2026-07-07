@@ -38,7 +38,7 @@ Future<T> findFirstItem<T extends AggregateRoot>(
 }
 
 /// Legacy aliases for backward compatibility during migration.
-/// TODO(cleanup): Remove these after all consumers are updated.
+// TODO(sean): Remove legacy aliases after all consumers are updated.
 
 /// @deprecated Use [getAllItems] instead.
 Future<List<T>> requireQueryableItems<T extends AggregateRoot>(
