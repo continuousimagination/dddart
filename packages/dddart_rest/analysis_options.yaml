@@ -13,6 +13,8 @@ analyzer:
     - "test/pem_verification_test.dart"  # Debug test file
     - "test/cognito_jwk_test.dart"  # Debug test file
     - "test/oauth_integration_test.dart"  # Integration test with external dependencies
+  errors:
+    deprecated_member_use: ignore
   language:
     strict-casts: false  # Too strict for tests with dynamic JSON
     strict-inference: false  # Too pedantic for examples and tests
