@@ -61,9 +61,8 @@ $fields
 
           final annotation = classElement.metadata.firstWhere(
             (a) =>
-                a.element is ConstructorElement &&
-                (a.element! as ConstructorElement).enclosingElement.name ==
-                    'GenerateRestRepository',
+                a.computeConstantValue()?.type?.element?.name ==
+                'GenerateRestRepository',
           );
 
           // Generate code
@@ -131,9 +130,8 @@ class TestAggregate extends AggregateRoot {
 
           final annotation = classElement.metadata.firstWhere(
             (a) =>
-                a.element is ConstructorElement &&
-                (a.element! as ConstructorElement).enclosingElement.name ==
-                    'GenerateRestRepository',
+                a.computeConstantValue()?.type?.element?.name ==
+                'GenerateRestRepository',
           );
 
           // Generate code
@@ -208,9 +206,8 @@ class $className extends AggregateRoot {
 
           final annotation = classElement.metadata.firstWhere(
             (a) =>
-                a.element is ConstructorElement &&
-                (a.element! as ConstructorElement).enclosingElement.name ==
-                    'GenerateRestRepository',
+                a.computeConstantValue()?.type?.element?.name ==
+                'GenerateRestRepository',
           );
 
           // Generate code
@@ -261,9 +258,8 @@ class User extends AggregateRoot {
 
         final annotation1 = classElement1.metadata.firstWhere(
           (a) =>
-              a.element is ConstructorElement &&
-              (a.element! as ConstructorElement).enclosingElement.name ==
-                  'GenerateRestRepository',
+              a.computeConstantValue()?.type?.element?.name ==
+              'GenerateRestRepository',
         );
 
         final output1 = generator.generateForAnnotatedElement(
@@ -304,9 +300,8 @@ class Product extends AggregateRoot {
 
         final annotation2 = classElement2.metadata.firstWhere(
           (a) =>
-              a.element is ConstructorElement &&
-              (a.element! as ConstructorElement).enclosingElement.name ==
-                  'GenerateRestRepository',
+              a.computeConstantValue()?.type?.element?.name ==
+              'GenerateRestRepository',
         );
 
         final output2 = generator.generateForAnnotatedElement(
@@ -350,9 +345,8 @@ class Order extends AggregateRoot {
 
         final annotation3 = classElement3.metadata.firstWhere(
           (a) =>
-              a.element is ConstructorElement &&
-              (a.element! as ConstructorElement).enclosingElement.name ==
-                  'GenerateRestRepository',
+              a.computeConstantValue()?.type?.element?.name ==
+              'GenerateRestRepository',
         );
 
         final output3 = generator.generateForAnnotatedElement(
@@ -462,9 +456,8 @@ class $className extends AggregateRoot {
 
           final annotation = classElement.metadata.firstWhere(
             (a) =>
-                a.element is ConstructorElement &&
-                (a.element! as ConstructorElement).enclosingElement.name ==
-                    'GenerateRestRepository',
+                a.computeConstantValue()?.type?.element?.name ==
+                'GenerateRestRepository',
           );
 
           // Generate code
@@ -592,9 +585,8 @@ class $className extends AggregateRoot {
 
           final annotation = classElement.metadata.firstWhere(
             (a) =>
-                a.element is ConstructorElement &&
-                (a.element! as ConstructorElement).enclosingElement.name ==
-                    'GenerateRestRepository',
+                a.computeConstantValue()?.type?.element?.name ==
+                'GenerateRestRepository',
           );
 
           // Generate code

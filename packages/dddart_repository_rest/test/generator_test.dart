@@ -81,9 +81,8 @@ class NotAnAggregate {
 
       final annotation = classElement.metadata.firstWhere(
         (a) =>
-            a.element is ConstructorElement &&
-            (a.element! as ConstructorElement).enclosingElement.name ==
-                'GenerateRestRepository',
+            a.computeConstantValue()?.type?.element?.name ==
+            'GenerateRestRepository',
       );
 
       // Act & Assert: Expect InvalidGenerationSourceError
@@ -127,9 +126,8 @@ class User extends AggregateRoot {
 
       final annotation = classElement.metadata.firstWhere(
         (a) =>
-            a.element is ConstructorElement &&
-            (a.element! as ConstructorElement).enclosingElement.name ==
-                'GenerateRestRepository',
+            a.computeConstantValue()?.type?.element?.name ==
+            'GenerateRestRepository',
       );
 
       // Act & Assert: Expect InvalidGenerationSourceError
@@ -175,9 +173,8 @@ class User extends AggregateRoot {
 
       final annotation = classElement.metadata.firstWhere(
         (a) =>
-            a.element is ConstructorElement &&
-            (a.element! as ConstructorElement).enclosingElement.name ==
-                'GenerateRestRepository',
+            a.computeConstantValue()?.type?.element?.name ==
+            'GenerateRestRepository',
       );
 
       // Act: Generate code
