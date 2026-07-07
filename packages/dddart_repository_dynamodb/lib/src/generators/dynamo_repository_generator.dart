@@ -133,9 +133,10 @@ class DynamoRepositoryGenerator
   /// Validates that a class has the @Serializable annotation.
   bool _hasSerializableAnnotation(ClassElement element) {
     return element.metadata.any((annotation) {
-      final annotationElement = annotation.element;
-      return annotationElement is ConstructorElement &&
-          annotationElement.enclosingElement.name == 'Serializable';
+      final value = annotation.computeConstantValue();
+      if (value == null) return false;
+      final typeName = value.type?.element?.name;
+      return typeName == 'Serializable';
     });
   }
 

@@ -78,9 +78,8 @@ class NotAnAggregate {
 
       final annotation = classElement.metadata.firstWhere(
         (a) =>
-            a.element is ConstructorElement &&
-            (a.element! as ConstructorElement).enclosingElement.name ==
-                'GenerateDynamoRepository',
+            a.computeConstantValue()?.type?.element?.name ==
+            'GenerateDynamoRepository',
       );
 
       expect(
@@ -122,9 +121,8 @@ class MissingSerializable extends AggregateRoot {
 
       final annotation = classElement.metadata.firstWhere(
         (a) =>
-            a.element is ConstructorElement &&
-            (a.element! as ConstructorElement).enclosingElement.name ==
-                'GenerateDynamoRepository',
+            a.computeConstantValue()?.type?.element?.name ==
+            'GenerateDynamoRepository',
       );
 
       expect(
@@ -167,9 +165,8 @@ class Product extends AggregateRoot {
 
       final annotation = classElement.metadata.firstWhere(
         (a) =>
-            a.element is ConstructorElement &&
-            (a.element! as ConstructorElement).enclosingElement.name ==
-                'GenerateDynamoRepository',
+            a.computeConstantValue()?.type?.element?.name ==
+            'GenerateDynamoRepository',
       );
 
       final output = generator.generateForAnnotatedElement(
@@ -205,9 +202,8 @@ class OrderItem extends AggregateRoot {
 
       final annotation = classElement.metadata.firstWhere(
         (a) =>
-            a.element is ConstructorElement &&
-            (a.element! as ConstructorElement).enclosingElement.name ==
-                'GenerateDynamoRepository',
+            a.computeConstantValue()?.type?.element?.name ==
+            'GenerateDynamoRepository',
       );
 
       final output = generator.generateForAnnotatedElement(
@@ -244,9 +240,8 @@ class User extends AggregateRoot {
 
       final annotation = classElement.metadata.firstWhere(
         (a) =>
-            a.element is ConstructorElement &&
-            (a.element! as ConstructorElement).enclosingElement.name ==
-                'GenerateDynamoRepository',
+            a.computeConstantValue()?.type?.element?.name ==
+            'GenerateDynamoRepository',
       );
 
       final output = generator.generateForAnnotatedElement(
@@ -305,9 +300,8 @@ class User extends AggregateRoot {
 
       final annotation = classElement.metadata.firstWhere(
         (a) =>
-            a.element is ConstructorElement &&
-            (a.element! as ConstructorElement).enclosingElement.name ==
-                'GenerateDynamoRepository',
+            a.computeConstantValue()?.type?.element?.name ==
+            'GenerateDynamoRepository',
       );
 
       final output = generator.generateForAnnotatedElement(
@@ -351,9 +345,8 @@ class User extends AggregateRoot {
 
       final annotation = classElement.metadata.firstWhere(
         (a) =>
-            a.element is ConstructorElement &&
-            (a.element! as ConstructorElement).enclosingElement.name ==
-                'GenerateDynamoRepository',
+            a.computeConstantValue()?.type?.element?.name ==
+            'GenerateDynamoRepository',
       );
 
       final output = generator.generateForAnnotatedElement(
@@ -409,9 +402,8 @@ class Order extends AggregateRoot {
 
         final annotation = classElement.metadata.firstWhere(
           (a) =>
-              a.element is ConstructorElement &&
-              (a.element! as ConstructorElement).enclosingElement.name ==
-                  'GenerateDynamoRepository',
+              a.computeConstantValue()?.type?.element?.name ==
+              'GenerateDynamoRepository',
         );
 
         final output = generator.generateForAnnotatedElement(
@@ -455,9 +447,8 @@ class Customer extends AggregateRoot {
 
         final annotation = classElement.metadata.firstWhere(
           (a) =>
-              a.element is ConstructorElement &&
-              (a.element! as ConstructorElement).enclosingElement.name ==
-                  'GenerateDynamoRepository',
+              a.computeConstantValue()?.type?.element?.name ==
+              'GenerateDynamoRepository',
         );
 
         final output = generator.generateForAnnotatedElement(
@@ -501,9 +492,8 @@ class Inventory extends AggregateRoot {
 
         final annotation = classElement.metadata.firstWhere(
           (a) =>
-              a.element is ConstructorElement &&
-              (a.element! as ConstructorElement).enclosingElement.name ==
-                  'GenerateDynamoRepository',
+              a.computeConstantValue()?.type?.element?.name ==
+              'GenerateDynamoRepository',
         );
 
         final output = generator.generateForAnnotatedElement(
@@ -550,9 +540,8 @@ class TestAggregate extends AggregateRoot {
 
         final annotation = classElement.metadata.firstWhere(
           (a) =>
-              a.element is ConstructorElement &&
-              (a.element! as ConstructorElement).enclosingElement.name ==
-                  'GenerateDynamoRepository',
+              a.computeConstantValue()?.type?.element?.name ==
+              'GenerateDynamoRepository',
         );
 
         final output = generator.generateForAnnotatedElement(
@@ -591,9 +580,8 @@ class BillingTest extends AggregateRoot {
 
         final annotation = classElement.metadata.firstWhere(
           (a) =>
-              a.element is ConstructorElement &&
-              (a.element! as ConstructorElement).enclosingElement.name ==
-                  'GenerateDynamoRepository',
+              a.computeConstantValue()?.type?.element?.name ==
+              'GenerateDynamoRepository',
         );
 
         final output = generator.generateForAnnotatedElement(
