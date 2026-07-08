@@ -196,7 +196,7 @@ void main() {
         );
 
         final repo = refreshTokenRepo as InMemoryRepository<RefreshToken>;
-        final allTokens = repo.getAll();
+        final allTokens = repo.getAllSync();
         final storedToken = allTokens.firstWhere(
           (token) => token.token == tokens.refreshToken,
         );
@@ -317,7 +317,7 @@ void main() {
         await authHandler.revoke(tokens.refreshToken);
 
         final repo = refreshTokenRepo as InMemoryRepository<RefreshToken>;
-        final allTokens = repo.getAll();
+        final allTokens = repo.getAllSync();
         final storedToken = allTokens.firstWhere(
           (token) => token.token == tokens.refreshToken,
         );

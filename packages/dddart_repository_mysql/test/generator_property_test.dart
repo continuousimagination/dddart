@@ -53,9 +53,8 @@ class SimpleAggregate extends AggregateRoot {
 
         final annotation = classElement.metadata.firstWhere(
           (a) =>
-              a.element is ConstructorElement &&
-              (a.element! as ConstructorElement).enclosingElement.name ==
-                  'GenerateMysqlRepository',
+              a.computeConstantValue()?.type?.element?.name ==
+              'GenerateMysqlRepository',
         );
 
         final generated = generator.generateForAnnotatedElement(
@@ -110,9 +109,8 @@ class Order extends AggregateRoot {
 
         final annotation = classElement.metadata.firstWhere(
           (a) =>
-              a.element is ConstructorElement &&
-              (a.element! as ConstructorElement).enclosingElement.name ==
-                  'GenerateMysqlRepository',
+              a.computeConstantValue()?.type?.element?.name ==
+              'GenerateMysqlRepository',
         );
 
         final generated = generator.generateForAnnotatedElement(
@@ -162,9 +160,8 @@ class Order extends AggregateRoot {
 
         final annotation = classElement.metadata.firstWhere(
           (a) =>
-              a.element is ConstructorElement &&
-              (a.element! as ConstructorElement).enclosingElement.name ==
-                  'GenerateMysqlRepository',
+              a.computeConstantValue()?.type?.element?.name ==
+              'GenerateMysqlRepository',
         );
 
         final generated = generator.generateForAnnotatedElement(
@@ -207,9 +204,8 @@ class Order extends AggregateRoot {
 
         final annotation = classElement.metadata.firstWhere(
           (a) =>
-              a.element is ConstructorElement &&
-              (a.element! as ConstructorElement).enclosingElement.name ==
-                  'GenerateMysqlRepository',
+              a.computeConstantValue()?.type?.element?.name ==
+              'GenerateMysqlRepository',
         );
 
         final generated = generator.generateForAnnotatedElement(
@@ -258,9 +254,8 @@ class Order extends AggregateRoot {
 
         final annotation1 = class1.metadata.firstWhere(
           (a) =>
-              a.element is ConstructorElement &&
-              (a.element! as ConstructorElement).enclosingElement.name ==
-                  'GenerateMysqlRepository',
+              a.computeConstantValue()?.type?.element?.name ==
+              'GenerateMysqlRepository',
         );
 
         final generated1 = generator.generateForAnnotatedElement(
@@ -295,9 +290,8 @@ class Customer extends AggregateRoot {
 
         final annotation2 = class2.metadata.firstWhere(
           (a) =>
-              a.element is ConstructorElement &&
-              (a.element! as ConstructorElement).enclosingElement.name ==
-                  'GenerateMysqlRepository',
+              a.computeConstantValue()?.type?.element?.name ==
+              'GenerateMysqlRepository',
         );
 
         final generated2 = generator.generateForAnnotatedElement(
@@ -375,9 +369,8 @@ class NotAnAggregate {
 
         final annotation = classElement.metadata.firstWhere(
           (a) =>
-              a.element is ConstructorElement &&
-              (a.element! as ConstructorElement).enclosingElement.name ==
-                  'GenerateMysqlRepository',
+              a.computeConstantValue()?.type?.element?.name ==
+              'GenerateMysqlRepository',
         );
 
         expect(
@@ -419,9 +412,8 @@ class MissingSerializable extends AggregateRoot {
 
         final annotation = classElement.metadata.firstWhere(
           (a) =>
-              a.element is ConstructorElement &&
-              (a.element! as ConstructorElement).enclosingElement.name ==
-                  'GenerateMysqlRepository',
+              a.computeConstantValue()?.type?.element?.name ==
+              'GenerateMysqlRepository',
         );
 
         expect(

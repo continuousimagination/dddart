@@ -5,6 +5,11 @@ analyzer:
     - "**/*.g.dart"
     - "**/*.freezed.dart"
     - "example/**"  # Examples are for demonstration
+  errors:
+    # The analyzer element model APIs used in this package have
+    # deprecated_member_use warnings on newer analyzer versions (7.x+).
+    # The code is cross-version compatible and works on both 6.x and 7.x+.
+    deprecated_member_use: ignore
   language:
     strict-casts: true
     strict-inference: false  # Too pedantic for examples and tests

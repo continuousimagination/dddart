@@ -17,7 +17,7 @@ class InMemoryEventRepository extends InMemoryRepository<StoredEvent>
     implements EventRepository<StoredEvent> {
   @override
   Future<List<StoredEvent>> findSince(DateTime timestamp) async {
-    final allEvents = getAll();
+    final allEvents = getAllSync();
     return allEvents
         .where(
           (event) =>
@@ -30,7 +30,7 @@ class InMemoryEventRepository extends InMemoryRepository<StoredEvent>
 
   @override
   Future<void> deleteOlderThan(DateTime timestamp) async {
-    final allEvents = getAll();
+    final allEvents = getAllSync();
     final toDelete = allEvents
         .where((event) => event.createdAt.isBefore(timestamp))
         .map((event) => event.id)
@@ -45,11 +45,11 @@ class InMemoryEventRepository extends InMemoryRepository<StoredEvent>
   ///
   /// Useful for testing and debugging.
   Future<List<StoredEvent>> findAll() async {
-    return getAll();
+    return getAllSync();
   }
 
   /// Returns the count of stored events.
   ///
   /// Useful for testing and verification.
-  int get count => getAll().length;
+  int get count => getAllSync().length;
 }

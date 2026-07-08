@@ -501,7 +501,7 @@ void main() {
         // Operations should complete quickly (this is a smoke test, not a precise benchmark)
         // Just verify it doesn't hang or crash
         expect(stopwatch.elapsedMilliseconds, lessThan(5000));
-        expect(repository.getAll().length, equals(100));
+        expect(repository.getAllSync().length, equals(100));
 
         await eventBus.close();
       });

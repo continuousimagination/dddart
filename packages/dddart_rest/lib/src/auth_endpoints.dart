@@ -412,7 +412,7 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
       }
 
       // Look up device code by user code.
-      final deviceCode = _findDeviceCodeByUserCode(userCode);
+      final deviceCode = await _findDeviceCodeByUserCode(userCode);
       if (deviceCode == null) {
         return _deviceVerifyError('Invalid user code');
       }
@@ -593,7 +593,7 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
         }
 
         // Look up device code.
-        final deviceCode = _findDeviceCodeByDeviceCode(deviceCodeString);
+        final deviceCode = await _findDeviceCodeByDeviceCode(deviceCodeString);
         if (deviceCode == null) {
           return _jsonResponse(
             {'error': 'invalid_grant'},
@@ -693,9 +693,9 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
     return code.toString();
   }
 
-  DeviceCode? _findDeviceCodeByUserCode(String userCode) {
+  Future<DeviceCode?> _findDeviceCodeByUserCode(String userCode) async {
     try {
-      return findFirstQueryableItem(
+      return await findFirstItem(
         deviceCodeRepository,
         (code) => code.userCode == userCode,
         operationName: 'device verification',
@@ -705,9 +705,11 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
     }
   }
 
-  DeviceCode? _findDeviceCodeByDeviceCode(String deviceCodeString) {
+  Future<DeviceCode?> _findDeviceCodeByDeviceCode(
+    String deviceCodeString,
+  ) async {
     try {
-      return findFirstQueryableItem(
+      return await findFirstItem(
         deviceCodeRepository,
         (code) => code.deviceCode == deviceCodeString,
         operationName: 'device token exchange',

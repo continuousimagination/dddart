@@ -4,6 +4,8 @@ analyzer:
   exclude:
     - "**/*.g.dart"
     - "**/*.dynamo_repository.g.dart"
+  errors:
+    deprecated_member_use: ignore
   
 linter:
   rules:

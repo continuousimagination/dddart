@@ -95,7 +95,7 @@ void main() {
 
         final retrieved = await repository.getById(id);
         expect(retrieved.name, equals('Updated'));
-        expect(repository.getAll().length, equals(1));
+        expect(repository.getAllSync().length, equals(1));
       });
 
       test('saves multiple different aggregates', () async {
@@ -107,7 +107,7 @@ void main() {
         await repository.save(aggregate2);
         await repository.save(aggregate3);
 
-        expect(repository.getAll().length, equals(3));
+        expect(repository.getAllSync().length, equals(3));
       });
 
       test('preserves aggregate identity and properties', () async {
@@ -161,7 +161,7 @@ void main() {
 
         await repository.deleteById(aggregate2.id);
 
-        expect(repository.getAll().length, equals(2));
+        expect(repository.getAllSync().length, equals(2));
         expect(await repository.getById(aggregate1.id), equals(aggregate1));
         expect(await repository.getById(aggregate3.id), equals(aggregate3));
         expect(
@@ -197,7 +197,7 @@ void main() {
 
         repository.clear();
 
-        expect(repository.getAll(), isEmpty);
+        expect(repository.getAllSync(), isEmpty);
       });
 
       test('allows saving after clear', () async {
@@ -209,14 +209,14 @@ void main() {
         final aggregate2 = TestAggregate(name: 'After Clear');
         await repository.save(aggregate2);
 
-        expect(repository.getAll().length, equals(1));
+        expect(repository.getAllSync().length, equals(1));
         expect(await repository.getById(aggregate2.id), equals(aggregate2));
       });
 
       test('does nothing when repository is already empty', () {
         repository.clear();
 
-        expect(repository.getAll(), isEmpty);
+        expect(repository.getAllSync(), isEmpty);
       });
     });
 
@@ -230,7 +230,7 @@ void main() {
         await repository.save(aggregate2);
         await repository.save(aggregate3);
 
-        final allAggregates = repository.getAll();
+        final allAggregates = repository.getAllSync();
 
         expect(allAggregates.length, equals(3));
         expect(allAggregates, contains(aggregate1));
@@ -239,7 +239,7 @@ void main() {
       });
 
       test('returns empty list when repository is empty', () {
-        final allAggregates = repository.getAll();
+        final allAggregates = repository.getAllSync();
 
         expect(allAggregates, isEmpty);
       });
@@ -248,7 +248,7 @@ void main() {
         final aggregate = TestAggregate(name: 'Test User');
         repository.save(aggregate);
 
-        final allAggregates = repository.getAll();
+        final allAggregates = repository.getAllSync();
 
         expect(
           () => allAggregates.add(TestAggregate(name: 'Another')),
@@ -261,16 +261,16 @@ void main() {
         final aggregate2 = TestAggregate(name: 'User 2');
 
         await repository.save(aggregate1);
-        expect(repository.getAll().length, equals(1));
+        expect(repository.getAllSync().length, equals(1));
 
         await repository.save(aggregate2);
-        expect(repository.getAll().length, equals(2));
+        expect(repository.getAllSync().length, equals(2));
 
         await repository.deleteById(aggregate1.id);
-        expect(repository.getAll().length, equals(1));
+        expect(repository.getAllSync().length, equals(1));
 
         repository.clear();
-        expect(repository.getAll(), isEmpty);
+        expect(repository.getAllSync(), isEmpty);
       });
     });
 
@@ -282,8 +282,8 @@ void main() {
         final aggregate = TestAggregate(name: 'Test User');
         await repository1.save(aggregate);
 
-        expect(repository1.getAll().length, equals(1));
-        expect(repository2.getAll().length, equals(0));
+        expect(repository1.getAllSync().length, equals(1));
+        expect(repository2.getAllSync().length, equals(0));
         expect(
           () => repository2.getById(aggregate.id),
           throwsA(isA<RepositoryException>()),
@@ -302,8 +302,8 @@ void main() {
 
         repository1.clear();
 
-        expect(repository1.getAll(), isEmpty);
-        expect(repository2.getAll().length, equals(1));
+        expect(repository1.getAllSync(), isEmpty);
+        expect(repository2.getAllSync().length, equals(1));
       });
     });
 

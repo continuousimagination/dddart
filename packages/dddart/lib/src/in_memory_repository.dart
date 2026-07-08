@@ -1,4 +1,5 @@
 import 'package:dddart/src/aggregate_root.dart';
+import 'package:dddart/src/queryable_repository.dart';
 import 'package:dddart/src/repository.dart';
 import 'package:dddart/src/repository_exception.dart';
 import 'package:dddart/src/uuid_value.dart';
@@ -98,7 +99,8 @@ import 'package:logging/logging.dart';
 /// * [Repository] - The base repository interface
 /// * [AggregateRoot] - The base class for aggregate roots
 /// * [RepositoryException] - Exception thrown by repository operations
-class InMemoryRepository<T extends AggregateRoot> implements Repository<T> {
+class InMemoryRepository<T extends AggregateRoot>
+    implements QueryableRepository<T> {
   /// Logger instance for repository operations.
   final Logger _logger = Logger('dddart.repository');
 
@@ -204,7 +206,14 @@ class InMemoryRepository<T extends AggregateRoot> implements Repository<T> {
   ///   print('User: ${user.name}');
   /// }
   /// ```
-  List<T> getAll() {
+  @override
+  Future<List<T>> getAll() async {
+    return List.unmodifiable(_storage.values);
+  }
+
+  /// Synchronous version of [getAll] for in-memory use cases
+  /// where async is unnecessary (e.g., tests, simple lookups).
+  List<T> getAllSync() {
     return List.unmodifiable(_storage.values);
   }
 }

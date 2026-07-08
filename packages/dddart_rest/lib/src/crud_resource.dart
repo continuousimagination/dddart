@@ -815,7 +815,7 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   ///
   /// Returns: A QueryResult with paginated items and total count
   Future<QueryResult<T>> _getAllItems(int skip, int take) async {
-    final allItems = requireQueryableItems(
+    final allItems = await getAllItems(
       repository,
       operationName: 'collection query',
     );

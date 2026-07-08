@@ -5,6 +5,8 @@ analyzer:
     - "**/*.g.dart"
     - "**/*.freezed.dart"
     - "example/**"  # Examples are for demonstration
+  errors:
+    deprecated_member_use: ignore
   language:
     strict-casts: true
     strict-inference: false  # Too pedantic for examples and tests

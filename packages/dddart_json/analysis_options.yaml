@@ -3,8 +3,11 @@ include: package:very_good_analysis/analysis_options.yaml
 analyzer:
   exclude:
     - "**/*.g.dart"
+    - "lib/src/generators/**"
     - "**/*.freezed.dart"
     - "example/**"  # Examples don't need strict docs
+  errors:
+    deprecated_member_use: ignore
   language:
     strict-casts: false  # Too strict for tests with dynamic JSON
     strict-inference: false  # Too pedantic for examples and tests

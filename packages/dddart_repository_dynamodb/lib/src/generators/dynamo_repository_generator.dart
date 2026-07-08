@@ -133,9 +133,10 @@ class DynamoRepositoryGenerator
   /// Validates that a class has the @Serializable annotation.
   bool _hasSerializableAnnotation(ClassElement element) {
     return element.metadata.any((annotation) {
-      final annotationElement = annotation.element;
-      return annotationElement is ConstructorElement &&
-          annotationElement.enclosingElement.name == 'Serializable';
+      final value = annotation.computeConstantValue();
+      if (value == null) return false;
+      final typeName = value.type?.element?.name;
+      return typeName == 'Serializable';
     });
   }
 
@@ -280,6 +281,30 @@ class DynamoRepositoryGenerator
       rethrow;
     } catch (e) {
       throw _mapDynamoException(e, 'deleteById');
+    }
+  }''';
+  }
+
+  /// Generates the getAll method implementation (full table scan).
+  String _generateGetAllMethod(String className) {
+    return '''
+  @override
+  Future<List<$className>> getAll() async {
+    try {
+      final response = await _connection.client.scan(
+        tableName: tableName,
+      );
+
+      if (response.items == null || response.items!.isEmpty) {
+        return [];
+      }
+
+      return response.items!.map((item) {
+        final json = AttributeValueConverter.attributeMapToJsonMap(item);
+        return _serializer.fromJson(json);
+      }).toList();
+    } catch (e) {
+      throw _mapDynamoException(e, 'getAll');
     }
   }''';
   }
@@ -448,7 +473,7 @@ Resources:
   }) {
     final interfaceClause = implements != null
         ? 'implements ${implements.element.name}'
-        : 'implements Repository<$className>';
+        : 'implements QueryableRepository<$className>';
 
     final buffer = StringBuffer();
 
@@ -491,7 +516,8 @@ Resources:
 
     buffer.writeln(_generateDeleteByIdMethod(className));
     buffer.writeln();
-
+    buffer.writeln(_generateGetAllMethod(className));
+    buffer.writeln();
     // Generate exception mapping helper
     buffer.writeln(_generateMapDynamoExceptionMethod());
     buffer.writeln();
@@ -565,6 +591,9 @@ Resources:
     buffer.writeln();
 
     buffer.writeln(_generateDeleteByIdMethod(className));
+    buffer.writeln();
+
+    buffer.writeln(_generateGetAllMethod(className));
     buffer.writeln();
 
     // Generate exception mapping helper

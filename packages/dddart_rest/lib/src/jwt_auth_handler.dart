@@ -208,7 +208,7 @@ class JwtAuthHandler<TClaims, TRefreshToken extends RefreshToken>
     // Look up refresh token in repository
     final RefreshToken refreshToken;
     try {
-      refreshToken = findFirstQueryableItem(
+      refreshToken = await findFirstItem(
         refreshTokenRepository,
         (token) => token.token == refreshTokenString,
         operationName: 'refresh token validation',
@@ -274,7 +274,7 @@ class JwtAuthHandler<TClaims, TRefreshToken extends RefreshToken>
   Future<void> revoke(String refreshTokenString) async {
     final RefreshToken refreshToken;
     try {
-      refreshToken = findFirstQueryableItem(
+      refreshToken = await findFirstItem(
         refreshTokenRepository,
         (token) => token.token == refreshTokenString,
         operationName: 'refresh token revocation',

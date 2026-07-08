@@ -1,6 +1,7 @@
 import 'dart:io' as io;
 
 import 'package:dddart_rest/src/crud_resource.dart';
+import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_router/shelf_router.dart';
 
@@ -27,6 +28,11 @@ class HttpServer {
   /// The port the server will bind to
   final int port;
 
+  /// Origins allowed for CORS requests.
+  ///
+  /// If empty, no CORS headers are added. Use [allowOrigins] to configure.
+  final Set<String> _allowedOrigins = {};
+
   /// List of registered CrudResource instances
   final List<CrudResource> _resources = [];
 
@@ -35,6 +41,22 @@ class HttpServer {
 
   /// The underlying shelf HttpServer instance
   io.HttpServer? _shelfServer;
+
+  /// Configures allowed origins for CORS requests.
+  ///
+  /// Pass `['*']` to allow all origins, or specify exact origins like
+  /// `['http://localhost:3000', 'https://example.com']`.
+  ///
+  /// Must be called before [start].
+  ///
+  /// Example:
+  /// ```dart
+  /// server.allowOrigins(['http://localhost:3000']);
+  /// await server.start();
+  /// ```
+  void allowOrigins(List<String> origins) {
+    _allowedOrigins.addAll(origins);
+  }
 
   /// Registers a CRUD resource with the server
   ///
@@ -145,9 +167,15 @@ class HttpServer {
       }
     }
 
+    // Build handler with CORS middleware if allowed origins configured.
+    Handler handler = router.call;
+    if (_allowedOrigins.isNotEmpty) {
+      handler = _corsMiddleware().addHandler(handler);
+    }
+
     // Start shelf server with router on configured port
     _shelfServer = await shelf_io.serve(
-      router.call,
+      handler,
       io.InternetAddress.anyIPv4,
       port,
       shared: true,
@@ -172,6 +200,40 @@ class HttpServer {
 
     await _shelfServer!.close(force: true);
     _shelfServer = null;
+  }
+
+  /// Creates a CORS middleware that handles preflight requests and adds
+  /// the appropriate headers to all responses.
+  Middleware _corsMiddleware() {
+    return (Handler innerHandler) {
+      return (Request request) async {
+        final origin = request.headers['origin'];
+
+        // Determine if the origin is allowed
+        final isAllowed = _allowedOrigins.contains('*') ||
+            (origin != null && _allowedOrigins.contains(origin));
+
+        final corsHeaders = <String, String>{
+          if (isAllowed && origin != null)
+            'Access-Control-Allow-Origin': origin,
+          if (_allowedOrigins.contains('*')) 'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods':
+              'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+          'Access-Control-Allow-Headers':
+              'Origin, Content-Type, Accept, Authorization',
+          'Access-Control-Max-Age': '86400',
+        };
+
+        // Handle preflight requests
+        if (request.method == 'OPTIONS') {
+          return Response.ok('', headers: corsHeaders);
+        }
+
+        // Forward to inner handler and add CORS headers to response
+        final response = await innerHandler(request);
+        return response.change(headers: corsHeaders);
+      };
+    };
   }
 }
 
