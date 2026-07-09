@@ -87,7 +87,7 @@ DomainEvent? _decodeRealtimeTestEvent(StoredEvent storedEvent) {
   }
 
   final decoded = jsonDecode(storedEvent.eventJson);
-  if (decoded is! Map<String, dynamic>) {
+  if (decoded is! Map<String, Object?>) {
     throw const FormatException('StoredEvent.eventJson must decode to a map');
   }
 
@@ -128,21 +128,21 @@ class _RealtimeTestEvent extends DomainEvent {
     super.context,
   });
 
-  factory _RealtimeTestEvent.fromJson(Map<String, dynamic> json) {
+  factory _RealtimeTestEvent.fromJson(Map<String, Object?> json) {
     return _RealtimeTestEvent(
       aggregateId: UuidValue.fromString(json['aggregateId'] as String),
       eventId: UuidValue.fromString(json['eventId'] as String),
       occurredAt: DateTime.parse(json['occurredAt'] as String),
       message: json['message'] as String,
-      context: Map<String, dynamic>.from(
-        json['context'] as Map<String, dynamic>? ?? const <String, dynamic>{},
+      context: Map<String, String>.from(
+        json['context'] as Map<String, Object?>? ?? const <String, Object?>{},
       ),
     );
   }
 
   final String message;
 
-  Map<String, dynamic> toJson() {
+  Map<String, Object?> toJson() {
     return {
       'eventId': eventId.toString(),
       'occurredAt': occurredAt.toIso8601String(),
