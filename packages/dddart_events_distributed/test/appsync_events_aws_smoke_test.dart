@@ -24,8 +24,7 @@ void main() {
     test(
       'skips until AWS AppSync Events smoke environment is configured',
       () {},
-      skip:
-          'Missing one or more required environment variables: '
+      skip: 'Missing one or more required environment variables: '
           '${_requiredEnvironmentVariables.join(', ')}',
     );
     return;
@@ -153,8 +152,7 @@ void main() {
         expect(
           denialError,
           isNotNull,
-          reason:
-              'User A was able to subscribe to user B channel '
+          reason: 'User A was able to subscribe to user B channel '
               '${config.secondUserChannel}; AppSync authorization should deny '
               'cross-user inbox subscriptions.',
         );
@@ -222,8 +220,8 @@ class _AwsSmokeConfig {
       environment['DDDART_APPSYNC_HTTP_ENDPOINT']!,
     );
     final authHost = (environment['DDDART_APPSYNC_AUTH_HOST'] ?? '').trim();
-    final publishApiKey = (environment['DDDART_APPSYNC_PUBLISH_API_KEY'] ?? '')
-        .trim();
+    final publishApiKey =
+        (environment['DDDART_APPSYNC_PUBLISH_API_KEY'] ?? '').trim();
     final publishJwt = (environment['DDDART_APPSYNC_PUBLISH_JWT'] ?? '').trim();
     final jwtA = environment['DDDART_APPSYNC_JWT_A']!.trim();
 
@@ -265,8 +263,8 @@ class _AwsSmokeConfig {
     final trimmed = rawValue.trim();
     final value =
         trimmed.startsWith('http://') || trimmed.startsWith('https://')
-        ? trimmed
-        : 'https://$trimmed';
+            ? trimmed
+            : 'https://$trimmed';
     final uri = Uri.parse(value);
     if (uri.path.isEmpty || uri.path == '/') {
       return uri.replace(path: '/event');

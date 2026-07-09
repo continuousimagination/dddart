@@ -18,11 +18,9 @@ void main() {
       expect(subprotocol, isNot(contains('=')));
 
       final encodedHeader = subprotocol.substring('header-'.length);
-      final decodedHeader =
-          jsonDecode(
-                utf8.decode(base64Url.decode(_base64UrlPad(encodedHeader))),
-              )
-              as Map<String, Object?>;
+      final decodedHeader = jsonDecode(
+        utf8.decode(base64Url.decode(_base64UrlPad(encodedHeader))),
+      ) as Map<String, Object?>;
 
       expect(
         decodedHeader['host'],

@@ -12,11 +12,10 @@ const awsAppSyncEventsWebSocketProtocol = 'aws-appsync-event-ws';
 typedef _JsonObject = Map<String, Object?>;
 
 /// Function that opens an AppSync-compatible WebSocket connection.
-typedef AppSyncWebSocketConnector =
-    Future<AppSyncWebSocketConnection> Function(
-      Uri uri,
-      Iterable<String> protocols,
-    );
+typedef AppSyncWebSocketConnector = Future<AppSyncWebSocketConnection> Function(
+  Uri uri,
+  Iterable<String> protocols,
+);
 
 /// Callback used when realtime traffic should trigger HTTP catch-up.
 ///
@@ -74,9 +73,8 @@ class AppSyncEventsAuthorization {
 
   /// Encoded authorization subprotocol required by AppSync Events.
   String get websocketSubprotocol {
-    final encoded = base64Url
-        .encode(utf8.encode(jsonEncode(headers)))
-        .replaceAll('=', '');
+    final encoded =
+        base64Url.encode(utf8.encode(jsonEncode(headers))).replaceAll('=', '');
     return 'header-$encoded';
   }
 
