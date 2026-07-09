@@ -152,7 +152,7 @@ class AppSyncEventsTransport implements DistributedEventTransport {
 
   /// Subscribes to remote stored-event notifications.
   ///
-  /// The AppSync channel is configured on the transport. [options.topic] may be
+  /// The AppSync channel is configured on the transport. `options.topic` may be
   /// omitted or equal to the configured channel; other topics require a
   /// separate transport instance so the fake/local protocol path stays explicit
   /// for this spike.
