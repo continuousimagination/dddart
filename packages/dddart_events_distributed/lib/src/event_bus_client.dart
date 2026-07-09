@@ -92,8 +92,18 @@ class EventBusClient {
   /// Optional authentication token for requests.
   final String? _authToken;
 
-  /// Timestamp of the last received event.
+  /// Maximum createdAt timestamp observed from received events.
+  ///
+  /// The HTTP catch-up endpoint is inclusive (`createdAt >= since`), so the
+  /// client keeps this cursor at the exact boundary timestamp and suppresses
+  /// duplicate stored event IDs when the boundary is delivered again.
   late DateTime _lastTimestamp;
+
+  /// Stored event IDs already published or intentionally skipped by this
+  /// client. This prevents inclusive boundary events from being republished
+  /// on later polls while still allowing same-timestamp events that were not
+  /// returned by an earlier poll to be processed.
+  final Set<String> _seenStoredEventIds = <String>{};
 
   /// Timer for periodic polling.
   Timer? _pollingTimer;
@@ -112,9 +122,9 @@ class EventBusClient {
   /// Polls server for new events.
   Future<void> _poll() async {
     try {
-      final url = Uri.parse('$serverUrl/events').replace(
-        queryParameters: {'since': _lastTimestamp.toIso8601String()},
-      );
+      final url = Uri.parse(
+        '$serverUrl/events',
+      ).replace(queryParameters: {'since': _lastTimestamp.toIso8601String()});
 
       _logger.finest('Polling: $url');
 
@@ -154,12 +164,24 @@ class EventBusClient {
       final eventDataJson = jsonDecode(storedEventJson['eventJson'] as String)
           as Map<String, dynamic>;
       final timestamp = DateTime.parse(storedEventJson['createdAt'] as String);
+      final storedEventId = storedEventJson['id'] as String? ??
+          eventDataJson['eventId'] as String?;
 
-      // Update last timestamp to be after this event to avoid re-processing
-      // Since findSince uses >=, we need to move past this timestamp
-      if (timestamp.isAfter(_lastTimestamp) ||
-          timestamp.isAtSameMomentAs(_lastTimestamp)) {
-        _lastTimestamp = timestamp.add(const Duration(microseconds: 1));
+      if (storedEventId == null || storedEventId.isEmpty) {
+        _logger.warning('Received event without an id (skipping)');
+        return;
+      }
+
+      if (!_seenStoredEventIds.add(storedEventId)) {
+        _logger.finest('Duplicate received event id: $storedEventId');
+        return;
+      }
+
+      // The server-side catch-up contract is inclusive (`createdAt >= since`).
+      // Keep the cursor at the maximum observed timestamp without adding an
+      // epsilon; duplicate boundary events are suppressed by stored event id.
+      if (timestamp.isAfter(_lastTimestamp)) {
+        _lastTimestamp = timestamp;
       }
 
       // Deserialize using registry
