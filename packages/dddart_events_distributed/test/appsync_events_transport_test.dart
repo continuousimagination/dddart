@@ -18,9 +18,11 @@ void main() {
       expect(subprotocol, isNot(contains('=')));
 
       final encodedHeader = subprotocol.substring('header-'.length);
-      final decodedHeader = jsonDecode(
-        utf8.decode(base64Url.decode(_base64UrlPad(encodedHeader))),
-      ) as Map<String, Object?>;
+      final decodedHeader =
+          jsonDecode(
+                utf8.decode(base64Url.decode(_base64UrlPad(encodedHeader))),
+              )
+              as Map<String, Object?>;
 
       expect(
         decodedHeader['host'],
@@ -109,10 +111,7 @@ void main() {
         },
       });
 
-      fakeConnection.receive({
-        'type': 'subscribe_success',
-        'id': 'sub-1',
-      });
+      fakeConnection.receive({'type': 'subscribe_success', 'id': 'sub-1'});
       await _flushMicrotasks();
       await subscription.cancel();
       await transport.close();
@@ -143,9 +142,7 @@ void main() {
         aggregateId: UuidValue.fromString(
           'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa',
         ),
-        eventId: UuidValue.fromString(
-          'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb',
-        ),
+        eventId: UuidValue.fromString('bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb'),
         occurredAt: DateTime.parse('2026-07-09T17:00:00Z'),
         message: 'hello from AppSync',
       );
@@ -185,7 +182,6 @@ void main() {
     });
   });
 }
-
 
 DomainEvent? _decodeAppSyncTestEvent(StoredEvent storedEvent) {
   if (storedEvent.eventType != 'AppSyncTestEvent') {

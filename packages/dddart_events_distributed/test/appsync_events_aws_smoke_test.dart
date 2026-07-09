@@ -24,7 +24,8 @@ void main() {
     test(
       'skips until AWS AppSync Events smoke environment is configured',
       () {},
-      skip: 'Missing one or more required environment variables: '
+      skip:
+          'Missing one or more required environment variables: '
           '${_requiredEnvironmentVariables.join(', ')}',
     );
     return;
@@ -44,114 +45,121 @@ void main() {
       await eventBus.close();
     });
 
-    test('subscribes to own inbox channel and receives a StoredEvent', () async {
-      var catchUpRequests = 0;
-      final transport = AppSyncEventsTransport(
-        realtimeEndpoint: config.realtimeEndpoint,
-        channel: config.ownChannel,
-        authorization: AppSyncEventsAuthorization.cognitoJwt(
-          host: config.authHost,
-          jwt: config.jwtA,
-        ),
-        subscriptionId: 'dddart-aws-smoke-own',
-        connectionAckTimeout: const Duration(seconds: 20),
-        subscribeAckTimeout: const Duration(seconds: 20),
-        onCatchUpNeeded: () {
-          catchUpRequests += 1;
-        },
-      );
-      final bridge = DistributedEventBusBridge(
-        localEventBus: eventBus,
-        transport: transport,
-        storedEventDecoder: _decodeAwsSmokeEvent,
-      );
-      final received = eventBus.on<_AwsSmokeEvent>().first;
+    test(
+      'subscribes to own inbox channel and receives a StoredEvent',
+      () async {
+        var catchUpRequests = 0;
+        final transport = AppSyncEventsTransport(
+          realtimeEndpoint: config.realtimeEndpoint,
+          channel: config.ownChannel,
+          authorization: AppSyncEventsAuthorization.cognitoJwt(
+            host: config.authHost,
+            jwt: config.jwtA,
+          ),
+          subscriptionId: 'dddart-aws-smoke-own',
+          connectionAckTimeout: const Duration(seconds: 20),
+          subscribeAckTimeout: const Duration(seconds: 20),
+          onCatchUpNeeded: () {
+            catchUpRequests += 1;
+          },
+        );
+        final bridge = DistributedEventBusBridge(
+          localEventBus: eventBus,
+          transport: transport,
+          storedEventDecoder: _decodeAwsSmokeEvent,
+        );
+        final received = eventBus.on<_AwsSmokeEvent>().first;
 
-      await transport.connect();
-      bridge.start();
+        await transport.connect();
+        bridge.start();
 
-      final event = _AwsSmokeEvent(
-        aggregateId: UuidValue.generate(),
-        eventId: UuidValue.generate(),
-        occurredAt: DateTime.now().toUtc(),
-        message: 'dddart AppSync Events smoke',
-        context: {'userId': config.userSubA},
-      );
-      final storedEvent = StoredEvent.fromDomainEvent(event);
+        final event = _AwsSmokeEvent(
+          aggregateId: UuidValue.generate(),
+          eventId: UuidValue.generate(),
+          occurredAt: DateTime.now().toUtc(),
+          message: 'dddart AppSync Events smoke',
+          context: {'userId': config.userSubA},
+        );
+        final storedEvent = StoredEvent.fromDomainEvent(event);
 
-      await _publishStoredEvent(
-        httpClient: httpClient,
-        config: config,
-        channel: config.ownChannel,
-        storedEvent: storedEvent,
-      );
+        await _publishStoredEvent(
+          httpClient: httpClient,
+          config: config,
+          channel: config.ownChannel,
+          storedEvent: storedEvent,
+        );
 
-      final delivered = await received.timeout(const Duration(seconds: 20));
-      expect(delivered.eventId, equals(event.eventId));
-      expect(delivered.aggregateId, equals(event.aggregateId));
-      expect(delivered.message, equals(event.message));
-      expect(catchUpRequests, greaterThanOrEqualTo(1));
+        final delivered = await received.timeout(const Duration(seconds: 20));
+        expect(delivered.eventId, equals(event.eventId));
+        expect(delivered.aggregateId, equals(event.aggregateId));
+        expect(delivered.message, equals(event.message));
+        expect(catchUpRequests, greaterThanOrEqualTo(1));
 
-      await bridge.close();
-      await transport.close();
-    }, timeout: const Timeout(Duration(seconds: 60)),
+        await bridge.close();
+        await transport.close();
+      },
+      timeout: const Timeout(Duration(seconds: 60)),
     );
 
-    test('denies cross-user subscription when a second user is configured', () async {
-      if (!config.hasSecondUser) {
-        markTestSkipped(
-          'DDDART_APPSYNC_JWT_B and DDDART_APPSYNC_USER_SUB_B are optional; '
-          'set both to validate cross-user subscription denial.',
+    test(
+      'denies cross-user subscription when a second user is configured',
+      () async {
+        if (!config.hasSecondUser) {
+          markTestSkipped(
+            'DDDART_APPSYNC_JWT_B and DDDART_APPSYNC_USER_SUB_B are optional; '
+            'set both to validate cross-user subscription denial.',
+          );
+          return;
+        }
+
+        final allowedTransport = AppSyncEventsTransport(
+          realtimeEndpoint: config.realtimeEndpoint,
+          channel: config.secondUserChannel,
+          authorization: AppSyncEventsAuthorization.cognitoJwt(
+            host: config.authHost,
+            jwt: config.jwtB!,
+          ),
+          subscriptionId: 'dddart-aws-smoke-user-b-own',
+          connectionAckTimeout: const Duration(seconds: 20),
+          subscribeAckTimeout: const Duration(seconds: 20),
         );
-        return;
-      }
+        try {
+          await allowedTransport.connect();
+        } finally {
+          await allowedTransport.close();
+        }
 
-      final allowedTransport = AppSyncEventsTransport(
-        realtimeEndpoint: config.realtimeEndpoint,
-        channel: config.secondUserChannel,
-        authorization: AppSyncEventsAuthorization.cognitoJwt(
-          host: config.authHost,
-          jwt: config.jwtB!,
-        ),
-        subscriptionId: 'dddart-aws-smoke-user-b-own',
-        connectionAckTimeout: const Duration(seconds: 20),
-        subscribeAckTimeout: const Duration(seconds: 20),
-      );
-      try {
-        await allowedTransport.connect();
-      } finally {
-        await allowedTransport.close();
-      }
+        final deniedTransport = AppSyncEventsTransport(
+          realtimeEndpoint: config.realtimeEndpoint,
+          channel: config.secondUserChannel,
+          authorization: AppSyncEventsAuthorization.cognitoJwt(
+            host: config.authHost,
+            jwt: config.jwtA,
+          ),
+          subscriptionId: 'dddart-aws-smoke-cross-user',
+          connectionAckTimeout: const Duration(seconds: 20),
+          subscribeAckTimeout: const Duration(seconds: 20),
+        );
 
-      final deniedTransport = AppSyncEventsTransport(
-        realtimeEndpoint: config.realtimeEndpoint,
-        channel: config.secondUserChannel,
-        authorization: AppSyncEventsAuthorization.cognitoJwt(
-          host: config.authHost,
-          jwt: config.jwtA,
-        ),
-        subscriptionId: 'dddart-aws-smoke-cross-user',
-        connectionAckTimeout: const Duration(seconds: 20),
-        subscribeAckTimeout: const Duration(seconds: 20),
-      );
+        Object? denialError;
+        try {
+          await deniedTransport.connect();
+        } catch (error) {
+          denialError = error;
+        } finally {
+          await deniedTransport.close();
+        }
 
-      Object? denialError;
-      try {
-        await deniedTransport.connect();
-      } catch (error) {
-        denialError = error;
-      } finally {
-        await deniedTransport.close();
-      }
-
-      expect(
-        denialError,
-        isNotNull,
-        reason: 'User A was able to subscribe to user B channel '
-            '${config.secondUserChannel}; AppSync authorization should deny '
-            'cross-user inbox subscriptions.',
-      );
-    }, timeout: const Timeout(Duration(seconds: 45)),
+        expect(
+          denialError,
+          isNotNull,
+          reason:
+              'User A was able to subscribe to user B channel '
+              '${config.secondUserChannel}; AppSync authorization should deny '
+              'cross-user inbox subscriptions.',
+        );
+      },
+      timeout: const Timeout(Duration(seconds: 45)),
     );
   });
 }
@@ -255,7 +263,8 @@ class _AwsSmokeConfig {
 
   static Uri _parsePublishEndpoint(String rawValue) {
     final trimmed = rawValue.trim();
-    final value = trimmed.startsWith('http://') || trimmed.startsWith('https://')
+    final value =
+        trimmed.startsWith('http://') || trimmed.startsWith('https://')
         ? trimmed
         : 'https://$trimmed';
     final uri = Uri.parse(value);

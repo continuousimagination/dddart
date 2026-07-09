@@ -11,9 +11,9 @@ void main() {
       final localEventBus = EventBus();
       final transport = _InMemoryDistributedEventTransport();
       final received = <_RealtimeTestEvent>[];
-      final listener = localEventBus
-          .on<_RealtimeTestEvent>()
-          .listen(received.add);
+      final listener = localEventBus.on<_RealtimeTestEvent>().listen(
+        received.add,
+      );
 
       final bridge = DistributedEventBusBridge(
         localEventBus: localEventBus,
@@ -48,9 +48,9 @@ void main() {
       final localEventBus = EventBus();
       final transport = _InMemoryDistributedEventTransport();
       final received = <_RealtimeTestEvent>[];
-      final listener = localEventBus
-          .on<_RealtimeTestEvent>()
-          .listen(received.add);
+      final listener = localEventBus.on<_RealtimeTestEvent>().listen(
+        received.add,
+      );
 
       final bridge = DistributedEventBusBridge(
         localEventBus: localEventBus,

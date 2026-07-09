@@ -12,10 +12,11 @@ const awsAppSyncEventsWebSocketProtocol = 'aws-appsync-event-ws';
 typedef _JsonObject = Map<String, Object?>;
 
 /// Function that opens an AppSync-compatible WebSocket connection.
-typedef AppSyncWebSocketConnector = Future<AppSyncWebSocketConnection> Function(
-  Uri uri,
-  Iterable<String> protocols,
-);
+typedef AppSyncWebSocketConnector =
+    Future<AppSyncWebSocketConnection> Function(
+      Uri uri,
+      Iterable<String> protocols,
+    );
 
 /// Callback used when realtime traffic should trigger HTTP catch-up.
 ///
@@ -53,10 +54,7 @@ class AppSyncEventsAuthorization {
     required String host,
     required String apiKey,
   }) {
-    return AppSyncEventsAuthorization({
-      'host': host,
-      'x-api-key': apiKey,
-    });
+    return AppSyncEventsAuthorization({'host': host, 'x-api-key': apiKey});
   }
 
   /// Creates authorization for Cognito User Pools or OIDC JWT auth.
@@ -264,10 +262,7 @@ class AppSyncEventsTransport implements DistributedEventTransport {
     _keepAliveTimer?.cancel();
 
     if (_connection != null) {
-      _sendJson({
-        'type': 'unsubscribe',
-        'id': subscriptionId,
-      });
+      _sendJson({'type': 'unsubscribe', 'id': subscriptionId});
     }
 
     await _subscription?.cancel();
@@ -299,9 +294,7 @@ class AppSyncEventsTransport implements DistributedEventTransport {
           unawaited(_notifyCatchUpNeeded());
         case 'data':
           unawaited(
-            _handleDataMessage(message).catchError(
-              _handleAsyncMessageError,
-            ),
+            _handleDataMessage(message).catchError(_handleAsyncMessageError),
           );
         default:
           _logger.fine('Ignoring AppSync realtime message: $message');
@@ -409,10 +402,7 @@ class AppSyncEventsTransport implements DistributedEventTransport {
     }
   }
 
-  static void _completeError(
-    Completer<void>? completer,
-    Object error,
-  ) {
+  static void _completeError(Completer<void>? completer, Object error) {
     if (completer != null && !completer.isCompleted) {
       completer.completeError(error);
     }
@@ -448,7 +438,9 @@ class _WebSocketChannelConnection implements AppSyncWebSocketConnection {
     if (message is List<int>) {
       return utf8.decode(message);
     }
-    throw FormatException('Expected AppSync WebSocket text frame, got $message');
+    throw FormatException(
+      'Expected AppSync WebSocket text frame, got $message',
+    );
   }
 }
 

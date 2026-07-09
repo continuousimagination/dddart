@@ -108,9 +108,9 @@ class EventNotificationPublisher {
     required DistributedEventTransport transport,
     StoredEventFactory? storedEventFactory,
     EventVisibilityResolver? visibilityResolver,
-  })  : _transport = transport,
-        _storedEventFactory = storedEventFactory ?? StoredEvent.fromDomainEvent,
-        _visibilityResolver = visibilityResolver;
+  }) : _transport = transport,
+       _storedEventFactory = storedEventFactory ?? StoredEvent.fromDomainEvent,
+       _visibilityResolver = visibilityResolver;
 
   final DistributedEventTransport _transport;
   final StoredEventFactory _storedEventFactory;
@@ -155,11 +155,11 @@ class DistributedEventBusBridge {
     EventSubscriptionOptions subscriptionOptions =
         const EventSubscriptionOptions(),
     bool dedupeByEventId = true,
-  })  : _localEventBus = localEventBus,
-        _transport = transport,
-        _storedEventDecoder = storedEventDecoder,
-        _subscriptionOptions = subscriptionOptions,
-        _dedupeByEventId = dedupeByEventId;
+  }) : _localEventBus = localEventBus,
+       _transport = transport,
+       _storedEventDecoder = storedEventDecoder,
+       _subscriptionOptions = subscriptionOptions,
+       _dedupeByEventId = dedupeByEventId;
 
   final EventBus _localEventBus;
   final DistributedEventTransport _transport;
@@ -213,6 +213,10 @@ class DistributedEventBusBridge {
   }
 
   void _handleError(Object error, StackTrace stackTrace) {
-    _logger.severe('Distributed event transport stream error', error, stackTrace);
+    _logger.severe(
+      'Distributed event transport stream error',
+      error,
+      stackTrace,
+    );
   }
 }
