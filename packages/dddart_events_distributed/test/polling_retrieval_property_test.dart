@@ -17,304 +17,271 @@ import 'package:test/test.dart';
 
 void main() {
   group('Property 4: Polling retrieves new events', () {
-    test(
-      'should retrieve all events since last timestamp',
-      () async {
-        final random = Random(42);
+    test('should retrieve all events since last timestamp', () async {
+      final random = Random(42);
 
-        for (var i = 0; i < 100; i++) {
-          // Create fresh instances for each iteration
-          final eventBus = EventBus();
-          final receivedEvents = <TestDomainEvent>[];
+      for (var i = 0; i < 100; i++) {
+        // Create fresh instances for each iteration
+        final eventBus = EventBus();
+        final receivedEvents = <TestDomainEvent>[];
 
-          // Subscribe to events on local bus
-          eventBus.on<TestDomainEvent>().listen(receivedEvents.add);
+        // Subscribe to events on local bus
+        eventBus.on<TestDomainEvent>().listen(receivedEvents.add);
 
-          // Generate random events with timestamps
-          final eventCount = 1 + random.nextInt(10); // 1-10 events
-          final serverEvents = List.generate(
-            eventCount,
-            (_) => _generateRandomTestEvent(random),
-          );
+        // Generate random events with timestamps
+        final eventCount = 1 + random.nextInt(10); // 1-10 events
+        final serverEvents = List.generate(
+          eventCount,
+          (_) => _generateRandomTestEvent(random),
+        );
 
-          // Sort by timestamp to simulate server behavior
-          serverEvents.sort((a, b) => a.occurredAt.compareTo(b.occurredAt));
+        // Sort by timestamp to simulate server behavior
+        serverEvents.sort((a, b) => a.occurredAt.compareTo(b.occurredAt));
 
-          // Create mock HTTP client that returns these events
-          final mockClient = MockClient((request) async {
-            if (request.url.path.endsWith('/events') &&
-                request.method == 'GET') {
-              // Parse the 'since' parameter
-              final since = request.url.queryParameters['since'];
-              expect(since, isNotNull, reason: 'since parameter is required');
+        // Create mock HTTP client that returns these events
+        final mockClient = MockClient((request) async {
+          if (request.url.path.endsWith('/events') && request.method == 'GET') {
+            // Parse the 'since' parameter
+            final since = request.url.queryParameters['since'];
+            expect(since, isNotNull, reason: 'since parameter is required');
 
-              final sinceTimestamp = DateTime.parse(since!);
+            final sinceTimestamp = DateTime.parse(since!);
 
-              // Filter events that are after the since timestamp
-              final filteredEvents = serverEvents
-                  .where((e) => e.occurredAt.isAfter(sinceTimestamp))
-                  .map(_eventToStoredEventJson)
-                  .toList();
+            // Filter events that are after the since timestamp
+            final filteredEvents = serverEvents
+                .where((e) => e.occurredAt.isAfter(sinceTimestamp))
+                .map(_eventToStoredEventJson)
+                .toList();
 
-              return http.Response(
-                jsonEncode(filteredEvents),
-                200,
-                headers: {'content-type': 'application/json'},
-              );
-            }
-            return http.Response('Not Found', 404);
-          });
-
-          // Create client with initial timestamp before all events
-          final initialTimestamp = serverEvents.first.occurredAt
-              .subtract(const Duration(seconds: 1));
-
-          final client = EventBusClient(
-            localEventBus: eventBus,
-            serverUrl: 'http://test-server',
-            eventRegistry: {
-              'TestDomainEvent': TestDomainEvent.fromJson,
-            },
-            pollingInterval: const Duration(milliseconds: 50),
-            initialTimestamp: initialTimestamp,
-            httpClient: mockClient,
-          );
-
-          // Wait for polling to occur
-          await Future<void>.delayed(const Duration(milliseconds: 150));
-
-          // Verify all events were received
-          expect(
-            receivedEvents.length,
-            equals(eventCount),
-            reason: 'Iteration $i: all $eventCount events should be received',
-          );
-
-          // Verify events match
-          for (var j = 0; j < eventCount; j++) {
-            final serverEvent = serverEvents[j];
-            final receivedEvent = receivedEvents.firstWhere(
-              (e) => e.eventId == serverEvent.eventId,
-            );
-
-            expect(
-              receivedEvent.aggregateId,
-              equals(serverEvent.aggregateId),
-              reason: 'Iteration $i, Event $j: aggregateId should match',
-            );
-            expect(
-              receivedEvent.data,
-              equals(serverEvent.data),
-              reason: 'Iteration $i, Event $j: data should match',
+            return http.Response(
+              jsonEncode(filteredEvents),
+              200,
+              headers: {'content-type': 'application/json'},
             );
           }
+          return http.Response('Not Found', 404);
+        });
 
-          // Clean up
-          await client.close();
-        }
-      },
-    );
+        // Create client with initial timestamp before all events
+        final initialTimestamp = serverEvents.first.occurredAt.subtract(
+          const Duration(seconds: 1),
+        );
 
-    test(
-      'should only retrieve events after last timestamp',
-      () async {
-        final random = Random(43);
+        final client = EventBusClient(
+          localEventBus: eventBus,
+          serverUrl: 'http://test-server',
+          eventRegistry: {'TestDomainEvent': TestDomainEvent.fromJson},
+          pollingInterval: const Duration(milliseconds: 50),
+          initialTimestamp: initialTimestamp,
+          httpClient: mockClient,
+        );
 
-        for (var i = 0; i < 100; i++) {
-          final eventBus = EventBus();
-          final receivedEvents = <TestDomainEvent>[];
+        // Wait for polling to occur
+        await Future<void>.delayed(const Duration(milliseconds: 150));
 
-          eventBus.on<TestDomainEvent>().listen(receivedEvents.add);
+        // Verify all events were received
+        expect(
+          receivedEvents.length,
+          equals(eventCount),
+          reason: 'Iteration $i: all $eventCount events should be received',
+        );
 
-          // Generate events with specific timestamps
-          final baseTime = DateTime.now();
-          final oldEvents = List.generate(
-            5,
-            (j) => _generateTestEventWithTimestamp(
-              random,
-              baseTime.subtract(Duration(hours: j + 1)),
-            ),
-          );
-          final newEvents = List.generate(
-            5,
-            (j) => _generateTestEventWithTimestamp(
-              random,
-              baseTime.add(Duration(hours: j + 1)),
-            ),
-          );
-
-          final allEvents = [...oldEvents, ...newEvents];
-
-          // Mock client that returns all events
-          final mockClient = MockClient((request) async {
-            if (request.url.path.endsWith('/events') &&
-                request.method == 'GET') {
-              final since = request.url.queryParameters['since'];
-              final sinceTimestamp = DateTime.parse(since!);
-
-              // Filter events after since timestamp
-              final filteredEvents = allEvents
-                  .where((e) => e.occurredAt.isAfter(sinceTimestamp))
-                  .map(_eventToStoredEventJson)
-                  .toList();
-
-              return http.Response(
-                jsonEncode(filteredEvents),
-                200,
-                headers: {'content-type': 'application/json'},
-              );
-            }
-            return http.Response('Not Found', 404);
-          });
-
-          // Create client with initial timestamp at baseTime
-          // Should only receive newEvents
-          final client = EventBusClient(
-            localEventBus: eventBus,
-            serverUrl: 'http://test-server',
-            eventRegistry: {
-              'TestDomainEvent': TestDomainEvent.fromJson,
-            },
-            pollingInterval: const Duration(milliseconds: 50),
-            initialTimestamp: baseTime,
-            httpClient: mockClient,
+        // Verify events match
+        for (var j = 0; j < eventCount; j++) {
+          final serverEvent = serverEvents[j];
+          final receivedEvent = receivedEvents.firstWhere(
+            (e) => e.eventId == serverEvent.eventId,
           );
 
-          // Wait for polling
-          await Future<void>.delayed(const Duration(milliseconds: 150));
-
-          // Verify only new events were received
           expect(
-            receivedEvents.length,
-            equals(newEvents.length),
-            reason: 'Iteration $i: only new events should be received',
+            receivedEvent.aggregateId,
+            equals(serverEvent.aggregateId),
+            reason: 'Iteration $i, Event $j: aggregateId should match',
           );
+          expect(
+            receivedEvent.data,
+            equals(serverEvent.data),
+            reason: 'Iteration $i, Event $j: data should match',
+          );
+        }
 
-          // Verify no old events were received
-          for (final oldEvent in oldEvents) {
-            expect(
-              receivedEvents.any((e) => e.eventId == oldEvent.eventId),
-              isFalse,
-              reason: 'Iteration $i: old events should not be received',
+        // Clean up
+        await client.close();
+      }
+    });
+
+    test('should only retrieve events after last timestamp', () async {
+      final random = Random(43);
+
+      for (var i = 0; i < 100; i++) {
+        final eventBus = EventBus();
+        final receivedEvents = <TestDomainEvent>[];
+
+        eventBus.on<TestDomainEvent>().listen(receivedEvents.add);
+
+        // Generate events with specific timestamps
+        final baseTime = DateTime.now();
+        final oldEvents = List.generate(
+          5,
+          (j) => _generateTestEventWithTimestamp(
+            random,
+            baseTime.subtract(Duration(hours: j + 1)),
+          ),
+        );
+        final newEvents = List.generate(
+          5,
+          (j) => _generateTestEventWithTimestamp(
+            random,
+            baseTime.add(Duration(hours: j + 1)),
+          ),
+        );
+
+        final allEvents = [...oldEvents, ...newEvents];
+
+        // Mock client that returns all events
+        final mockClient = MockClient((request) async {
+          if (request.url.path.endsWith('/events') && request.method == 'GET') {
+            final since = request.url.queryParameters['since'];
+            final sinceTimestamp = DateTime.parse(since!);
+
+            // Filter events after since timestamp
+            final filteredEvents = allEvents
+                .where((e) => e.occurredAt.isAfter(sinceTimestamp))
+                .map(_eventToStoredEventJson)
+                .toList();
+
+            return http.Response(
+              jsonEncode(filteredEvents),
+              200,
+              headers: {'content-type': 'application/json'},
             );
           }
+          return http.Response('Not Found', 404);
+        });
 
-          // Verify all new events were received
-          for (final newEvent in newEvents) {
-            expect(
-              receivedEvents.any((e) => e.eventId == newEvent.eventId),
-              isTrue,
-              reason: 'Iteration $i: new events should be received',
+        // Create client with initial timestamp at baseTime
+        // Should only receive newEvents
+        final client = EventBusClient(
+          localEventBus: eventBus,
+          serverUrl: 'http://test-server',
+          eventRegistry: {'TestDomainEvent': TestDomainEvent.fromJson},
+          pollingInterval: const Duration(milliseconds: 50),
+          initialTimestamp: baseTime,
+          httpClient: mockClient,
+        );
+
+        // Wait for polling
+        await Future<void>.delayed(const Duration(milliseconds: 150));
+
+        // Verify only new events were received
+        expect(
+          receivedEvents.length,
+          equals(newEvents.length),
+          reason: 'Iteration $i: only new events should be received',
+        );
+
+        // Verify no old events were received
+        for (final oldEvent in oldEvents) {
+          expect(
+            receivedEvents.any((e) => e.eventId == oldEvent.eventId),
+            isFalse,
+            reason: 'Iteration $i: old events should not be received',
+          );
+        }
+
+        // Verify all new events were received
+        for (final newEvent in newEvents) {
+          expect(
+            receivedEvents.any((e) => e.eventId == newEvent.eventId),
+            isTrue,
+            reason: 'Iteration $i: new events should be received',
+          );
+        }
+
+        // Clean up
+        await client.close();
+      }
+    });
+
+    test('should handle empty responses when no new events', () async {
+      for (var i = 0; i < 50; i++) {
+        final eventBus = EventBus();
+        final receivedEvents = <TestDomainEvent>[];
+
+        eventBus.on<TestDomainEvent>().listen(receivedEvents.add);
+
+        // Mock client that returns empty array
+        final mockClient = MockClient((request) async {
+          if (request.url.path.endsWith('/events') && request.method == 'GET') {
+            return http.Response(
+              jsonEncode([]),
+              200,
+              headers: {'content-type': 'application/json'},
             );
           }
+          return http.Response('Not Found', 404);
+        });
 
-          // Clean up
-          await client.close();
-        }
-      },
-    );
+        final client = EventBusClient(
+          localEventBus: eventBus,
+          serverUrl: 'http://test-server',
+          eventRegistry: {'TestDomainEvent': TestDomainEvent.fromJson},
+          pollingInterval: const Duration(milliseconds: 50),
+          httpClient: mockClient,
+        );
 
-    test(
-      'should handle empty responses when no new events',
-      () async {
-        for (var i = 0; i < 50; i++) {
-          final eventBus = EventBus();
-          final receivedEvents = <TestDomainEvent>[];
+        // Wait for multiple polls
+        await Future<void>.delayed(const Duration(milliseconds: 150));
 
-          eventBus.on<TestDomainEvent>().listen(receivedEvents.add);
+        // Verify no events were received
+        expect(
+          receivedEvents.length,
+          equals(0),
+          reason: 'Iteration $i: no events should be received',
+        );
 
-          // Mock client that returns empty array
-          final mockClient = MockClient((request) async {
-            if (request.url.path.endsWith('/events') &&
-                request.method == 'GET') {
-              return http.Response(
-                jsonEncode([]),
-                200,
-                headers: {'content-type': 'application/json'},
-              );
-            }
-            return http.Response('Not Found', 404);
-          });
+        // Clean up
+        await client.close();
+      }
+    });
 
-          final client = EventBusClient(
-            localEventBus: eventBus,
-            serverUrl: 'http://test-server',
-            eventRegistry: {
-              'TestDomainEvent': TestDomainEvent.fromJson,
-            },
-            pollingInterval: const Duration(milliseconds: 50),
-            httpClient: mockClient,
-          );
+    test('should update last timestamp after receiving events', () async {
+      final random = Random(45);
 
-          // Wait for multiple polls
-          await Future<void>.delayed(const Duration(milliseconds: 150));
+      for (var i = 0; i < 50; i++) {
+        final eventBus = EventBus();
+        final receivedEvents = <TestDomainEvent>[];
 
-          // Verify no events were received
-          expect(
-            receivedEvents.length,
-            equals(0),
-            reason: 'Iteration $i: no events should be received',
-          );
+        eventBus.on<TestDomainEvent>().listen(receivedEvents.add);
 
-          // Clean up
-          await client.close();
-        }
-      },
-    );
+        // Generate events with increasing timestamps
+        final baseTime = DateTime.now();
+        final firstBatch = List.generate(
+          3,
+          (j) => _generateTestEventWithTimestamp(
+            random,
+            baseTime.add(Duration(seconds: j + 1)),
+          ),
+        );
+        final secondBatch = List.generate(
+          3,
+          (j) => _generateTestEventWithTimestamp(
+            random,
+            baseTime.add(Duration(seconds: j + 10)),
+          ),
+        );
 
-    test(
-      'should update last timestamp after receiving events',
-      () async {
-        final random = Random(45);
+        var pollCount = 0;
+        final mockClient = MockClient((request) async {
+          if (request.url.path.endsWith('/events') && request.method == 'GET') {
+            final since = request.url.queryParameters['since'];
+            final sinceTimestamp = DateTime.parse(since!);
 
-        for (var i = 0; i < 50; i++) {
-          final eventBus = EventBus();
-          final receivedEvents = <TestDomainEvent>[];
+            pollCount++;
 
-          eventBus.on<TestDomainEvent>().listen(receivedEvents.add);
-
-          // Generate events with increasing timestamps
-          final baseTime = DateTime.now();
-          final firstBatch = List.generate(
-            3,
-            (j) => _generateTestEventWithTimestamp(
-              random,
-              baseTime.add(Duration(seconds: j + 1)),
-            ),
-          );
-          final secondBatch = List.generate(
-            3,
-            (j) => _generateTestEventWithTimestamp(
-              random,
-              baseTime.add(Duration(seconds: j + 10)),
-            ),
-          );
-
-          var pollCount = 0;
-          final mockClient = MockClient((request) async {
-            if (request.url.path.endsWith('/events') &&
-                request.method == 'GET') {
-              final since = request.url.queryParameters['since'];
-              final sinceTimestamp = DateTime.parse(since!);
-
-              pollCount++;
-
-              // First poll: return first batch
-              if (pollCount == 1) {
-                final events = firstBatch
-                    .where((e) => e.occurredAt.isAfter(sinceTimestamp))
-                    .map(_eventToStoredEventJson)
-                    .toList();
-                return http.Response(
-                  jsonEncode(events),
-                  200,
-                  headers: {'content-type': 'application/json'},
-                );
-              }
-
-              // Second poll: should only return second batch
-              // (first batch should be filtered by updated timestamp)
-              final events = secondBatch
+            // First poll: return first batch
+            if (pollCount == 1) {
+              final events = firstBatch
                   .where((e) => e.occurredAt.isAfter(sinceTimestamp))
                   .map(_eventToStoredEventJson)
                   .toList();
@@ -324,33 +291,180 @@ void main() {
                 headers: {'content-type': 'application/json'},
               );
             }
-            return http.Response('Not Found', 404);
-          });
 
-          final client = EventBusClient(
-            localEventBus: eventBus,
-            serverUrl: 'http://test-server',
-            eventRegistry: {
-              'TestDomainEvent': TestDomainEvent.fromJson,
-            },
-            pollingInterval: const Duration(milliseconds: 50),
-            initialTimestamp: baseTime,
-            httpClient: mockClient,
-          );
+            // Second poll: should only return second batch
+            // (first batch should be filtered by updated timestamp)
+            final events = secondBatch
+                .where((e) => e.occurredAt.isAfter(sinceTimestamp))
+                .map(_eventToStoredEventJson)
+                .toList();
+            return http.Response(
+              jsonEncode(events),
+              200,
+              headers: {'content-type': 'application/json'},
+            );
+          }
+          return http.Response('Not Found', 404);
+        });
 
-          // Wait for multiple polls
-          await Future<void>.delayed(const Duration(milliseconds: 200));
+        final client = EventBusClient(
+          localEventBus: eventBus,
+          serverUrl: 'http://test-server',
+          eventRegistry: {'TestDomainEvent': TestDomainEvent.fromJson},
+          pollingInterval: const Duration(milliseconds: 50),
+          initialTimestamp: baseTime,
+          httpClient: mockClient,
+        );
 
-          // Verify all events from both batches were received
-          expect(
-            receivedEvents.length,
-            equals(firstBatch.length + secondBatch.length),
-            reason: 'Iteration $i: all events should be received',
-          );
+        // Wait for multiple polls
+        await Future<void>.delayed(const Duration(milliseconds: 200));
 
-          // Clean up
-          await client.close();
-        }
+        // Verify all events from both batches were received
+        expect(
+          receivedEvents.length,
+          equals(firstBatch.length + secondBatch.length),
+          reason: 'Iteration $i: all events should be received',
+        );
+
+        // Clean up
+        await client.close();
+      }
+    });
+
+    test(
+      'should not skip same-timestamp events after truncated inclusive poll',
+      () async {
+        final eventBus = EventBus();
+        final receivedEvents = <TestDomainEvent>[];
+
+        eventBus.on<TestDomainEvent>().listen(receivedEvents.add);
+
+        final initialTimestamp = DateTime.utc(2026, 2);
+        final sharedTimestamp =
+            initialTimestamp.add(const Duration(seconds: 1));
+        final random = Random(46);
+        final firstEvent = _generateTestEventWithTimestamp(
+          random,
+          sharedTimestamp,
+        );
+        final secondEvent = _generateTestEventWithTimestamp(
+          random,
+          sharedTimestamp,
+        );
+        final allEvents = [firstEvent, secondEvent];
+
+        var pollCount = 0;
+        final requestedSince = <DateTime>[];
+        final mockClient = MockClient((request) async {
+          if (request.url.path.endsWith('/events') && request.method == 'GET') {
+            final since = request.url.queryParameters['since'];
+            final sinceTimestamp = DateTime.parse(since!);
+            requestedSince.add(sinceTimestamp);
+            pollCount++;
+
+            // Simulate a truncated first response: another event with the same
+            // createdAt exists but is only returned on the next inclusive poll.
+            final events = pollCount == 1
+                ? [firstEvent]
+                : allEvents
+                    .where((e) => !e.occurredAt.isBefore(sinceTimestamp))
+                    .toList();
+
+            return http.Response(
+              jsonEncode(events.map(_eventToStoredEventJson).toList()),
+              200,
+              headers: {'content-type': 'application/json'},
+            );
+          }
+          return http.Response('Not Found', 404);
+        });
+
+        final client = EventBusClient(
+          localEventBus: eventBus,
+          serverUrl: 'http://test-server',
+          eventRegistry: {'TestDomainEvent': TestDomainEvent.fromJson},
+          pollingInterval: const Duration(milliseconds: 50),
+          initialTimestamp: initialTimestamp,
+          httpClient: mockClient,
+        );
+
+        await Future<void>.delayed(const Duration(milliseconds: 180));
+
+        expect(requestedSince.length, greaterThanOrEqualTo(2));
+        expect(requestedSince[1], equals(sharedTimestamp));
+        expect(
+          receivedEvents.map((e) => e.eventId),
+          unorderedEquals([firstEvent.eventId, secondEvent.eventId]),
+        );
+
+        await client.close();
+      },
+    );
+
+    test(
+      'should dedupe duplicate boundary events from inclusive polling',
+      () async {
+        final eventBus = EventBus();
+        final receivedEvents = <TestDomainEvent>[];
+
+        eventBus.on<TestDomainEvent>().listen(receivedEvents.add);
+
+        final initialTimestamp = DateTime.utc(2026, 2);
+        final random = Random(47);
+        final firstEvent = _generateTestEventWithTimestamp(
+          random,
+          initialTimestamp.add(const Duration(seconds: 1)),
+        );
+        final boundaryEvent = _generateTestEventWithTimestamp(
+          random,
+          initialTimestamp.add(const Duration(seconds: 2)),
+        );
+        final allEvents = [firstEvent, boundaryEvent];
+        final requestedSince = <DateTime>[];
+
+        final mockClient = MockClient((request) async {
+          if (request.url.path.endsWith('/events') && request.method == 'GET') {
+            final since = request.url.queryParameters['since'];
+            final sinceTimestamp = DateTime.parse(since!);
+            requestedSince.add(sinceTimestamp);
+
+            final events = allEvents
+                .where((e) => !e.occurredAt.isBefore(sinceTimestamp))
+                .map(_eventToStoredEventJson)
+                .toList();
+
+            return http.Response(
+              jsonEncode(events),
+              200,
+              headers: {'content-type': 'application/json'},
+            );
+          }
+          return http.Response('Not Found', 404);
+        });
+
+        final client = EventBusClient(
+          localEventBus: eventBus,
+          serverUrl: 'http://test-server',
+          eventRegistry: {'TestDomainEvent': TestDomainEvent.fromJson},
+          pollingInterval: const Duration(milliseconds: 50),
+          initialTimestamp: initialTimestamp,
+          httpClient: mockClient,
+        );
+
+        await Future<void>.delayed(const Duration(milliseconds: 180));
+
+        expect(requestedSince.length, greaterThanOrEqualTo(2));
+        expect(requestedSince[1], equals(boundaryEvent.occurredAt));
+        expect(
+          receivedEvents.where((e) => e.eventId == boundaryEvent.eventId),
+          hasLength(1),
+        );
+        expect(
+          receivedEvents.map((e) => e.eventId),
+          unorderedEquals([firstEvent.eventId, boundaryEvent.eventId]),
+        );
+
+        await client.close();
       },
     );
   });
