@@ -30,6 +30,48 @@ durable catch-up/correctness path and dedupe by `eventId` when combining catch-u
 with realtime notifications. Transport adapters should not make entity IDs, UUIDv7,
 ULID, or client clocks authoritative for event ordering.
 
+### Opt-in AWS AppSync Events smoke test
+
+The package includes an opt-in smoke test for validating a real AWS AppSync Events
+API with Cognito user-pool authorization. Normal local and CI test runs do not need
+AWS credentials; the smoke test skips itself with a clear message unless the required
+environment variables are present.
+
+Run it from `packages/dddart_events_distributed`:
+
+```bash
+dart test -t aws test/appsync_events_aws_smoke_test.dart
+```
+
+Required environment variables:
+
+- `DDDART_APPSYNC_AWS_SMOKE=1`: explicit opt-in so the smoke never runs just
+  because AWS variables happen to exist in a local or CI environment.
+- `DDDART_APPSYNC_REALTIME_URL`: AppSync Events realtime WebSocket URL, for example
+  `wss://...appsync-realtime-api.../event/realtime`.
+- `DDDART_APPSYNC_HTTP_ENDPOINT`: AppSync Events HTTP publish endpoint or domain. If
+  a bare domain is supplied, the smoke test posts to `https://<domain>/event`.
+- `DDDART_APPSYNC_JWT_A`: Cognito User Pool JWT for test user A. The token is never
+  printed by the test.
+- `DDDART_APPSYNC_USER_SUB_A`: Cognito `sub` for test user A. The smoke subscribes to
+  `/users/<sub>/events` and publishes a serialized `StoredEvent` to that channel.
+
+Optional environment variables:
+
+- `DDDART_APPSYNC_AUTH_HOST`: host value to encode in the AppSync realtime
+  authorization header. Defaults to the HTTP endpoint host.
+- `DDDART_APPSYNC_PUBLISH_JWT`: JWT used for HTTP publish. Defaults to
+  `DDDART_APPSYNC_JWT_A`.
+- `DDDART_APPSYNC_PUBLISH_API_KEY`: API key used for HTTP publish. When set, this is
+  preferred over bearer-token publish auth.
+- `DDDART_APPSYNC_JWT_B` and `DDDART_APPSYNC_USER_SUB_B`: second test identity. When
+  both are set, the smoke asserts user A cannot subscribe to `/users/<subB>/events`.
+
+The smoke verifies that the Flutter-compatible Dart transport connects with a Cognito
+JWT, subscribes to the user's inbox channel, receives and deserializes a fake
+`StoredEvent`, and invokes the catch-up callback so applications continue to use the
+durable `/events?since=` path after realtime activity or reconnects.
+
 ## Installation
 
 Add this to your package's `pubspec.yaml` file:
