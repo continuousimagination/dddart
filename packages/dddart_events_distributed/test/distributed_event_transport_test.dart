@@ -94,6 +94,21 @@ DomainEvent? _decodeRealtimeTestEvent(StoredEvent storedEvent) {
   return _RealtimeTestEvent.fromJson(decoded);
 }
 
+Map<String, String> _decodeStringContext(Object? value) {
+  if (value == null) {
+    return const {};
+  }
+  if (value is Map<Object?, Object?>) {
+    return value.map((key, value) {
+      if (key is! String || value is! String) {
+        throw FormatException('Expected string context entry, got $key=$value');
+      }
+      return MapEntry(key, value);
+    });
+  }
+  throw FormatException('Expected context to be an object, got $value');
+}
+
 class _InMemoryDistributedEventTransport implements DistributedEventTransport {
   final StreamController<StoredEvent> _events =
       StreamController<StoredEvent>.broadcast();
@@ -130,13 +145,11 @@ class _RealtimeTestEvent extends DomainEvent {
 
   factory _RealtimeTestEvent.fromJson(Map<String, Object?> json) {
     return _RealtimeTestEvent(
-      aggregateId: UuidValue.fromString(json['aggregateId'] as String),
-      eventId: UuidValue.fromString(json['eventId'] as String),
-      occurredAt: DateTime.parse(json['occurredAt'] as String),
-      message: json['message'] as String,
-      context: Map<String, String>.from(
-        json['context'] as Map<String, Object?>? ?? const <String, Object?>{},
-      ),
+      aggregateId: UuidValue.fromString(json['aggregateId']! as String),
+      eventId: UuidValue.fromString(json['eventId']! as String),
+      occurredAt: DateTime.parse(json['occurredAt']! as String),
+      message: json['message']! as String,
+      context: _decodeStringContext(json['context']),
     );
   }
 

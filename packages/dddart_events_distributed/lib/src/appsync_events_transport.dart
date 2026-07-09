@@ -153,8 +153,9 @@ class AppSyncEventsTransport implements DistributedEventTransport {
   /// Subscribes to remote stored-event notifications.
   ///
   /// The AppSync channel is configured on the transport. [options.topic] may be
-  /// omitted or equal to [channel]; other topics require a separate transport
-  /// instance so the fake/local protocol path stays explicit for this spike.
+  /// omitted or equal to the configured channel; other topics require a
+  /// separate transport instance so the fake/local protocol path stays explicit
+  /// for this spike.
   @override
   Stream<StoredEvent> subscribe({
     EventSubscriptionOptions options = const EventSubscriptionOptions(),
@@ -359,7 +360,7 @@ class AppSyncEventsTransport implements DistributedEventTransport {
   }
 
   _JsonObject _decodeStoredEventPayload(Object? payload) {
-    Object? decoded = payload;
+    var decoded = payload;
 
     if (decoded is String) {
       decoded = jsonDecode(decoded);

@@ -94,7 +94,8 @@ void main() {
 
       await bridge.close();
       await transport.close();
-    }, timeout: const Timeout(Duration(seconds: 60)));
+    }, timeout: const Timeout(Duration(seconds: 60)),
+    );
 
     test('denies cross-user subscription when a second user is configured', () async {
       if (!config.hasSecondUser) {
@@ -150,7 +151,8 @@ void main() {
             '${config.secondUserChannel}; AppSync authorization should deny '
             'cross-user inbox subscriptions.',
       );
-    }, timeout: const Timeout(Duration(seconds: 45)));
+    }, timeout: const Timeout(Duration(seconds: 45)),
+    );
   });
 }
 
@@ -295,11 +297,11 @@ class _AwsSmokeEvent extends DomainEvent {
 
   factory _AwsSmokeEvent.fromJson(Map<String, Object?> json) {
     return _AwsSmokeEvent(
-      aggregateId: UuidValue.fromString(json['aggregateId'] as String),
-      eventId: UuidValue.fromString(json['eventId'] as String),
-      occurredAt: DateTime.parse(json['occurredAt'] as String),
+      aggregateId: UuidValue.fromString(json['aggregateId']! as String),
+      eventId: UuidValue.fromString(json['eventId']! as String),
+      occurredAt: DateTime.parse(json['occurredAt']! as String),
       context: _decodeContext(json['context']),
-      message: json['message'] as String,
+      message: json['message']! as String,
     );
   }
 

@@ -248,11 +248,10 @@ class AppSyncTestEvent extends DomainEvent {
 
   factory AppSyncTestEvent.fromJson(Map<String, Object?> json) {
     return AppSyncTestEvent(
-      aggregateId: UuidValue.fromString(json['aggregateId'] as String),
-      eventId: UuidValue.fromString(json['eventId'] as String),
-      occurredAt: DateTime.parse(json['occurredAt'] as String),
-      context: const {},
-      message: json['message'] as String,
+      aggregateId: UuidValue.fromString(json['aggregateId']! as String),
+      eventId: UuidValue.fromString(json['eventId']! as String),
+      occurredAt: DateTime.parse(json['occurredAt']! as String),
+      message: json['message']! as String,
     );
   }
 

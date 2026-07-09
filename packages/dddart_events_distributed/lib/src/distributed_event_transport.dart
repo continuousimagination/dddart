@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:dddart/dddart.dart';
 import 'package:dddart_events_distributed/src/stored_event.dart';
-import 'package:logging/logging.dart';
 
 /// Converts a local domain event into the durable stored-event envelope used by
 /// distributed notifications.
@@ -22,6 +21,7 @@ typedef StoredEventDecoder = DomainEvent? Function(StoredEvent storedEvent);
 /// session identifiers to provider-specific recipient/channel IDs. The resolver
 /// returns neutral string identifiers so DDDart does not depend on AppSync, IoT,
 /// API Gateway, Flutter, AWS, or any other transport/runtime.
+// ignore: one_member_abstracts
 abstract interface class EventVisibilityResolver {
   /// Returns recipient identifiers that should be notified for [storedEvent].
   Future<List<String>> recipientsFor(StoredEvent storedEvent);
