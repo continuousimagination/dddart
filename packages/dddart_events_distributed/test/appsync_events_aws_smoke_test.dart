@@ -11,7 +11,6 @@ import 'package:http/http.dart' as http;
 import 'package:test/test.dart';
 
 const _requiredEnvironmentVariables = <String>[
-  'DDDART_APPSYNC_AWS_SMOKE=1',
   'DDDART_APPSYNC_REALTIME_URL',
   'DDDART_APPSYNC_HTTP_ENDPOINT',
   'DDDART_APPSYNC_JWT_A',
@@ -207,10 +206,7 @@ class _AwsSmokeConfig {
   });
 
   static _AwsSmokeConfig? fromEnvironment(Map<String, String> environment) {
-    if ((environment['DDDART_APPSYNC_AWS_SMOKE'] ?? '').trim() != '1') {
-      return null;
-    }
-    for (final name in _requiredEnvironmentVariables.skip(1)) {
+    for (final name in _requiredEnvironmentVariables) {
       if ((environment[name] ?? '').trim().isEmpty) {
         return null;
       }

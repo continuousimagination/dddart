@@ -33,44 +33,113 @@ ULID, or client clocks authoritative for event ordering.
 ### Opt-in AWS AppSync Events smoke test
 
 The package includes an opt-in smoke test for validating a real AWS AppSync Events
-API with Cognito user-pool authorization. Normal local and CI test runs do not need
-AWS credentials; the smoke test skips itself with a clear message unless the required
-environment variables are present.
-
-Run it from `packages/dddart_events_distributed`:
+API with Cognito user-pool authorization. Normal local and CI runs execute
+`dart test`, and `dart_test.yaml` excludes tests tagged `aws` from that default
+run. Use the `aws_smoke` preset to run the live AWS test intentionally:
 
 ```bash
-dart test -t aws test/appsync_events_aws_smoke_test.dart
+cd packages/dddart_events_distributed
+dart test -P aws_smoke test/appsync_events_aws_smoke_test.dart
 ```
 
-Required environment variables:
+If the preset is selected but required environment variables are missing, the
+smoke test reports a skipped test with the missing configuration names.
 
-- `DDDART_APPSYNC_AWS_SMOKE=1`: explicit opt-in so the smoke never runs just
-  because AWS variables happen to exist in a local or CI environment.
-- `DDDART_APPSYNC_REALTIME_URL`: AppSync Events realtime WebSocket URL, for example
-  `wss://...appsync-realtime-api.../event/realtime`.
-- `DDDART_APPSYNC_HTTP_ENDPOINT`: AppSync Events HTTP publish endpoint or domain. If
-  a bare domain is supplied, the smoke test posts to `https://<domain>/event`.
-- `DDDART_APPSYNC_JWT_A`: Cognito User Pool JWT for test user A. The token is never
-  printed by the test.
-- `DDDART_APPSYNC_USER_SUB_A`: Cognito `sub` for test user A. The smoke subscribes to
-  `/users/<sub>/events` and publishes a serialized `StoredEvent` to that channel.
+The smoke verifies that the Flutter-compatible Dart transport connects with a
+Cognito JWT, subscribes to the user's inbox channel, receives and deserializes a
+fake `StoredEvent`, and invokes the catch-up callback so applications continue to
+use the durable `/events?since=` path after realtime activity or reconnects.
 
-Optional environment variables:
+#### AWS resources required
+
+You need an AppSync Events API that allows Cognito User Pool users to subscribe
+and publish on per-user inbox channels of this form:
+
+```text
+/users/<cognito-sub>/events
+```
+
+The test expects authorization rules that allow a user to subscribe to their own
+channel and, when the optional second user is configured, deny user A from
+subscribing to user B's channel.
+
+#### Required environment variables
+
+- `DDDART_APPSYNC_REALTIME_URL`: AppSync Events realtime WebSocket URL, for
+  example `wss://...appsync-realtime-api.../event/realtime`.
+- `DDDART_APPSYNC_HTTP_ENDPOINT`: AppSync Events HTTP publish endpoint or domain.
+  If a bare domain is supplied, the smoke test posts to `https://<domain>/event`.
+- `DDDART_APPSYNC_JWT_A`: Cognito User Pool ID token or access token for test
+  user A. The token is never printed by the test.
+- `DDDART_APPSYNC_USER_SUB_A`: Cognito `sub` claim for test user A. The smoke
+  subscribes to `/users/<sub>/events` and publishes a serialized `StoredEvent`
+  to that channel.
+
+#### Optional environment variables
 
 - `DDDART_APPSYNC_AUTH_HOST`: host value to encode in the AppSync realtime
   authorization header. Defaults to the HTTP endpoint host.
 - `DDDART_APPSYNC_PUBLISH_JWT`: JWT used for HTTP publish. Defaults to
   `DDDART_APPSYNC_JWT_A`.
-- `DDDART_APPSYNC_PUBLISH_API_KEY`: API key used for HTTP publish. When set, this is
-  preferred over bearer-token publish auth.
-- `DDDART_APPSYNC_JWT_B` and `DDDART_APPSYNC_USER_SUB_B`: second test identity. When
-  both are set, the smoke asserts user A cannot subscribe to `/users/<subB>/events`.
+- `DDDART_APPSYNC_PUBLISH_API_KEY`: API key used for HTTP publish. When set, this
+  is preferred over bearer-token publish auth.
+- `DDDART_APPSYNC_JWT_B` and `DDDART_APPSYNC_USER_SUB_B`: second test identity.
+  When both are set, the smoke asserts user A cannot subscribe to
+  `/users/<subB>/events`.
 
-The smoke verifies that the Flutter-compatible Dart transport connects with a Cognito
-JWT, subscribes to the user's inbox channel, receives and deserializes a fake
-`StoredEvent`, and invokes the catch-up callback so applications continue to use the
-durable `/events?since=` path after realtime activity or reconnects.
+#### Getting Cognito JWTs
+
+Use a disposable test user; do not use a human's normal production account. The
+simplest repeatable CLI path is Cognito's `USER_PASSWORD_AUTH` flow:
+
+```bash
+export AWS_REGION=us-east-1
+export COGNITO_CLIENT_ID=exampleclientid
+export COGNITO_USERNAME_A=dddart-smoke-a@example.com
+export COGNITO_PASSWORD_A='replace-with-test-password'
+
+aws cognito-idp initiate-auth \
+  --region "$AWS_REGION" \
+  --client-id "$COGNITO_CLIENT_ID" \
+  --auth-flow USER_PASSWORD_AUTH \
+  --auth-parameters USERNAME="$COGNITO_USERNAME_A",PASSWORD="$COGNITO_PASSWORD_A" \
+  > /tmp/dddart-smoke-user-a.json
+
+export DDDART_APPSYNC_JWT_A=$(jq -r '.AuthenticationResult.IdToken' /tmp/dddart-smoke-user-a.json)
+```
+
+If your app client is configured to use access tokens for AppSync authorization,
+export `.AuthenticationResult.AccessToken` instead. If the app client does not
+allow `USER_PASSWORD_AUTH`, use the app's normal sign-in path. If the app client
+has a client secret, provide the Cognito `SECRET_HASH` parameter required by AWS.
+
+Get the Cognito `sub` claim from the JWT payload:
+
+```bash
+export DDDART_APPSYNC_USER_SUB_A=$(
+  python3 - <<'PY'
+import base64, json, os
+payload = os.environ['DDDART_APPSYNC_JWT_A'].split('.')[1]
+payload += '=' * (-len(payload) % 4)
+print(json.loads(base64.urlsafe_b64decode(payload))['sub'])
+PY
+)
+```
+
+To validate cross-user denial, repeat the same sign-in and `sub` extraction for a
+second disposable Cognito user and export `DDDART_APPSYNC_JWT_B` plus
+`DDDART_APPSYNC_USER_SUB_B`.
+
+#### Full local run example
+
+```bash
+export DDDART_APPSYNC_REALTIME_URL='wss://example.appsync-realtime-api.us-east-1.amazonaws.com/event/realtime'
+export DDDART_APPSYNC_HTTP_ENDPOINT='https://example.appsync-api.us-east-1.amazonaws.com/event'
+# Export DDDART_APPSYNC_JWT_A and DDDART_APPSYNC_USER_SUB_A as shown above.
+
+cd packages/dddart_events_distributed
+dart test -P aws_smoke test/appsync_events_aws_smoke_test.dart
+```
 
 ## Installation
 
