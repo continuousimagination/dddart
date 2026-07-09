@@ -20,7 +20,7 @@ void main() {
       final encodedHeader = subprotocol.substring('header-'.length);
       final decodedHeader = jsonDecode(
         utf8.decode(base64Url.decode(_base64UrlPad(encodedHeader))),
-      ) as Map<String, dynamic>;
+      ) as Map<String, Object?>;
 
       expect(
         decodedHeader['host'],
@@ -193,7 +193,7 @@ DomainEvent? _decodeAppSyncTestEvent(StoredEvent storedEvent) {
   }
 
   return AppSyncTestEvent.fromJson(
-    jsonDecode(storedEvent.eventJson) as Map<String, dynamic>,
+    jsonDecode(storedEvent.eventJson) as Map<String, Object?>,
   );
 }
 
@@ -207,15 +207,15 @@ Future<void> _flushMicrotasks() async {
 }
 
 class _FakeAppSyncWebSocketConnection implements AppSyncWebSocketConnection {
-  final _incoming = StreamController<dynamic>.broadcast();
+  final _incoming = StreamController<String>.broadcast();
   final sent = <String>[];
   bool closed = false;
 
   @override
-  Stream<dynamic> get stream => _incoming.stream;
+  Stream<String> get stream => _incoming.stream;
 
-  List<Map<String, dynamic>> get sentJson => sent
-      .map((message) => jsonDecode(message) as Map<String, dynamic>)
+  List<Map<String, Object?>> get sentJson => sent
+      .map((message) => jsonDecode(message) as Map<String, Object?>)
       .toList();
 
   @override
@@ -223,7 +223,7 @@ class _FakeAppSyncWebSocketConnection implements AppSyncWebSocketConnection {
     sent.add(message);
   }
 
-  void receive(Map<String, dynamic> message) {
+  void receive(Map<String, Object?> message) {
     _incoming.add(jsonEncode(message));
   }
 
@@ -246,19 +246,19 @@ class AppSyncTestEvent extends DomainEvent {
     super.context = const {},
   });
 
-  factory AppSyncTestEvent.fromJson(Map<String, dynamic> json) {
+  factory AppSyncTestEvent.fromJson(Map<String, Object?> json) {
     return AppSyncTestEvent(
       aggregateId: UuidValue.fromString(json['aggregateId'] as String),
       eventId: UuidValue.fromString(json['eventId'] as String),
       occurredAt: DateTime.parse(json['occurredAt'] as String),
-      context: json['context'] as Map<String, dynamic>? ?? const {},
+      context: const {},
       message: json['message'] as String,
     );
   }
 
   final String message;
 
-  Map<String, dynamic> toJson() {
+  Map<String, Object?> toJson() {
     return {
       'eventId': eventId.toString(),
       'occurredAt': occurredAt.toIso8601String(),

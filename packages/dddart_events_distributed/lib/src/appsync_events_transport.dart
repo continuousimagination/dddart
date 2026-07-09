@@ -9,6 +9,8 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 /// AWS AppSync Events WebSocket subprotocol name.
 const awsAppSyncEventsWebSocketProtocol = 'aws-appsync-event-ws';
 
+typedef _JsonObject = Map<String, Object?>;
+
 /// Function that opens an AppSync-compatible WebSocket connection.
 typedef AppSyncWebSocketConnector = Future<AppSyncWebSocketConnection> Function(
   Uri uri,
@@ -23,8 +25,12 @@ typedef AppSyncCatchUpCallback = FutureOr<void> Function();
 
 /// Minimal WebSocket abstraction for fake protocol tests.
 abstract interface class AppSyncWebSocketConnection {
-  /// Incoming WebSocket messages.
-  Stream<dynamic> get stream;
+  /// Incoming WebSocket text messages.
+  ///
+  /// AppSync Events messages are JSON text frames. Concrete WebSocket adapters
+  /// must normalize provider-specific frame types before they cross this
+  /// interface so protocol handling stays statically typed.
+  Stream<String> get stream;
 
   /// Sends a raw WebSocket text message.
   void send(String message);
@@ -136,7 +142,7 @@ class AppSyncEventsTransport implements DistributedEventTransport {
       StreamController<StoredEvent>.broadcast();
 
   AppSyncWebSocketConnection? _connection;
-  StreamSubscription<dynamic>? _subscription;
+  StreamSubscription<String>? _subscription;
   Completer<void>? _connectionAck;
   Completer<void>? _subscribeAck;
   Timer? _keepAliveTimer;
@@ -269,10 +275,10 @@ class AppSyncEventsTransport implements DistributedEventTransport {
     _connection = null;
   }
 
-  void _handleRawMessage(dynamic rawMessage) {
+  void _handleRawMessage(String rawMessage) {
     try {
       final message = _decodeMessage(rawMessage);
-      final type = message['type'] as String?;
+      final type = message['type'];
 
       switch (type) {
         case 'connection_ack':
@@ -310,26 +316,12 @@ class AppSyncEventsTransport implements DistributedEventTransport {
     }
   }
 
-  Map<String, dynamic> _decodeMessage(dynamic rawMessage) {
-    final Object decoded;
-    if (rawMessage is String) {
-      decoded = jsonDecode(rawMessage) as Object;
-    } else if (rawMessage is List<int>) {
-      decoded = jsonDecode(utf8.decode(rawMessage)) as Object;
-    } else {
-      decoded = rawMessage as Object;
-    }
-
-    if (decoded is Map<String, dynamic>) {
-      return decoded;
-    }
-    if (decoded is Map) {
-      return Map<String, dynamic>.from(decoded);
-    }
-    throw FormatException('Expected AppSync message object, got $decoded');
+  _JsonObject _decodeMessage(String rawMessage) {
+    final decoded = jsonDecode(rawMessage);
+    return _decodeJsonObject(decoded, 'AppSync message');
   }
 
-  void _handleConnectionAck(Map<String, dynamic> message) {
+  void _handleConnectionAck(_JsonObject message) {
     final timeoutMs = message['connectionTimeoutMs'];
     if (timeoutMs is int && timeoutMs > 0) {
       _connectionTimeout = Duration(milliseconds: timeoutMs);
@@ -348,13 +340,13 @@ class AppSyncEventsTransport implements DistributedEventTransport {
     unawaited(_notifyCatchUpNeeded());
   }
 
-  Future<void> _handleDataMessage(Map<String, dynamic> message) async {
+  Future<void> _handleDataMessage(_JsonObject message) async {
     if (message['id'] != null && message['id'] != subscriptionId) {
       return;
     }
 
     final events = message['event'];
-    if (events is! List) {
+    if (events is! Iterable<Object?>) {
       throw const FormatException('AppSync data message missing event list');
     }
 
@@ -366,21 +358,31 @@ class AppSyncEventsTransport implements DistributedEventTransport {
     await _notifyCatchUpNeeded();
   }
 
-  Map<String, dynamic> _decodeStoredEventPayload(Object? payload) {
+  _JsonObject _decodeStoredEventPayload(Object? payload) {
     Object? decoded = payload;
 
     if (decoded is String) {
       decoded = jsonDecode(decoded);
     }
 
-    if (decoded is Map<String, dynamic>) {
+    return _decodeJsonObject(decoded, 'serialized StoredEvent');
+  }
+
+  _JsonObject _decodeJsonObject(Object? decoded, String description) {
+    if (decoded is Map<String, Object?>) {
       return decoded;
     }
-    if (decoded is Map) {
-      return Map<String, dynamic>.from(decoded);
+    if (decoded is Map<Object?, Object?>) {
+      return decoded.map((key, value) {
+        if (key is! String) {
+          throw FormatException(
+            'Expected $description object with string keys, got $decoded',
+          );
+        }
+        return MapEntry(key, value);
+      });
     }
-
-    throw FormatException('Expected serialized StoredEvent, got $payload');
+    throw FormatException('Expected $description object, got $decoded');
   }
 
   void _resetKeepAliveTimer() {
@@ -392,7 +394,7 @@ class AppSyncEventsTransport implements DistributedEventTransport {
     });
   }
 
-  void _sendJson(Map<String, dynamic> message) {
+  void _sendJson(_JsonObject message) {
     final connection = _connection;
     if (connection == null) {
       throw StateError('AppSyncEventsTransport is not connected');
@@ -426,7 +428,7 @@ class _WebSocketChannelConnection implements AppSyncWebSocketConnection {
   final WebSocketChannel _channel;
 
   @override
-  Stream<dynamic> get stream => _channel.stream;
+  Stream<String> get stream => _channel.stream.map(_decodeWebSocketMessage);
 
   @override
   void send(String message) {
@@ -436,6 +438,16 @@ class _WebSocketChannelConnection implements AppSyncWebSocketConnection {
   @override
   Future<void> close() async {
     await _channel.sink.close();
+  }
+
+  static String _decodeWebSocketMessage(Object? message) {
+    if (message is String) {
+      return message;
+    }
+    if (message is List<int>) {
+      return utf8.decode(message);
+    }
+    throw FormatException('Expected AppSync WebSocket text frame, got $message');
   }
 }
 
