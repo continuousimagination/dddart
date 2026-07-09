@@ -7,11 +7,28 @@ Distributed event system for DDDart that extends the local EventBus to enable do
 - **EventBusServer**: Server-side component with automatic event persistence and HTTP endpoints
 - **EventBusClient**: Client-side component with HTTP polling and optional event forwarding
 - **HTTP Polling**: Reliable event delivery with automatic catch-up capabilities
+- **Neutral realtime transport boundary**: Optional best-effort `StoredEvent` notifications without coupling DDDart to
+  AppSync, IoT, API Gateway, Flutter, AWS, or any specific runtime
 - **Repository Pattern**: Use any database implementation (MongoDB, MySQL, DynamoDB, Redis, etc.)
 - **Authorization Filtering**: Control which events each client can receive based on context
 - **Automatic Serialization**: Code generation for event serialization/deserialization
 - **Bidirectional Flow**: Events can flow from server to client and client to server
 - **Event Cleanup**: Automatic deletion of old events based on retention policies
+
+## Realtime notification boundary
+
+`DistributedEventTransport` is the minimal adapter interface for optional realtime notifications.
+It publishes and subscribes to `StoredEvent` payloads, and `DistributedEventBusBridge`
+deserializes those payloads through your `StoredEventDecoder` before publishing concrete
+`DomainEvent`s into the normal local `EventBus`. The realtime transport API stays typed
+as `StoredEvent`/`DomainEvent`; raw JSON map handling belongs inside the decoder/codec
+layer where applications can use their generated serializers and validation.
+
+Realtime transport implementations are best-effort wake-up paths only: messages can be
+missed, duplicated, delayed, or delivered out of order. Keep `/events?since=` as the
+durable catch-up/correctness path and dedupe by `eventId` when combining catch-up
+with realtime notifications. Transport adapters should not make entity IDs, UUIDv7,
+ULID, or client clocks authoritative for event ordering.
 
 ## Installation
 

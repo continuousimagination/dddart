@@ -4,6 +4,7 @@
 /// and subscribed across network boundaries using HTTP polling.
 library dddart_events_distributed;
 
+export 'src/distributed_event_transport.dart';
 export 'src/event_bus_client.dart';
 export 'src/event_bus_server.dart';
 export 'src/event_http_endpoints.dart';
