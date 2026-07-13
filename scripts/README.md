@@ -13,12 +13,28 @@ Runs all tests and checks across all packages in the workspace. This script mirr
 ./scripts/test-all.sh
 ```
 
+**Prerequisite:** a Docker-compatible runtime available as `docker`, or set `DOCKER_BIN` to a compatible CLI wrapper. On Amazon Linux EC2 hosts, the provisioning path is:
+
+```bash
+sudo dnf install -y docker
+sudo systemctl enable --now docker
+sudo usermod -aG docker "$USER"
+# start a new login shell/group session, then verify:
+docker version
+./scripts/test-all.sh
+```
+
 **What it does:**
+- Pulls the pinned Docker images listed in `scripts/test-images.env`
+- Starts MongoDB, DynamoDB Local, and MySQL containers
+- Runs the full workspace check inside the pinned Dart container
 - Resolves workspace dependencies
-- Runs code generation (where needed)
+- Runs code generation (including the `dddart_rest` dependency needed by `dddart_repository_rest`)
 - Analyzes code with `dart analyze --fatal-infos`
 - Checks code formatting
-- Runs the full test matrix inside Docker using the same service images as GitHub Actions
+- Runs all tests, including integration tests
+
+To update image versions, update `scripts/test-images.env` with digest-pinned image references. CI should invoke this script rather than duplicating service-image definitions so local and CI stay on the same container versions.
 
 ### `setup-hooks.sh`
 

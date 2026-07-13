@@ -109,7 +109,7 @@ cd packages/dddart_serialization && dart test
 cd packages/dddart_json && dart test
 ```
 
-For the Dockerized full-suite check that mirrors GitHub Actions, run `./scripts/test-all.sh`.
+For the Dockerized full-suite check, run `./scripts/test-all.sh`. The runner pulls digest-pinned images from `scripts/test-images.env` so local runs use fixed container versions instead of cached moving tags.
 
 ### Code Generation
 

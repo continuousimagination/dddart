@@ -4,9 +4,9 @@
 # Usage: ./scripts/test-all.sh
 #
 # Host mode:
-#   1. Starts MongoDB, DynamoDB Local, and MySQL containers using the same
-#      images/configuration as GitHub Actions.
-#   2. Runs this script again inside a Dart 3.9.4 container on the host
+#   1. Pulls the pinned Docker images listed in scripts/test-images.env.
+#   2. Starts MongoDB, DynamoDB Local, and MySQL containers.
+#   3. Runs this script again inside the pinned Dart container on the host
 #      network so localhost-based tests can reach the services.
 #
 # Container mode (TEST_ALL_IN_DOCKER=1):
@@ -17,11 +17,17 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+IMAGE_ENV_FILE="${TEST_ALL_IMAGE_ENV_FILE:-$REPO_ROOT/scripts/test-images.env}"
+if [ -r "$IMAGE_ENV_FILE" ]; then
+  # shellcheck source=/dev/null
+  . "$IMAGE_ENV_FILE"
+fi
+
 DOCKER_BIN="${DOCKER_BIN:-docker}"
-DART_IMAGE="${TEST_ALL_DART_IMAGE:-dart:3.9.4}"
-MONGO_IMAGE="${TEST_ALL_MONGODB_IMAGE:-mongo:latest}"
-DYNAMODB_IMAGE="${TEST_ALL_DYNAMODB_IMAGE:-amazon/dynamodb-local:latest}"
-MYSQL_IMAGE="${TEST_ALL_MYSQL_IMAGE:-mysql:8.0}"
+DART_IMAGE="${TEST_ALL_DART_IMAGE:?TEST_ALL_DART_IMAGE must be set in scripts/test-images.env}"
+MONGO_IMAGE="${TEST_ALL_MONGODB_IMAGE:?TEST_ALL_MONGODB_IMAGE must be set in scripts/test-images.env}"
+DYNAMODB_IMAGE="${TEST_ALL_DYNAMODB_IMAGE:?TEST_ALL_DYNAMODB_IMAGE must be set in scripts/test-images.env}"
+MYSQL_IMAGE="${TEST_ALL_MYSQL_IMAGE:?TEST_ALL_MYSQL_IMAGE must be set in scripts/test-images.env}"
 MONGO_CONTAINER="${TEST_ALL_MONGODB_CONTAINER:-dddart-test-mongodb}"
 DYNAMODB_CONTAINER="${TEST_ALL_DYNAMODB_CONTAINER:-dddart-test-dynamodb}"
 MYSQL_CONTAINER="${TEST_ALL_MYSQL_CONTAINER:-dddart-test-mysql}"
@@ -66,6 +72,33 @@ require_docker() {
     echo "  Set DOCKER_BIN to a compatible wrapper or install Docker first."
     exit 1
   fi
+}
+
+require_pinned_image() {
+  local image=$1
+  if [[ "$image" != *@sha256:* ]]; then
+    echo -e "${RED}✗ Docker image is not pinned by digest: $image${NC}"
+    echo "  Update scripts/test-images.env with an immutable @sha256 digest."
+    exit 1
+  fi
+}
+
+pull_image() {
+  local image=$1
+  require_pinned_image "$image"
+  echo "  Pulling $image"
+  $DOCKER_BIN pull "$image" >/dev/null
+  $DOCKER_BIN image inspect "$image" >/dev/null
+}
+
+pull_images() {
+  echo "🐳 Pulling pinned Docker images..."
+  pull_image "$DART_IMAGE"
+  pull_image "$MONGO_IMAGE"
+  pull_image "$DYNAMODB_IMAGE"
+  pull_image "$MYSQL_IMAGE"
+  echo -e "${GREEN}✓ Docker image pins pulled and verified${NC}"
+  echo ""
 }
 
 restore_ulimit() {
@@ -143,6 +176,19 @@ start_services() {
   wait_for_container_healthy "$MYSQL_CONTAINER" "MySQL"
 }
 
+run_codegen_if_needed() {
+  local pkg_path=$1
+  local label=$2
+
+  if grep -q "build_runner" "$pkg_path/pubspec.yaml" 2>/dev/null; then
+    echo "  🔨 Running code generation for $label..."
+    (
+      cd "$pkg_path"
+      dart run build_runner build --delete-conflicting-outputs
+    )
+  fi
+}
+
 run_package_checks() {
   local pkg=$1
   local pkg_path="$REPO_ROOT/packages/$pkg"
@@ -152,15 +198,15 @@ run_package_checks() {
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
   (
-    cd "$pkg_path"
-
-    # Run code generation if needed
-    if grep -q "build_runner" pubspec.yaml 2>/dev/null; then
-      echo "  🔨 Running code generation..."
-      if ! dart run build_runner build --delete-conflicting-outputs > /dev/null 2>&1; then
-        echo -e "  ${YELLOW}⚠ Code generation had warnings (continuing)${NC}"
-      fi
+    if [ "$pkg" = "dddart_repository_rest" ]; then
+      # dddart_repository_rest tests depend on dddart_rest generated code,
+      # matching the dependency-generation behavior in the previous workflow.
+      run_codegen_if_needed "$REPO_ROOT/packages/dddart_rest" "dependency dddart_rest"
     fi
+
+    run_codegen_if_needed "$pkg_path" "$pkg"
+
+    cd "$pkg_path"
 
     # Analyze code
     echo "  🔍 Analyzing code..."
@@ -249,9 +295,10 @@ run_workspace_checks() {
 
 run_host_wrapper() {
   require_docker
-
-  start_services
   trap cleanup_services EXIT INT TERM
+
+  pull_images
+  start_services
 
   echo "🐳 Running checks inside ${DART_IMAGE}..."
   echo ""
