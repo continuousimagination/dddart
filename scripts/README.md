@@ -18,7 +18,7 @@ Runs all tests and checks across all packages in the workspace. This script mirr
 - Runs code generation (where needed)
 - Analyzes code with `dart analyze --fatal-infos`
 - Checks code formatting
-- Runs tests (excluding `requires-mongo` tagged tests)
+- Runs the full test matrix inside Docker using the same service images as GitHub Actions
 
 ### `setup-hooks.sh`
 

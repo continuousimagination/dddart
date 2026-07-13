@@ -109,6 +109,8 @@ cd packages/dddart_serialization && dart test
 cd packages/dddart_json && dart test
 ```
 
+For the Dockerized full-suite check that mirrors GitHub Actions, run `./scripts/test-all.sh`.
+
 ### Code Generation
 
 ```bash
