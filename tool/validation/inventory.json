@@ -1,0 +1,230 @@
+{
+  "schemaVersion": 1,
+  "packages": [
+    {
+      "name": "dddart",
+      "path": "packages/dddart",
+      "generation": "none",
+      "allowedLocalPackages": ["dddart"]
+    },
+    {
+      "name": "dddart_serialization",
+      "path": "packages/dddart_serialization",
+      "generation": "none",
+      "allowedLocalPackages": ["dddart", "dddart_serialization"]
+    },
+    {
+      "name": "dddart_json",
+      "path": "packages/dddart_json",
+      "generation": "required",
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_serialization",
+        "dddart_json"
+      ]
+    },
+    {
+      "name": "dddart_rest",
+      "path": "packages/dddart_rest",
+      "generation": "required",
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_serialization",
+        "dddart_json",
+        "dddart_rest"
+      ]
+    },
+    {
+      "name": "dddart_rest_client",
+      "path": "packages/dddart_rest_client",
+      "generation": "none",
+      "allowedLocalPackages": ["dddart_rest_client"]
+    },
+    {
+      "name": "dddart_config",
+      "path": "packages/dddart_config",
+      "generation": "none",
+      "allowedLocalPackages": ["dddart_config"]
+    },
+    {
+      "name": "dddart_repository_mongodb",
+      "path": "packages/dddart_repository_mongodb",
+      "generation": "required",
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_serialization",
+        "dddart_json",
+        "dddart_repository_mongodb"
+      ]
+    },
+    {
+      "name": "dddart_repository_dynamodb",
+      "path": "packages/dddart_repository_dynamodb",
+      "generation": "required",
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_serialization",
+        "dddart_json",
+        "dddart_repository_dynamodb"
+      ]
+    },
+    {
+      "name": "dddart_repository_rest",
+      "path": "packages/dddart_repository_rest",
+      "generation": "required",
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_serialization",
+        "dddart_json",
+        "dddart_rest_client",
+        "dddart_repository_rest"
+      ],
+      "generationPrerequisites": ["dddart_rest"]
+    },
+    {
+      "name": "dddart_repository_sql",
+      "path": "packages/dddart_repository_sql",
+      "generation": "required",
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_serialization",
+        "dddart_repository_sql"
+      ]
+    },
+    {
+      "name": "dddart_repository_sqlite",
+      "path": "packages/dddart_repository_sqlite",
+      "generation": "required",
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_serialization",
+        "dddart_json",
+        "dddart_repository_sql",
+        "dddart_repository_sqlite"
+      ]
+    },
+    {
+      "name": "dddart_repository_mysql",
+      "path": "packages/dddart_repository_mysql",
+      "generation": "required",
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_serialization",
+        "dddart_repository_sql",
+        "dddart_repository_mysql"
+      ]
+    },
+    {
+      "name": "dddart_webhooks",
+      "path": "packages/dddart_webhooks",
+      "generation": "none",
+      "allowedLocalPackages": ["dddart_webhooks"]
+    },
+    {
+      "name": "dddart_webhooks_slack",
+      "path": "packages/dddart_webhooks_slack",
+      "generation": "none",
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_webhooks",
+        "dddart_webhooks_slack"
+      ]
+    },
+    {
+      "name": "dddart_events_distributed",
+      "path": "packages/dddart_events_distributed",
+      "generation": "required",
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_serialization",
+        "dddart_json",
+        "dddart_events_distributed"
+      ]
+    }
+  ],
+  "workspaceExemptions": [
+    {
+      "name": "dddart_json_example",
+      "path": "packages/dddart_json/example",
+      "reason": "Example classification and clean-state validation are owned by EXAMPLE-001."
+    },
+    {
+      "name": "dddart_rest_client_example",
+      "path": "packages/dddart_rest_client/example",
+      "reason": "Example classification and clean-state validation are owned by EXAMPLE-001."
+    },
+    {
+      "name": "dddart_config_example",
+      "path": "packages/dddart_config/example",
+      "reason": "Example classification and clean-state validation are owned by EXAMPLE-001."
+    },
+    {
+      "name": "dddart_repository_rest_example",
+      "path": "packages/dddart_repository_rest/example",
+      "reason": "Example classification and clean-state validation are owned by EXAMPLE-001."
+    },
+    {
+      "name": "dddart_repository_sqlite_example",
+      "path": "packages/dddart_repository_sqlite/example",
+      "reason": "Example classification and clean-state validation are owned by EXAMPLE-001."
+    },
+    {
+      "name": "dddart_repository_mysql_example",
+      "path": "packages/dddart_repository_mysql/example",
+      "reason": "Example classification and clean-state validation are owned by EXAMPLE-001."
+    },
+    {
+      "name": "dddart_events_distributed_example",
+      "path": "packages/dddart_events_distributed/example",
+      "reason": "Example classification and clean-state validation are owned by EXAMPLE-001."
+    }
+  ],
+  "testTagPolicies": [
+    {
+      "tag": "requires-mongo",
+      "packages": ["dddart_repository_mongodb"],
+      "localAction": "exclude",
+      "ciAction": "run",
+      "reason": "Local validation does not assume a MongoDB service; CI supplies MongoDB on localhost:27017.",
+      "service": {
+        "kind": "mongo",
+        "host": "127.0.0.1",
+        "port": 27017,
+        "timeoutSeconds": 60
+      }
+    },
+    {
+      "tag": "requires-dynamodb",
+      "packages": ["dddart_repository_dynamodb"],
+      "localAction": "exclude",
+      "ciAction": "run",
+      "reason": "Local validation does not assume DynamoDB Local; CI supplies it on localhost:8000.",
+      "service": {
+        "kind": "dynamodb",
+        "host": "127.0.0.1",
+        "port": 8000,
+        "timeoutSeconds": 60
+      }
+    },
+    {
+      "tag": "requires-mysql",
+      "packages": ["dddart_repository_mysql"],
+      "localAction": "exclude",
+      "ciAction": "run",
+      "reason": "Local validation does not assume MySQL; CI supplies the documented test database on localhost:3307.",
+      "service": {
+        "kind": "mysql",
+        "host": "127.0.0.1",
+        "port": 3307,
+        "timeoutSeconds": 90
+      },
+      "ciEnvironment": {
+        "MYSQL_HOST": "127.0.0.1",
+        "MYSQL_PORT": "3307",
+        "MYSQL_USER": "root",
+        "MYSQL_PASSWORD": "test_password",
+        "MYSQL_DATABASE": "test_db"
+      }
+    }
+  ]
+}

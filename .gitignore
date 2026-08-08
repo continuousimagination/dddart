@@ -15,6 +15,8 @@ Thumbs.db
 
 # Generated files
 *.g.dart
+# Stock REST claims import this generated runtime part from the Pub archive.
+!packages/dddart_rest/lib/src/standard_claims.g.dart
 *.freezed.dart
 
 # Coverage

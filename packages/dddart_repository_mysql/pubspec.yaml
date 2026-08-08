@@ -1,7 +1,7 @@
 name: dddart_repository_mysql
 description: MySQL database repository implementation for DDDart aggregate roots with automatic code generation support.
 version: 0.9.0
-repository: https://github.com/yourusername/dddart
+repository: https://github.com/continuousimagination/dddart
 resolution: workspace
 
 environment:
@@ -10,12 +10,9 @@ environment:
 dependencies:
   analyzer: '^6.4.0'
   build: '>=2.4.0 <5.0.0'
-  dddart:
-    resolution: workspace
-  dddart_repository_sql:
-    resolution: workspace
-  dddart_serialization:
-    resolution: workspace
+  dddart: ^0.9.0
+  dddart_repository_sql: ^0.9.0
+  dddart_serialization: ^0.9.0
   mysql_client: ^0.0.27
   source_gen: '>=1.4.0 <5.0.0'
 

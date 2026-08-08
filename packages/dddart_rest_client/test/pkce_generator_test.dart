@@ -9,8 +9,8 @@ void main() {
     test('Property 1: PKCE Code Verifier Format', () {
       // Feature: cognito-oauth-fix
       // Property 1: PKCE Code Verifier Format
-      // For any generated code verifier, the verifier must be a base64url-encoded
-      // string of 43-128 characters containing only unreserved characters
+      // For any generated verifier, the value must be a base64url-encoded
+      // string of 43-128 characters containing only unreserved characters.
       // [A-Z, a-z, 0-9, -, ., _, ~]
 
       for (var i = 0; i < 100; i++) {

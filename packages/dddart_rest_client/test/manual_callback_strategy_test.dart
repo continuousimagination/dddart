@@ -5,7 +5,8 @@ import 'package:test/test.dart';
 
 void main() {
   group('ManualCallbackStrategy', () {
-    // Note: Testing stdin interaction requires manual testing or complex mocking.
+    // Note: Testing stdin interaction requires manual testing or complex
+    // mocking.
     // These tests focus on the parsing logic which is the core functionality.
 
     test('Property 7: Manual Input Parsing - full URL with code', () {
@@ -18,7 +19,7 @@ void main() {
       for (var i = 0; i < 100; i++) {
         final code = _generateRandomString(random, 20);
         final state = _generateRandomString(random, 16);
-        final redirectUri = 'https://example.com/callback';
+        const redirectUri = 'https://example.com/callback';
 
         // Simulate parsing a full callback URL
         final input = '$redirectUri?code=$code&state=$state';
@@ -38,10 +39,10 @@ void main() {
         final error = _generateRandomString(random, 10);
         final errorDesc = _generateRandomString(random, 30);
         final state = _generateRandomString(random, 16);
-        final redirectUri = 'https://example.com/callback';
+        const redirectUri = 'https://example.com/callback';
 
-        final input =
-            '$redirectUri?error=$error&error_description=$errorDesc&state=$state';
+        final input = '$redirectUri?error=$error&'
+            'error_description=$errorDesc&state=$state';
         final uri = Uri.parse(input);
 
         expect(uri.queryParameters['error'], equals(error));
@@ -96,14 +97,16 @@ void main() {
 
     test('URL parsing handles URL-encoded parameters', () {
       const redirectUri = 'https://example.com/callback';
-      const input =
-          '$redirectUri?code=test123&state=state456&error_description=User%20denied%20access';
+      const input = '$redirectUri?code=test123&state=state456&'
+          'error_description=User%20denied%20access';
       final uri = Uri.parse(input);
 
       expect(uri.queryParameters['code'], equals('test123'));
       expect(uri.queryParameters['state'], equals('state456'));
-      expect(uri.queryParameters['error_description'],
-          equals('User denied access'));
+      expect(
+        uri.queryParameters['error_description'],
+        equals('User denied access'),
+      );
     });
 
     test('parsing handles missing state in URL', () {

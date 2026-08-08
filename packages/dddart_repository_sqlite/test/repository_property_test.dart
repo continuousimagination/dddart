@@ -562,7 +562,7 @@ Address _generateRandomAddress(Random random) {
 
 /// Generates a random DateTime within the last year.
 DateTime _generateRandomDateTime(Random random) {
-  final now = DateTime.now();
+  final now = DateTime.now().toUtc();
   final daysAgo = random.nextInt(365);
   return now.subtract(Duration(days: daysAgo));
 }
