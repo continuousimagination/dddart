@@ -60,11 +60,24 @@ class RestConnection {
   ///
   /// [httpClient] - Optional HTTP client. If null, creates a new [http.Client].
   /// Useful for testing or custom HTTP client configuration.
-  RestConnection({
-    required this.baseUrl,
-    this.authProvider,
+  factory RestConnection({
+    required String baseUrl,
+    AuthProvider? authProvider,
     http.Client? httpClient,
-  })  : _httpClient = httpClient ?? http.Client(),
+  }) {
+    final ownedClient = httpClient ?? http.Client();
+    return RestConnection._(
+      baseUrl: baseUrl,
+      authProvider: authProvider,
+      httpClient: ownedClient,
+    );
+  }
+
+  RestConnection._({
+    required this.baseUrl,
+    required this.authProvider,
+    required http.Client httpClient,
+  })  : _httpClient = httpClient,
         _client = authProvider != null
             ? RestClient(
                 baseUrl: baseUrl,
