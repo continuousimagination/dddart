@@ -406,7 +406,7 @@ $fromJsonWithConfigBody
     }
 
     buffer.writeln('      );');
-    buffer.writeln('    } catch (e, stackTrace) {');
+    buffer.writeln('    } catch (e) {');
     buffer.writeln('      throw DeserializationException(');
     buffer.writeln("        'Failed to deserialize $className: \$e',");
     buffer.writeln("        expectedType: '$className',");
@@ -581,7 +581,7 @@ $fromJsonWithConfigBody
     );
 
     buffer.writeln('      );');
-    buffer.writeln('    } catch (e, stackTrace) {');
+    buffer.writeln('    } catch (e) {');
     buffer.writeln('      throw DeserializationException(');
     buffer.writeln("        'Failed to deserialize $className: \$e',");
     buffer.writeln("        expectedType: '$className',");
@@ -649,7 +649,7 @@ $fromJsonWithConfigBody
     }
 
     buffer.writeln('      );');
-    buffer.writeln('    } catch (e, stackTrace) {');
+    buffer.writeln('    } catch (e) {');
     buffer.writeln('      throw DeserializationException(');
     buffer.writeln("        'Failed to deserialize $className: \$e',");
     buffer.writeln("        expectedType: '$className',");

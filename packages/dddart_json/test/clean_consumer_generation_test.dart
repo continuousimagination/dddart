@@ -55,6 +55,28 @@ class ConsumerAggregate extends AggregateRoot {
 
   final String name;
 }
+
+@Serializable()
+class ConsumerEntity extends Entity {
+  ConsumerEntity({
+    required this.name,
+    super.id,
+    super.createdAt,
+    super.updatedAt,
+  });
+
+  final String name;
+}
+
+@Serializable()
+class ConsumerValue extends Value {
+  const ConsumerValue({required this.name});
+
+  final String name;
+
+  @override
+  List<Object?> get props => [name];
+}
 ''');
 
       final binDirectory = Directory('${fixture.path}/bin')..createSync();
@@ -83,7 +105,7 @@ void main() {
       );
 
       expect(File('${libDirectory.path}/model.g.dart').existsSync(), isTrue);
-      await _expectDartSuccess(fixture, ['analyze', '--no-fatal-warnings']);
+      await _expectDartSuccess(fixture, ['analyze', '--fatal-warnings']);
       await _expectDartSuccess(fixture, ['run', 'bin/main.dart']);
     },
     timeout: const Timeout(Duration(minutes: 2)),
