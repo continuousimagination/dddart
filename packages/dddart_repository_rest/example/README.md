@@ -92,7 +92,7 @@ Future<void> main() async {
     CrudResource<User, void>(
       path: '/users',
       repository: InMemoryRepository<User>(),
-      serializers: {'application/json': UserJsonSerializer()},
+      serializer: UserJsonSerializer(),
     ),
   );
 
@@ -101,7 +101,7 @@ Future<void> main() async {
     CrudResource<Product, void>(
       path: '/products',
       repository: InMemoryRepository<Product>(),
-      serializers: {'application/json': ProductJsonSerializer()},
+      serializer: ProductJsonSerializer(),
     ),
   );
 

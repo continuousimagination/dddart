@@ -13,8 +13,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/dddart_rest.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:shelf/shelf.dart';
+
+import 'lib/json_serializer_support.dart';
 
 // Domain model
 class User extends AggregateRoot {
@@ -65,7 +66,7 @@ class UserClaims {
 }
 
 // Simple serializer for User
-class UserSerializer implements Serializer<User> {
+class UserSerializer extends ExampleJsonSerializer<User> {
   @override
   User deserialize(String data, [dynamic config]) {
     final json = jsonDecode(data) as Map<String, dynamic>;
@@ -163,7 +164,7 @@ void main() async {
     CrudResource<User, UserClaims>(
       path: '/users',
       repository: userRepo,
-      serializers: {'application/json': UserSerializer()},
+      serializer: UserSerializer(),
       authenticationHandler: authHandler,
       queryHandlers: {
         'me': (repo, params, skip, take, authResult) async {

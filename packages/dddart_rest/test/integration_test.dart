@@ -3,9 +3,10 @@ import 'dart:io' as io;
 
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/dddart_rest.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:shelf/shelf.dart';
 import 'package:test/test.dart';
+
+import 'json_serializer_test_support.dart';
 
 // Test aggregate root
 class TestUser extends AggregateRoot {
@@ -22,7 +23,7 @@ class TestUser extends AggregateRoot {
 }
 
 // Test serializer
-class TestUserSerializer implements Serializer<TestUser> {
+class TestUserSerializer extends TestJsonSerializer<TestUser> {
   @override
   String serialize(TestUser user, [dynamic config]) {
     return jsonEncode({
@@ -43,38 +44,6 @@ class TestUserSerializer implements Serializer<TestUser> {
       email: json['email'],
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
-    );
-  }
-}
-
-// Alternative serializer for content negotiation tests
-class TestUserYamlSerializer implements Serializer<TestUser> {
-  @override
-  String serialize(TestUser user, [dynamic config]) {
-    return 'name: ${user.name}\n'
-        'email: ${user.email}\n'
-        'id: ${user.id}\n'
-        'createdAt: ${user.createdAt.toIso8601String()}\n'
-        'updatedAt: ${user.updatedAt.toIso8601String()}';
-  }
-
-  @override
-  TestUser deserialize(String data, [dynamic config]) {
-    final lines = data.split('\n');
-    final map = <String, String>{};
-    for (final line in lines) {
-      if (line.trim().isEmpty) continue;
-      final parts = line.split(': ');
-      if (parts.length == 2) {
-        map[parts[0].trim()] = parts[1].trim();
-      }
-    }
-    return TestUser(
-      id: UuidValue.fromString(map['id']!),
-      name: map['name']!,
-      email: map['email']!,
-      createdAt: DateTime.parse(map['createdAt']!),
-      updatedAt: DateTime.parse(map['updatedAt']!),
     );
   }
 }
@@ -171,9 +140,7 @@ void main() {
         CrudResource<TestUser, dynamic>(
           path: '/users',
           repository: repository,
-          serializers: {
-            'application/json': serializer,
-          },
+          serializer: serializer,
         ),
       );
 
@@ -320,9 +287,7 @@ void main() {
         CrudResource<TestUser, dynamic>(
           path: '/users',
           repository: repository,
-          serializers: {
-            'application/json': serializer,
-          },
+          serializer: serializer,
           queryHandlers: {
             'name': (repo, params, skip, take, authResult) async {
               final name = params['name']!;
@@ -409,27 +374,22 @@ void main() {
     });
   });
 
-  group('Integration Tests - Content Negotiation', () {
+  group('Integration Tests - JSON media contract', () {
     late HttpServer server;
     late InMemoryRepository<TestUser> repository;
     late TestUserSerializer jsonSerializer;
-    late TestUserYamlSerializer yamlSerializer;
     const port = 8083;
 
     setUp(() async {
       repository = InMemoryRepository<TestUser>();
       jsonSerializer = TestUserSerializer();
-      yamlSerializer = TestUserYamlSerializer();
       server = HttpServer(port: port);
 
       server.registerResource(
         CrudResource<TestUser, dynamic>(
           path: '/users',
           repository: repository,
-          serializers: {
-            'application/json': jsonSerializer,
-            'application/yaml': yamlSerializer,
-          },
+          serializer: jsonSerializer,
         ),
       );
 
@@ -440,7 +400,7 @@ void main() {
       await server.stop();
     });
 
-    test('content negotiation end-to-end', () async {
+    test('JSON-only negotiation end-to-end', () async {
       // Test POST with JSON Content-Type
       final jsonUser = TestUser(
         id: UuidValue.generate(),
@@ -470,34 +430,6 @@ void main() {
 
       final jsonUserId = jsonDecode(jsonCreateResponse.body)['id'];
 
-      // Test POST with YAML Content-Type
-      final yamlUser = TestUser(
-        id: UuidValue.generate(),
-        name: 'YAML User',
-        email: 'yaml@example.com',
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
-
-      final yamlBody = yamlSerializer.serialize(yamlUser);
-      final yamlCreateResponse = await makeRequest(
-        method: 'POST',
-        path: '/users',
-        headers: {
-          'Content-Type': 'application/yaml',
-          'Accept': 'application/yaml',
-        },
-        body: yamlBody,
-        port: port,
-      );
-
-      expect(yamlCreateResponse.statusCode, equals(201));
-      expect(
-        yamlCreateResponse.header('content-type'),
-        equals('application/yaml'),
-      );
-      expect(yamlCreateResponse.body, contains('name: YAML User'));
-
       // Test GET with JSON Accept header
       final jsonGetResponse = await makeRequest(
         method: 'GET',
@@ -514,21 +446,6 @@ void main() {
 
       final jsonGetUser = jsonDecode(jsonGetResponse.body);
       expect(jsonGetUser['name'], equals('JSON User'));
-
-      // Test GET with YAML Accept header
-      final yamlGetResponse = await makeRequest(
-        method: 'GET',
-        path: '/users/$jsonUserId',
-        headers: {'Accept': 'application/yaml'},
-        port: port,
-      );
-
-      expect(yamlGetResponse.statusCode, equals(200));
-      expect(
-        yamlGetResponse.header('content-type'),
-        equals('application/yaml'),
-      );
-      expect(yamlGetResponse.body, contains('name: JSON User'));
 
       // Test 415 response for unsupported Content-Type
       final unsupportedContentTypeResponse = await makeRequest(
@@ -587,9 +504,7 @@ void main() {
         CrudResource<TestUser, dynamic>(
           path: '/users',
           repository: repository,
-          serializers: {
-            'application/json': serializer,
-          },
+          serializer: serializer,
           queryHandlers: {
             'name': (repo, params, skip, take, authResult) async {
               final name = params['name']!;
@@ -736,9 +651,7 @@ void main() {
         CrudResource<TestUser, dynamic>(
           path: '/users',
           repository: repository,
-          serializers: {
-            'application/json': serializer,
-          },
+          serializer: serializer,
           customExceptionHandlers: {
             CustomDomainException: (e) {
               return Response(
@@ -832,9 +745,7 @@ void main() {
         CrudResource<TestUser, dynamic>(
           path: '/users',
           repository: repository,
-          serializers: {
-            'application/json': serializer,
-          },
+          serializer: serializer,
           queryHandlers: {
             'name': (repo, params, skip, take, authResult) async {
               final name = params['name']!;

@@ -14,6 +14,7 @@ dependencies:
   crypto: ^3.0.3
   dart_jsonwebtoken: ^2.17.0
   dddart: ^0.9.0
+  dddart_json: ^0.9.0
   dddart_serialization: ^0.9.0
   http: ^1.2.0
   jose: ^0.3.4

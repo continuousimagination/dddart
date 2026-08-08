@@ -13,8 +13,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/dddart_rest.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:shelf/shelf.dart';
+
+import 'lib/json_serializer_support.dart';
 
 // Domain model - Document owned by a user
 class Document extends AggregateRoot {
@@ -144,7 +145,7 @@ class DocumentAuthorizationHandler
 }
 
 // Simple serializer for Document
-class DocumentSerializer implements Serializer<Document> {
+class DocumentSerializer extends ExampleJsonSerializer<Document> {
   @override
   Document deserialize(String data, [dynamic config]) {
     final json = jsonDecode(data) as Map<String, dynamic>;
@@ -255,7 +256,7 @@ void main() async {
     CrudResource<Document, UserClaims>(
       path: '/documents',
       repository: documentRepo,
-      serializers: {'application/json': DocumentSerializer()},
+      serializer: DocumentSerializer(),
       authenticationHandler: authHandler,
       authorizationHandler: authzHandler, // Authorization handler added here
       queryHandlers: {

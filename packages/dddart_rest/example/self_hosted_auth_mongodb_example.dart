@@ -18,6 +18,8 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/dddart_rest.dart';
 import 'package:shelf/shelf.dart';
 
+import 'lib/json_serializer_support.dart';
+
 // NOTE: This is a conceptual example showing the structure.
 // To actually run this, you would need:
 // 1. Add dddart_repository_mongodb dependency
@@ -113,9 +115,9 @@ class UserClaims {
 //    - AppDeviceCodeMongoRepository
 
 // Simple serializer for User
-class UserSerializer implements Serializer<User> {
+class UserSerializer extends ExampleJsonSerializer<User> {
   @override
-  User deserialize(String data) {
+  User deserialize(String data, [dynamic config]) {
     final json = jsonDecode(data) as Map<String, dynamic>;
     return User(
       id: json['id'] as String,
@@ -127,7 +129,7 @@ class UserSerializer implements Serializer<User> {
   }
 
   @override
-  String serialize(User aggregate) {
+  String serialize(User aggregate, [dynamic config]) {
     return jsonEncode({
       'id': aggregate.id,
       'username': aggregate.username,
@@ -218,7 +220,7 @@ void main() async {
     CrudResource<User, UserClaims>(
       path: '/users',
       repository: userRepo,
-      serializers: {'application/json': UserSerializer()},
+      serializer: UserSerializer(),
       authenticationHandler: authHandler,
     ),
   );

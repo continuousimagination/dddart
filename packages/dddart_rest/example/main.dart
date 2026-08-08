@@ -35,9 +35,7 @@ void main() async {
     CrudResource<User, void>(
       path: '/users',
       repository: repository,
-      serializers: {
-        'application/json': serializer,
-      },
+      serializer: serializer,
       queryHandlers: {
         'firstName': firstNameQueryHandler,
         'email': emailQueryHandler,

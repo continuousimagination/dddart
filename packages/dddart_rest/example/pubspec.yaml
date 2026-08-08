@@ -9,6 +9,8 @@ environment:
 dependencies:
   dddart:
     path: ../../dddart
+  dddart_json:
+    path: ../../dddart_json
   dddart_serialization:
     path: ../../dddart_serialization
   dddart_rest:
@@ -18,6 +20,8 @@ dependencies:
 dependency_overrides:
   dddart:
     path: ../../dddart
+  dddart_json:
+    path: ../../dddart_json
   dddart_serialization:
     path: ../../dddart_serialization
   dddart_rest:

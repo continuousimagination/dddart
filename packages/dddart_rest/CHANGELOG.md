@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING:** `CrudResource<T>` now requires one `JsonSerializer<T>` through
+  `serializer` instead of a content-type-to-serializer map.
+- **BREAKING:** `ResponseBuilder<T>.ok`, `.created`, and `.okList` now accept a
+  `JsonSerializer<T>` and no longer take a positional content-type argument.
+- CRUD success bodies use `application/json`; collection bodies are valid JSON
+  arrays and stock errors use `application/problem+json`.
+- `Accept` values that do not allow JSON return 406, and `POST`/`PUT` requests
+  without `Content-Type: application/json` return 415, before request side
+  effects.
+
 ### Added
 
 - **ETag-based optimistic concurrency control** - Prevent lost updates from concurrent modifications

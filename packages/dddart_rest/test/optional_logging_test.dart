@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/dddart_rest.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:shelf/shelf.dart';
 import 'package:test/test.dart';
+
+import 'json_serializer_test_support.dart';
 
 // Test domain model
 class TestProduct extends AggregateRoot {
@@ -19,7 +20,7 @@ class TestProduct extends AggregateRoot {
 }
 
 // Test serializer
-class TestProductSerializer implements Serializer<TestProduct> {
+class TestProductSerializer extends TestJsonSerializer<TestProduct> {
   @override
   String serialize(TestProduct product, [dynamic config]) {
     return jsonEncode({
@@ -59,7 +60,7 @@ void main() {
       final resource = CrudResource<TestProduct, dynamic>(
         path: 'products',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
       );
 
       // Create a product
@@ -89,7 +90,7 @@ void main() {
       final resource = CrudResource<TestProduct, dynamic>(
         path: 'products',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
       );
 
       final product = TestProduct(name: 'New Product', price: 49.99);
@@ -119,7 +120,7 @@ void main() {
       final resource = CrudResource<TestProduct, dynamic>(
         path: 'products',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
       );
 
       // Create initial product
@@ -153,7 +154,7 @@ void main() {
       final resource = CrudResource<TestProduct, dynamic>(
         path: 'products',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
       );
 
       // Create product
@@ -177,7 +178,7 @@ void main() {
       final resource = CrudResource<TestProduct, dynamic>(
         path: 'products',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
       );
 
       // Try to get non-existent product
@@ -200,7 +201,7 @@ void main() {
       final resource = CrudResource<TestProduct, dynamic>(
         path: 'products',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
       );
 
       // Perform multiple operations
@@ -229,7 +230,7 @@ void main() {
       final resource = CrudResource<TestProduct, dynamic>(
         path: 'products',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
       );
 
       final product = TestProduct(name: 'Test', price: 100);
@@ -256,7 +257,7 @@ void main() {
       final resource = CrudResource<TestProduct, dynamic>(
         path: 'products',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
       );
 
       final product = TestProduct(name: 'Test', price: 100);

@@ -4,8 +4,9 @@ import 'dart:convert';
 
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/dddart_rest.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:http/http.dart' as http;
+
+import 'lib/json_serializer_support.dart';
 
 // Simple User aggregate for demonstration
 class User extends AggregateRoot {
@@ -22,7 +23,7 @@ class User extends AggregateRoot {
 }
 
 // Simple JSON serializer
-class UserSerializer implements Serializer<User> {
+class UserSerializer extends ExampleJsonSerializer<User> {
   @override
   String serialize(User user, [dynamic config]) {
     return jsonEncode({
@@ -67,7 +68,7 @@ void main() async {
     CrudResource<User, void>(
       path: '/users',
       repository: repository,
-      serializers: {'application/json': UserSerializer()},
+      serializer: UserSerializer(),
       etagStrategy: ETagStrategy.timestamp, // Use timestamp-based ETags
     ),
   );

@@ -7,9 +7,10 @@ import 'package:dddart_rest/src/authorization_handler.dart';
 import 'package:dddart_rest/src/authorization_result.dart';
 import 'package:dddart_rest/src/crud_resource.dart';
 import 'package:dddart_rest/src/query_handler.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:shelf/shelf.dart';
 import 'package:test/test.dart';
+
+import 'json_serializer_test_support.dart';
 
 // Test aggregate root
 class TestUser extends AggregateRoot {
@@ -34,7 +35,7 @@ class TestClaims {
 }
 
 // Test serializer
-class TestUserSerializer implements Serializer<TestUser> {
+class TestUserSerializer extends TestJsonSerializer<TestUser> {
   @override
   String serialize(TestUser user, [dynamic config]) {
     return jsonEncode({
@@ -266,7 +267,7 @@ void main() {
         final resource = CrudResource<TestUser, TestClaims>(
           path: '/users',
           repository: repository,
-          serializers: {'application/json': serializer},
+          serializer: serializer,
           authenticationHandler: authHandler,
           authorizationHandler: authzHandler,
         );
@@ -294,7 +295,7 @@ void main() {
         final resource = CrudResource<TestUser, TestClaims>(
           path: '/users',
           repository: repository,
-          serializers: {'application/json': serializer},
+          serializer: serializer,
           authenticationHandler: authHandler,
           authorizationHandler: authzHandler,
         );
@@ -326,7 +327,7 @@ void main() {
         final resource = CrudResource<TestUser, TestClaims>(
           path: '/users',
           repository: repository,
-          serializers: {'application/json': serializer},
+          serializer: serializer,
           authenticationHandler: authHandler,
           authorizationHandler: authzHandler,
         );
@@ -362,7 +363,7 @@ void main() {
         final resource = CrudResource<TestUser, TestClaims>(
           path: '/users',
           repository: repository,
-          serializers: {'application/json': serializer},
+          serializer: serializer,
           authenticationHandler: authHandler,
           authorizationHandler: authzHandler,
         );
@@ -397,7 +398,7 @@ void main() {
         final resource = CrudResource<TestUser, TestClaims>(
           path: '/users',
           repository: repository,
-          serializers: {'application/json': serializer},
+          serializer: serializer,
           authenticationHandler: authHandler,
           // No authorizationHandler provided
         );
@@ -430,7 +431,7 @@ void main() {
         final resource = CrudResource<TestUser, TestClaims>(
           path: '/users',
           repository: repository,
-          serializers: {'application/json': serializer},
+          serializer: serializer,
           authenticationHandler: authHandler,
           authorizationHandler: authzHandler,
         );
@@ -469,7 +470,7 @@ void main() {
         final resource = CrudResource<TestUser, TestClaims>(
           path: '/users',
           repository: repository,
-          serializers: {'application/json': serializer},
+          serializer: serializer,
           authenticationHandler: authHandler,
           authorizationHandler: authzHandler,
         );
@@ -513,7 +514,7 @@ void main() {
         final resource = CrudResource<TestUser, TestClaims>(
           path: '/users',
           repository: repository,
-          serializers: {'application/json': serializer},
+          serializer: serializer,
           authenticationHandler: authHandler,
           authorizationHandler: authzHandler,
         );
@@ -557,7 +558,7 @@ void main() {
         final resource = CrudResource<TestUser, TestClaims>(
           path: '/users',
           repository: repository,
-          serializers: {'application/json': serializer},
+          serializer: serializer,
           authenticationHandler: authHandler,
           authorizationHandler: authzHandler,
         );
@@ -605,7 +606,7 @@ void main() {
         final resource = CrudResource<TestUser, TestClaims>(
           path: '/users',
           repository: repository,
-          serializers: {'application/json': serializer},
+          serializer: serializer,
           authenticationHandler: authHandler,
           // No authorizationHandler provided
         );
@@ -649,7 +650,7 @@ void main() {
         final resource = CrudResource<TestUser, TestClaims>(
           path: '/users',
           repository: repository,
-          serializers: {'application/json': serializer},
+          serializer: serializer,
           authenticationHandler: authHandler,
           authorizationHandler: authzHandler,
         );
@@ -676,7 +677,7 @@ void main() {
         final resource = CrudResource<TestUser, TestClaims>(
           path: '/users',
           repository: repository,
-          serializers: {'application/json': serializer},
+          serializer: serializer,
           authenticationHandler: authHandler,
           authorizationHandler: authzHandler,
         );
@@ -712,7 +713,7 @@ void main() {
         final resource = CrudResource<TestUser, TestClaims>(
           path: '/users',
           repository: repository,
-          serializers: {'application/json': serializer},
+          serializer: serializer,
           authenticationHandler: authHandler,
           authorizationHandler: authzHandler,
         );
@@ -744,7 +745,7 @@ void main() {
         final resource = CrudResource<TestUser, TestClaims>(
           path: '/users',
           repository: repository,
-          serializers: {'application/json': serializer},
+          serializer: serializer,
           authenticationHandler: authHandler,
           authorizationHandler: authzHandler,
         );
@@ -780,7 +781,7 @@ void main() {
         final resource = CrudResource<TestUser, TestClaims>(
           path: '/users',
           repository: repository,
-          serializers: {'application/json': serializer},
+          serializer: serializer,
           authenticationHandler: authHandler,
           // No authorizationHandler provided
         );
@@ -814,7 +815,7 @@ void main() {
         final resource = CrudResource<TestUser, TestClaims>(
           path: '/users',
           repository: repository,
-          serializers: {'application/json': serializer},
+          serializer: serializer,
           authenticationHandler: authHandler,
           authorizationHandler: authzHandler,
           queryHandlers: {
@@ -844,7 +845,7 @@ void main() {
         final resource = CrudResource<TestUser, TestClaims>(
           path: '/users',
           repository: repository,
-          serializers: {'application/json': serializer},
+          serializer: serializer,
           authenticationHandler: authHandler,
           authorizationHandler: authzHandler,
           queryHandlers: {
@@ -878,7 +879,7 @@ void main() {
         final resource = CrudResource<TestUser, TestClaims>(
           path: '/users',
           repository: repository,
-          serializers: {'application/json': serializer},
+          serializer: serializer,
           authenticationHandler: authHandler,
           authorizationHandler: authzHandler,
           queryHandlers: {
@@ -908,7 +909,7 @@ void main() {
         final resource = CrudResource<TestUser, TestClaims>(
           path: '/users',
           repository: repository,
-          serializers: {'application/json': serializer},
+          serializer: serializer,
           authenticationHandler: authHandler,
           authorizationHandler: authzHandler,
           queryHandlers: {
@@ -948,7 +949,7 @@ void main() {
         final resource = CrudResource<TestUser, TestClaims>(
           path: '/users',
           repository: inMemoryRepo,
-          serializers: {'application/json': serializer},
+          serializer: serializer,
           authenticationHandler: authHandler,
           authorizationHandler: authzHandler,
         );
@@ -968,7 +969,7 @@ void main() {
         final resource = CrudResource<TestUser, TestClaims>(
           path: '/users',
           repository: repository,
-          serializers: {'application/json': serializer},
+          serializer: serializer,
           authenticationHandler: authHandler,
           // No authorizationHandler provided
           queryHandlers: {
@@ -998,7 +999,7 @@ void main() {
         final resource = CrudResource<TestUser, TestClaims>(
           path: '/users',
           repository: repository,
-          serializers: {'application/json': serializer},
+          serializer: serializer,
           // No authenticationHandler provided
           authorizationHandler: authzHandler,
         );
@@ -1027,7 +1028,7 @@ void main() {
         final resource = CrudResource<TestUser, TestClaims>(
           path: '/users',
           repository: repository,
-          serializers: {'application/json': serializer},
+          serializer: serializer,
           authenticationHandler: authHandler,
           authorizationHandler: authzHandler,
         );

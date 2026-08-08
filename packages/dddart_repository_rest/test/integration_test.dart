@@ -130,12 +130,12 @@ void main() {
           '/users': CrudResource<TestUser, void>(
             path: '/users',
             repository: InMemoryRepository<TestUser>(),
-            serializers: {'application/json': TestUserJsonSerializer()},
+            serializer: TestUserJsonSerializer(),
           ),
           '/products': CrudResource<TestProduct, void>(
             path: '/products',
             repository: InMemoryRepository<TestProduct>(),
-            serializers: {'application/json': TestProductJsonSerializer()},
+            serializer: TestProductJsonSerializer(),
           ),
         },
         port: 8766,
@@ -349,12 +349,12 @@ void main() {
           '/users': CrudResource<TestUser, void>(
             path: '/users',
             repository: InMemoryRepository<TestUser>(),
-            serializers: {'application/json': TestUserJsonSerializer()},
+            serializer: TestUserJsonSerializer(),
           ),
           '/accounts': CrudResource<TestAccount, void>(
             path: '/accounts',
             repository: InMemoryRepository<TestAccount>(),
-            serializers: {'application/json': TestAccountJsonSerializer()},
+            serializer: TestAccountJsonSerializer(),
           ),
         },
         port: 8770,

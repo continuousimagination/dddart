@@ -1,15 +1,15 @@
 import 'dart:convert';
 import 'package:dddart/dddart.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
 import '../models/user.dart';
 import '../models/address.dart';
 import '../models/profile.dart';
+import '../json_serializer_support.dart';
 
 /// JSON serializer for User aggregate root
 ///
 /// Implements JsonSerializer to provide toJson and fromJson methods
 /// for serializing User aggregates to/from JSON format
-class UserSerializer implements Serializer<User> {
+class UserSerializer extends ExampleJsonSerializer<User> {
   @override
   String serialize(User user, [dynamic config]) {
     return jsonEncode(toJson(user, config));

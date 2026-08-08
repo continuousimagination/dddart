@@ -4,9 +4,10 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/src/authentication_handler.dart';
 import 'package:dddart_rest/src/authentication_result.dart';
 import 'package:dddart_rest/src/crud_resource.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:shelf/shelf.dart';
 import 'package:test/test.dart';
+
+import 'json_serializer_test_support.dart';
 
 // Test aggregate root
 class TestUser extends AggregateRoot {
@@ -23,7 +24,7 @@ class TestUser extends AggregateRoot {
 }
 
 // Test serializer
-class TestUserSerializer implements Serializer<TestUser> {
+class TestUserSerializer extends TestJsonSerializer<TestUser> {
   @override
   String serialize(TestUser user, [dynamic config]) {
     return jsonEncode({
@@ -153,7 +154,7 @@ void main() {
       final resource = CrudResource<TestUser, String>(
         path: '/users',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
         authenticationHandler: authHandler,
       );
       await repository.save(testUser);
@@ -177,7 +178,7 @@ void main() {
       final resource = CrudResource<TestUser, String>(
         path: '/users',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
         authenticationHandler: authHandler,
       );
       await repository.save(testUser);
@@ -197,7 +198,7 @@ void main() {
       final resource = CrudResource<TestUser, String>(
         path: '/users',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
         authenticationHandler: authHandler,
       );
       final request = createRequest(
@@ -219,7 +220,7 @@ void main() {
       final resource = CrudResource<TestUser, String>(
         path: '/users',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
         authenticationHandler: authHandler,
       );
       final request = createRequest(
@@ -243,7 +244,7 @@ void main() {
       final resource = CrudResource<TestUser, String>(
         path: '/users',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
         authenticationHandler: authHandler,
       );
       await repository.save(testUser);
@@ -266,7 +267,7 @@ void main() {
       final resource = CrudResource<TestUser, String>(
         path: '/users',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
         authenticationHandler: authHandler,
       );
       final request = createRequest();
@@ -284,7 +285,7 @@ void main() {
       final resource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
       );
       await repository.save(testUser);
       final request = createRequest(path: '/users/${testUser.id}');

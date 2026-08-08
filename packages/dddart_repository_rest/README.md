@@ -12,6 +12,7 @@ The package follows the established patterns from other DDDart repository packag
 
 - **Code Generation**: Automatically generates REST repository implementations from annotated aggregate root classes
 - **JSON Serialization**: Reuses existing `dddart_json` serializers for HTTP request/response bodies
+- **JSON Media Headers**: Generated CRUD requests explicitly declare the JSON response and request media types
 - **Authentication**: Integrates with `dddart_rest_client` for automatic token management and refresh
 - **Extensibility**: Generated repositories can be used directly or extended with custom query methods
 - **Error Handling**: Comprehensive HTTP status code mapping to `RepositoryException` types
@@ -554,6 +555,11 @@ abstract interface class Repository<T extends AggregateRoot> {
   Future<void> deleteById(UuidValue id);
 }
 ```
+
+Generated `getById` and `deleteById` requests send
+`Accept: application/json`. Generated `save` requests send both
+`Accept: application/json` and `Content-Type: application/json`, matching the
+JSON-only `dddart_rest` CRUD contract.
 
 ## Examples
 

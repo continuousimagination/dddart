@@ -4,8 +4,9 @@ import 'dart:io' as io;
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/src/crud_resource.dart';
 import 'package:dddart_rest/src/http_server.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:test/test.dart';
+
+import 'json_serializer_test_support.dart';
 
 // Test aggregate root
 class TestUser extends AggregateRoot {
@@ -22,7 +23,7 @@ class TestUser extends AggregateRoot {
 }
 
 // Test serializer
-class TestUserSerializer implements Serializer<TestUser> {
+class TestUserSerializer extends TestJsonSerializer<TestUser> {
   @override
   String serialize(TestUser user, [dynamic config]) {
     return jsonEncode({
@@ -62,7 +63,7 @@ class TestProduct extends AggregateRoot {
 }
 
 // Test product serializer
-class TestProductSerializer implements Serializer<TestProduct> {
+class TestProductSerializer extends TestJsonSerializer<TestProduct> {
   @override
   String serialize(TestProduct product, [dynamic config]) {
     return jsonEncode({
@@ -97,7 +98,7 @@ void main() {
       final resource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
       );
 
       // Act
@@ -129,7 +130,7 @@ void main() {
       final userResource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: userRepository,
-        serializers: {'application/json': userSerializer},
+        serializer: userSerializer,
       );
 
       final productRepository = InMemoryRepository<TestProduct>();
@@ -137,7 +138,7 @@ void main() {
       final productResource = CrudResource<TestProduct, dynamic>(
         path: '/products',
         repository: productRepository,
-        serializers: {'application/json': productSerializer},
+        serializer: productSerializer,
       );
 
       // Act
@@ -175,7 +176,7 @@ void main() {
       final resource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
       );
       server.registerResource(resource);
 
@@ -202,7 +203,7 @@ void main() {
       final resource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
       );
       server.registerResource(resource);
       await server.start();
@@ -248,7 +249,7 @@ void main() {
       final resource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
       );
       server.registerResource(resource);
       await server.start();
@@ -308,7 +309,7 @@ void main() {
       final resource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
       );
       server.registerResource(resource);
       await server.start();
@@ -386,7 +387,7 @@ void main() {
       final userResource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: userRepository,
-        serializers: {'application/json': userSerializer},
+        serializer: userSerializer,
       );
 
       // Set up products resource
@@ -404,7 +405,7 @@ void main() {
       final productResource = CrudResource<TestProduct, dynamic>(
         path: '/products',
         repository: productRepository,
-        serializers: {'application/json': productSerializer},
+        serializer: productSerializer,
       );
 
       server.registerResource(userResource);
@@ -468,7 +469,7 @@ void main() {
       final resource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
       );
       server.registerResource(resource);
       await server.start();

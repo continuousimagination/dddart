@@ -10,7 +10,7 @@ RESTful CRUD API framework for DDDart - Provides REST endpoints for aggregate ro
 - **ETag concurrency control** - Optimistic locking with If-Match headers to prevent lost updates
 - **JWT Authentication** - Built-in support for self-hosted and OAuth/OIDC authentication
 - **Device Flow** - OAuth2 device flow for CLI tools and limited-input devices
-- **Content negotiation** - Support multiple serialization formats (JSON, YAML, etc.) via HTTP headers
+- **JSON media contract** - JSON success bodies, JSON arrays for collections, and RFC 7807 errors
 - **Custom query handlers** - Define filterable endpoints with custom query parameters
 - **Pagination support** - Built-in pagination with configurable defaults and limits
 - **Custom exception handling** - Map domain exceptions to appropriate HTTP responses
@@ -26,6 +26,7 @@ Add to your `pubspec.yaml`:
 dependencies:
   dddart_rest: ^0.9.0
   dddart: ^0.9.0
+  dddart_json: ^0.9.0
   dddart_serialization: ^0.9.0
 ```
 
@@ -38,7 +39,7 @@ import 'package:dddart_rest/dddart_rest.dart';
 void main() async {
   // Create repository and serializer
   final repository = InMemoryRepository<User>();
-  final serializer = UserSerializer();
+  final serializer = UserJsonSerializer();
 
   // Create and configure HTTP server
   final server = HttpServer(port: 8080);
@@ -47,7 +48,7 @@ void main() async {
     CrudResource<User>(
       path: '/users',
       repository: repository,
-      serializers: {'application/json': serializer},
+      serializer: serializer,
     ),
   );
 
@@ -195,62 +196,52 @@ curl -X DELETE http://localhost:8080/users/123e4567-e89b-12d3-a456-426614174000
 
 Response (204 No Content) - empty body
 
-### Content Negotiation
+### JSON Media Contract
 
-Support multiple serialization formats by registering multiple serializers:
+Each CRUD resource uses one `JsonSerializer<T>`:
 
 ```dart
 server.registerResource(
   CrudResource<User>(
     path: '/users',
     repository: repository,
-    serializers: {
-      'application/json': jsonSerializer,  // First entry is default
-      'application/yaml': yamlSerializer,
-      'application/xml': xmlSerializer,
-    },
+    serializer: jsonSerializer,
   ),
 );
 ```
 
 #### Request Format (POST/PUT)
 
-Clients specify the request body format using the `Content-Type` header:
+`POST` and `PUT` require `Content-Type: application/json`. Media type
+parameters and casing are accepted, for example
+`Application/JSON; Charset=UTF-8`.
 
 ```bash
-# Send JSON
 curl -X POST http://localhost:8080/users \
   -H "Content-Type: application/json" \
   -d '{"firstName": "John", "email": "john@example.com"}'
-
-# Send YAML
-curl -X POST http://localhost:8080/users \
-  -H "Content-Type: application/yaml" \
-  -d 'firstName: John
-email: john@example.com'
 ```
 
-If `Content-Type` is missing, the first registered serializer is used as default.
-
-If `Content-Type` specifies an unsupported format, returns **415 Unsupported Media Type**.
+Missing or unsupported request media types return **415 Unsupported Media
+Type** before authentication, authorization, or repository side effects.
 
 #### Response Format (GET)
 
-Clients specify the desired response format using the `Accept` header:
+Success responses use `Content-Type: application/json`. Collection responses
+are JSON arrays, including `[]` for an empty collection.
 
 ```bash
-# Request JSON response
 curl http://localhost:8080/users/123 \
   -H "Accept: application/json"
-
-# Request YAML response
-curl http://localhost:8080/users/123 \
-  -H "Accept: application/yaml"
 ```
 
-If `Accept` is `*/*` or missing, the first registered serializer is used as default.
+Missing `Accept`, `*/*`, or any comma-separated range containing a positive
+quality `application/json` or `*/*` range selects JSON.
 
-If `Accept` specifies an unsupported format, returns **406 Not Acceptable**.
+An unsupported header, including `application/json;q=0` with no other supported
+positive-quality range, returns **406 Not Acceptable** before authentication,
+authorization, or repository side effects. Stock errors use
+`Content-Type: application/problem+json`.
 
 ### Pagination
 
@@ -279,7 +270,7 @@ Configure pagination defaults when registering a resource:
 CrudResource<User>(
   path: '/users',
   repository: repository,
-  serializers: {'application/json': serializer},
+  serializer: serializer,
   defaultSkip: 0,      // Default: 0
   defaultTake: 20,     // Default: 50
   maxTake: 100,        // Default: 100 (prevents excessive queries)
@@ -321,7 +312,7 @@ server.registerResource(
   CrudResource<User>(
     path: '/users',
     repository: repository,
-    serializers: {'application/json': serializer},
+    serializer: serializer,
     queryHandlers: {
       'firstName': firstNameHandler,
       'email': emailHandler,
@@ -432,7 +423,7 @@ server.registerResource(
   CrudResource<User>(
     path: '/users',
     repository: repository,
-    serializers: {'application/json': serializer},
+    serializer: serializer,
     customExceptionHandlers: {
       InvalidEmailException: handleInvalidEmail,
       DuplicateEmailException: handleDuplicateEmail,
@@ -492,7 +483,7 @@ server.registerResource(
   CrudResource<User>(
     path: '/users',
     repository: repository,
-    serializers: {'application/json': serializer},
+    serializer: serializer,
     etagStrategy: ETagStrategy.timestamp,  // Default
   ),
 );
@@ -666,7 +657,7 @@ class CrudResource<T extends AggregateRoot> {
   CrudResource({
     required String path,
     required Repository<T> repository,
-    required Map<String, Serializer<T>> serializers,
+    required JsonSerializer<T> serializer,
     Map<String, QueryHandler<T>> queryHandlers = const {},
     Map<Type, Response Function(Object)> customExceptionHandlers = const {},
     int defaultSkip = 0,
@@ -680,14 +671,13 @@ class CrudResource<T extends AggregateRoot> {
 **Parameters:**
 - `path` - Base URL path for the resource (e.g., '/users')
 - `repository` - Repository instance for persistence operations
-- `serializers` - Map of content types to serializer instances (first is default)
+- `serializer` - JSON serializer for request and success response bodies
 - `queryHandlers` - Map of query parameter names to handler functions
 - `customExceptionHandlers` - Map of exception types to error response handlers
 - `defaultSkip` - Default skip value for pagination (default: 0)
 - `defaultTake` - Default take value for pagination (default: 50)
 - `maxTake` - Maximum allowed take value (default: 100)
 - `etagStrategy` - Strategy for generating ETags (default: timestamp)
-- `serializers` - Map of content types to serializer instances (first is default)
 - `queryHandlers` - Map of query parameter names to handler functions
 - `customExceptionHandlers` - Map of exception types to error response handlers
 - `defaultSkip` - Default skip value for pagination (default: 0)
@@ -736,11 +726,13 @@ Builds HTTP responses with proper status codes and serialization.
 
 ```dart
 class ResponseBuilder<T extends AggregateRoot> {
-  Response ok(T aggregate, Serializer<T> serializer, String contentType);
-  Response created(T aggregate, Serializer<T> serializer, String contentType);
-  Response okList(List<T> aggregates, Serializer<T> serializer, String contentType, {int? totalCount});
+  Response ok(T aggregate, JsonSerializer<T> serializer, {String? etag});
+  Response created(T aggregate, JsonSerializer<T> serializer, {String? etag});
+  Response okList(List<T> aggregates, JsonSerializer<T> serializer, {int? totalCount});
   Response noContent();
   Response badRequest(String message);
+  Response notAcceptable(String message);
+  Response unsupportedMediaType(String message);
   Response notFound(String message);
 }
 ```
@@ -985,7 +977,7 @@ server.registerResource(
   CrudResource<User, UserClaims>(
     path: '/users',
     repository: userRepo,
-    serializers: {'application/json': serializer},
+    serializer: serializer,
     authHandler: authHandler,  // Require authentication
   ),
 );
@@ -995,7 +987,7 @@ server.registerResource(
   CrudResource<Product>(
     path: '/products',
     repository: productRepo,
-    serializers: {'application/json': serializer},
+    serializer: serializer,
     // No authHandler = public access
   ),
 );
@@ -1040,7 +1032,7 @@ server.registerResource(
   CrudResource<User, CognitoClaims>(
     path: '/users',
     repository: userRepo,
-    serializers: {'application/json': serializer},
+    serializer: serializer,
     authHandler: authHandler,
   ),
 );
