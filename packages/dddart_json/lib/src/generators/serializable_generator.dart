@@ -871,23 +871,37 @@ $fromJsonWithConfigBody
 
     final itemType = typeArgs.first;
     final itemTypeName = itemType.getDisplayString(withNullability: false);
+    final itemIsNullable =
+        itemType.nullabilitySuffix == NullabilitySuffix.question;
 
     // Handle special item types
     if (itemTypeName == 'UuidValue') {
+      if (itemIsNullable) {
+        return '$fieldRef.map((item) => item?.toString()).toList()';
+      }
       return '$fieldRef.map((item) => item.toString()).toList()';
     }
 
     if (itemTypeName == 'DateTime') {
+      if (itemIsNullable) {
+        return '$fieldRef.map((item) => item?.toIso8601String()).toList()';
+      }
       return '$fieldRef.map((item) => item.toIso8601String()).toList()';
     }
 
     // Handle enum item types
     if (_isEnumType(itemType)) {
+      if (itemIsNullable) {
+        return '$fieldRef.map((item) => item?.name).toList()';
+      }
       return '$fieldRef.map((item) => item.name).toList()';
     }
 
     // Handle DDDart types
     if (_isDDDartType(itemType)) {
+      if (itemIsNullable) {
+        return '$fieldRef.map((item) => item != null ? ${itemTypeName}JsonSerializer().toJson(item, effectiveConfig) : null).toList()';
+      }
       return '$fieldRef.map((item) => ${itemTypeName}JsonSerializer().toJson(item, effectiveConfig)).toList()';
     }
 
@@ -924,6 +938,8 @@ $fromJsonWithConfigBody
     final valueType = typeArgs[1];
     final keyTypeName = keyType.getDisplayString(withNullability: false);
     final valueTypeName = valueType.getDisplayString(withNullability: false);
+    final valueIsNullable =
+        valueType.nullabilitySuffix == NullabilitySuffix.question;
 
     // Only handle String keys for now (JSON limitation)
     if (keyTypeName != 'String') {
@@ -932,20 +948,32 @@ $fromJsonWithConfigBody
 
     // Handle special value types
     if (valueTypeName == 'UuidValue') {
+      if (valueIsNullable) {
+        return '$fieldRef.map((key, value) => MapEntry(key, value?.toString()))';
+      }
       return '$fieldRef.map((key, value) => MapEntry(key, value.toString()))';
     }
 
     if (valueTypeName == 'DateTime') {
+      if (valueIsNullable) {
+        return '$fieldRef.map((key, value) => MapEntry(key, value?.toIso8601String()))';
+      }
       return '$fieldRef.map((key, value) => MapEntry(key, value.toIso8601String()))';
     }
 
     // Handle enum value types
     if (_isEnumType(valueType)) {
+      if (valueIsNullable) {
+        return '$fieldRef.map((key, value) => MapEntry(key, value?.name))';
+      }
       return '$fieldRef.map((key, value) => MapEntry(key, value.name))';
     }
 
     // Handle DDDart value types
     if (_isDDDartType(valueType)) {
+      if (valueIsNullable) {
+        return '$fieldRef.map((key, value) => MapEntry(key, value != null ? ${valueTypeName}JsonSerializer().toJson(value, effectiveConfig) : null))';
+      }
       return '$fieldRef.map((key, value) => MapEntry(key, ${valueTypeName}JsonSerializer().toJson(value, effectiveConfig)))';
     }
 
@@ -971,23 +999,37 @@ $fromJsonWithConfigBody
         itemType.getDisplayString(withNullability: true);
     final isSet = typeName.startsWith('Set<');
     final collectionMethod = isSet ? 'toSet()' : 'toList()';
+    final itemIsNullable =
+        itemType.nullabilitySuffix == NullabilitySuffix.question;
 
     // Handle special item types
     if (itemTypeName == 'UuidValue') {
+      if (itemIsNullable) {
+        return "(json['$jsonKey'] as List).map((item) => item != null ? UuidValue.fromString(item as String) : null).$collectionMethod";
+      }
       return "(json['$jsonKey'] as List).map((item) => UuidValue.fromString(item as String)).$collectionMethod";
     }
 
     if (itemTypeName == 'DateTime') {
+      if (itemIsNullable) {
+        return "(json['$jsonKey'] as List).map((item) => item != null ? DateTime.parse(item as String) : null).$collectionMethod";
+      }
       return "(json['$jsonKey'] as List).map((item) => DateTime.parse(item as String)).$collectionMethod";
     }
 
     // Handle enum item types
     if (_isEnumType(itemType)) {
+      if (itemIsNullable) {
+        return "(json['$jsonKey'] as List).map((item) => item != null ? $itemTypeName.values.byName(item as String) : null).$collectionMethod";
+      }
       return "(json['$jsonKey'] as List).map((item) => $itemTypeName.values.byName(item as String)).$collectionMethod";
     }
 
     // Handle DDDart types
     if (_isDDDartType(itemType)) {
+      if (itemIsNullable) {
+        return "(json['$jsonKey'] as List).map((item) => item != null ? ${itemTypeName}JsonSerializer().fromJson(item, effectiveConfig) : null).$collectionMethod";
+      }
       return "(json['$jsonKey'] as List).map((item) => ${itemTypeName}JsonSerializer().fromJson(item, effectiveConfig)).$collectionMethod";
     }
 
@@ -1015,6 +1057,10 @@ $fromJsonWithConfigBody
     final valueType = typeArgs[1];
     final keyTypeName = keyType.getDisplayString(withNullability: false);
     final valueTypeName = valueType.getDisplayString(withNullability: false);
+    final valueTypeNameWithNull =
+        valueType.getDisplayString(withNullability: true);
+    final valueIsNullable =
+        valueType.nullabilitySuffix == NullabilitySuffix.question;
 
     // Only handle String keys for now (JSON limitation)
     if (keyTypeName != 'String') {
@@ -1023,26 +1069,38 @@ $fromJsonWithConfigBody
 
     // Handle special value types
     if (valueTypeName == 'UuidValue') {
+      if (valueIsNullable) {
+        return "Map<String, dynamic>.from(json['$jsonKey'] as Map).map((key, value) => MapEntry(key, value != null ? UuidValue.fromString(value as String) : null))";
+      }
       return "Map<String, dynamic>.from(json['$jsonKey'] as Map).map((key, value) => MapEntry(key, UuidValue.fromString(value as String)))";
     }
 
     if (valueTypeName == 'DateTime') {
+      if (valueIsNullable) {
+        return "Map<String, dynamic>.from(json['$jsonKey'] as Map).map((key, value) => MapEntry(key, value != null ? DateTime.parse(value as String) : null))";
+      }
       return "Map<String, dynamic>.from(json['$jsonKey'] as Map).map((key, value) => MapEntry(key, DateTime.parse(value as String)))";
     }
 
     // Handle enum value types
     if (_isEnumType(valueType)) {
+      if (valueIsNullable) {
+        return "Map<String, dynamic>.from(json['$jsonKey'] as Map).map((key, value) => MapEntry(key, value != null ? $valueTypeName.values.byName(value as String) : null))";
+      }
       return "Map<String, dynamic>.from(json['$jsonKey'] as Map).map((key, value) => MapEntry(key, $valueTypeName.values.byName(value as String)))";
     }
 
     // Handle DDDart value types
     if (_isDDDartType(valueType)) {
+      if (valueIsNullable) {
+        return "Map<String, dynamic>.from(json['$jsonKey'] as Map).map((key, value) => MapEntry(key, value != null ? ${valueTypeName}JsonSerializer().fromJson(value, effectiveConfig) : null))";
+      }
       return "Map<String, dynamic>.from(json['$jsonKey'] as Map).map((key, value) => MapEntry(key, ${valueTypeName}JsonSerializer().fromJson(value, effectiveConfig)))";
     }
 
     // Handle primitive value types (including dynamic)
     if (_isPrimitiveType(valueTypeName) || valueTypeName == 'dynamic') {
-      return "Map<String, dynamic>.from(json['$jsonKey'] as Map).map((key, value) => MapEntry(key, value as $valueTypeName))";
+      return "Map<String, dynamic>.from(json['$jsonKey'] as Map).map((key, value) => MapEntry(key, value as $valueTypeNameWithNull))";
     }
 
     // Default case - use Map.from for safe casting
@@ -1070,23 +1128,37 @@ $fromJsonWithConfigBody
         itemType.getDisplayString(withNullability: true);
     final isSet = typeName.startsWith('Set<');
     final collectionMethod = isSet ? 'toSet()' : 'toList()';
+    final itemIsNullable =
+        itemType.nullabilitySuffix == NullabilitySuffix.question;
 
     // Handle special item types
     if (itemTypeName == 'UuidValue') {
+      if (itemIsNullable) {
+        return '($jsonAccess as List).map((item) => item != null ? UuidValue.fromString(item as String) : null).$collectionMethod';
+      }
       return '($jsonAccess as List).map((item) => UuidValue.fromString(item as String)).$collectionMethod';
     }
 
     if (itemTypeName == 'DateTime') {
+      if (itemIsNullable) {
+        return '($jsonAccess as List).map((item) => item != null ? DateTime.parse(item as String) : null).$collectionMethod';
+      }
       return '($jsonAccess as List).map((item) => DateTime.parse(item as String)).$collectionMethod';
     }
 
     // Handle enum item types
     if (_isEnumType(itemType)) {
+      if (itemIsNullable) {
+        return '($jsonAccess as List).map((item) => item != null ? $itemTypeName.values.byName(item as String) : null).$collectionMethod';
+      }
       return '($jsonAccess as List).map((item) => $itemTypeName.values.byName(item as String)).$collectionMethod';
     }
 
     // Handle DDDart types
     if (_isDDDartType(itemType)) {
+      if (itemIsNullable) {
+        return '($jsonAccess as List).map((item) => item != null ? ${itemTypeName}JsonSerializer().fromJson(item as Map<String, dynamic>, effectiveConfig) : null).$collectionMethod';
+      }
       return '($jsonAccess as List).map((item) => ${itemTypeName}JsonSerializer().fromJson(item as Map<String, dynamic>, effectiveConfig)).$collectionMethod';
     }
 
@@ -1117,6 +1189,10 @@ $fromJsonWithConfigBody
     final valueType = typeArgs[1];
     final keyTypeName = keyType.getDisplayString(withNullability: false);
     final valueTypeName = valueType.getDisplayString(withNullability: false);
+    final valueTypeNameWithNull =
+        valueType.getDisplayString(withNullability: true);
+    final valueIsNullable =
+        valueType.nullabilitySuffix == NullabilitySuffix.question;
 
     // Only handle String keys for now (JSON limitation)
     if (keyTypeName != 'String') {
@@ -1125,26 +1201,38 @@ $fromJsonWithConfigBody
 
     // Handle special value types
     if (valueTypeName == 'UuidValue') {
+      if (valueIsNullable) {
+        return 'Map<String, dynamic>.from($jsonAccess as Map).map((key, value) => MapEntry(key, value != null ? UuidValue.fromString(value as String) : null))';
+      }
       return 'Map<String, dynamic>.from($jsonAccess as Map).map((key, value) => MapEntry(key, UuidValue.fromString(value as String)))';
     }
 
     if (valueTypeName == 'DateTime') {
+      if (valueIsNullable) {
+        return 'Map<String, dynamic>.from($jsonAccess as Map).map((key, value) => MapEntry(key, value != null ? DateTime.parse(value as String) : null))';
+      }
       return 'Map<String, dynamic>.from($jsonAccess as Map).map((key, value) => MapEntry(key, DateTime.parse(value as String)))';
     }
 
     // Handle enum value types
     if (_isEnumType(valueType)) {
+      if (valueIsNullable) {
+        return 'Map<String, dynamic>.from($jsonAccess as Map).map((key, value) => MapEntry(key, value != null ? $valueTypeName.values.byName(value as String) : null))';
+      }
       return 'Map<String, dynamic>.from($jsonAccess as Map).map((key, value) => MapEntry(key, $valueTypeName.values.byName(value as String)))';
     }
 
     // Handle DDDart value types
     if (_isDDDartType(valueType)) {
+      if (valueIsNullable) {
+        return 'Map<String, dynamic>.from($jsonAccess as Map).map((key, value) => MapEntry(key, value != null ? ${valueTypeName}JsonSerializer().fromJson(value as Map<String, dynamic>, effectiveConfig) : null))';
+      }
       return 'Map<String, dynamic>.from($jsonAccess as Map).map((key, value) => MapEntry(key, ${valueTypeName}JsonSerializer().fromJson(value as Map<String, dynamic>, effectiveConfig)))';
     }
 
     // Handle primitive value types (including dynamic)
     if (_isPrimitiveType(valueTypeName) || valueTypeName == 'dynamic') {
-      return 'Map<String, dynamic>.from($jsonAccess as Map).map((key, value) => MapEntry(key, value as $valueTypeName))';
+      return 'Map<String, dynamic>.from($jsonAccess as Map).map((key, value) => MapEntry(key, value as $valueTypeNameWithNull))';
     }
 
     // Default case - use Map.from for safe casting
