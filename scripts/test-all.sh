@@ -18,6 +18,8 @@
 
 set -e  # Exit on first error
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 echo "🔍 Running all checks..."
 echo ""
 
@@ -99,9 +101,12 @@ check_package() {
   # Run code generation if needed
   if grep -q "build_runner" pubspec.yaml 2>/dev/null; then
     echo "  🔨 Running code generation..."
-    if ! dart run build_runner build --delete-conflicting-outputs > /dev/null 2>&1; then
-      echo -e "  ${YELLOW}⚠ Code generation had warnings (continuing)${NC}"
+    if ! "$SCRIPT_DIR/run-required-generation.sh" "."; then
+      echo -e "  ${RED}✗ Code generation failed${NC}"
+      cd - > /dev/null
+      return 1
     fi
+    echo -e "  ${GREEN}✓ Code generation passed${NC}"
   fi
   
   # Analyze code

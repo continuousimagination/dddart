@@ -35,14 +35,15 @@ dependency_overrides:
 ''');
 
       final libDirectory = Directory('${fixture.path}/lib')..createSync();
-      File('${libDirectory.path}/model.dart').writeAsStringSync('''
+      File('${libDirectory.path}/model.dart').writeAsStringSync(
+        '''
 import 'dart:convert';
 
 import 'package:dddart/dddart.dart';
 import 'package:dddart_json/dddart_json.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
-part 'model.g.dart';
+__GENERATED_PART_DIRECTIVE__
 
 @Serializable()
 class ConsumerAggregate extends AggregateRoot {
@@ -77,7 +78,12 @@ class ConsumerValue extends Value {
   @override
   List<Object?> get props => [name];
 }
-''');
+'''
+            .replaceFirst(
+          '__GENERATED_PART_DIRECTIVE__',
+          "part 'model.g.dart';",
+        ),
+      );
 
       final binDirectory = Directory('${fixture.path}/bin')..createSync();
       File('${binDirectory.path}/main.dart').writeAsStringSync('''
