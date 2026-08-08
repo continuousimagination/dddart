@@ -18,6 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Accept` values that do not allow JSON return 406, and `POST`/`PUT` requests
   without `Content-Type: application/json` return 415, before request side
   effects.
+- `PUT` now rejects a deserialized aggregate whose ID differs from the route ID
+  with a problem+json 400 response before authorization, ETag lookup, or
+  persistence.
 
 ### Added
 

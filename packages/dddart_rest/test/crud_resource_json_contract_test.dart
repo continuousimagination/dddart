@@ -1,7 +1,11 @@
 import 'dart:convert';
 
 import 'package:dddart/dddart.dart';
-import 'package:dddart_rest/dddart_rest.dart';
+import 'package:dddart_rest/src/authentication_handler.dart';
+import 'package:dddart_rest/src/authentication_result.dart';
+import 'package:dddart_rest/src/authorization_handler.dart';
+import 'package:dddart_rest/src/authorization_result.dart';
+import 'package:dddart_rest/src/crud_resource.dart';
 import 'package:shelf/shelf.dart';
 import 'package:test/test.dart';
 
@@ -85,6 +89,47 @@ class _CountingAuthenticationHandler implements AuthenticationHandler<String> {
   Future<AuthenticationResult<String>> authenticate(Request request) async {
     calls++;
     return const AuthenticationResult(isAuthenticated: true, claims: 'claims');
+  }
+}
+
+class _CountingAuthorizationHandler
+    implements AuthorizationHandler<_TestUser, String> {
+  int calls = 0;
+
+  @override
+  Future<AuthorizationResult> authorizeCreate(
+    _TestUser aggregate,
+    AuthenticationResult<String> authResult,
+  ) async {
+    calls++;
+    return AuthorizationResult.allow();
+  }
+
+  @override
+  Future<AuthorizationResult> authorizeDelete(
+    UuidValue aggregateId,
+    AuthenticationResult<String> authResult,
+  ) async {
+    calls++;
+    return AuthorizationResult.allow();
+  }
+
+  @override
+  Future<AuthorizationResult> authorizeQuery(
+    Map<String, String> queryParams,
+    AuthenticationResult<String> authResult,
+  ) async {
+    calls++;
+    return AuthorizationResult.allow();
+  }
+
+  @override
+  Future<AuthorizationResult> authorizeUpdate(
+    _TestUser aggregate,
+    AuthenticationResult<String> authResult,
+  ) async {
+    calls++;
+    return AuthorizationResult.allow();
   }
 }
 
@@ -280,6 +325,92 @@ void main() {
     expect(response.statusCode, 201);
     expect(repository.saveCalls, 1);
     expect(response.headers['Content-Type'], 'application/json');
+  });
+
+  test('PUT rejects a route/body ID mismatch before downstream effects',
+      () async {
+    final bodyId = UuidValue.fromString('987fcdeb-51a2-43f7-b123-456789abcdef');
+    final bodyUser = _TestUser(
+      id: bodyId,
+      name: 'Wrong identity',
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    );
+    final repository = _CountingRepository([user]);
+    final authentication = _CountingAuthenticationHandler();
+    final authorization = _CountingAuthorizationHandler();
+    final resource = CrudResource<_TestUser, String>(
+      path: '/users',
+      repository: repository,
+      serializer: serializer,
+      authenticationHandler: authentication,
+      authorizationHandler: authorization,
+    );
+
+    final response = await resource.handleUpdate(
+      _request(
+        'PUT',
+        '/users/$id',
+        headers: {
+          'accept': 'application/json',
+          'content-type': 'application/json',
+          'if-match': '"stale"',
+        },
+        body: serializer.serialize(bodyUser),
+      ),
+      id.toString(),
+    );
+
+    expect(response.statusCode, 400);
+    expect(response.headers['Content-Type'], 'application/problem+json');
+    final problem = jsonDecode(await response.readAsString()) as Map;
+    expect(problem['title'], 'Bad Request');
+    expect(problem['detail'], contains(id.toString()));
+    expect(problem['detail'], contains(bodyId.toString()));
+    expect(authentication.calls, 1);
+    expect(authorization.calls, 0);
+    expect(repository.getByIdCalls, 0);
+    expect(repository.getAllCalls, 0);
+    expect(repository.saveCalls, 0);
+    expect(repository.deleteCalls, 0);
+  });
+
+  test('PUT with matching route and body IDs still updates', () async {
+    final updatedUser = _TestUser(
+      id: id,
+      name: 'Updated identity',
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    );
+    final repository = _CountingRepository([user]);
+    final authentication = _CountingAuthenticationHandler();
+    final authorization = _CountingAuthorizationHandler();
+    final resource = CrudResource<_TestUser, String>(
+      path: '/users',
+      repository: repository,
+      serializer: serializer,
+      authenticationHandler: authentication,
+      authorizationHandler: authorization,
+    );
+
+    final response = await resource.handleUpdate(
+      _request(
+        'PUT',
+        '/users/$id',
+        headers: {'content-type': 'application/json'},
+        body: serializer.serialize(updatedUser),
+      ),
+      id.toString(),
+    );
+
+    expect(response.statusCode, 200);
+    expect(authentication.calls, 1);
+    expect(authorization.calls, 1);
+    expect(repository.getByIdCalls, 0);
+    expect(repository.saveCalls, 1);
+    final responseBody = jsonDecode(await response.readAsString()) as Map;
+    expect(responseBody['id'], id.toString());
+    expect(responseBody['name'], 'Updated identity');
   });
 
   test('collection responses are valid JSON arrays', () async {

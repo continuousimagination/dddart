@@ -451,6 +451,9 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   /// updated aggregate as JSON. Content-Type must be application/json and the
   /// Accept header must allow JSON.
   ///
+  /// The route ID is authoritative and must match the deserialized aggregate
+  /// ID. A mismatch returns 400 before authorization, ETag lookup, or saving.
+  ///
   /// Supports optimistic concurrency control via If-Match header:
   /// - If If-Match header is present, validates ETag before updating
   /// - If ETag doesn't match, returns 412 Precondition Failed
@@ -489,7 +492,23 @@ class CrudResource<T extends AggregateRoot, TClaims> {
         return authCheck.response!;
       }
 
+      final body = await request.readAsString();
+      T aggregate;
+      try {
+        aggregate = serializer.deserialize(body);
+      } catch (e) {
+        _logger.warning('PUT /$path/$id - Deserialization failed: $e');
+        rethrow;
+      }
+
       final uuid = UuidValue.fromString(id);
+      if (aggregate.id != uuid) {
+        final response = _responseBuilder.badRequest(
+          'Route ID $uuid does not match request body ID ${aggregate.id}.',
+        );
+        _logger.fine('PUT /$path/$id - ${response.statusCode} (ID mismatch)');
+        return response;
+      }
 
       // Check If-Match header for optimistic concurrency control
       final ifMatch = request.headers['if-match'];
@@ -518,15 +537,6 @@ class CrudResource<T extends AggregateRoot, TClaims> {
               .fine('PUT /$path/$id - ${response.statusCode} (ETag mismatch)');
           return response;
         }
-      }
-
-      final body = await request.readAsString();
-      T aggregate;
-      try {
-        aggregate = serializer.deserialize(body);
-      } catch (e) {
-        _logger.warning('PUT /$path/$id - Deserialization failed: $e');
-        rethrow;
       }
 
       // Authorize if handler is configured

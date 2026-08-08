@@ -31,6 +31,9 @@ clients must also follow these media rules:
   range. Headers that do not allow JSON return 406 before side effects.
 - Expect JSON objects for single-resource success responses, JSON arrays for
   collection success responses, and `application/problem+json` for stock errors.
+- Ensure every `PUT /resource/:id` JSON body contains the same aggregate ID as
+  the route. A mismatch now returns 400 before authorization, ETag lookup, or
+  persistence; the route ID is authoritative.
 
 `ResponseBuilder<T>` is also JSON-specific. Remove the positional content-type
 argument and pass a `JsonSerializer<T>`:

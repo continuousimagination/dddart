@@ -243,6 +243,10 @@ positive-quality range, returns **406 Not Acceptable** before authentication,
 authorization, or repository side effects. Stock errors use
 `Content-Type: application/problem+json`.
 
+For `PUT /resource/:id`, the route ID is authoritative. The JSON body's
+aggregate ID must match it; otherwise the server returns a problem+json
+**400 Bad Request** before authorization, `If-Match` lookup, or persistence.
+
 ### Pagination
 
 All collection endpoints support pagination via query parameters:
