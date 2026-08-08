@@ -446,9 +446,10 @@ aws dynamodb create-table \\\\
   /// // Add to CloudFormation template
   /// ```
   static String getCloudFormationTemplate(String tableName) {
+    final logicalId = _cloudFormationLogicalId(tableName);
     return \'\'\'
 Resources:
-  \\\${tableName.split('_').map((s) => s[0].toUpperCase() + s.substring(1)).join()}Table:
+  \${logicalId}Table:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: \$tableName
@@ -460,6 +461,24 @@ Resources:
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
 \'\'\'.trim();
+  }
+
+  static String _cloudFormationLogicalId(String tableName) {
+    final segments = tableName
+        .split(RegExp('[^A-Za-z0-9]+'))
+        .where((segment) => segment.isNotEmpty);
+    var logicalId = segments
+        .map(
+          (segment) =>
+              segment[0].toUpperCase() + segment.substring(1),
+        )
+        .join();
+
+    if (logicalId.isEmpty) logicalId = 'Dynamo';
+    if (!RegExp('^[A-Za-z]').hasMatch(logicalId)) {
+      logicalId = 'Dynamo\$logicalId';
+    }
+    return logicalId;
   }''';
   }
 
