@@ -125,7 +125,7 @@ void main() {
           path: '/webhooks/test',
           verifier: TestWebhookVerifier(
             shouldSucceed: false,
-            errorMessage: 'Invalid signature',
+            errorMessage: 'internal verification sentinel',
           ),
           deserializer: (body) => WebhookDeserializers.json(
             body,
@@ -152,6 +152,7 @@ void main() {
         final json = jsonDecode(responseBody) as Map<String, dynamic>;
         expect(json['error'], equals('Signature verification failed'));
         expect(json['message'], equals('Invalid signature'));
+        expect(responseBody, isNot(contains('internal verification sentinel')));
       });
 
       test('should return 400 when deserialization fails', () async {
@@ -160,10 +161,8 @@ void main() {
         final webhook = WebhookResource<TestPayload, TestVerificationResult>(
           path: '/webhooks/test',
           verifier: TestWebhookVerifier(),
-          deserializer: (body) => WebhookDeserializers.json(
-            body,
-            TestPayload.fromJson,
-          ),
+          deserializer: (body) =>
+              throw const FormatException('internal parsing sentinel'),
           handler: (payload, verification) async {
             handlerCalled = true;
             return Response.ok('Success');
@@ -184,6 +183,8 @@ void main() {
         final responseBody = await response.readAsString();
         final json = jsonDecode(responseBody) as Map<String, dynamic>;
         expect(json['error'], equals('Deserialization failed'));
+        expect(json['message'], equals('Invalid webhook payload'));
+        expect(responseBody, isNot(contains('internal parsing sentinel')));
       });
 
       test('should use custom error handler for deserialization failures',
