@@ -130,9 +130,11 @@ class CognitoAuthProvider implements AuthProvider {
   Future<_CognitoTokens> _refresh(String refreshToken) async {
     final response = await _httpClient.post(
       Uri.parse('$cognitoDomain/oauth2/token'),
-      body: 'grant_type=refresh_token'
-          '&refresh_token=$refreshToken'
-          '&client_id=$clientId',
+      body: {
+        'grant_type': 'refresh_token',
+        'refresh_token': refreshToken,
+        'client_id': clientId,
+      },
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},
     );
 
