@@ -50,9 +50,9 @@ class SlackWebhookVerifier extends WebhookVerifier<SlackVerificationResult> {
   /// The [signingSecret] is provided by Slack in your app's configuration
   /// under "Basic Information" > "App Credentials" > "Signing Secret".
   ///
-  /// The [maxTimestampAge] determines how old a request timestamp can be
-  /// before it's rejected as a potential replay attack. Defaults to 5 minutes,
-  /// which matches Slack's recommendation.
+  /// The [maxTimestampAge] determines how far a request timestamp can differ
+  /// from the current time before it's rejected as a potential replay attack.
+  /// Defaults to 5 minutes, which matches Slack's recommendation.
   SlackWebhookVerifier({
     required this.signingSecret,
     this.maxTimestampAge = const Duration(minutes: 5),
@@ -66,7 +66,7 @@ class SlackWebhookVerifier extends WebhookVerifier<SlackVerificationResult> {
 
   /// Maximum age of request timestamp to prevent replay attacks.
   ///
-  /// Requests with timestamps older than this duration are rejected.
+  /// Requests outside this past-or-future window are rejected.
   /// Defaults to 5 minutes, which is Slack's recommended value.
   final Duration maxTimestampAge;
 
@@ -95,10 +95,10 @@ class SlackWebhookVerifier extends WebhookVerifier<SlackVerificationResult> {
 
     final requestTime = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
     final now = DateTime.now();
-    if (now.difference(requestTime) > maxTimestampAge) {
+    if (now.difference(requestTime).abs() > maxTimestampAge) {
       return SlackVerificationResult(
         isValid: false,
-        errorMessage: 'Request timestamp too old (replay attack prevention)',
+        errorMessage: 'Request timestamp outside allowed window',
         timestamp: requestTime,
       );
     }

@@ -132,7 +132,32 @@ void main() {
       expect(result.isValid, isFalse);
       expect(
         result.errorMessage,
-        equals('Request timestamp too old (replay attack prevention)'),
+        equals('Request timestamp outside allowed window'),
+      );
+    });
+
+    test('should reject a signed timestamp too far in the future', () async {
+      final futureTimestamp =
+          (DateTime.now().millisecondsSinceEpoch ~/ 1000) + (6 * 60);
+      final body = jsonEncode({'team_id': 'T123'});
+      final baseString = 'v0:$futureTimestamp:$body';
+      final hmac = Hmac(sha256, utf8.encode(signingSecret));
+      final signature = 'v0=${hmac.convert(utf8.encode(baseString))}';
+      final request = Request(
+        'POST',
+        Uri.parse('http://example.com/webhook'),
+        headers: {
+          'x-slack-signature': signature,
+          'x-slack-request-timestamp': futureTimestamp.toString(),
+        },
+      );
+
+      final result = await verifier.verify(request, body);
+
+      expect(result.isValid, isFalse);
+      expect(
+        result.errorMessage,
+        equals('Request timestamp outside allowed window'),
       );
     });
 
@@ -279,7 +304,7 @@ void main() {
       expect(result.isValid, isFalse);
       expect(
         result.errorMessage,
-        equals('Request timestamp too old (replay attack prevention)'),
+        equals('Request timestamp outside allowed window'),
       );
     });
   });
