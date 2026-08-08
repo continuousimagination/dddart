@@ -379,6 +379,24 @@ void main() {
         await authHandler.revoke('non-existent-token');
       });
 
+      test('should propagate repository failures', () async {
+        const failure = RepositoryException(
+          'refresh token store unavailable',
+          type: RepositoryExceptionType.connection,
+        );
+        final failingHandler = JwtAuthHandler<StandardClaims, RefreshToken>(
+          secret: 'test-secret-key-for-testing',
+          refreshTokenRepository: const _FailingRefreshTokenRepository(failure),
+          parseClaimsFromJson: StandardClaims.fromJson,
+          claimsToJson: (claims) => claims.toJson(),
+        );
+
+        await expectLater(
+          failingHandler.revoke('existing-token'),
+          throwsA(same(failure)),
+        );
+      });
+
       test('should prevent refresh after revocation', () async {
         final tokens = await authHandler.issueTokens(
           'user123',
@@ -443,4 +461,23 @@ void main() {
       });
     });
   });
+}
+
+class _FailingRefreshTokenRepository
+    implements QueryableRepository<RefreshToken> {
+  const _FailingRefreshTokenRepository(this.failure);
+
+  final RepositoryException failure;
+
+  @override
+  Future<void> deleteById(UuidValue id) => throw UnimplementedError();
+
+  @override
+  Future<List<RefreshToken>> getAll() => throw failure;
+
+  @override
+  Future<RefreshToken> getById(UuidValue id) => throw UnimplementedError();
+
+  @override
+  Future<void> save(RefreshToken aggregate) => throw UnimplementedError();
 }

@@ -250,15 +250,19 @@ class JwtAuthHandler<TClaims, TRefreshToken extends RefreshToken>
   /// await authHandler.revoke('refresh-token-string');
   /// ```
   Future<void> revoke(String refreshTokenString) async {
-    final RefreshToken refreshToken;
-    try {
-      refreshToken = await findFirstItem(
-        refreshTokenRepository,
-        (token) => token.token == refreshTokenString,
-        operationName: 'refresh token revocation',
-      );
-    } catch (_) {
-      // Token doesn't exist, nothing to revoke.
+    final refreshTokens = await getAllItems(
+      refreshTokenRepository,
+      operationName: 'refresh token revocation',
+    );
+    TRefreshToken? refreshToken;
+    for (final token in refreshTokens) {
+      if (token.token == refreshTokenString) {
+        refreshToken = token;
+        break;
+      }
+    }
+
+    if (refreshToken == null) {
       return;
     }
 
