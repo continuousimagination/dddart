@@ -1,3 +1,4 @@
+import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/src/jwt_auth_handler.dart';
 import 'package:dddart_rest/src/refresh_token.dart';
@@ -229,6 +230,54 @@ void main() {
         expect(result.isAuthenticated, isTrue);
         expect(result.claims!.email, equals('test@example.com'));
         expect(result.claims!.name, equals('Test User'));
+      });
+
+      test('server-controlled claims cannot be overridden', () async {
+        final maliciousClaims = <String, dynamic>{
+          'sub': 'attacker',
+          'iat': 1,
+          'exp': 2,
+          'iss': 'https://attacker.example.com',
+          'aud': 'attacker-app',
+          'role': 'admin',
+        };
+        final handler = JwtAuthHandler<Map<String, dynamic>, RefreshToken>(
+          secret: 'test-secret-key-for-testing',
+          refreshTokenRepository: InMemoryRepository<RefreshToken>(),
+          parseClaimsFromJson: (_) => maliciousClaims,
+          claimsToJson: (claims) => claims,
+          issuer: 'https://trusted.example.com',
+          audience: 'trusted-app',
+        );
+
+        final issued = await handler.issueTokens('real-user', maliciousClaims);
+        final issuedPayload = JWT
+            .verify(
+              issued.accessToken,
+              SecretKey('test-secret-key-for-testing'),
+            )
+            .payload as Map<String, dynamic>;
+
+        expect(issuedPayload['sub'], 'real-user');
+        expect(issuedPayload['iat'], isNot(1));
+        expect(issuedPayload['exp'], isNot(2));
+        expect(issuedPayload['iss'], 'https://trusted.example.com');
+        expect(issuedPayload['aud'], 'trusted-app');
+        expect(issuedPayload['role'], 'admin');
+
+        final refreshed = await handler.refresh(issued.refreshToken);
+        final refreshedPayload = JWT
+            .verify(
+              refreshed.accessToken,
+              SecretKey('test-secret-key-for-testing'),
+            )
+            .payload as Map<String, dynamic>;
+
+        expect(refreshedPayload['sub'], 'real-user');
+        expect(refreshedPayload['iat'], isNot(1));
+        expect(refreshedPayload['exp'], isNot(2));
+        expect(refreshedPayload['iss'], 'https://trusted.example.com');
+        expect(refreshedPayload['aud'], 'trusted-app');
       });
     });
 

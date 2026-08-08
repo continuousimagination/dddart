@@ -152,22 +152,11 @@ class JwtAuthHandler<TClaims, TRefreshToken extends RefreshToken>
 
     // Create JWT payload
     final now = DateTime.now();
-    final expiration = now.add(accessTokenDuration);
-
-    final payload = <String, dynamic>{
-      'sub': userId,
-      'iat': now.millisecondsSinceEpoch ~/ 1000,
-      'exp': expiration.millisecondsSinceEpoch ~/ 1000,
-      ...claimsJson,
-    };
-
-    if (issuer != null) {
-      payload['iss'] = issuer;
-    }
-
-    if (audience != null) {
-      payload['aud'] = audience;
-    }
+    final payload = _buildAccessTokenPayload(
+      userId: userId,
+      issuedAt: now,
+      customClaims: claimsJson,
+    );
 
     // Sign JWT
     final jwt = JWT(payload);
@@ -235,22 +224,11 @@ class JwtAuthHandler<TClaims, TRefreshToken extends RefreshToken>
 
     // Issue new access token (but not a new refresh token)
     final now = DateTime.now();
-    final expiration = now.add(accessTokenDuration);
-
-    final payload = <String, dynamic>{
-      'sub': refreshToken.userId,
-      'iat': now.millisecondsSinceEpoch ~/ 1000,
-      'exp': expiration.millisecondsSinceEpoch ~/ 1000,
-      ..._claimsToJson(claims),
-    };
-
-    if (issuer != null) {
-      payload['iss'] = issuer;
-    }
-
-    if (audience != null) {
-      payload['aud'] = audience;
-    }
+    final payload = _buildAccessTokenPayload(
+      userId: refreshToken.userId,
+      issuedAt: now,
+      customClaims: _claimsToJson(claims),
+    );
 
     final jwt = JWT(payload);
     final accessToken = jwt.sign(SecretKey(secret));
@@ -287,6 +265,34 @@ class JwtAuthHandler<TClaims, TRefreshToken extends RefreshToken>
     // Mark as revoked
     final revokedToken = refreshToken.revoke() as TRefreshToken;
     await refreshTokenRepository.save(revokedToken);
+  }
+
+  Map<String, dynamic> _buildAccessTokenPayload({
+    required String userId,
+    required DateTime issuedAt,
+    required Map<String, dynamic> customClaims,
+  }) {
+    final payload = Map<String, dynamic>.of(customClaims)
+      ..remove('sub')
+      ..remove('iat')
+      ..remove('exp')
+      ..remove('iss')
+      ..remove('aud')
+      ..addAll({
+        'sub': userId,
+        'iat': issuedAt.millisecondsSinceEpoch ~/ 1000,
+        'exp': issuedAt.add(accessTokenDuration).millisecondsSinceEpoch ~/ 1000,
+      });
+
+    if (issuer != null) {
+      payload['iss'] = issuer;
+    }
+
+    if (audience != null) {
+      payload['aud'] = audience;
+    }
+
+    return payload;
   }
 
   /// Generates a cryptographically secure random refresh token
