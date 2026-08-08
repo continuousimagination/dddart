@@ -141,9 +141,9 @@ class RestRepositoryGenerator
   ///
   /// Converts PascalCase to kebab-case and pluralizes.
   /// Examples:
-  /// - User → users
-  /// - OrderItem → order-items
-  /// - Company → companies
+  /// - User → /users
+  /// - OrderItem → /order-items
+  /// - Company → /companies
   String _generateResourcePath(String className) {
     // Convert PascalCase to kebab-case
     final kebab = className
@@ -155,13 +155,13 @@ class RestRepositoryGenerator
 
     // Simple pluralization
     if (kebab.endsWith('y')) {
-      return '${kebab.substring(0, kebab.length - 1)}ies';
+      return '/${kebab.substring(0, kebab.length - 1)}ies';
     } else if (kebab.endsWith('s') ||
         kebab.endsWith('x') ||
         kebab.endsWith('ch')) {
-      return '${kebab}es';
+      return '/${kebab}es';
     } else {
-      return '${kebab}s';
+      return '/${kebab}s';
     }
   }
 
