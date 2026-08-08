@@ -32,6 +32,8 @@ final _log = Logger('WebhookResource');
 /// ## Error Handling
 ///
 /// - **Verification Failure**: Returns 401 Unauthorized
+/// - **Verifier Exception**: Returns a sanitized 500 Internal Server Error and
+///   logs the exception internally
 /// - **Deserialization Failure**: Returns 400 Bad Request (or custom via
 ///   [onDeserializationError])
 /// - **Handler Exception**: Returns 500 Internal Server Error
@@ -203,6 +205,7 @@ class WebhookResource<TPayload,
   /// ## Error Responses
   ///
   /// - **401 Unauthorized**: Signature verification failed
+  /// - **500 Internal Server Error**: Signature verifier threw an exception
   /// - **400 Bad Request**: Deserialization failed (if no custom error handler)
   /// - **500 Internal Server Error**: Handler threw an exception
   Future<Response> handleRequest(Request request) async {
@@ -211,7 +214,21 @@ class WebhookResource<TPayload,
 
     // 2. Verify signature
     _log.fine('Verifying webhook signature for ${request.url.path}');
-    final verification = await verifier.verify(request, body);
+    late final TVerification verification;
+    try {
+      verification = await verifier.verify(request, body);
+    } catch (e, stackTrace) {
+      _log.severe('Webhook verifier threw exception', e, stackTrace);
+
+      return Response(
+        500,
+        body: jsonEncode({
+          'error': 'Internal server error',
+          'message': 'Unable to process webhook',
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
 
     if (!verification.isValid) {
       _log.warning(

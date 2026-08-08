@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:dddart_webhooks/dddart_webhooks.dart';
+import 'package:logging/logging.dart';
 import 'package:shelf/shelf.dart';
 import 'package:test/test.dart';
 
@@ -34,6 +35,13 @@ class TestWebhookVerifier extends WebhookVerifier<TestVerificationResult> {
       errorMessage: errorMessage,
       userId: userId,
     );
+  }
+}
+
+class ThrowingWebhookVerifier extends WebhookVerifier<TestVerificationResult> {
+  @override
+  Future<TestVerificationResult> verify(Request request, String body) async {
+    throw StateError('verifier-exception-sentinel secret-sentinel');
   }
 }
 
@@ -153,6 +161,63 @@ void main() {
         expect(json['error'], equals('Signature verification failed'));
         expect(json['message'], equals('Invalid signature'));
         expect(responseBody, isNot(contains('internal verification sentinel')));
+      });
+
+      test('should log verifier exceptions and return a sanitized 500',
+          () async {
+        const payloadSentinel = 'payload-fragment-sentinel';
+        const signatureSentinel = 'signature-material-sentinel';
+        var handlerCalled = false;
+        final logRecords = <LogRecord>[];
+        final logSubscription = Logger.root.onRecord.listen(logRecords.add);
+        addTearDown(logSubscription.cancel);
+
+        final webhook = WebhookResource<String, TestVerificationResult>(
+          path: '/webhooks/test',
+          verifier: ThrowingWebhookVerifier(),
+          handler: (body, verification) async {
+            handlerCalled = true;
+            return Response.ok('Success');
+          },
+        );
+
+        final request = Request(
+          'POST',
+          Uri.parse('http://localhost/webhooks/test'),
+          headers: {'X-Signature': signatureSentinel},
+          body: payloadSentinel,
+        );
+
+        final response = await webhook.handleRequest(request);
+
+        expect(response.statusCode, equals(500));
+        expect(handlerCalled, isFalse);
+
+        final responseBody = await response.readAsString();
+        expect(
+          jsonDecode(responseBody),
+          equals({
+            'error': 'Internal server error',
+            'message': 'Unable to process webhook',
+          }),
+        );
+        expect(responseBody, isNot(contains('verifier-exception-sentinel')));
+        expect(responseBody, isNot(contains('secret-sentinel')));
+        expect(responseBody, isNot(contains(payloadSentinel)));
+        expect(responseBody, isNot(contains(signatureSentinel)));
+
+        final verifierLogs = logRecords.where(
+          (record) =>
+              record.loggerName == 'WebhookResource' &&
+              record.message == 'Webhook verifier threw exception',
+        );
+        expect(verifierLogs, hasLength(1));
+        expect(
+          verifierLogs.single.error.toString(),
+          contains('verifier-exception-sentinel'),
+        );
+        expect(verifierLogs.single.stackTrace, isNotNull);
+        expect(verifierLogs.single.stackTrace.toString(), isNotEmpty);
       });
 
       test('should return 400 when deserialization fails', () async {
