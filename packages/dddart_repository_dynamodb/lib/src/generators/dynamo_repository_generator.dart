@@ -630,11 +630,50 @@ Resources:
   String _generateMethodSignature(MethodElement method) {
     final returnType =
         method.returnType.getDisplayString(withNullability: true);
-    final params = method.parameters.map((p) {
-      final type = p.type.getDisplayString(withNullability: true);
-      return '$type ${p.name}';
-    }).join(', ');
+    final typeParameters = method.typeParameters.isEmpty
+        ? ''
+        : '<${method.typeParameters.map((parameter) {
+            final bound = parameter.bound;
+            if (bound == null) return parameter.name;
+            return '${parameter.name} extends '
+                '${bound.getDisplayString(withNullability: true)}';
+          }).join(', ')}>';
 
-    return '$returnType ${method.name}($params)';
+    final requiredPositional = method.parameters
+        .where((parameter) => parameter.isRequiredPositional)
+        .map(_generateParameter)
+        .toList();
+    final optionalPositional = method.parameters
+        .where((parameter) => parameter.isOptionalPositional)
+        .map(_generateParameter)
+        .toList();
+    final named = method.parameters
+        .where((parameter) => parameter.isNamed)
+        .map(_generateParameter)
+        .toList();
+
+    final parameterGroups = <String>[...requiredPositional];
+    if (optionalPositional.isNotEmpty) {
+      parameterGroups.add('[${optionalPositional.join(', ')}]');
+    }
+    if (named.isNotEmpty) {
+      parameterGroups.add('{${named.join(', ')}}');
+    }
+
+    return '$returnType ${method.name}$typeParameters'
+        '(${parameterGroups.join(', ')})';
+  }
+
+  String _generateParameter(ParameterElement parameter) {
+    final buffer = StringBuffer();
+    if (parameter.isRequiredNamed) buffer.write('required ');
+    if (parameter.isCovariant) buffer.write('covariant ');
+    buffer
+      ..write(parameter.type.getDisplayString(withNullability: true))
+      ..write(' ${parameter.name}');
+
+    final defaultValue = parameter.defaultValueCode;
+    if (defaultValue != null) buffer.write(' = $defaultValue');
+    return buffer.toString();
   }
 }
