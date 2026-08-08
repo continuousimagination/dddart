@@ -1,7 +1,7 @@
 name: dddart_repository_dynamodb
 description: DynamoDB repository implementation for DDDart aggregate roots with code generation support
 version: 0.1.0
-repository: https://github.com/yourusername/dddart_repository_dynamodb
+repository: https://github.com/continuousimagination/dddart
 resolution: workspace
 
 environment:
