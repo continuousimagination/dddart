@@ -355,8 +355,11 @@ class RestRepositoryGenerator
   @override
   Future<$className> getById(UuidValue id) async {
     try {
-      final response = await _connection.client.get(
-        Uri.parse('\${_connection.baseUrl}\$_resourcePath/\${id.uuid}'),
+      final response = await _connection.executeRequest(
+        () => _connection.client.get(
+          Uri.parse('\${_connection.baseUrl}\$_resourcePath/\${id.uuid}'),
+        ),
+        operation: 'retrieve $className',
       );
       
       if (response.statusCode == 200) {
@@ -386,10 +389,13 @@ class RestRepositoryGenerator
       final json = _serializer.toJson(aggregate);
       final body = jsonEncode(json);
       
-      final response = await _connection.client.put(
-        Uri.parse('\${_connection.baseUrl}\$_resourcePath/\${aggregate.id.uuid}'),
-        body: body,
-        headers: {'Content-Type': 'application/json'},
+      final response = await _connection.executeRequest(
+        () => _connection.client.put(
+          Uri.parse('\${_connection.baseUrl}\$_resourcePath/\${aggregate.id.uuid}'),
+          body: body,
+          headers: {'Content-Type': 'application/json'},
+        ),
+        operation: 'save $className',
       );
       
       if (response.statusCode == 200 || response.statusCode == 204) {
@@ -415,8 +421,11 @@ class RestRepositoryGenerator
   @override
   Future<void> deleteById(UuidValue id) async {
     try {
-      final response = await _connection.client.delete(
-        Uri.parse('\${_connection.baseUrl}\$_resourcePath/\${id.uuid}'),
+      final response = await _connection.executeRequest(
+        () => _connection.client.delete(
+          Uri.parse('\${_connection.baseUrl}\$_resourcePath/\${id.uuid}'),
+        ),
+        operation: 'delete $className',
       );
       
       if (response.statusCode == 204 || response.statusCode == 200) {
