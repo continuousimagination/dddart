@@ -292,14 +292,22 @@ $fromJsonWithConfigBody
   
   @override
   $className deserialize(String data, [dynamic config]) {
-    final json = jsonDecode(data);
-    if (json is! Map<String, dynamic>) {
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map<String, dynamic>) {
+        throw DeserializationException(
+          'Expected JSON object but got \${json.runtimeType}',
+          expectedType: '$className',
+        );
+      }
+      return fromJson(json, config as SerializationConfig?);
+    } catch (e) {
+      if (e is DeserializationException) rethrow;
       throw DeserializationException(
-        'Expected JSON object but got \${json.runtimeType}',
+        'Failed to deserialize JSON: \$e',
         expectedType: '$className',
       );
     }
-    return fromJson(json, config as SerializationConfig?);
   }
   
   /// Convenience method for static access with default configuration
