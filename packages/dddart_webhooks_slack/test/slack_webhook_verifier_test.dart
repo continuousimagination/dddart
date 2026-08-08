@@ -105,6 +105,24 @@ void main() {
       expect(result.errorMessage, equals('Invalid timestamp format'));
     });
 
+    test('should reject an out-of-range numeric timestamp without throwing',
+        () async {
+      const timestamp = '9223372036854775';
+      final request = Request(
+        'POST',
+        Uri.parse('http://example.com/webhook'),
+        headers: {
+          'x-slack-signature': 'v0=somehash',
+          'x-slack-request-timestamp': timestamp,
+        },
+      );
+
+      final result = await verifier.verify(request, '{}');
+
+      expect(result.isValid, isFalse);
+      expect(result.errorMessage, equals('Timestamp out of range'));
+    });
+
     test('should reject request with expired timestamp (replay attack)',
         () async {
       // Arrange

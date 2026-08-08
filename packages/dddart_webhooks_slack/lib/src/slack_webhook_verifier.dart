@@ -93,6 +93,13 @@ class SlackWebhookVerifier extends WebhookVerifier<SlackVerificationResult> {
       );
     }
 
+    const maxDateTimeSeconds = 8640000000000;
+    if (timestamp < -maxDateTimeSeconds || timestamp > maxDateTimeSeconds) {
+      return const SlackVerificationResult(
+        isValid: false,
+        errorMessage: 'Timestamp out of range',
+      );
+    }
     final requestTime = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
     final now = DateTime.now();
     if (now.difference(requestTime).abs() > maxTimestampAge) {
