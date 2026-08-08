@@ -125,14 +125,14 @@ Covers connection lifecycle and advanced features:
 - Connection creation with custom parameters
 - Opening and closing connections
 - Connection state checking
-- Connection pooling configuration
+- Reusing one connection for multiple operations
 - Transaction management (commit/rollback)
 - Concurrent operations
 
 **Key concepts:**
-- Connection pooling
+- Single-connection lifecycle
 - Transaction boundaries
-- Concurrent access
+- Sequential connection reuse
 - Resource cleanup
 
 ### collection_examples.dart

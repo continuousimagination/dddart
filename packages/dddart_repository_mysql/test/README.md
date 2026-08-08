@@ -338,7 +338,7 @@ These models are annotated with `@Serializable()` and `@GenerateMysqlRepository(
 
 3. Use a local MySQL instance instead of Docker for faster I/O
 
-4. Increase MySQL connection pool size in test helpers
+4. Reduce concurrent test load against the single MySQL connection
 
 ### Code Generation Errors
 

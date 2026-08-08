@@ -501,7 +501,6 @@ void main() async {
     database: database,
     user: user,
     password: password,
-    maxConnections: 5,
   );
 
   try {

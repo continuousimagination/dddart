@@ -47,7 +47,7 @@ a subtype of type 'List<dynamic>' in type cast
 ### 3. Connection Stability
 
 **Issues:**
-- Connection pool exhaustion under concurrent load
+- Connection exhaustion under concurrent load
 - "Got packets out of order" errors
 - Socket closure during query execution
 
@@ -68,7 +68,7 @@ The `mysql1` package:
 
 **Advantages:**
 1. ✅ Full MySQL 8.0+ support (including `caching_sha2_password`)
-2. ✅ Better connection pooling and stability
+2. ✅ Better connection stability
 3. ✅ Modern async/await API
 4. ✅ Actively maintained
 5. ✅ Better prepared statement support
@@ -182,7 +182,7 @@ await conn.transactional((txn) async {
 1. **Unit Tests:** Should pass without changes (no driver dependency)
 2. **Integration Tests:** Require MySQL instance
    - Run against MySQL 8.0 with default authentication
-   - Test connection pooling under load
+   - Test single-connection behavior under load
    - Verify collection support works correctly
    - Test transaction rollback behavior
 
@@ -256,7 +256,7 @@ final connection = MysqlConnection(
 - [ ] Update Docker commands in TESTING.md
 - [ ] Verify all 71 non-integration tests still pass
 - [ ] Fix and verify all 55 integration tests pass
-- [ ] Add connection pool stress tests
+- [ ] Add single-connection stress tests
 - [ ] Add MySQL 8.0 authentication tests
 
 ### Documentation Updates
@@ -276,7 +276,7 @@ After migration:
 3. ✅ Stable connection handling under load
 4. ✅ Better error messages and debugging
 5. ✅ Collection support fully functional
-6. ✅ Improved performance (better connection pooling)
+6. ✅ Improved connection stability
 
 ## Timeline Estimate
 

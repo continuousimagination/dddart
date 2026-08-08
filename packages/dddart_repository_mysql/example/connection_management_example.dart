@@ -12,7 +12,7 @@ import 'lib/domain/order_item.dart';
 /// - Creating a connection with custom parameters
 /// - Opening and closing connections
 /// - Connection state checking
-/// - Connection pooling configuration
+/// - Reusing one connection for multiple operations
 /// - Transaction management
 /// - Proper resource cleanup
 ///
@@ -26,7 +26,7 @@ Future<void> main() async {
   await _demonstrateBasicConnectionLifecycle();
   print('');
 
-  await _demonstrateConnectionPooling();
+  await _demonstrateSingleConnectionReuse();
   print('');
 
   await _demonstrateTransactionManagement();
@@ -83,37 +83,31 @@ Future<void> _demonstrateBasicConnectionLifecycle() async {
   }
 }
 
-/// Demonstrates connection pooling configuration.
-Future<void> _demonstrateConnectionPooling() async {
-  print('2. Demonstrating connection pooling...');
+/// Demonstrates reusing the same connection for multiple operations.
+Future<void> _demonstrateSingleConnectionReuse() async {
+  print('2. Demonstrating single-connection reuse...');
 
-  // Create connection with larger pool for high concurrency
-  print('   Creating connection with pool size 10...');
+  print('   Creating one connection...');
   final connection = MysqlConnection(
     host: 'localhost',
     port: 3306,
     database: 'dddart_example',
     user: 'root',
     password: 'password',
-    maxConnections: 10, // Larger pool for concurrent operations
   );
 
   try {
     await connection.open();
-    print('   ✓ Connection pool opened');
+    print('   ✓ Connection opened');
 
     final orderRepo = OrderMysqlRepository(connection);
     await orderRepo.createTables();
 
-    // Simulate concurrent operations
-    print('\n   Executing concurrent operations...');
-    final futures = <Future<void>>[];
+    print('\n   Executing operations on the same connection...');
     for (var i = 0; i < 5; i++) {
-      futures.add(_createAndSaveOrder(orderRepo, i));
+      await _createAndSaveOrder(orderRepo, i);
     }
-
-    await Future.wait(futures);
-    print('   ✓ All concurrent operations completed');
+    print('   ✓ All operations completed');
 
     // Clean up
     print('\n   Cleaning up test data...');
@@ -122,7 +116,7 @@ Future<void> _demonstrateConnectionPooling() async {
     print('   ✓ Test data cleaned up');
   } finally {
     await connection.close();
-    print('\n   ✓ Connection pool closed');
+    print('\n   ✓ Connection closed');
   }
 }
 
