@@ -80,6 +80,7 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
       toJsonBody,
       fromJsonBody,
       analysis,
+      config,
     );
   }
 
@@ -101,6 +102,7 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
       toJsonBody,
       fromJsonBody,
       analysis,
+      config,
     );
   }
 
@@ -127,13 +129,30 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
       toJsonBody,
       fromJsonBody,
       analysis,
+      config,
     );
   }
 
   /// Extracts configuration from the @Serializable annotation.
   SerializationConfig _extractAnnotationConfig(ConstantReader annotation) {
-    // For now, return default config. In the future, we can extract config from annotation parameters
-    return const SerializationConfig();
+    final fieldRenameIndex = annotation
+        .read('fieldRename')
+        .objectValue
+        .getField('index')
+        ?.toIntValue();
+
+    if (fieldRenameIndex == null ||
+        fieldRenameIndex < 0 ||
+        fieldRenameIndex >= FieldRename.values.length) {
+      throw InvalidGenerationSourceError(
+        'The @Serializable fieldRename setting is invalid.',
+      );
+    }
+
+    return SerializationConfig(
+      includeNullFields: annotation.read('includeNullFields').boolValue,
+      fieldRename: FieldRename.values[fieldRenameIndex],
+    );
   }
 
   /// Analyzes a class to determine its type and extract field information.
@@ -258,11 +277,13 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
     String toJsonBody,
     String fromJsonBody,
     ClassAnalysis analysis,
+    SerializationConfig annotationConfig,
   ) {
     // Generate configurable versions of the methods
     final toJsonWithConfigBody = _generateToJsonWithConfig(className, analysis);
     final fromJsonWithConfigBody =
         _generateFromJsonWithConfig(className, analysis);
+    final annotationConfigSource = _generateConfigSource(annotationConfig);
 
     return '''
 class ${className}JsonSerializer implements JsonSerializer<$className> {
@@ -271,7 +292,7 @@ class ${className}JsonSerializer implements JsonSerializer<$className> {
   
   /// Creates a serializer with the specified default configuration.
   ${className}JsonSerializer([SerializationConfig? defaultConfig])
-      : _defaultConfig = defaultConfig ?? const SerializationConfig();
+      : _defaultConfig = defaultConfig ?? $annotationConfigSource;
   
   @override
   Map<String, dynamic> toJson($className instance, [SerializationConfig? config]) {
@@ -320,6 +341,13 @@ $fromJsonWithConfigBody
     return ${className}JsonSerializer().fromJson(json, config);
   }
 }''';
+  }
+
+  String _generateConfigSource(SerializationConfig config) {
+    return 'const SerializationConfig('
+        'fieldRename: FieldRename.${config.fieldRename.name}, '
+        'includeNullFields: ${config.includeNullFields},'
+        ')';
   }
 
   /// Generates configurable toJson method body.

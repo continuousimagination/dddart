@@ -102,6 +102,15 @@ Configure how field names are transformed in JSON:
 ```dart
 import 'package:dddart_serialization/dddart_serialization.dart';
 
+// Annotation-level configuration is the generated default.
+@Serializable(
+  fieldRename: FieldRename.kebab,
+  includeNullFields: false,
+)
+class ApiValue extends Value {
+  // ...
+}
+
 // Constructor-level configuration (default for all operations)
 final snakeSerializer = UserJsonSerializer(
   SerializationConfig(fieldRename: FieldRename.snake)
@@ -111,6 +120,10 @@ final snakeSerializer = UserJsonSerializer(
 final camelConfig = SerializationConfig(fieldRename: FieldRename.none);
 final json = snakeSerializer.toJson(user, camelConfig);  // Override to camelCase
 ```
+
+Configuration is selected as a complete value in this order: operation,
+serializer constructor, annotation on the concrete type, then framework
+defaults. Settings from annotations on ancestor types are not merged.
 
 Available field naming strategies:
 - `FieldRename.none` - Keep original field names (camelCase)
