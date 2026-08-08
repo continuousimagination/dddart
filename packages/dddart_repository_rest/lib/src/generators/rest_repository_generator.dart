@@ -358,6 +358,7 @@ class RestRepositoryGenerator
       final response = await _connection.executeRequest(
         () => _connection.client.get(
           Uri.parse('\${_connection.baseUrl}\$_resourcePath/\${id.uuid}'),
+          headers: {'Accept': 'application/json'},
         ),
         operation: 'retrieve $className',
       );
