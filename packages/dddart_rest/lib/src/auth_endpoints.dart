@@ -131,11 +131,11 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
       );
 
       return _jsonResponse(tokens.toJson());
-    } catch (e) {
+    } catch (_) {
       return _problemResponse(
         status: 500,
         title: 'Internal Server Error',
-        detail: 'Failed to process login: $e',
+        detail: 'Failed to process login',
       );
     }
   }
@@ -220,11 +220,11 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
       await authHandler.revoke(refreshToken);
 
       return Response(204);
-    } catch (e) {
+    } catch (_) {
       return _problemResponse(
         status: 500,
         title: 'Internal Server Error',
-        detail: 'Failed to logout: $e',
+        detail: 'Failed to logout',
       );
     }
   }
@@ -293,11 +293,11 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
         'expires_in': deviceCodeExpiration.inSeconds,
         'interval': pollingInterval,
       });
-    } catch (e) {
+    } catch (_) {
       return _problemResponse(
         status: 500,
         title: 'Internal Server Error',
-        detail: 'Failed to create device code: $e',
+        detail: 'Failed to create device code',
       );
     }
   }
@@ -461,13 +461,14 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
         html,
         headers: {'Content-Type': 'text/html'},
       );
-    } catch (e) {
-      return _deviceVerifyError('Failed to verify device: $e');
+    } catch (_) {
+      return _deviceVerifyError('Failed to verify device');
     }
   }
 
   /// Returns an error page for device verification
   Response _deviceVerifyError(String message) {
+    final escapedMessage = const HtmlEscape().convert(message);
     final html = '''
 <!DOCTYPE html>
 <html>
@@ -495,7 +496,7 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
 </head>
 <body>
   <h1>Verification Error</h1>
-  <p class="error">$message</p>
+  <p class="error">$escapedMessage</p>
   <p><a href="/auth/device/verify">Try again</a></p>
 </body>
 </html>
@@ -662,11 +663,11 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
         title: 'Bad Request',
         detail: 'Unsupported grant_type',
       );
-    } catch (e) {
+    } catch (_) {
       return _problemResponse(
         status: 500,
         title: 'Internal Server Error',
-        detail: 'Failed to process token request: $e',
+        detail: 'Failed to process token request',
       );
     }
   }
