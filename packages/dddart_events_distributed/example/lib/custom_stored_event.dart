@@ -16,6 +16,7 @@ class CustomStoredEvent extends StoredEvent {
   CustomStoredEvent({
     required super.id,
     required super.createdAt,
+    super.updatedAt,
     required super.aggregateId,
     required super.eventType,
     required super.eventJson,
@@ -60,6 +61,9 @@ class CustomStoredEvent extends StoredEvent {
     return CustomStoredEvent(
       id: UuidValue.fromString(json['id'] as String),
       createdAt: DateTime.parse(json['createdAt'] as String),
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'] as String)
+          : null,
       aggregateId: UuidValue.fromString(json['aggregateId'] as String),
       eventType: json['eventType'] as String,
       eventJson: json['eventJson'] as String,

@@ -7,6 +7,7 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:build/build.dart';
+import 'package:dddart/dddart.dart' show AggregateRoot, Entity, Value;
 import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:source_gen/source_gen.dart';
 
@@ -16,6 +17,10 @@ Builder serializableBuilder(BuilderOptions options) =>
 
 /// Generator for DDDart serialization code.
 class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
+  static const _aggregateRootType = TypeChecker.fromRuntime(AggregateRoot);
+  static const _entityType = TypeChecker.fromRuntime(Entity);
+  static const _valueType = TypeChecker.fromRuntime(Value);
+
   @override
   String generateForAnnotatedElement(
     Element element,
@@ -190,19 +195,19 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
       final supertype = current.supertype;
       if (supertype == null) break;
 
-      final supertypeName = supertype.element.name;
+      final supertypeElement = supertype.element;
 
-      // Check for direct inheritance from DDDart base classes
-      switch (supertypeName) {
-        case 'AggregateRoot':
-          return ClassType.aggregateRoot;
-        case 'Entity':
-          return ClassType.entity;
-        case 'Value':
-          return ClassType.value;
+      if (_aggregateRootType.isExactly(supertypeElement)) {
+        return ClassType.aggregateRoot;
+      }
+      if (_entityType.isExactly(supertypeElement)) {
+        return ClassType.entity;
+      }
+      if (_valueType.isExactly(supertypeElement)) {
+        return ClassType.value;
       }
 
-      current = supertype.element as ClassElement?;
+      current = supertypeElement as ClassElement?;
     }
 
     return ClassType.invalid;
@@ -215,60 +220,91 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
   ) {
     final fields = <FieldInfo>[];
 
-    // For Entity classes, we need to explicitly include the inherited fields
-    // from the Entity base class (id, createdAt, updatedAt) since they're needed
-    // for persistence
-    if (classType == ClassType.entity) {
-      // Add Entity base class fields
-      final supertype = classElement.supertype;
-      if (supertype != null) {
-        for (final field in supertype.element.fields) {
-          if (['id', 'createdAt', 'updatedAt'].contains(field.name) &&
-              !field.isStatic &&
-              !field.isSynthetic) {
-            final fieldType = field.type;
-            final isNullable =
-                fieldType.nullabilitySuffix == NullabilitySuffix.question;
-            fields.add(
-              FieldInfo(
-                name: field.name,
-                type: fieldType,
-                isNullable: isNullable,
-              ),
-            );
-          }
+    final frameworkBaseType = switch (classType) {
+      ClassType.aggregateRoot => _aggregateRootType,
+      ClassType.entity => _entityType,
+      ClassType.value => _valueType,
+      ClassType.invalid => null,
+    };
+    if (frameworkBaseType == null) return fields;
+
+    final fieldNames = <String>{};
+    ClassElement? current = classElement;
+    while (current != null && !frameworkBaseType.isExactly(current)) {
+      final isInherited = current != classElement;
+
+      for (final field in current.fields) {
+        if (field.isStatic || field.isSynthetic) continue;
+        if ((classType == ClassType.aggregateRoot ||
+                classType == ClassType.entity) &&
+            ['id', 'createdAt', 'updatedAt'].contains(field.name)) {
+          continue;
+        }
+
+        if (!fieldNames.add(field.name)) {
+          throw InvalidGenerationSourceError(
+            'Cannot generate JSON serializer for ${classElement.name}: '
+            'application field "${field.name}" is declared more than once '
+            'in its superclass chain.',
+            element: classElement,
+          );
+        }
+
+        if (isInherited) {
+          _validateInheritedFieldReconstruction(classElement, field);
+        }
+
+        fields.add(
+          FieldInfo(
+            name: field.name,
+            type: field.type,
+            isNullable:
+                field.type.nullabilitySuffix == NullabilitySuffix.question,
+          ),
+        );
+      }
+
+      current = current.supertype?.element as ClassElement?;
+    }
+
+    return fields;
+  }
+
+  void _validateInheritedFieldReconstruction(
+    ClassElement classElement,
+    FieldElement field,
+  ) {
+    final constructor = classElement.unnamedConstructor;
+    SuperFormalParameterElement? reconstructionParameter;
+
+    if (constructor != null) {
+      for (final parameter in constructor.parameters) {
+        if (parameter.name == field.name &&
+            parameter.isNamed &&
+            parameter is SuperFormalParameterElement) {
+          reconstructionParameter = parameter;
+          break;
         }
       }
     }
 
-    // Get all fields from the class (excluding inherited ones from DDDart base classes)
-    for (final field in classElement.fields) {
-      // Skip static fields and synthetic fields
-      if (field.isStatic || field.isSynthetic) continue;
-
-      // Skip fields that are part of the DDDart base classes
-      // For AggregateRoot, skip id, createdAt, updatedAt (handled specially)
-      // For Entity, we already added these above
-      if (['id', 'createdAt', 'updatedAt'].contains(field.name) &&
-          (classType == ClassType.aggregateRoot ||
-              classType == ClassType.entity)) {
-        continue;
-      }
-
-      final fieldType = field.type;
-      final isNullable =
-          fieldType.nullabilitySuffix == NullabilitySuffix.question;
-
-      fields.add(
-        FieldInfo(
-          name: field.name,
-          type: fieldType,
-          isNullable: isNullable,
-        ),
-      );
+    ParameterElement? currentParameter = reconstructionParameter;
+    while (currentParameter is SuperFormalParameterElement) {
+      currentParameter = currentParameter.superConstructorParameter;
     }
 
-    return fields;
+    final reconstructedField = currentParameter is FieldFormalParameterElement
+        ? currentParameter.field
+        : null;
+    if (reconstructedField?.declaration == field.declaration) return;
+
+    throw InvalidGenerationSourceError(
+      'Cannot generate JSON serializer for ${classElement.name}: inherited '
+      'application field "${field.name}" has no reconstruction path through '
+      "${classElement.name}'s unnamed constructor and named super-parameter "
+      'chain.',
+      element: classElement,
+    );
   }
 
   /// Generates a complete JsonSerializer class with constructor + optional parameter design.
@@ -356,7 +392,8 @@ $fromJsonWithConfigBody
     buffer.writeln('    final json = <String, dynamic>{');
 
     // Add Entity base fields with runtime field naming
-    if (analysis.type == ClassType.aggregateRoot) {
+    if (analysis.type == ClassType.aggregateRoot ||
+        analysis.type == ClassType.entity) {
       buffer.writeln(
         "      SerializationUtils.applyFieldRename('id', effectiveConfig.fieldRename): instance.id.toString(),",
       );
@@ -429,7 +466,8 @@ $fromJsonWithConfigBody
     }
 
     // Add Entity base field parameters with runtime field naming
-    if (analysis.type == ClassType.aggregateRoot) {
+    if (analysis.type == ClassType.aggregateRoot ||
+        analysis.type == ClassType.entity) {
       buffer.writeln(
         "        id: UuidValue.fromString(json[SerializationUtils.applyFieldRename('id', effectiveConfig.fieldRename)] as String),",
       );

@@ -1,12 +1,13 @@
 # DDDart JSON
 
-JSON serialization code generation for DDDart aggregate roots and value objects.
+JSON serialization code generation for DDDart aggregate roots, entities, and
+value objects.
 
 ## Features
 
 - **PODO Preservation**: Keep your domain objects as Plain Old Dart Objects
 - **Service Class Generation**: Creates dedicated serializer classes - no mixins required
-- **DDD Compliance**: Only AggregateRoots and Values are serializable (enforces proper DDD patterns)
+- **DDD Types**: Generates serializers for AggregateRoots, Entities, and Values
 - **Cross-Platform**: Works on Dart server, Flutter mobile, and Flutter web
 - **Nested Serialization**: Handles complex object graphs with embedded values and entities
 - **Flexible Configuration**: Constructor-level defaults with method-level overrides
@@ -32,13 +33,14 @@ dev_dependencies:
 
 ```dart
 import 'package:dddart/dddart.dart';
+import 'package:dddart_json/dddart_json.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 part 'user.g.dart';  // Required for code generation
 
 @Serializable()
 class User extends AggregateRoot {
-  const User({
+  User({
     required this.name,
     required this.email,
     super.id,
@@ -52,7 +54,11 @@ class User extends AggregateRoot {
 
 @Serializable()
 class Address extends Value {
-  const Address(this.street, this.city, this.zipCode);
+  const Address({
+    required this.street,
+    required this.city,
+    required this.zipCode,
+  });
   
   final String street;
   final String city;
@@ -62,6 +68,18 @@ class Address extends Value {
   List<Object?> get props => [street, city, zipCode];
 }
 ```
+
+Generated deserialization calls the annotated type's unnamed constructor and
+passes every serialized field as a same-name named argument. Define that
+constructor even when the type has other named constructors.
+
+Inherited application state is supported when the concrete constructor exposes
+the field as a same-name named super-formal parameter, and every intermediate
+constructor forwards that named super-formal until it reaches the field-formal
+parameter that declares the state. If that reconstruction path is absent,
+generation fails instead of omitting the field or relying on an initializer or
+default value. The annotation on the concrete type controls the representation
+of both concrete and inherited fields; ancestor annotations are not merged.
 
 ### 2. Generate Code
 
@@ -159,7 +177,7 @@ The serializer handles nested entities and values automatically:
 ```dart
 @Serializable()
 class Company extends AggregateRoot {
-  const Company({
+  Company({
     required this.name,
     required this.address,
     required this.employees,
@@ -175,7 +193,7 @@ class Company extends AggregateRoot {
 
 @Serializable()
 class Employee extends Entity {
-  const Employee({
+  Employee({
     required this.name,
     required this.position,
     super.id,
@@ -190,7 +208,11 @@ class Employee extends Entity {
 // Serialization works recursively
 final company = Company(
   name: 'Acme Corp',
-  address: Address('123 Main St', 'Anytown', '12345'),
+  address: Address(
+    street: '123 Main St',
+    city: 'Anytown',
+    zipCode: '12345',
+  ),
   employees: [
     Employee(name: 'John', position: 'Developer'),
     Employee(name: 'Jane', position: 'Designer'),
@@ -255,9 +277,14 @@ AggregateRoots include Entity base fields plus custom fields:
 }
 ```
 
+### Entity Serialization
+
+Entities include `id`, `createdAt`, and `updatedAt` plus their application
+fields, using the same representation rules as aggregate roots.
+
 ### Value Object Serialization
 
-Values serialize only their props fields:
+Values serialize their application fields:
 
 ```json
 {
@@ -316,18 +343,15 @@ Common error scenarios:
 
 ## DDD Compliance
 
-This package enforces proper DDD patterns:
+This package generates serializers only for the three DDDart domain base types:
 
 ### ✅ Allowed
 - **AggregateRoots**: The consistency boundaries of your domain
+- **Entities**: Identity-bearing domain objects, whether serialized directly or nested in an aggregate
 - **Values**: Immutable objects that can be safely shared
-- **Entities within AggregateRoots**: Serialized as part of their aggregate
 
-### ❌ Not Allowed
-- **Direct Entity serialization**: Prevents passing entities between aggregates
-- **Serializing entities outside their aggregate context**
-
-This design prevents common DDD anti-patterns and maintains proper aggregate boundaries.
+Types outside these actual DDDart base-class hierarchies are rejected, even if
+an application class happens to use one of the same class names.
 
 ## Performance
 
@@ -361,6 +385,8 @@ Generated serializers are strongly typed. Ensure:
 - JSON structure matches expected field types
 - All required fields are present
 - Nested objects are properly structured
+- The unnamed constructor accepts same-name named arguments for concrete fields
+- Inherited fields have a same-name named super-formal chain to their declarations
 
 ## Contributing
 
