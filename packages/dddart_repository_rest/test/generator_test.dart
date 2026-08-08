@@ -194,6 +194,65 @@ class User extends AggregateRoot {
       expect(output, contains('final _serializer = UserJsonSerializer()'));
       expect(output, contains('RepositoryException _mapHttpException'));
     });
+
+    test('custom methods preserve Dart parameter and type parameter forms',
+        () async {
+      final library = await resolveSource(
+        '''
+library test;
+
+import 'package:dddart/dddart.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
+import 'package:dddart_repository_rest/dddart_repository_rest.dart';
+
+abstract interface class UserRepository implements Repository<User> {
+  Future<R> transform<R extends Object>(
+    R value, {
+    required bool enabled,
+    String label = 'default',
+  });
+
+  Future<List<User>> page(int offset, [int limit = 20]);
+}
+
+@Serializable()
+@GenerateRestRepository(implements: UserRepository)
+class User extends AggregateRoot {
+  User({required this.name});
+
+  final String name;
+}
+''',
+        (resolver) async => (await resolver.findLibraryByName('test'))!,
+      );
+
+      final classElement = library.topLevelElements
+          .whereType<ClassElement>()
+          .firstWhere((element) => element.name == 'User');
+      final annotation = classElement.metadata.firstWhere(
+        (metadata) =>
+            metadata.computeConstantValue()?.type?.element?.name ==
+            'GenerateRestRepository',
+      );
+
+      final output = generator.generateForAnnotatedElement(
+        classElement,
+        ConstantReader(annotation.computeConstantValue()),
+        _mockBuildStep(),
+      );
+
+      expect(
+        output,
+        contains(
+          'Future<R> transform<R extends Object>(R value, '
+          "{required bool enabled, String label = 'default'});",
+        ),
+      );
+      expect(
+        output,
+        contains('Future<List<User>> page(int offset, [int limit = 20]);'),
+      );
+    });
   });
 }
 

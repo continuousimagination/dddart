@@ -515,12 +515,52 @@ class RestRepositoryGenerator
   String _generateMethodSignature(MethodElement method) {
     final returnType =
         method.returnType.getDisplayString(withNullability: true);
-    final params = method.parameters.map((p) {
-      final type = p.type.getDisplayString(withNullability: true);
-      return '$type ${p.name}';
-    }).join(', ');
+    final typeParameters = method.typeParameters.isEmpty
+        ? ''
+        : '<${method.typeParameters.map(_formatTypeParameter).join(', ')}>';
 
-    return '$returnType ${method.name}($params)';
+    final requiredPositional = method.parameters
+        .where((parameter) => parameter.isRequiredPositional)
+        .map(_formatParameter)
+        .toList();
+    final optionalPositional = method.parameters
+        .where((parameter) => parameter.isOptionalPositional)
+        .map(_formatParameter)
+        .toList();
+    final named = method.parameters
+        .where((parameter) => parameter.isNamed)
+        .map(_formatParameter)
+        .toList();
+
+    final parameterSections = <String>[
+      ...requiredPositional,
+      if (optionalPositional.isNotEmpty) '[${optionalPositional.join(', ')}]',
+      if (named.isNotEmpty) '{${named.join(', ')}}',
+    ];
+
+    return '$returnType ${method.name}$typeParameters'
+        '(${parameterSections.join(', ')})';
+  }
+
+  String _formatParameter(ParameterElement parameter) {
+    final buffer = StringBuffer();
+    if (parameter.isRequiredNamed) {
+      buffer.write('required ');
+    }
+    if (parameter.isCovariant) {
+      buffer.write('covariant ');
+    }
+    parameter.appendToWithoutDelimiters(buffer, withNullability: true);
+    return buffer.toString();
+  }
+
+  String _formatTypeParameter(TypeParameterElement parameter) {
+    final bound = parameter.bound;
+    if (bound == null) {
+      return parameter.name;
+    }
+    return '${parameter.name} extends '
+        '${bound.getDisplayString(withNullability: true)}';
   }
 }
 
