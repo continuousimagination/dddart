@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 /// Security utilities for authentication operations
 ///
@@ -139,11 +140,10 @@ class SecurityUtils {
   /// final token = SecurityUtils.generateSecureRandom(32);
   /// ```
   static String generateSecureRandom([int length = 32]) {
-    // Note: This is a simplified implementation
-    // In production, use a proper CSPRNG like dart:io's Random.secure()
+    final random = Random.secure();
     final bytes = List<int>.generate(
       length,
-      (i) => DateTime.now().microsecondsSinceEpoch % 256,
+      (_) => random.nextInt(256),
     );
     return base64Url.encode(bytes);
   }
