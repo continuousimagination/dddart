@@ -28,10 +28,10 @@ class SlackSlashCommand extends Value {
     required this.command,
     required this.text,
     required this.userId,
-    required this.userName,
     required this.teamId,
     required this.channelId,
     required this.responseUrl,
+    this.userName,
     this.triggerId,
   });
 
@@ -59,7 +59,7 @@ class SlackSlashCommand extends Value {
       command: form['command']!,
       text: form['text'] ?? '',
       userId: form['user_id']!,
-      userName: form['user_name']!,
+      userName: form['user_name'],
       teamId: form['team_id']!,
       channelId: form['channel_id']!,
       responseUrl: form['response_url']!,
@@ -76,8 +76,11 @@ class SlackSlashCommand extends Value {
   /// The ID of the user who triggered the command.
   final String userId;
 
-  /// The username of the user who triggered the command.
-  final String userName;
+  /// The legacy username of the user who triggered the command.
+  ///
+  /// Slack may omit this deprecated field. Use [userId] as the canonical user
+  /// identity.
+  final String? userName;
 
   /// The ID of the workspace/team where the command was triggered.
   final String teamId;

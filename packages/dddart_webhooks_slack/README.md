@@ -74,7 +74,8 @@ void main() async {
       handler: (command, verification) async {
         print('Command: ${command.command}');
         print('Text: ${command.text}');
-        print('User: ${command.userName}');
+        print('User ID: ${command.userId}');
+        print('Legacy username: ${command.userName}');
         print('Team: ${verification.teamId}');
 
         return Response.ok('Command received!');
@@ -236,8 +237,8 @@ Value object representing a Slack slash command payload.
 **Properties:**
 - `command`: The slash command (e.g., "/weather")
 - `text`: Command arguments
-- `userId`: User who invoked the command
-- `userName`: Username
+- `userId`: Canonical ID of the user who invoked the command
+- `userName`: Optional legacy username; Slack may omit it
 - `teamId`: Workspace/team ID
 - `channelId`: Channel where command was invoked
 - `responseUrl`: URL for delayed responses
