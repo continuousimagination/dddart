@@ -484,6 +484,11 @@ class RestRepositoryGenerator
           detail ?? 'Duplicate resource',
           type: RepositoryExceptionType.duplicate,
         );
+      case 422:
+        return RepositoryException(
+          detail ?? 'Repository constraint violated',
+          type: RepositoryExceptionType.constraint,
+        );
       case 408:
       case 504:
         return RepositoryException(
