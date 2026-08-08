@@ -291,15 +291,19 @@ class DynamoRepositoryGenerator
   @override
   Future<List<$className>> getAll() async {
     try {
-      final response = await _connection.client.scan(
-        tableName: tableName,
-      );
+      final items = <Map<String, AttributeValue>>[];
+      Map<String, AttributeValue>? exclusiveStartKey;
 
-      if (response.items == null || response.items!.isEmpty) {
-        return [];
-      }
+      do {
+        final response = await _connection.client.scan(
+          tableName: tableName,
+          exclusiveStartKey: exclusiveStartKey,
+        );
+        items.addAll(response.items ?? const []);
+        exclusiveStartKey = response.lastEvaluatedKey;
+      } while (exclusiveStartKey != null && exclusiveStartKey.isNotEmpty);
 
-      return response.items!.map((item) {
+      return items.map((item) {
         final json = AttributeValueConverter.attributeMapToJsonMap(item);
         return _serializer.fromJson(json);
       }).toList();
