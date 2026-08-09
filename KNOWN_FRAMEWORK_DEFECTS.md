@@ -1,12 +1,12 @@
 # Unaddressed framework defects
 
-Snapshot: 2026-08-09, after the nine next framework defects were completed on
-`fix/next-framework-defects`.
+Snapshot: 2026-08-09, after the accepted authentication defects AUTH-001,
+AUTH-003, AUTH-005, and AUTH-006 were completed on
+`fix/auth-framework-defects`.
 
-This register contains the 11 implementation defects that remain after the
-next-fix branch. Resolved entries are removed once their completion tests pass.
-It is not an exhaustive issue tracker; source and executable tests remain
-authoritative.
+This register contains the 7 implementation defects that remain. Resolved
+entries are removed once their completion tests pass. It is not an exhaustive
+issue tracker; source and executable tests remain authoritative.
 
 Suggested priorities are provisional:
 
@@ -22,8 +22,7 @@ Suggested priorities are provisional:
   work in progress.
 - **DYNAMO-002**: reconsider the intended role of `QueryableRepository` first.
 - **REST-004**: decide the intended ETag and atomic-concurrency contract first.
-- **AUTH-001**, **AUTH-002**, **AUTH-003**, **AUTH-005**, and **AUTH-006**:
-  revisit the authentication and authorization contracts later.
+- **AUTH-002**: revisit the authorization contract later.
 
 ## Summary
 
@@ -35,11 +34,7 @@ Suggested priorities are provisional:
 | EVENT-004 | P1 | Distributed events | Polling advances its cursor before an event is successfully reconstructed and published. |
 | DYNAMO-002 | P2 | DynamoDB generation | Custom queryable interfaces can produce conflicting `getAll()` declarations. |
 | REST-004 | P1 | REST server | ETag validation is a non-atomic read/check/save sequence. |
-| AUTH-001 | P1 | Authentication | Refresh reconstructs custom claims from `sub` alone. |
 | AUTH-002 | P1 | Authorization | Item GET and unfiltered collection GET bypass `AuthorizationHandler`. |
-| AUTH-003 | P1 | Authentication | OAuth JWT authentication does not enforce `exp` or `nbf`. |
-| AUTH-005 | P2 | Authentication | Generic refresh-token and device-code subtypes are created through unsafe base-type casts. |
-| AUTH-006 | P1 | Authentication | Device grants are not client-bound or single-use. |
 
 ## Confirmed generator and persistence defects
 
@@ -122,17 +117,6 @@ Suggested priorities are provisional:
   compare-and-save atomic and a concurrency test proves only one stale writer
   succeeds. If ETags remain advisory, the API and naming should say so plainly.
 
-### AUTH-001 — refresh cannot preserve arbitrary custom claims
-
-- **Evidence:** `JwtAuthHandler.refresh()` calls the application's claims parser
-  with only `{'sub': refreshToken.userId}` and then serializes the resulting
-  claims into the new token.
-- **Impact:** ordinary parsers can throw; parsers that default missing values can
-  silently erase roles, tenant membership, email, or other authorization data.
-- **Done when:** refresh rehydrates claims through an explicit trusted callback or
-  stores sufficient validated claims, with a test proving required roles/profile
-  claims survive refresh.
-
 ### AUTH-002 — authorization is not applied to two read paths
 
 - **Evidence:** `AuthorizationHandler` is invoked for create, update, delete, and
@@ -143,33 +127,3 @@ Suggested priorities are provisional:
 - **Done when:** read authorization hooks cover both paths, or the framework
   requires an explicit policy that disables those routes. Tests should prove a
   denied identity cannot read either form.
-
-### AUTH-003 — OAuth authentication accepts expired/not-yet-valid JWTs
-
-- **Evidence:** `OAuthJwtAuthHandler.authenticate()` verifies signature, issuer,
-  and audience but does not enforce `exp` or `nbf` before returning success.
-- **Impact:** a cryptographically valid expired token, or one not yet valid, can
-  authenticate.
-- **Done when:** JWKS-backed tests reject expired and future-`nbf` tokens while
-  accepting a token inside a configured clock-skew window.
-
-### AUTH-005 — generic token/device subtypes use unsafe casts
-
-- **Evidence:** token issuance constructs a base `RefreshToken` and casts it to
-  `TRefreshToken`; device-code creation similarly constructs the base type.
-  `revoke()` and `approve()` return base objects that are cast back to generic
-  subtypes.
-- **Impact:** the advertised persistent/custom subtype extension path throws
-  `TypeError` at runtime.
-- **Done when:** subtype factories/copy contracts construct the requested type,
-  and issuance, approval, refresh, and revocation pass with real subclasses.
-
-### AUTH-006 — device grants are not client-bound or single-use
-
-- **Evidence:** the token endpoint reads `client_id` but does not compare it with
-  `DeviceCode.clientId`. Successful redemption leaves the device code approved,
-  allowing subsequent redemptions.
-- **Impact:** another client can redeem a captured code, and the same grant can
-  issue tokens repeatedly.
-- **Done when:** client mismatch returns `invalid_grant`, successful redemption
-  atomically consumes the code, and a second redemption fails.
