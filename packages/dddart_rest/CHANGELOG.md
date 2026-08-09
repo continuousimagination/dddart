@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `PUT` now rejects a deserialized aggregate whose ID differs from the route ID
   with a problem+json 400 response before authorization, ETag lookup, or
   persistence.
+- `OAuthJwtAuthHandler` now rejects expired and not-yet-valid JWTs, with a
+  configurable `clockSkewTolerance` that defaults to zero.
 
 ### Added
 

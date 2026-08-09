@@ -830,6 +830,7 @@ dddart_rest provides comprehensive JWT-based authentication with support for bot
 **OAuth/OIDC Authentication:**
 - External provider (AWS Cognito, Auth0, Okta) manages authentication
 - Your application validates JWTs using provider's public keys (JWKS)
+- Expiration and not-before claims are enforced with configurable clock skew
 - No authentication endpoints needed (provider handles them)
 - No refresh token storage needed
 
@@ -1023,11 +1024,17 @@ class CognitoClaims {
 ```dart
 final authHandler = OAuthJwtAuthHandler<CognitoClaims>(
   jwksUri: 'https://cognito-idp.us-east-1.amazonaws.com/us-east-1_ABC123/.well-known/jwks.json',
+  parseClaimsFromJson: CognitoClaims.fromJson,
   issuer: 'https://cognito-idp.us-east-1.amazonaws.com/us-east-1_ABC123',
   audience: 'your-cognito-client-id',
-  cacheDuration: Duration(hours: 24),
+  cacheDuration: const Duration(hours: 24),
+  clockSkewTolerance: const Duration(seconds: 30),
 );
 ```
+
+`OAuthJwtAuthHandler` rejects tokens at or after their `exp` time and tokens
+whose `nbf` time is still in the future. `clockSkewTolerance` applies the same
+allowance in both directions and defaults to zero.
 
 #### 3. Protect Resources
 
@@ -1037,7 +1044,7 @@ server.registerResource(
     path: '/users',
     repository: userRepo,
     serializer: serializer,
-    authHandler: authHandler,
+    authenticationHandler: authHandler,
   ),
 );
 ```

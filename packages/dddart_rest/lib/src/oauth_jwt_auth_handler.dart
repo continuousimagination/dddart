@@ -18,6 +18,7 @@ import 'package:shelf/shelf.dart';
 ///   parseClaimsFromJson: (json) => UserClaims.fromJson(json),
 ///   issuer: 'https://cognito-idp.us-east-1.amazonaws.com/us-east-1_xxxxx',
 ///   audience: 'my-client-id',
+///   clockSkewTolerance: const Duration(seconds: 30),
 /// );
 /// ```
 class OAuthJwtAuthHandler<TClaims> extends AuthenticationHandler<TClaims> {
@@ -28,7 +29,16 @@ class OAuthJwtAuthHandler<TClaims> extends AuthenticationHandler<TClaims> {
     this.issuer,
     this.audience,
     this.cacheDuration = const Duration(hours: 1),
+    this.clockSkewTolerance = Duration.zero,
   }) : _parseClaimsFromJson = parseClaimsFromJson {
+    if (clockSkewTolerance.isNegative) {
+      throw ArgumentError.value(
+        clockSkewTolerance,
+        'clockSkewTolerance',
+        'must not be negative',
+      );
+    }
+
     // Initialize the key store with the JWKS URI
     _keyStore = JsonWebKeyStore()..addKeySetUrl(Uri.parse(jwksUri));
   }
@@ -44,6 +54,12 @@ class OAuthJwtAuthHandler<TClaims> extends AuthenticationHandler<TClaims> {
 
   /// How long to cache JWKS before refetching
   final Duration cacheDuration;
+
+  /// Clock-skew allowance applied when validating `exp` and `nbf` claims
+  ///
+  /// Defaults to zero. The token remains valid until `exp` plus this duration,
+  /// and becomes valid this duration before `nbf`.
+  final Duration clockSkewTolerance;
 
   /// Function to parse claims from JSON
   final TClaims Function(Map<String, dynamic>) _parseClaimsFromJson;
@@ -120,6 +136,20 @@ class OAuthJwtAuthHandler<TClaims> extends AuthenticationHandler<TClaims> {
         } else {
           return AuthenticationResult.failure('Invalid token audience');
         }
+      }
+
+      // Validate token lifetime after signature, issuer, and audience so their
+      // existing error precedence remains unchanged.
+      final now = DateTime.now();
+      final expiresAt = jwt.claims.expiry;
+      if (expiresAt != null &&
+          !now.isBefore(expiresAt.add(clockSkewTolerance))) {
+        return AuthenticationResult.failure('Token has expired');
+      }
+
+      final notBefore = jwt.claims.notBefore;
+      if (notBefore != null && notBefore.isAfter(now.add(clockSkewTolerance))) {
+        return AuthenticationResult.failure('Token is not yet valid');
       }
 
       // Extract user ID from sub claim
