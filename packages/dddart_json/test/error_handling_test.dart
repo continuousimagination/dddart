@@ -169,6 +169,25 @@ void main() {
     });
 
     group('Malformed JSON', () {
+      test('deserialize wraps malformed JSON syntax', () {
+        expect(
+          () => TestUserJsonSerializer().deserialize('{"name":'),
+          throwsA(
+            isA<DeserializationException>()
+                .having(
+                  (exception) => exception.message,
+                  'message',
+                  contains('Failed to deserialize JSON'),
+                )
+                .having(
+                  (exception) => exception.expectedType,
+                  'expectedType',
+                  'TestUser',
+                ),
+          ),
+        );
+      });
+
       test('throws error for null JSON input', () {
         expect(
           () => TestUserJsonSerializer().fromJson(null as dynamic),

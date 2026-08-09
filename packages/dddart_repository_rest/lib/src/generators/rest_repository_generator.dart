@@ -141,9 +141,9 @@ class RestRepositoryGenerator
   ///
   /// Converts PascalCase to kebab-case and pluralizes.
   /// Examples:
-  /// - User → users
-  /// - OrderItem → order-items
-  /// - Company → companies
+  /// - User → /users
+  /// - OrderItem → /order-items
+  /// - Company → /companies
   String _generateResourcePath(String className) {
     // Convert PascalCase to kebab-case
     final kebab = className
@@ -155,13 +155,13 @@ class RestRepositoryGenerator
 
     // Simple pluralization
     if (kebab.endsWith('y')) {
-      return '${kebab.substring(0, kebab.length - 1)}ies';
+      return '/${kebab.substring(0, kebab.length - 1)}ies';
     } else if (kebab.endsWith('s') ||
         kebab.endsWith('x') ||
         kebab.endsWith('ch')) {
-      return '${kebab}es';
+      return '/${kebab}es';
     } else {
-      return '${kebab}s';
+      return '/${kebab}s';
     }
   }
 
@@ -355,8 +355,12 @@ class RestRepositoryGenerator
   @override
   Future<$className> getById(UuidValue id) async {
     try {
-      final response = await _connection.client.get(
-        Uri.parse('\${_connection.baseUrl}\$_resourcePath/\${id.uuid}'),
+      final response = await _connection.executeRequest(
+        () => _connection.client.get(
+          Uri.parse('\${_connection.baseUrl}\$_resourcePath/\${id.uuid}'),
+          headers: {'Accept': 'application/json'},
+        ),
+        operation: 'retrieve $className',
       );
       
       if (response.statusCode == 200) {
@@ -386,10 +390,13 @@ class RestRepositoryGenerator
       final json = _serializer.toJson(aggregate);
       final body = jsonEncode(json);
       
-      final response = await _connection.client.put(
-        Uri.parse('\${_connection.baseUrl}\$_resourcePath/\${aggregate.id.uuid}'),
-        body: body,
-        headers: {'Content-Type': 'application/json'},
+      final response = await _connection.executeRequest(
+        () => _connection.client.put(
+          Uri.parse('\${_connection.baseUrl}\$_resourcePath/\${aggregate.id.uuid}'),
+          body: body,
+          headers: {'Content-Type': 'application/json'},
+        ),
+        operation: 'save $className',
       );
       
       if (response.statusCode == 200 || response.statusCode == 204) {
@@ -415,8 +422,11 @@ class RestRepositoryGenerator
   @override
   Future<void> deleteById(UuidValue id) async {
     try {
-      final response = await _connection.client.delete(
-        Uri.parse('\${_connection.baseUrl}\$_resourcePath/\${id.uuid}'),
+      final response = await _connection.executeRequest(
+        () => _connection.client.delete(
+          Uri.parse('\${_connection.baseUrl}\$_resourcePath/\${id.uuid}'),
+        ),
+        operation: 'delete $className',
       );
       
       if (response.statusCode == 204 || response.statusCode == 200) {
@@ -474,6 +484,11 @@ class RestRepositoryGenerator
           detail ?? 'Duplicate resource',
           type: RepositoryExceptionType.duplicate,
         );
+      case 422:
+        return RepositoryException(
+          detail ?? 'Repository constraint violated',
+          type: RepositoryExceptionType.constraint,
+        );
       case 408:
       case 504:
         return RepositoryException(
@@ -500,12 +515,52 @@ class RestRepositoryGenerator
   String _generateMethodSignature(MethodElement method) {
     final returnType =
         method.returnType.getDisplayString(withNullability: true);
-    final params = method.parameters.map((p) {
-      final type = p.type.getDisplayString(withNullability: true);
-      return '$type ${p.name}';
-    }).join(', ');
+    final typeParameters = method.typeParameters.isEmpty
+        ? ''
+        : '<${method.typeParameters.map(_formatTypeParameter).join(', ')}>';
 
-    return '$returnType ${method.name}($params)';
+    final requiredPositional = method.parameters
+        .where((parameter) => parameter.isRequiredPositional)
+        .map(_formatParameter)
+        .toList();
+    final optionalPositional = method.parameters
+        .where((parameter) => parameter.isOptionalPositional)
+        .map(_formatParameter)
+        .toList();
+    final named = method.parameters
+        .where((parameter) => parameter.isNamed)
+        .map(_formatParameter)
+        .toList();
+
+    final parameterSections = <String>[
+      ...requiredPositional,
+      if (optionalPositional.isNotEmpty) '[${optionalPositional.join(', ')}]',
+      if (named.isNotEmpty) '{${named.join(', ')}}',
+    ];
+
+    return '$returnType ${method.name}$typeParameters'
+        '(${parameterSections.join(', ')})';
+  }
+
+  String _formatParameter(ParameterElement parameter) {
+    final buffer = StringBuffer();
+    if (parameter.isRequiredNamed) {
+      buffer.write('required ');
+    }
+    if (parameter.isCovariant) {
+      buffer.write('covariant ');
+    }
+    parameter.appendToWithoutDelimiters(buffer, withNullability: true);
+    return buffer.toString();
+  }
+
+  String _formatTypeParameter(TypeParameterElement parameter) {
+    final bound = parameter.bound;
+    if (bound == null) {
+      return parameter.name;
+    }
+    return '${parameter.name} extends '
+        '${bound.getDisplayString(withNullability: true)}';
   }
 }
 

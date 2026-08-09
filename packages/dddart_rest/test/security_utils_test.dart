@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dddart_rest/dddart_rest.dart';
 import 'package:test/test.dart';
 
@@ -187,15 +189,12 @@ void main() {
 
       test('respects custom length', () {
         final random = SecurityUtils.generateSecureRandom(16);
-        expect(random, isNotEmpty);
-        // Base64 encoding of 16 bytes should be around 22-24 characters
-        expect(random.length, greaterThan(16));
+        expect(base64Url.decode(random), hasLength(16));
       });
 
       test('generates valid base64 string', () {
         final random = SecurityUtils.generateSecureRandom();
-        // Should not throw when decoding
-        expect(() => Uri.decodeComponent(random), returnsNormally);
+        expect(base64Url.decode(random), hasLength(32));
       });
     });
   });

@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:dddart/dddart.dart';
 import 'package:dddart_rest_client/dddart_rest_client.dart';
 import 'package:http/http.dart' as http;
 
@@ -57,11 +60,24 @@ class RestConnection {
   ///
   /// [httpClient] - Optional HTTP client. If null, creates a new [http.Client].
   /// Useful for testing or custom HTTP client configuration.
-  RestConnection({
-    required this.baseUrl,
-    this.authProvider,
+  factory RestConnection({
+    required String baseUrl,
+    AuthProvider? authProvider,
     http.Client? httpClient,
-  })  : _httpClient = httpClient ?? http.Client(),
+  }) {
+    final ownedClient = httpClient ?? http.Client();
+    return RestConnection._(
+      baseUrl: baseUrl,
+      authProvider: authProvider,
+      httpClient: ownedClient,
+    );
+  }
+
+  RestConnection._({
+    required this.baseUrl,
+    required this.authProvider,
+    required http.Client httpClient,
+  })  : _httpClient = httpClient,
         _client = authProvider != null
             ? RestClient(
                 baseUrl: baseUrl,
@@ -100,6 +116,32 @@ class RestConnection {
   /// Both implement [http.Client] interface, so callers don't need
   /// to know which one they're using.
   http.Client get client => _client ?? _httpClient;
+
+  /// Executes one HTTP request and maps transport failures to repository errors.
+  ///
+  /// Generated repositories use this boundary so that failures thrown while the
+  /// HTTP client is sending a request are consistently distinguished from
+  /// serialization and other unexpected failures.
+  Future<T> executeRequest<T>(
+    Future<T> Function() request, {
+    required String operation,
+  }) async {
+    try {
+      return await request();
+    } on TimeoutException catch (error) {
+      throw RepositoryException(
+        'REST $operation timed out: $error',
+        type: RepositoryExceptionType.timeout,
+        cause: error,
+      );
+    } catch (error) {
+      throw RepositoryException(
+        'REST $operation failed: $error',
+        type: RepositoryExceptionType.connection,
+        cause: error,
+      );
+    }
+  }
 
   /// Disposes the connection and releases resources.
   ///

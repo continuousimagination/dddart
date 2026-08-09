@@ -291,15 +291,19 @@ class DynamoRepositoryGenerator
   @override
   Future<List<$className>> getAll() async {
     try {
-      final response = await _connection.client.scan(
-        tableName: tableName,
-      );
+      final items = <Map<String, AttributeValue>>[];
+      Map<String, AttributeValue>? exclusiveStartKey;
 
-      if (response.items == null || response.items!.isEmpty) {
-        return [];
-      }
+      do {
+        final response = await _connection.client.scan(
+          tableName: tableName,
+          exclusiveStartKey: exclusiveStartKey,
+        );
+        items.addAll(response.items ?? const []);
+        exclusiveStartKey = response.lastEvaluatedKey;
+      } while (exclusiveStartKey != null && exclusiveStartKey.isNotEmpty);
 
-      return response.items!.map((item) {
+      return items.map((item) {
         final json = AttributeValueConverter.attributeMapToJsonMap(item);
         return _serializer.fromJson(json);
       }).toList();
@@ -442,9 +446,10 @@ aws dynamodb create-table \\\\
   /// // Add to CloudFormation template
   /// ```
   static String getCloudFormationTemplate(String tableName) {
+    final logicalId = _cloudFormationLogicalId(tableName);
     return \'\'\'
 Resources:
-  \\\${tableName.split('_').map((s) => s[0].toUpperCase() + s.substring(1)).join()}Table:
+  \${logicalId}Table:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: \$tableName
@@ -456,6 +461,24 @@ Resources:
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
 \'\'\'.trim();
+  }
+
+  static String _cloudFormationLogicalId(String tableName) {
+    final segments = tableName
+        .split(RegExp('[^A-Za-z0-9]+'))
+        .where((segment) => segment.isNotEmpty);
+    var logicalId = segments
+        .map(
+          (segment) =>
+              segment[0].toUpperCase() + segment.substring(1),
+        )
+        .join();
+
+    if (logicalId.isEmpty) logicalId = 'Dynamo';
+    if (!RegExp('^[A-Za-z]').hasMatch(logicalId)) {
+      logicalId = 'Dynamo\$logicalId';
+    }
+    return logicalId;
   }''';
   }
 
@@ -626,11 +649,50 @@ Resources:
   String _generateMethodSignature(MethodElement method) {
     final returnType =
         method.returnType.getDisplayString(withNullability: true);
-    final params = method.parameters.map((p) {
-      final type = p.type.getDisplayString(withNullability: true);
-      return '$type ${p.name}';
-    }).join(', ');
+    final typeParameters = method.typeParameters.isEmpty
+        ? ''
+        : '<${method.typeParameters.map((parameter) {
+            final bound = parameter.bound;
+            if (bound == null) return parameter.name;
+            return '${parameter.name} extends '
+                '${bound.getDisplayString(withNullability: true)}';
+          }).join(', ')}>';
 
-    return '$returnType ${method.name}($params)';
+    final requiredPositional = method.parameters
+        .where((parameter) => parameter.isRequiredPositional)
+        .map(_generateParameter)
+        .toList();
+    final optionalPositional = method.parameters
+        .where((parameter) => parameter.isOptionalPositional)
+        .map(_generateParameter)
+        .toList();
+    final named = method.parameters
+        .where((parameter) => parameter.isNamed)
+        .map(_generateParameter)
+        .toList();
+
+    final parameterGroups = <String>[...requiredPositional];
+    if (optionalPositional.isNotEmpty) {
+      parameterGroups.add('[${optionalPositional.join(', ')}]');
+    }
+    if (named.isNotEmpty) {
+      parameterGroups.add('{${named.join(', ')}}');
+    }
+
+    return '$returnType ${method.name}$typeParameters'
+        '(${parameterGroups.join(', ')})';
+  }
+
+  String _generateParameter(ParameterElement parameter) {
+    final buffer = StringBuffer();
+    if (parameter.isRequiredNamed) buffer.write('required ');
+    if (parameter.isCovariant) buffer.write('covariant ');
+    buffer
+      ..write(parameter.type.getDisplayString(withNullability: true))
+      ..write(' ${parameter.name}');
+
+    final defaultValue = parameter.defaultValueCode;
+    if (defaultValue != null) buffer.write(' = $defaultValue');
+    return buffer.toString();
   }
 }

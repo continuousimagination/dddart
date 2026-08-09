@@ -6,6 +6,7 @@ import 'package:test/test.dart';
 /// Mock HTTP client for testing
 class MockHttpClient extends http.BaseClient {
   bool isClosed = false;
+  int closeCount = 0;
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
@@ -15,6 +16,24 @@ class MockHttpClient extends http.BaseClient {
   @override
   void close() {
     isClosed = true;
+    closeCount++;
+    super.close();
+  }
+}
+
+class RecordingHttpClient extends http.BaseClient {
+  int requestCount = 0;
+  int closeCount = 0;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    requestCount++;
+    return http.StreamedResponse(const Stream.empty(), 204);
+  }
+
+  @override
+  void close() {
+    closeCount++;
     super.close();
   }
 }
@@ -244,6 +263,25 @@ void main() {
         connection.dispose();
 
         expect(mockClient.isClosed, isTrue);
+      });
+
+      test('authenticated connection uses and closes its single owned client',
+          () async {
+        final ownedClient = RecordingHttpClient();
+        final connection = RestConnection(
+          baseUrl: 'https://api.example.com',
+          authProvider: MockAuthProvider(),
+          httpClient: ownedClient,
+        );
+
+        await connection.client.get(Uri.parse('https://api.example.com/ping'));
+
+        expect(ownedClient.requestCount, 1);
+        expect(ownedClient.closeCount, 0);
+
+        connection.dispose();
+
+        expect(ownedClient.closeCount, 1);
       });
 
       test('should be safe to call dispose multiple times', () {

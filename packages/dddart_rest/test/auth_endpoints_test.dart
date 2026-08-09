@@ -133,6 +133,33 @@ void main() {
 
         expect(response.statusCode, equals(400));
       });
+
+      test('should not disclose internal login errors', () async {
+        final leakingEndpoints =
+            AuthEndpoints<StandardClaims, RefreshToken, DeviceCode>(
+          authHandler: authHandler,
+          deviceCodeRepository: deviceCodeRepo,
+          userValidator: (_, __) =>
+              throw Exception('sentinel-secret <script>alert(1)</script>'),
+          claimsBuilder: (userId) async => StandardClaims(sub: userId),
+        );
+        final request = Request(
+          'POST',
+          Uri.parse('http://localhost/auth/login'),
+          body: jsonEncode({
+            'username': 'testuser',
+            'password': 'testpass',
+          }),
+        );
+
+        final response = await leakingEndpoints.handleLogin(request);
+        final body = await response.readAsString();
+
+        expect(response.statusCode, 500);
+        expect(body, isNot(contains('sentinel-secret')));
+        expect(body, isNot(contains('<script>')));
+        expect(body, contains('Failed to process login'));
+      });
     });
 
     group('handleRefresh', () {
@@ -400,6 +427,31 @@ void main() {
 
         final body = await response.readAsString();
         expect(body, contains('Invalid credentials'));
+      });
+
+      test('should not reflect internal errors into HTML', () async {
+        final leakingEndpoints =
+            AuthEndpoints<StandardClaims, RefreshToken, DeviceCode>(
+          authHandler: authHandler,
+          deviceCodeRepository: deviceCodeRepo,
+          userValidator: (_, __) =>
+              throw Exception('sentinel-secret <script>alert(1)</script>'),
+          claimsBuilder: (userId) async => StandardClaims(sub: userId),
+        );
+        final request = Request(
+          'POST',
+          Uri.parse('http://localhost/auth/device/verify'),
+          body: 'user_code=ABCD-EFGH&username=testuser&password=testpass',
+          headers: {'content-type': 'application/x-www-form-urlencoded'},
+        );
+
+        final response = await leakingEndpoints.handleDeviceVerify(request);
+        final body = await response.readAsString();
+
+        expect(response.statusCode, 200);
+        expect(body, contains('Failed to verify device'));
+        expect(body, isNot(contains('sentinel-secret')));
+        expect(body, isNot(contains('<script>')));
       });
     });
 

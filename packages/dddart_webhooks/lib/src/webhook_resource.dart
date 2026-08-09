@@ -110,7 +110,6 @@ final _log = Logger('WebhookResource');
 ///       400,
 ///       body: jsonEncode({
 ///         'error': 'Invalid payload format',
-///         'details': error.toString(),
 ///       }),
 ///       headers: {'Content-Type': 'application/json'},
 ///     );
@@ -222,7 +221,7 @@ class WebhookResource<TPayload,
         401,
         body: jsonEncode({
           'error': 'Signature verification failed',
-          'message': verification.errorMessage ?? 'Invalid signature',
+          'message': 'Invalid signature',
         }),
         headers: {'Content-Type': 'application/json'},
       );
@@ -252,7 +251,7 @@ class WebhookResource<TPayload,
         400,
         body: jsonEncode({
           'error': 'Deserialization failed',
-          'message': e.toString(),
+          'message': 'Invalid webhook payload',
         }),
         headers: {'Content-Type': 'application/json'},
       );

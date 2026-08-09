@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';
 import 'package:test/test.dart';
 
@@ -27,6 +29,16 @@ void main() {
 
     test('should export DynamoRepositoryException class', () {
       expect(DynamoRepositoryException, isNotNull);
+    });
+
+    test('should link package metadata to the canonical repository', () {
+      final pubspec = File('pubspec.yaml').readAsStringSync();
+
+      expect(
+        pubspec,
+        contains('repository: https://github.com/continuousimagination/dddart'),
+      );
+      expect(pubspec, isNot(contains('yourusername')));
     });
   });
 }
