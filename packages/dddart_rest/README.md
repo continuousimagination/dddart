@@ -891,7 +891,9 @@ Choose your persistence strategy:
 import 'package:dddart_rest/dddart_rest.dart';
 
 final refreshTokenRepo = InMemoryRepository<RefreshToken>();
-final deviceCodeRepo = InMemoryRepository<DeviceCode>();
+final deviceCodeRepo = InMemoryDeviceCodeRepository<DeviceCode>(
+  lifecycle: const StandardDeviceCodeLifecycle(),
+);
 ```
 
 **Production persistence**
@@ -902,6 +904,13 @@ device-code flows. Do not assume that a generated CRUD repository is a
 production authentication adapter. In particular, the generated MongoDB
 repositories have not been verified as sufficient for these flows, and dddart
 does not currently ship a verified MongoDB authentication adapter.
+
+A production device-code adapter must implement `DeviceCodeRepository<T>`,
+including lookup by user code and device code. Its `consumeApproved` operation
+must be one database-level conditional operation that matches the device code,
+bound client ID, approved state, non-null user, and expiration, then persists
+and returns the typed consumed value. An ordinary read followed by `save()` is
+not atomic and does not satisfy this contract.
 
 If an application stores custom `RefreshToken` or `DeviceCode` subtypes, keep
 the same concrete type in the repository, handler or endpoints, and lifecycle:
@@ -928,12 +937,11 @@ final authEndpoints =
 `AppRefreshTokenLifecycle` implements
 `RefreshTokenLifecycle<AppRefreshToken>` and returns `AppRefreshToken` from
 both `create` and `revoke`. `AppDeviceCodeLifecycle` implements
-`DeviceCodeLifecycle<AppDeviceCode>` and returns `AppDeviceCode` from both
-`create` and `approve`. Each `create` method initializes the subtype-specific
+`DeviceCodeLifecycle<AppDeviceCode>` and returns `AppDeviceCode` from `create`,
+`approve`, and `consume`. Each `create` method initializes the subtype-specific
 fields, and transition methods copy those fields from the current value while
 applying the required base-state change. This keeps the runtime subtype and
-custom state intact through lookup, transition, and
-`Repository<CustomType>.save`.
+custom state intact through lookup, transition, and typed persistence.
 
 #### 3. Create Auth Handler
 
@@ -1211,6 +1219,15 @@ Poll for device flow tokens.
   "token_type": "Bearer"
 }
 ```
+
+The `client_id` must exactly match the client ID stored when the device code was
+created. A mismatch returns `invalid_grant`. An approved device grant is
+single-use: redemption atomically changes it to consumed, only that caller
+receives tokens, and every later attempt returns `invalid_grant`.
+
+If the successful response is lost after the grant is consumed, the tokens
+cannot be recovered by polling again. Restart login and request a new device
+code.
 
 ### JWT Claims Code Generation
 

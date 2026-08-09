@@ -95,7 +95,9 @@ void main() async {
   // Create repositories
   final userRepo = InMemoryRepository<User>();
   final refreshTokenRepo = InMemoryRepository<RefreshToken>();
-  final deviceCodeRepo = InMemoryRepository<DeviceCode>();
+  final deviceCodeRepo = InMemoryDeviceCodeRepository<DeviceCode>(
+    lifecycle: const StandardDeviceCodeLifecycle(),
+  );
 
   // Seed test users
   await _seedUsers(userRepo);

@@ -15,6 +15,7 @@ export 'src/concurrency_exception.dart';
 export 'src/crud_resource.dart';
 export 'src/device_code.dart';
 export 'src/device_code_lifecycle.dart';
+export 'src/device_code_repository.dart';
 export 'src/error_mapper.dart';
 export 'src/etag_generator.dart';
 export 'src/exceptions.dart';

@@ -33,10 +33,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `RefreshTokenLifecycle<TRefreshToken>`, and `AuthEndpoints` requires a typed
   `DeviceCodeLifecycle<TDeviceCode>`. Standard implementations support the base
   token types; custom lifecycles preserve custom runtime types and state through
-  creation, transition, lookup, and repository save.
+  creation, transition, lookup, and typed persistence.
 - Authentication persistence guidance no longer presents generated MongoDB CRUD
   repositories as production-ready authentication adapters. No verified MongoDB
   authentication adapter is currently shipped.
+- **BREAKING:** `AuthEndpoints` now requires a `DeviceCodeRepository<T>`.
+  Approved device grants are bound to the exact requesting client ID and are
+  atomically consumed once; mismatched and subsequent redemptions return
+  `invalid_grant`.
+- `InMemoryDeviceCodeRepository<T>` provides the reference atomic repository for
+  examples and tests. Production adapters must use a database conditional
+  operation rather than an ordinary read followed by `save()`.
 
 ### Added
 

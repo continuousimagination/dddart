@@ -12,18 +12,24 @@
 //
 // - Repository<CustomRefreshToken> persistence plus the lookup capability used
 //   by refresh and revocation;
-// - Repository<CustomDeviceCode> persistence plus the lookup capability used by
-//   device verification and redemption;
+// - DeviceCodeRepository<CustomDeviceCode> lookup by user code and device code;
+// - an atomic database conditional operation for consumeApproved that matches
+//   the device code, exact client ID, approved state, non-null user, and
+//   expiration, then persists and returns the consumed value exactly once;
 // - RefreshTokenLifecycle<CustomRefreshToken> and
 //   DeviceCodeLifecycle<CustomDeviceCode> implementations that construct the
-//   concrete subtype and preserve every subtype field during transitions;
+//   concrete subtype and preserve every subtype field during approve and
+//   consume transitions;
 // - serializers whose concrete constructors expose all inherited fields,
 //   including id, createdAt, and updatedAt, through named super-formals.
 //
-// Do not infer those authentication guarantees from @GenerateMongoRepository.
+// Device-code consumption cannot be implemented as an ordinary read followed
+// by save(), because concurrent redemptions could both succeed. Do not infer
+// atomicity or the other authentication guarantees from @GenerateMongoRepository.
 // Keep using the runnable in-memory self_hosted_auth_example.dart until an
 // application supplies a MongoDB authentication adapter with focused lookup,
-// transition, serialization, and persistence tests.
+// atomic-transition, serialization, and persistence tests. If a successful
+// response is lost after consumption, login must restart with a new device code.
 
 void main() {
   throw UnsupportedError(

@@ -132,6 +132,25 @@ final class CustomDeviceCodeLifecycle
       updatedAt: approvedAt,
     );
   }
+
+  @override
+  CustomDeviceCode consume(
+    CustomDeviceCode current, {
+    required DateTime consumedAt,
+  }) {
+    return CustomDeviceCode(
+      id: current.id,
+      deviceCode: current.deviceCode,
+      userCode: current.userCode,
+      clientId: current.clientId,
+      expiresAt: current.expiresAt,
+      verificationChannel: current.verificationChannel,
+      userId: current.userId,
+      status: DeviceCodeStatus.consumed,
+      createdAt: current.createdAt,
+      updatedAt: consumedAt,
+    );
+  }
 }
 
 void main() {
@@ -226,13 +245,20 @@ void main() {
           parseClaimsFromJson: StandardClaims.fromJson,
           claimsToJson: (claims) => claims.toJson(),
         );
-        final inMemoryRepository = InMemoryRepository<CustomDeviceCode>();
-        final Repository<CustomDeviceCode> repository = inMemoryRepository;
+        const deviceCodeLifecycle = CustomDeviceCodeLifecycle();
+        final inMemoryRepository =
+            InMemoryDeviceCodeRepository<CustomDeviceCode>(
+          lifecycle: deviceCodeLifecycle,
+        );
+        final DeviceCodeRepository<CustomDeviceCode> deviceCodeRepository =
+            inMemoryRepository;
+        final Repository<CustomDeviceCode> repository = deviceCodeRepository;
+        expect(repository, same(inMemoryRepository));
         final endpoints =
             AuthEndpoints<StandardClaims, RefreshToken, CustomDeviceCode>(
           authHandler: authHandler,
-          deviceCodeRepository: repository,
-          deviceCodeLifecycle: const CustomDeviceCodeLifecycle(),
+          deviceCodeRepository: deviceCodeRepository,
+          deviceCodeLifecycle: deviceCodeLifecycle,
           userValidator: (username, password) async {
             if (username == 'custom-user' && password == 'correct-password') {
               return 'custom-user-id';
@@ -296,25 +322,51 @@ void main() {
         expect(storedAfterApproval.userId, 'custom-user-id');
         expect(storedAfterApproval.status, DeviceCodeStatus.approved);
 
+        final consumedAt = storedAfterApproval.updatedAt.add(
+          const Duration(milliseconds: 1),
+        );
+        final consumed = await deviceCodeRepository.consumeApproved(
+          deviceCode: storedAfterApproval.deviceCode,
+          clientId: storedAfterApproval.clientId,
+          consumedAt: consumedAt,
+        );
+
+        expect(consumed, isNotNull);
+        expect(consumed, isA<CustomDeviceCode>());
+        expect(consumed!.runtimeType, CustomDeviceCode);
+        expect(
+          consumed.verificationChannel,
+          storedAfterApproval.verificationChannel,
+        );
+        expect(consumed.id, storedAfterApproval.id);
+        expect(consumed.deviceCode, storedAfterApproval.deviceCode);
+        expect(consumed.userCode, storedAfterApproval.userCode);
+        expect(consumed.clientId, storedAfterApproval.clientId);
+        expect(consumed.expiresAt, storedAfterApproval.expiresAt);
+        expect(consumed.userId, storedAfterApproval.userId);
+        expect(consumed.status, DeviceCodeStatus.consumed);
+        expect(consumed.createdAt, storedAfterApproval.createdAt);
+        expect(consumed.updatedAt, consumedAt);
+
         final serializer = CustomDeviceCodeJsonSerializer();
         final restored = serializer.deserialize(
-          serializer.serialize(storedAfterApproval),
+          serializer.serialize(consumed),
         );
 
         expect(restored, isA<CustomDeviceCode>());
         expect(
           restored.verificationChannel,
-          storedAfterApproval.verificationChannel,
+          consumed.verificationChannel,
         );
-        expect(restored.id, storedAfterApproval.id);
-        expect(restored.deviceCode, storedAfterApproval.deviceCode);
-        expect(restored.userCode, storedAfterApproval.userCode);
-        expect(restored.clientId, storedAfterApproval.clientId);
-        expect(restored.expiresAt, storedAfterApproval.expiresAt);
-        expect(restored.userId, storedAfterApproval.userId);
-        expect(restored.status, DeviceCodeStatus.approved);
-        expect(restored.createdAt, storedAfterApproval.createdAt);
-        expect(restored.updatedAt, storedAfterApproval.updatedAt);
+        expect(restored.id, consumed.id);
+        expect(restored.deviceCode, consumed.deviceCode);
+        expect(restored.userCode, consumed.userCode);
+        expect(restored.clientId, consumed.clientId);
+        expect(restored.expiresAt, consumed.expiresAt);
+        expect(restored.userId, consumed.userId);
+        expect(restored.status, DeviceCodeStatus.consumed);
+        expect(restored.createdAt, consumed.createdAt);
+        expect(restored.updatedAt, consumed.updatedAt);
       },
     );
   });

@@ -1,14 +1,13 @@
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
-import 'package:dddart/dddart.dart' hide UuidValue;
 import 'package:dddart/dddart.dart' as dddart show UuidValue;
 import 'package:dddart_rest/src/auth_error_mapper.dart';
 import 'package:dddart_rest/src/device_code.dart';
 import 'package:dddart_rest/src/device_code_lifecycle.dart';
+import 'package:dddart_rest/src/device_code_repository.dart';
 import 'package:dddart_rest/src/jwt_auth_handler.dart';
 import 'package:dddart_rest/src/refresh_token.dart';
-import 'package:dddart_rest/src/repository_query_support.dart';
 import 'package:dddart_rest/src/security_utils.dart';
 import 'package:shelf/shelf.dart';
 import 'package:uuid/uuid.dart';
@@ -50,8 +49,8 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
   /// JWT auth handler for issuing/validating tokens
   final JwtAuthHandler<TClaims, TRefreshToken> authHandler;
 
-  /// Repository for storing device codes
-  final Repository<TDeviceCode> deviceCodeRepository;
+  /// Repository for looking up and atomically consuming device codes.
+  final DeviceCodeRepository<TDeviceCode> deviceCodeRepository;
 
   /// Typed construction and transition behavior for device codes.
   final DeviceCodeLifecycle<TDeviceCode> deviceCodeLifecycle;
@@ -601,6 +600,23 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
           );
         }
 
+        // A device grant belongs only to the client that requested it. Check
+        // this before exposing its status to another client.
+        if (deviceCode.clientId != clientId) {
+          return _jsonResponse(
+            {'error': 'invalid_grant'},
+            statusCode: 400,
+          );
+        }
+
+        // A consumed grant is always invalid, even after its original expiry.
+        if (deviceCode.status == DeviceCodeStatus.consumed) {
+          return _jsonResponse(
+            {'error': 'invalid_grant'},
+            statusCode: 400,
+          );
+        }
+
         // Check if expired
         if (deviceCode.isExpired) {
           return _jsonResponse(
@@ -638,9 +654,21 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
 
         if (deviceCode.status == DeviceCodeStatus.approved &&
             deviceCode.userId != null) {
+          final consumedCode = await deviceCodeRepository.consumeApproved(
+            deviceCode: deviceCodeString,
+            clientId: clientId,
+            consumedAt: DateTime.now(),
+          );
+          if (consumedCode == null || consumedCode.userId == null) {
+            return _jsonResponse(
+              {'error': 'invalid_grant'},
+              statusCode: 400,
+            );
+          }
+
           // Issue tokens
           final tokens = await authHandler.issueTokens(
-            deviceCode.userId!,
+            consumedCode.userId!,
             deviceInfo: 'Device Code Flow',
           );
 
@@ -691,11 +719,7 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
 
   Future<TDeviceCode?> _findDeviceCodeByUserCode(String userCode) async {
     try {
-      return await findFirstItem(
-        deviceCodeRepository,
-        (code) => code.userCode == userCode,
-        operationName: 'device verification',
-      );
+      return await deviceCodeRepository.findByUserCode(userCode);
     } catch (_) {
       return null;
     }
@@ -705,11 +729,7 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
     String deviceCodeString,
   ) async {
     try {
-      return await findFirstItem(
-        deviceCodeRepository,
-        (code) => code.deviceCode == deviceCodeString,
-        operationName: 'device token exchange',
-      );
+      return await deviceCodeRepository.findByDeviceCode(deviceCodeString);
     } catch (_) {
       return null;
     }

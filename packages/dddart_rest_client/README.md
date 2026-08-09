@@ -213,6 +213,16 @@ Device flow is perfect for CLI tools and applications without a browser. The flo
 
 The client library handles all of this automatically when you call `login()`.
 
+`DeviceFlowAuthProvider` sends its configured `clientId` when requesting a
+device code and reuses that same value for every token poll. The server requires
+an exact match with the client ID bound to the grant and consumes an approved
+grant on the first successful redemption. The provider stops polling as soon as
+it receives that success.
+
+Device grants are single-use. If the successful token response is lost before
+the client stores it, retrying the consumed grant returns `invalid_grant`; call
+`login()` again to start a new device flow.
+
 ## Credential Storage
 
 Credentials are stored as JSON in the specified file:

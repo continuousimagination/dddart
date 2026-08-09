@@ -8,14 +8,16 @@ import 'package:test/test.dart';
 void main() {
   group('AuthEndpoints', () {
     late InMemoryRepository<RefreshToken> refreshTokenRepo;
-    late InMemoryRepository<DeviceCode> deviceCodeRepo;
+    late InMemoryDeviceCodeRepository<DeviceCode> deviceCodeRepo;
     late JwtAuthHandler<StandardClaims, RefreshToken> authHandler;
     late AuthEndpoints<StandardClaims, RefreshToken, DeviceCode> authEndpoints;
     late StandardClaims? currentClaims;
 
     setUp(() {
       refreshTokenRepo = InMemoryRepository<RefreshToken>();
-      deviceCodeRepo = InMemoryRepository<DeviceCode>();
+      deviceCodeRepo = InMemoryDeviceCodeRepository<DeviceCode>(
+        lifecycle: const StandardDeviceCodeLifecycle(),
+      );
       currentClaims = const StandardClaims(
         sub: 'user123',
         email: 'test@example.com',

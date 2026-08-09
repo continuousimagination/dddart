@@ -174,7 +174,9 @@ void main() async {
   // Create repositories
   final documentRepo = InMemoryRepository<Document>();
   final refreshTokenRepo = InMemoryRepository<RefreshToken>();
-  final deviceCodeRepo = InMemoryRepository<DeviceCode>();
+  final deviceCodeRepo = InMemoryDeviceCodeRepository<DeviceCode>(
+    lifecycle: const StandardDeviceCodeLifecycle(),
+  );
 
   // Seed test documents
   await _seedDocuments(documentRepo);

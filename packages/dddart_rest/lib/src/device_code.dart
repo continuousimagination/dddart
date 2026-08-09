@@ -14,6 +14,9 @@ enum DeviceCodeStatus {
 
   /// Device code has expired
   expired,
+
+  /// Device code was redeemed and cannot be used again
+  consumed,
 }
 
 /// Device code for device flow authentication

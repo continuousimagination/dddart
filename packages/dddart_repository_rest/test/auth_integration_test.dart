@@ -114,7 +114,9 @@ Future<AuthenticatedTestServer> createAuthenticatedTestServer({
   // Create repositories
   final userRepository = InMemoryRepository<TestUser>();
   final refreshTokenRepository = InMemoryRepository<RefreshToken>();
-  final deviceCodeRepository = InMemoryRepository<DeviceCode>();
+  final deviceCodeRepository = InMemoryDeviceCodeRepository<DeviceCode>(
+    lifecycle: const StandardDeviceCodeLifecycle(),
+  );
 
   // Create JWT auth handler
   final authHandler = JwtAuthHandler<TestClaims, RefreshToken>(
