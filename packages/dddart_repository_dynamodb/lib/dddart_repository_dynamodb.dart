@@ -21,7 +21,6 @@
 /// import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';
 ///
 /// part 'user.g.dart';
-/// part 'user.dynamo_repository.g.dart';
 ///
 /// @Serializable()
 /// @GenerateDynamoRepository(tableName: 'users')

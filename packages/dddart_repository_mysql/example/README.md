@@ -6,9 +6,12 @@ This directory contains comprehensive examples demonstrating the usage of `dddar
 
 Before running these examples, you need:
 
-1. **MySQL Server** running on `localhost:3306`
+1. **MySQL Server** running on `127.0.0.1:3306`
 2. **Database created**: `dddart_example`
-3. **User credentials**: `root` / `password` (or update connection parameters in examples)
+3. **User credentials**: `root` / `password`
+
+Override those defaults with `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_DATABASE`,
+`MYSQL_USER`, and `MYSQL_PASSWORD`.
 
 ### Quick MySQL Setup with Docker
 
@@ -47,9 +50,9 @@ cd packages/dddart_repository_mysql/example
 dart run build_runner build --delete-conflicting-outputs
 ```
 
-This will generate:
-- `lib/domain/*.g.dart` - JSON serializers
-- `lib/domain/*_repository.g.part` - Repository implementations
+Run `dart run build_runner clean` first when validating from a clean state. The
+JSON and MySQL builders write their serializers and repository implementations
+into the combined `lib/domain/*.g.dart` parts declared by each domain library.
 
 ### 2. Run Examples
 
@@ -68,8 +71,6 @@ dart run error_handling_example.dart
 # Connection lifecycle management
 dart run connection_management_example.dart
 
-# Collection support (List, Set, Map)
-dart run collection_examples.dart
 ```
 
 ## Examples Overview
@@ -97,7 +98,7 @@ Shows how to extend generated repositories with custom query methods:
 - Defining a custom repository interface
 - Implementing domain-specific query methods
 - Using both generated CRUD and custom queries
-- Accessing protected members (connection, dialect, serializer)
+- Accessing library-private members from a handwritten `part` implementation
 
 **Key concepts:**
 - Abstract base class generation
@@ -135,40 +136,11 @@ Covers connection lifecycle and advanced features:
 - Sequential connection reuse
 - Resource cleanup
 
-### collection_examples.dart
+### Legacy collection sketch
 
-Comprehensive demonstration of collection support in MySQL repositories:
-- Primitive collections (List, Set, Map with int, String, DateTime, etc.)
-- Value object collections (List, Set, Map with embedded value objects)
-- Entity collections (List, Set, Map with entities)
-- Nullable collections and empty collections
-- Cascade delete behavior
-- Order preservation for lists
-- Uniqueness enforcement for sets
-- Key-value mappings for maps
-
-**Key concepts:**
-- Junction table generation for collections
-- Position columns for ordered lists
-- UNIQUE constraints for sets and map keys
-- Value object flattening in junction tables
-- CASCADE DELETE for collection items
-- DateTime storage as DATETIME (UTC)
-- Boolean storage as TINYINT(1)
-
-**Domain Models:**
-- `User`: Aggregate with primitive collections (favoriteNumbers, tags, scoresByGame)
-- `Order`: Aggregate with value object collections (payments, deliveryLocations, discountsByCode)
-- `ShoppingCart`: Aggregate with entity collections (items, appliedDiscounts, savedItems)
-- `Product`: Aggregate demonstrating nullable collections
-
-**Collection Types Demonstrated:**
-- `List<int>`, `Set<String>`, `Map<String, int>` - Primitive collections
-- `List<Money>`, `Set<Address>`, `Map<String, Money>` - Value object collections
-- `List<CartItem>`, `Set<Discount>`, `Map<String, CartItem>` - Entity collections
-- `List<DateTime>` - DateTime collections with DATETIME storage
-- `List<int?>` - Nullable element collections
-- `Set<String>?` - Nullable collection fields
+The former collection example is retained under `legacy/` as a labeled design
+sketch. It is not part of the supported runnable inventory because it depends
+on collection behavior that the current generator does not provide.
 
 ## Domain Models
 
@@ -222,11 +194,12 @@ CREATE TABLE order_items (
 
 ## Customizing Connection Parameters
 
-All examples use these default connection parameters:
+All examples use these default connection parameters through
+`lib/mysql_example_connection.dart`:
 
 ```dart
 final connection = MysqlConnection(
-  host: 'localhost',
+  host: Platform.environment['MYSQL_HOST'] ?? '127.0.0.1',
   port: 3306,
   database: 'dddart_example',
   user: 'root',
@@ -234,7 +207,8 @@ final connection = MysqlConnection(
 );
 ```
 
-To use different parameters, edit the connection creation in each example file.
+Use the documented `MYSQL_*` environment variables to change them without
+editing the examples.
 
 ## Troubleshooting
 

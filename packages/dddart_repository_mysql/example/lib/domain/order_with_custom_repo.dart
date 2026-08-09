@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:dddart/dddart.dart';
+import 'package:dddart_json/dddart_json.dart';
 import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
 import 'package:dddart_repository_mysql_example/domain/address.dart';
 import 'package:dddart_repository_mysql_example/domain/money.dart';
@@ -13,9 +16,11 @@ part 'order_with_custom_repo_impl.dart';
 ///
 /// This demonstrates how to use a custom repository interface that will
 /// generate an abstract base class requiring custom method implementations.
+/// It uses the same tables as `Order` because only the repository interface,
+/// not the aggregate's persistence shape, differs from the basic example.
 @Serializable()
 @GenerateMysqlRepository(
-  tableName: 'orders_custom',
+  tableName: 'orders',
   implements: OrderRepository,
 )
 class OrderWithCustomRepo extends AggregateRoot {

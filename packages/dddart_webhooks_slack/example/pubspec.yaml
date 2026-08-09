@@ -4,7 +4,7 @@ version: 1.0.0
 publish_to: none
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: '>=3.5.0 <4.0.0'
 
 dependencies:
   dddart_webhooks:
@@ -19,8 +19,6 @@ dependency_overrides:
     path: ../../dddart
   dddart_webhooks:
     path: ../../dddart_webhooks
-  dddart_webhooks_slack:
-    path: ../
 
 dev_dependencies:
   lints: ^3.0.0

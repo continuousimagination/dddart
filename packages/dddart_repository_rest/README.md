@@ -69,7 +69,6 @@ class User extends AggregateRoot {
 }
 
 part 'user.g.dart';
-part 'user.rest_repository.g.dart';
 ```
 
 ### 2. Generate Code
@@ -80,9 +79,8 @@ Run the build_runner to generate the repository and serializer:
 dart run build_runner build
 ```
 
-This generates two files:
-- `user.g.dart` - JSON serializer (from `dddart_json`)
-- `user.rest_repository.g.dart` - REST repository implementation
+This generates one combined `user.g.dart` part containing both the JSON
+serializer and REST repository implementation.
 
 ### 3. Use the Generated Repository
 
@@ -305,7 +303,6 @@ class Product extends AggregateRoot {
 }
 
 part 'product.g.dart';
-part 'product.rest_repository.g.dart';
 ```
 
 ### 3. Implement Custom Methods

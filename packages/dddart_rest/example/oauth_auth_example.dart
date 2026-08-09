@@ -11,7 +11,7 @@
 // - User Pool ID and Client ID
 // - JWKS endpoint URL
 //
-// Run: dart run example/oauth_auth_example.dart
+// Run from this example directory: dart run oauth_auth_example.dart
 // Then test with a JWT from Cognito
 
 import 'dart:async';
@@ -34,9 +34,6 @@ class User extends AggregateRoot {
   final String email;
   final String name;
   final List<String> cognitoGroups;
-
-  @override
-  List<Object?> get props => [id, email, name, cognitoGroups];
 }
 
 // Cognito JWT claims

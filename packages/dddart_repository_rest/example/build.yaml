@@ -1,7 +1,7 @@
 targets:
   $default:
     builders:
-      dddart_json|serializable:
+      dddart_json:json_serializable:
         enabled: true
-      dddart_repository_rest|rest_repository:
+      dddart_repository_rest:rest_repository:
         enabled: true

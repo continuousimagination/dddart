@@ -18,6 +18,8 @@ import 'lib/domain/user.dart';
 Future<void> main() async {
   print('=== Configuration Integration Example ===\n');
 
+  MongoConnection? connection;
+  var connectionOpened = false;
   try {
     // Step 1: Load configuration from file
     print('1. Loading configuration from config.yaml...');
@@ -26,7 +28,7 @@ Future<void> main() async {
 
     // Step 2: Create connection from config
     print('2. Creating MongoDB connection from config...');
-    final connection = _createConnectionFromConfig(config);
+    connection = _createConnectionFromConfig(config);
     print('   ✓ Connection created');
     print('   Host: ${connection.host}');
     print('   Port: ${connection.port}');
@@ -35,6 +37,7 @@ Future<void> main() async {
     // Step 3: Open connection
     print('3. Opening connection...');
     await connection.open();
+    connectionOpened = true;
     print('   ✓ Connected to MongoDB\n');
 
     // Step 4: Use repository
@@ -56,17 +59,19 @@ Future<void> main() async {
     await userRepo.deleteById(user.id);
     print('   ✓ User deleted\n');
 
-    // Step 5: Close connection
-    print('5. Closing connection...');
-    await connection.close();
-    print('   ✓ Connection closed');
-
     print('\n=== Example completed successfully ===');
   } catch (e, stackTrace) {
     print('\n✗ Error: $e');
     print('Stack trace: $stackTrace');
     print('\nMake sure you have created a config.yaml file.');
     print('See the example configuration below.');
+    rethrow;
+  } finally {
+    if (connectionOpened) {
+      print('\n5. Closing connection...');
+      await connection!.close();
+      print('   ✓ Connection closed');
+    }
   }
 }
 

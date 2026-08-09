@@ -55,7 +55,7 @@ class UserSerializer extends ExampleJsonSerializer<User> {
 ///
 /// Run this example:
 /// ```bash
-/// dart run example/etag_concurrency_example.dart
+/// dart run etag_concurrency_example.dart
 /// ```
 void main() async {
   print('=== ETag Concurrency Control Example ===\n');

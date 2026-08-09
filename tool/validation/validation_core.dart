@@ -73,6 +73,161 @@ final class PackagePolicy {
   final Set<String> generationPrerequisites;
 }
 
+final class ExampleGenerationPolicy {
+  ExampleGenerationPolicy({
+    required this.action,
+    required this.builders,
+    required this.disabledBuilders,
+    required this.outputs,
+  });
+
+  factory ExampleGenerationPolicy.fromJson(Map<String, Object?> json) {
+    return ExampleGenerationPolicy(
+      action: _requiredString(json, 'action'),
+      builders: _stringSet(json, 'builders', required: false),
+      disabledBuilders: _stringSet(
+        json,
+        'disabledBuilders',
+        required: false,
+      ),
+      outputs: _stringSet(json, 'outputs', required: false),
+    );
+  }
+
+  final String action;
+  final Set<String> builders;
+  final Set<String> disabledBuilders;
+  final Set<String> outputs;
+}
+
+final class ExampleEntrypointPolicy {
+  ExampleEntrypointPolicy({
+    required this.path,
+    required this.classification,
+    required this.action,
+    required this.reason,
+  });
+
+  factory ExampleEntrypointPolicy.fromJson(Map<String, Object?> json) {
+    return ExampleEntrypointPolicy(
+      path: _requiredString(json, 'path'),
+      classification: _requiredString(json, 'classification'),
+      action: _requiredString(json, 'action'),
+      reason: _requiredString(json, 'reason'),
+    );
+  }
+
+  final String path;
+  final String classification;
+  final String action;
+  final String reason;
+}
+
+final class ExampleSourcePolicy {
+  ExampleSourcePolicy({
+    required this.path,
+    required this.classification,
+    required this.action,
+    required this.reason,
+  });
+
+  factory ExampleSourcePolicy.fromJson(Map<String, Object?> json) {
+    return ExampleSourcePolicy(
+      path: _requiredString(json, 'path'),
+      classification: _requiredString(json, 'classification'),
+      action: _requiredString(json, 'action'),
+      reason: _requiredString(json, 'reason'),
+    );
+  }
+
+  final String path;
+  final String classification;
+  final String action;
+  final String reason;
+}
+
+final class ExampleServicePolicy {
+  ExampleServicePolicy({
+    required this.kind,
+    required this.localAction,
+    required this.ciAction,
+    required this.testTag,
+    required this.reason,
+  });
+
+  factory ExampleServicePolicy.fromJson(Map<String, Object?> json) {
+    final testTag = json['testTag'];
+    if (testTag != null && (testTag is! String || testTag.trim().isEmpty)) {
+      throw ValidationFailure('testTag must be a non-empty string when set.');
+    }
+    return ExampleServicePolicy(
+      kind: _requiredString(json, 'kind'),
+      localAction: _requiredString(json, 'localAction'),
+      ciAction: _requiredString(json, 'ciAction'),
+      testTag: testTag as String?,
+      reason: _requiredString(json, 'reason'),
+    );
+  }
+
+  final String kind;
+  final String localAction;
+  final String ciAction;
+  final String? testTag;
+  final String reason;
+}
+
+final class ExamplePolicy {
+  ExamplePolicy({
+    required this.name,
+    required this.path,
+    required this.category,
+    required this.status,
+    required this.owners,
+    required this.allowedLocalPackages,
+    required this.resolution,
+    required this.generation,
+    required this.entrypoints,
+    required this.sourceOverrides,
+    required this.externalService,
+  });
+
+  factory ExamplePolicy.fromJson(Map<String, Object?> json) {
+    return ExamplePolicy(
+      name: _requiredString(json, 'name'),
+      path: _requiredString(json, 'path'),
+      category: _requiredString(json, 'category'),
+      status: _requiredString(json, 'status'),
+      owners: _stringSet(json, 'owners'),
+      allowedLocalPackages: _stringSet(json, 'allowedLocalPackages'),
+      resolution: _requiredString(json, 'resolution'),
+      generation: ExampleGenerationPolicy.fromJson(
+        _objectMap(json['generation'], 'generation'),
+      ),
+      entrypoints: _objectList(json, 'entrypoints')
+          .map(ExampleEntrypointPolicy.fromJson)
+          .toList(growable: false),
+      sourceOverrides: _objectList(json, 'sourceOverrides')
+          .map(ExampleSourcePolicy.fromJson)
+          .toList(growable: false),
+      externalService: ExampleServicePolicy.fromJson(
+        _objectMap(json['externalService'], 'externalService'),
+      ),
+    );
+  }
+
+  final String name;
+  final String path;
+  final String category;
+  final String status;
+  final Set<String> owners;
+  final Set<String> allowedLocalPackages;
+  final String resolution;
+  final ExampleGenerationPolicy generation;
+  final List<ExampleEntrypointPolicy> entrypoints;
+  final List<ExampleSourcePolicy> sourceOverrides;
+  final ExampleServicePolicy externalService;
+}
+
 final class WorkspaceExemption {
   WorkspaceExemption({
     required this.name,
@@ -160,6 +315,7 @@ final class ValidationInventory {
   ValidationInventory({
     required this.schemaVersion,
     required this.packages,
+    required this.examples,
     required this.workspaceExemptions,
     required this.testTagPolicies,
   });
@@ -167,6 +323,9 @@ final class ValidationInventory {
   factory ValidationInventory.fromJson(Map<String, Object?> json) {
     final packageList = _objectList(json, 'packages')
         .map(PackagePolicy.fromJson)
+        .toList(growable: false);
+    final exampleList = _objectList(json, 'examples')
+        .map(ExamplePolicy.fromJson)
         .toList(growable: false);
     final exemptionList = _objectList(json, 'workspaceExemptions')
         .map(WorkspaceExemption.fromJson)
@@ -178,6 +337,7 @@ final class ValidationInventory {
     return ValidationInventory(
       schemaVersion: _requiredInt(json, 'schemaVersion'),
       packages: {for (final package in packageList) package.name: package},
+      examples: {for (final example in exampleList) example.name: example},
       workspaceExemptions: {
         for (final exemption in exemptionList) exemption.name: exemption,
       },
@@ -187,6 +347,7 @@ final class ValidationInventory {
 
   final int schemaVersion;
   final Map<String, PackagePolicy> packages;
+  final Map<String, ExamplePolicy> examples;
   final Map<String, WorkspaceExemption> workspaceExemptions;
   final List<TestTagPolicy> testTagPolicies;
 }
@@ -263,7 +424,7 @@ Set<String> localDependencyClosure(
 }
 
 void validateInventoryShape(ValidationInventory inventory) {
-  if (inventory.schemaVersion != 1) {
+  if (inventory.schemaVersion != 2) {
     throw ValidationFailure(
       'Unsupported validation inventory schema ${inventory.schemaVersion}.',
     );
@@ -271,6 +432,11 @@ void validateInventoryShape(ValidationInventory inventory) {
   if (inventory.packages.isEmpty) {
     throw ValidationFailure(
       'The validation inventory must declare at least one public package.',
+    );
+  }
+  if (inventory.examples.isEmpty) {
+    throw ValidationFailure(
+      'The validation inventory must declare at least one example.',
     );
   }
 
@@ -334,6 +500,223 @@ void validateInventoryShape(ValidationInventory inventory) {
     }
   }
 
+  const classifications = {'runnable', 'illustrative', 'legacy'};
+  const exampleStatuses = {'active', 'wip'};
+  const resolutions = {'workspace', 'standalone'};
+  const generationActions = {'none', 'required'};
+  const entrypointActions = {'run', 'compile', 'service', 'excluded'};
+  const sourceActions = {'analyze', 'excluded'};
+  const exampleServiceKinds = {'none', 'mongo', 'dynamodb', 'mysql', 'slack'};
+  const exampleServiceActions = {'not-required', 'compile', 'run'};
+  final examplePaths = <String>{};
+  for (final example in inventory.examples.values) {
+    if (!examplePaths.add(example.path)) {
+      throw ValidationFailure('Duplicate example path: ${example.path}.');
+    }
+    if (!classifications.contains(example.category)) {
+      throw ValidationFailure(
+        '${example.name} has unsupported category ${example.category}.',
+      );
+    }
+    if (!exampleStatuses.contains(example.status)) {
+      throw ValidationFailure(
+        '${example.name} has unsupported status ${example.status}.',
+      );
+    }
+    if (!resolutions.contains(example.resolution)) {
+      throw ValidationFailure(
+        '${example.name} has unsupported resolution ${example.resolution}.',
+      );
+    }
+    final unknownOwners = example.owners.difference(
+      inventory.packages.keys.toSet(),
+    );
+    if (unknownOwners.isNotEmpty) {
+      throw ValidationFailure(
+        '${example.name} names unknown owners: ${_sorted(unknownOwners)}.',
+      );
+    }
+    final unknownAllowed = example.allowedLocalPackages.difference(
+      inventory.packages.keys.toSet(),
+    );
+    if (unknownAllowed.isNotEmpty) {
+      throw ValidationFailure(
+        '${example.name} allows unknown local packages: '
+        '${_sorted(unknownAllowed)}.',
+      );
+    }
+    if (!generationActions.contains(example.generation.action)) {
+      throw ValidationFailure(
+        '${example.name} has unsupported generation action '
+        '${example.generation.action}.',
+      );
+    }
+    final generation = example.generation;
+    final generationMetadata = {
+      ...generation.builders,
+      ...generation.disabledBuilders,
+      ...generation.outputs,
+    };
+    if (generation.action == 'none' && generationMetadata.isNotEmpty) {
+      throw ValidationFailure(
+        '${example.name} marks generation none but declares generation '
+        'metadata.',
+      );
+    }
+    if (generation.action == 'required' &&
+        (generation.builders.isEmpty || generation.outputs.isEmpty)) {
+      throw ValidationFailure(
+        '${example.name} requires generation and must declare builders and '
+        'outputs.',
+      );
+    }
+    final builderOverlap = generation.builders.intersection(
+      generation.disabledBuilders,
+    );
+    if (builderOverlap.isNotEmpty) {
+      throw ValidationFailure(
+        '${example.name} both enables and disables builders: '
+        '${_sorted(builderOverlap)}.',
+      );
+    }
+    for (final builder in {
+      ...generation.builders,
+      ...generation.disabledBuilders,
+    }) {
+      if (!RegExp(r'^[a-z0-9_]+:[a-z0-9_]+$').hasMatch(builder)) {
+        throw ValidationFailure(
+          '${example.name} uses non-canonical builder key $builder.',
+        );
+      }
+    }
+    for (final output in generation.outputs) {
+      _validateRelativePolicyPath(example.name, output);
+      if (!output.endsWith('.g.dart')) {
+        throw ValidationFailure(
+          '${example.name} generated output must end in .g.dart: $output.',
+        );
+      }
+    }
+
+    if (example.entrypoints.isEmpty) {
+      throw ValidationFailure(
+        '${example.name} must account for at least one entrypoint.',
+      );
+    }
+    final entrypointPaths = <String>{};
+    for (final entrypoint in example.entrypoints) {
+      _validateRelativePolicyPath(example.name, entrypoint.path);
+      if (!entrypointPaths.add(entrypoint.path)) {
+        throw ValidationFailure(
+          '${example.name} declares duplicate entrypoint ${entrypoint.path}.',
+        );
+      }
+      if (!classifications.contains(entrypoint.classification)) {
+        throw ValidationFailure(
+          '${example.name} entrypoint ${entrypoint.path} has unsupported '
+          'classification ${entrypoint.classification}.',
+        );
+      }
+      if (!entrypointActions.contains(entrypoint.action)) {
+        throw ValidationFailure(
+          '${example.name} entrypoint ${entrypoint.path} has unsupported '
+          'action ${entrypoint.action}.',
+        );
+      }
+      if (entrypoint.classification == 'runnable' &&
+          entrypoint.action == 'excluded') {
+        throw ValidationFailure(
+          '${example.name} cannot exclude runnable entrypoint '
+          '${entrypoint.path}.',
+        );
+      }
+      if (entrypoint.classification == 'illustrative' &&
+          entrypoint.action == 'excluded') {
+        throw ValidationFailure(
+          '${example.name} illustrative entrypoint ${entrypoint.path} must '
+          'be analyzed and compiled.',
+        );
+      }
+      if (entrypoint.classification == 'legacy' &&
+          entrypoint.action != 'excluded') {
+        throw ValidationFailure(
+          '${example.name} legacy entrypoint ${entrypoint.path} must be '
+          'excluded.',
+        );
+      }
+    }
+
+    final overriddenSourcePaths = <String>{};
+    for (final source in example.sourceOverrides) {
+      _validateRelativePolicyPath(example.name, source.path);
+      if (!overriddenSourcePaths.add(source.path)) {
+        throw ValidationFailure(
+          '${example.name} declares duplicate source override ${source.path}.',
+        );
+      }
+      if (entrypointPaths.contains(source.path)) {
+        throw ValidationFailure(
+          '${example.name} source override ${source.path} is already an '
+          'entrypoint.',
+        );
+      }
+      if (!classifications.contains(source.classification) ||
+          !sourceActions.contains(source.action)) {
+        throw ValidationFailure(
+          '${example.name} source override ${source.path} has unsupported '
+          'classification/action ${source.classification}/${source.action}.',
+        );
+      }
+      if (source.classification == 'runnable' && source.action != 'analyze') {
+        throw ValidationFailure(
+          '${example.name} runnable source ${source.path} must be analyzed.',
+        );
+      }
+      if (source.classification == 'illustrative' &&
+          source.action != 'analyze') {
+        throw ValidationFailure(
+          '${example.name} illustrative source ${source.path} must be '
+          'analyzed.',
+        );
+      }
+      if (source.classification == 'legacy' && source.action != 'excluded') {
+        throw ValidationFailure(
+          '${example.name} legacy source ${source.path} must be excluded.',
+        );
+      }
+    }
+
+    final service = example.externalService;
+    if (!exampleServiceKinds.contains(service.kind) ||
+        !exampleServiceActions.contains(service.localAction) ||
+        !exampleServiceActions.contains(service.ciAction)) {
+      throw ValidationFailure(
+        '${example.name} has unsupported external-service policy '
+        '${service.kind}/${service.localAction}/${service.ciAction}.',
+      );
+    }
+    if (service.kind == 'none') {
+      if (service.localAction != 'not-required' ||
+          service.ciAction != 'not-required' ||
+          service.testTag != null) {
+        throw ValidationFailure(
+          '${example.name} has kind none but configures an external service.',
+        );
+      }
+    } else if (service.ciAction == 'run' && service.testTag == null) {
+      throw ValidationFailure(
+        '${example.name} runs an external service in CI without a testTag.',
+      );
+    }
+    if (example.entrypoints
+            .any((entrypoint) => entrypoint.action == 'service') &&
+        service.kind == 'none') {
+      throw ValidationFailure(
+        '${example.name} has service entrypoints without a service policy.',
+      );
+    }
+  }
+
   const actions = {'exclude', 'run'};
   const serviceKinds = {'mongo', 'dynamodb', 'mysql'};
   final seenTags = <String>{};
@@ -388,6 +771,34 @@ void validateInventoryShape(ValidationInventory inventory) {
       }
     }
   }
+
+  final policiesByTag = {
+    for (final policy in inventory.testTagPolicies) policy.tag: policy,
+  };
+  for (final example in inventory.examples.values) {
+    final service = example.externalService;
+    if (service.testTag case final testTag?) {
+      final policy = policiesByTag[testTag];
+      if (policy == null || policy.service?.kind != service.kind) {
+        throw ValidationFailure(
+          '${example.name} external service ${service.kind} references '
+          'incompatible test tag $testTag.',
+        );
+      }
+    }
+  }
+}
+
+void _validateRelativePolicyPath(String exampleName, String path) {
+  if (path.startsWith('/') ||
+      path.contains(r'\') ||
+      RegExp(r'^[a-zA-Z]:').hasMatch(path) ||
+      path == '.' ||
+      path.split('/').any((segment) => segment.isEmpty || segment == '..')) {
+    throw ValidationFailure(
+      '$exampleName declares invalid relative path $path.',
+    );
+  }
 }
 
 Set<String> parseDeclaredServiceTags(String dartTestYaml) {
@@ -413,6 +824,13 @@ Set<String> parseUsedServiceTags(Iterable<String> dartSources) {
     }
   }
   return tags;
+}
+
+Set<String> parseConfiguredExampleBuilderKeys(String buildYaml) {
+  return RegExp(
+    r'^ {6}([a-z0-9_]+:[a-z0-9_]+):\s*$',
+    multiLine: true,
+  ).allMatches(buildYaml).map((match) => match.group(1)!).toSet();
 }
 
 Future<void> stagePublishedPackage({
@@ -510,6 +928,9 @@ void validateWorkspaceCoverage({
   };
   final classifiedNames = <String>{
     ...inventory.packages.keys,
+    ...inventory.examples.values
+        .where((example) => example.resolution == 'workspace')
+        .map((example) => example.name),
     ...inventory.workspaceExemptions.keys,
   };
   final missing = nonRoot.keys.toSet().difference(classifiedNames);
@@ -534,6 +955,40 @@ void validateWorkspaceCoverage({
       expectedRelativePath: exemption.path,
       workspacePackage: nonRoot[exemption.name]!,
     );
+  }
+  for (final example in inventory.examples.values.where(
+    (example) => example.resolution == 'workspace',
+  )) {
+    _validateWorkspacePath(
+      repositoryRoot: repositoryRoot,
+      expectedRelativePath: example.path,
+      workspacePackage: nonRoot[example.name]!,
+    );
+  }
+}
+
+void validateExampleDirectoryCoverage({
+  required ValidationInventory inventory,
+  required Map<String, String> discoveredExamples,
+}) {
+  final configuredNames = inventory.examples.keys.toSet();
+  final discoveredNames = discoveredExamples.keys.toSet();
+  final missing = discoveredNames.difference(configuredNames);
+  final stale = configuredNames.difference(discoveredNames);
+  if (missing.isNotEmpty || stale.isNotEmpty) {
+    throw ValidationFailure(
+      'Example inventory drift. Unclassified: ${_sorted(missing)}; '
+      'not discovered: ${_sorted(stale)}.',
+    );
+  }
+  for (final example in inventory.examples.values) {
+    final discoveredPath = discoveredExamples[example.name];
+    if (discoveredPath != example.path) {
+      throw ValidationFailure(
+        '${example.name} example path drifted: expected ${example.path}, '
+        'found $discoveredPath.',
+      );
+    }
   }
 }
 
@@ -604,6 +1059,54 @@ void validateConsumerDependencyGraph({
       '${policy.name} isolated dependency boundary failed. '
       'Forbidden local packages: ${_sorted(forbidden)}; '
       'missing required packages: ${_sorted(missing)}.',
+    );
+  }
+}
+
+void validateExampleDependencyGraph({
+  required String jsonText,
+  required ExamplePolicy policy,
+  required Set<String> intendedPublicPackages,
+}) {
+  final decoded = _objectMap(jsonDecode(jsonText), 'example dependencies');
+  final packages = _objectList(decoded, 'packages');
+  final dependencyGraph = parseDirectDependencyGraph(jsonText);
+  final root = packages.where(
+    (package) => _requiredString(package, 'name') == policy.name,
+  );
+  if (root.length != 1) {
+    throw ValidationFailure(
+      '${policy.name} dependency graph must contain exactly one example root.',
+    );
+  }
+  dependencyGraph[policy.name]!.addAll(
+    _stringSet(root.single, 'devDependencies', required: false),
+  );
+  final actual = localDependencyClosure(
+    policy.name,
+    dependencyGraph,
+    intendedPublicPackages,
+  )..remove(policy.name);
+  final packagesByName = {
+    for (final package in packages) _requiredString(package, 'name'): package,
+  };
+  for (final packageName in actual) {
+    final source = _requiredString(packagesByName[packageName]!, 'source');
+    final expectedSource = policy.resolution == 'workspace' ? 'root' : 'path';
+    if (source != expectedSource) {
+      throw ValidationFailure(
+        '${policy.name} resolved $packageName from source $source; expected '
+        '$expectedSource for its ${policy.resolution} resolution policy.',
+      );
+    }
+  }
+  if (!_sameSet(actual, policy.allowedLocalPackages)) {
+    final forbidden = actual.difference(policy.allowedLocalPackages);
+    final missing = policy.allowedLocalPackages.difference(actual);
+    throw ValidationFailure(
+      '${policy.name} example dependency boundary failed. Forbidden local '
+      'packages: ${_sorted(forbidden)}; missing required packages: '
+      '${_sorted(missing)}.',
     );
   }
 }

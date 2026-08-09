@@ -26,7 +26,7 @@
 ///   User({required this.firstName, required this.lastName});
 /// }
 ///
-/// part 'user.mongo_repository.g.dart';
+/// part 'user.g.dart';
 ///
 /// // Usage:
 /// final connection = MongoConnection(
@@ -71,7 +71,7 @@
 ///   });
 /// }
 ///
-/// part 'user.mongo_repository.g.dart';
+/// part 'user.g.dart';
 ///
 /// // Extend generated base class and implement custom methods
 /// class UserMongoRepository extends UserMongoRepositoryBase {

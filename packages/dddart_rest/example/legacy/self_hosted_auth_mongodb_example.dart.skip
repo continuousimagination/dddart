@@ -1,4 +1,4 @@
-// Example: Self-hosted authentication with MongoDB
+// Legacy illustrative sketch: self-hosted authentication with MongoDB
 //
 // This example demonstrates:
 // - Setting up JWT authentication with MongoDB persistence

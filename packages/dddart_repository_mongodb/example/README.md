@@ -42,9 +42,10 @@ docker run -d -p 27017:27017 --name mongodb mongo:latest
 dart pub get
 ```
 
-2. Generate code (serializers and repositories):
+2. Generate code from a clean state (serializers and repositories):
 ```bash
-dart run build_runner build
+dart run build_runner clean
+dart run build_runner build --delete-conflicting-outputs
 ```
 
 ## Examples
@@ -208,11 +209,11 @@ Additional aggregate for examples:
 The examples use code generation for:
 
 1. **JSON Serialization** (`dddart_json`)
-   - Generates `*.g.dart` files with `JsonSerializer` classes
+   - Adds `JsonSerializer` classes to each combined `*.g.dart` part
    - Handles aggregate serialization to/from JSON
 
 2. **MongoDB Repositories** (`dddart_repository_mongodb`)
-   - Generates `*.mongo_repository.g.part` files
+   - Adds repository implementations to the same combined `*.g.dart` parts
    - Creates concrete or abstract base repository classes
    - Implements CRUD operations
 

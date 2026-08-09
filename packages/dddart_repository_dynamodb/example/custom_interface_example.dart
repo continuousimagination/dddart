@@ -1,6 +1,7 @@
 // ignore_for_file: avoid_print
 
 import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';
+import 'lib/dynamodb_example_tables.dart';
 import 'lib/domain/user_with_custom_repo.dart';
 
 /// Custom interface example demonstrating extended repository functionality.
@@ -14,7 +15,7 @@ import 'lib/domain/user_with_custom_repo.dart';
 /// Prerequisites:
 /// - DynamoDB Local running on localhost:8000
 /// - Or update connection parameters below
-/// - Table 'users_with_custom_repo' must exist
+/// - The example creates the `users_with_custom_repo` table when needed
 Future<void> main() async {
   print('=== Custom Interface Example ===\n');
 
@@ -29,6 +30,13 @@ Future<void> main() async {
   print('   ✓ Custom repository created\n');
 
   try {
+    await ensureDynamoTable(
+      connection: connection,
+      tableName: userRepo.tableName,
+      createTable: userRepo.createTable,
+    );
+    print('   ✓ Table ready: ${userRepo.tableName}\n');
+
     // Step 3: Create and save multiple users
     print('3. Creating and saving multiple users...');
     final users = [
@@ -62,7 +70,7 @@ Future<void> main() async {
       print('   ✓ Found user: ${foundByEmail.fullName}');
       print('   Email: ${foundByEmail.email}');
     } else {
-      print('   ✗ User not found');
+      throw StateError('Expected to find jane.doe@example.com');
     }
     print('');
 
@@ -87,7 +95,7 @@ Future<void> main() async {
     if (notFound == null) {
       print('   ✓ Correctly returned null for non-existent email');
     } else {
-      print('   ✗ Unexpected result');
+      throw StateError('Unexpectedly found nonexistent@example.com');
     }
     print('');
 
@@ -102,6 +110,7 @@ Future<void> main() async {
   } catch (e, stackTrace) {
     print('\n✗ Error: $e');
     print('Stack trace: $stackTrace');
+    rethrow;
   } finally {
     // Step 9: Clean up connection
     print('\n9. Disposing connection...');

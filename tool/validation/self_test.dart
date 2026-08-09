@@ -26,6 +26,7 @@ Future<void> main() async {
         generationPrerequisites: {},
       ),
     },
+    examples: inventory.examples,
     workspaceExemptions: inventory.workspaceExemptions,
     testTagPolicies: inventory.testTagPolicies,
   );
@@ -49,6 +50,21 @@ Future<void> main() async {
       {'requires-mongo', 'requires-mysql'},
     ),
     'service tags are read from test annotations and arguments',
+  );
+  _expect(
+    _sameSet(
+      parseConfiguredExampleBuilderKeys(
+        'targets:\n'
+        '  \$default:\n'
+        '    builders:\n'
+        '      dddart_json:json_serializable:\n'
+        '        enabled: true\n'
+        '      source_gen:combining_builder:\n'
+        '        enabled: true\n',
+      ),
+      {'dddart_json:json_serializable', 'source_gen:combining_builder'},
+    ),
+    'example builder parsing includes unexpected non-dddart builders',
   );
 
   final configuredServiceTags = {
@@ -138,6 +154,120 @@ Future<void> main() async {
       intendedPublicPackages: inventory.packages.keys.toSet(),
     ),
     'forbidden adapters fail isolated-consumer validation',
+  );
+
+  final mysqlExample = inventory.examples['dddart_repository_mysql_example']!;
+  _expectFailure(
+    () => validateInventoryShape(
+      _inventoryWithExample(
+        inventory,
+        _copyExample(
+          mysqlExample,
+          entrypoints: [
+            ExampleEntrypointPolicy(
+              path: 'illustrative_example.dart.skip',
+              classification: 'illustrative',
+              action: 'excluded',
+              reason: 'Negative policy fixture.',
+            ),
+            ...mysqlExample.entrypoints.skip(1),
+          ],
+        ),
+      ),
+    ),
+    'illustrative entrypoints cannot evade analysis and compilation',
+  );
+  _expectFailure(
+    () => validateInventoryShape(
+      _inventoryWithExample(
+        inventory,
+        _copyExample(
+          mysqlExample,
+          sourceOverrides: [
+            ...mysqlExample.sourceOverrides,
+            ExampleSourcePolicy(
+              path: 'lib/illustrative.dart.skip',
+              classification: 'illustrative',
+              action: 'excluded',
+              reason: 'Negative policy fixture.',
+            ),
+          ],
+        ),
+      ),
+    ),
+    'illustrative sources cannot evade analysis',
+  );
+  _expectFailure(
+    () => validateInventoryShape(
+      _inventoryWithExample(
+        inventory,
+        _copyExample(
+          mysqlExample,
+          generation: ExampleGenerationPolicy(
+            action: 'required',
+            builders: mysqlExample.generation.builders,
+            disabledBuilders: mysqlExample.generation.disabledBuilders,
+            outputs: {r'lib\escape.g.dart'},
+          ),
+        ),
+      ),
+    ),
+    'backslashes cannot bypass relative generated-output validation',
+  );
+  _expectFailure(
+    () => validateInventoryShape(
+      _inventoryWithExample(
+        inventory,
+        _copyExample(
+          mysqlExample,
+          generation: ExampleGenerationPolicy(
+            action: 'required',
+            builders: mysqlExample.generation.builders,
+            disabledBuilders: mysqlExample.generation.disabledBuilders,
+            outputs: {'C:/escape.g.dart'},
+          ),
+        ),
+      ),
+    ),
+    'drive prefixes cannot bypass relative generated-output validation',
+  );
+  validateExampleDependencyGraph(
+    jsonText: _exampleGraph(
+      exampleName: mysqlExample.name,
+      localPackages: mysqlExample.allowedLocalPackages,
+      devLocalPackages: {'dddart_json'},
+      localSource: 'root',
+    ),
+    policy: mysqlExample,
+    intendedPublicPackages: inventory.packages.keys.toSet(),
+  );
+  _expectFailure(
+    () => validateExampleDependencyGraph(
+      jsonText: _exampleGraph(
+        exampleName: mysqlExample.name,
+        localPackages: {
+          ...mysqlExample.allowedLocalPackages,
+          'dddart_repository_mongodb',
+        },
+        localSource: 'root',
+      ),
+      policy: mysqlExample,
+      intendedPublicPackages: inventory.packages.keys.toSet(),
+    ),
+    'example dependency closure drift fails validation',
+  );
+  _expectFailure(
+    () => validateExampleDependencyGraph(
+      jsonText: _exampleGraph(
+        exampleName: mysqlExample.name,
+        localPackages: mysqlExample.allowedLocalPackages,
+        localSource: 'root',
+        nonPathPackage: 'dddart_repository_mysql',
+      ),
+      policy: mysqlExample,
+      intendedPublicPackages: inventory.packages.keys.toSet(),
+    ),
+    'hosted resolution fails the example local-package boundary',
   );
 
   _expect(
@@ -294,6 +424,67 @@ String _consumerGraph({
         },
     ],
   });
+}
+
+String _exampleGraph({
+  required String exampleName,
+  required Set<String> localPackages,
+  Set<String> devLocalPackages = const {},
+  String localSource = 'path',
+  String? nonPathPackage,
+}) {
+  return jsonEncode({
+    'root': exampleName,
+    'packages': [
+      {
+        'name': exampleName,
+        'source': 'root',
+        'directDependencies':
+            localPackages.difference(devLocalPackages).toList(),
+        'devDependencies': devLocalPackages.toList(),
+      },
+      for (final package in localPackages)
+        {
+          'name': package,
+          'source': package == nonPathPackage ? 'hosted' : localSource,
+          'directDependencies': const <String>[],
+        },
+    ],
+  });
+}
+
+ValidationInventory _inventoryWithExample(
+  ValidationInventory inventory,
+  ExamplePolicy example,
+) {
+  return ValidationInventory(
+    schemaVersion: inventory.schemaVersion,
+    packages: inventory.packages,
+    examples: {...inventory.examples, example.name: example},
+    workspaceExemptions: inventory.workspaceExemptions,
+    testTagPolicies: inventory.testTagPolicies,
+  );
+}
+
+ExamplePolicy _copyExample(
+  ExamplePolicy example, {
+  ExampleGenerationPolicy? generation,
+  List<ExampleEntrypointPolicy>? entrypoints,
+  List<ExampleSourcePolicy>? sourceOverrides,
+}) {
+  return ExamplePolicy(
+    name: example.name,
+    path: example.path,
+    category: example.category,
+    status: example.status,
+    owners: example.owners,
+    allowedLocalPackages: example.allowedLocalPackages,
+    resolution: example.resolution,
+    generation: generation ?? example.generation,
+    entrypoints: entrypoints ?? example.entrypoints,
+    sourceOverrides: sourceOverrides ?? example.sourceOverrides,
+    externalService: example.externalService,
+  );
 }
 
 void _expect(bool condition, String description) {

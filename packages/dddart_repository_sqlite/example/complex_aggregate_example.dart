@@ -144,10 +144,12 @@ Future<void> main() async {
     // Verify deletion
     try {
       await repository.getById(order.id);
-      print('✗ ERROR: Order should not exist!');
+      throw StateError('Order should not exist after deletion');
     } on RepositoryException catch (e) {
       if (e.type == RepositoryExceptionType.notFound) {
         print('✓ Order not found (as expected)');
+      } else {
+        rethrow;
       }
     }
 
@@ -155,6 +157,7 @@ Future<void> main() async {
   } catch (e, stackTrace) {
     print('✗ Error: $e');
     print(stackTrace);
+    rethrow;
   } finally {
     await connection.close();
     print('\n✓ Database connection closed');

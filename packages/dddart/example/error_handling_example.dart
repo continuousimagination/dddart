@@ -10,7 +10,7 @@ import 'package:dddart/dddart.dart';
 /// - Prevent cascading failures
 /// - Log errors without crashing the system
 ///
-/// Run with: dart run example/error_handling_example.dart
+/// Run from this example directory with: `dart run error_handling_example.dart`.
 void main() async {
   print('🚨 Event Handler Error Handling Example\n');
 

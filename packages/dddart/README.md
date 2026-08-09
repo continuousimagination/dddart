@@ -758,7 +758,7 @@ These interfaces will enable:
 
 ## Examples
 
-See the [example](../../example) directory for comprehensive examples:
+See the [example](example/) directory for comprehensive examples:
 
 - **Basic event raising** - Creating aggregates that raise events
 - **EventBus usage** - Publishing and subscribing to events
@@ -771,10 +771,10 @@ Run the examples:
 
 ```bash
 # Domain events examples
-dart run example/events_main.dart
+dart run example/events_example.dart
 
 # Serialization examples
-dart run example/main.dart
+dart run example/event_serialization_example.dart
 ```
 
 ## Documentation
@@ -784,14 +784,14 @@ dart run example/main.dart
 - **[Getting Started Guide](GETTING_STARTED.md)** - 5-minute quick start for domain events
 - **[Domain Events Guide](DOMAIN_EVENTS_GUIDE.md)** - Comprehensive patterns and best practices
 - **[API Reference](API_REFERENCE.md)** - Complete API documentation
-- **[Examples](../../example)** - Working code examples and usage patterns
+- **[Examples](example/)** - Working code examples and usage patterns
 
 ### Documentation Structure
 
 1. **New to DDDart?** Start with [GETTING_STARTED.md](GETTING_STARTED.md)
 2. **Building features?** Read [DOMAIN_EVENTS_GUIDE.md](DOMAIN_EVENTS_GUIDE.md)
 3. **Need API details?** Check [API_REFERENCE.md](API_REFERENCE.md)
-4. **Want to see code?** Explore the [example](../../example) directory
+4. **Want to see code?** Explore the [example](example/) directory
 
 ## Platform Support
 

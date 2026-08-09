@@ -2,6 +2,7 @@
 
 import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';
 
+import 'lib/dynamodb_example_tables.dart';
 import 'lib/domain/product.dart';
 
 /// Local development example demonstrating DynamoDB Local setup.
@@ -48,17 +49,12 @@ Future<void> main() async {
 
     // Step 3: Create table if it doesn't exist
     print('3. Creating table if needed...');
-    try {
-      await productRepo.createTable();
-      print('   ✓ Table created successfully\n');
-    } catch (e) {
-      if (e.toString().contains('ResourceInUseException') ||
-          e.toString().contains('Table already exists')) {
-        print('   ✓ Table already exists\n');
-      } else {
-        rethrow;
-      }
-    }
+    await ensureDynamoTable(
+      connection: connection,
+      tableName: productRepo.tableName,
+      createTable: productRepo.createTable,
+    );
+    print('   ✓ Table ready: ${productRepo.tableName}\n');
 
     // Step 4: Verify table exists by listing tables
     print('4. Verifying table exists...');
@@ -68,7 +64,7 @@ Future<void> main() async {
       print('   ✓ Table "products" exists');
       print('   Available tables: ${listResponse.tableNames?.join(", ")}\n');
     } else {
-      print('   ✗ Table not found\n');
+      throw StateError('Table "products" was not created');
     }
 
     // Step 5: Test CRUD operations
@@ -101,7 +97,6 @@ Future<void> main() async {
     // Step 7: Show table creation utilities
     print('7. Table creation utilities:');
     print('   • createTable() - Programmatic creation');
-    print('   • createTableDefinition() - Get CreateTableInput');
     print('   • getCreateTableCommand() - Get AWS CLI command');
     print('   • getCloudFormationTemplate() - Get CloudFormation YAML\n');
 
@@ -109,6 +104,7 @@ Future<void> main() async {
   } catch (e, stackTrace) {
     print('\n✗ Error: $e');
     print('Stack trace: $stackTrace');
+    rethrow;
   } finally {
     // Step 8: Clean up connection
     print('\n8. Disposing connection...');

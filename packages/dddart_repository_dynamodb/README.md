@@ -36,7 +36,6 @@ import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';
 
 part 'user.g.dart';
-part 'user.dynamo_repository.g.dart';
 
 @Serializable()
 @GenerateDynamoRepository(tableName: 'users')
@@ -327,7 +326,6 @@ Generated when no custom interface is specified or interface has only base metho
 - `Future<void> createTable()`: Create DynamoDB table
 
 **Static Methods:**
-- `CreateTableInput createTableDefinition(String tableName)`: Get table definition
 - `String getCreateTableCommand(String tableName)`: Get AWS CLI command
 - `String getCloudFormationTemplate(String tableName)`: Get CloudFormation YAML
 
@@ -736,7 +734,6 @@ class User extends AggregateRoot {
 }
 
 part 'user.g.dart';
-part 'user.dynamo_repository.g.dart';
 
 class UserDynamoRepository extends UserDynamoRepositoryBase {
   UserDynamoRepository(super.connection);
@@ -1065,7 +1062,7 @@ dart run build_runner watch --delete-conflicting-outputs
 ```
 
 **Common issues:**
-- Missing `part` directive: Add `part 'filename.dynamo_repository.g.dart';`
+- Missing `part` directive: Add the combined `part 'filename.g.dart';`
 - Missing `@Serializable()`: Add to aggregate root class
 - Class doesn't extend `AggregateRoot`: Ensure proper inheritance
 
@@ -1191,7 +1188,6 @@ dart pub upgrade
 
 # 2. Clean all generated files
 find . -name "*.g.dart" -delete
-find . -name "*.dynamo_repository.g.dart" -delete
 
 # 3. Regenerate
 dart run build_runner build --delete-conflicting-outputs

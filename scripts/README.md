@@ -38,11 +38,17 @@ lists must not be duplicated in this script or in the workflow.
 - creates a temporary consumer for every intended public package by extracting
   Pub's own archive file set (including nested `.pubignore` semantics), confines
   local path overrides to that fixture, and proves its resolved dddart
-  dependency graph contains exactly the smallest allowed closure.
-
-The current workspace-example exemptions are deliberately recorded in the same
-policy. EXAMPLE-001 owns replacing those exemptions with clean example
-classification and validation; they must not be silently omitted.
+  dependency graph contains exactly the smallest allowed closure;
+- discovers every `packages/*/example` directory and matches it against the
+  shared runnable/illustrative/legacy inventory;
+- resolves each example from its declared workspace or standalone context,
+  proves its smallest local dependency closure, regenerates declared outputs
+  from clean state, analyzes its source with a local analysis configuration,
+  compiles every supported entrypoint, and runs finite local entrypoints;
+- compiles external-service examples locally. CI derives example matrices from
+  the same inventory and runs the MongoDB, DynamoDB, and MySQL lanes with their
+  provisioned services. Slack entrypoints remain compile-only because they need
+  real credentials and inbound requests.
 
 ### Validation tool
 
@@ -56,11 +62,19 @@ dart tool/validation/validate.dart check
 dart tool/validation/validate.dart matrix
 dart tool/validation/validate.dart matrix --service-kind=mysql
 
+# Full or service-scoped example matrices from the same inventory
+dart tool/validation/validate.dart example-matrix
+dart tool/validation/validate.dart example-matrix --service-kind=dynamodb
+
 # One integrated package lane
 dart tool/validation/validate.dart package dddart_json --mode=local
 
 # One outside-workspace minimal consumer
 dart tool/validation/validate.dart consumer dddart_repository_mysql
+
+# One example or all examples; local mode does not assume external services
+dart tool/validation/validate.dart example dddart_json_example --mode=local
+dart tool/validation/validate.dart examples --mode=local
 
 # Fast policy and dependency-boundary regression tests
 dart tool/validation/self_test.dart

@@ -1,5 +1,7 @@
 // ignore_for_file: avoid_print
 
+import 'dart:io';
+
 import 'package:dddart_config/dddart_config.dart';
 
 /// Demonstrates accessing configuration sections.
@@ -10,10 +12,13 @@ import 'package:dddart_config/dddart_config.dart';
 /// - Build connection strings from configuration sections
 /// - Iterate over related configuration values
 void main() {
+  final configPath = File.fromUri(
+    Platform.script.resolve('config.yaml'),
+  ).path;
   // Create configuration
   final config = Configuration([
     EnvironmentConfigProvider(prefix: 'MYAPP'),
-    YamlConfigProvider('example/config.yaml'),
+    YamlConfigProvider(configPath),
   ]);
 
   print('=== Configuration Section Access ===\n');

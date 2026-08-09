@@ -8,7 +8,7 @@ Before running these examples, you need:
 
 1. **Dart SDK** 3.5.0 or later
 2. **A REST API server** running locally (see [Setting Up a Test Server](#setting-up-a-test-server))
-3. **Generated code** (run `dart run build_runner build` in this directory)
+3. **Generated code** (run the clean-generation commands below)
 
 ## Examples Overview
 
@@ -47,7 +47,7 @@ Demonstrates extending generated repositories with custom query methods:
 - Defining a custom repository interface
 - Extending the generated base class
 - Implementing domain-specific queries
-- Using protected members (`_connection`, `_serializer`, `_resourcePath`)
+- Using library-private generated members from a handwritten `part`
 - Consistent error handling with `_mapHttpException`
 
 **Run:**
@@ -140,9 +140,7 @@ The example domain models require code generation. Run:
 
 ```bash
 # From the example directory
-dart run build_runner build
-
-# Or with conflict resolution
+dart run build_runner clean
 dart run build_runner build --delete-conflicting-outputs
 ```
 

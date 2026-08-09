@@ -32,7 +32,7 @@ Demonstrates handling Slack slash commands with:
 
 2. Run the example:
    ```bash
-   dart run example/slash_command_example.dart
+   dart run slash_command_example.dart
    ```
 
 3. Expose localhost to the internet (for local testing):
@@ -84,7 +84,7 @@ Demonstrates handling Slack interactive messages with:
 
 2. Run the example:
    ```bash
-   dart run example/interactive_message_example.dart
+   dart run interactive_message_example.dart
    ```
 
 3. Expose localhost to the internet (for local testing):
@@ -196,7 +196,7 @@ For local development, use ngrok to expose your localhost:
 # https://ngrok.com/download
 
 # Start your webhook server
-dart run example/slash_command_example.dart
+dart run slash_command_example.dart
 
 # In another terminal, start ngrok
 ngrok http 8080

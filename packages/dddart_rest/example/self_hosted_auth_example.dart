@@ -6,7 +6,7 @@
 // - Protecting resources with authentication
 // - Using in-memory repositories for quick start
 //
-// Run: dart run example/self_hosted_auth_example.dart
+// Run from this example directory: dart run self_hosted_auth_example.dart
 // Then test with curl or the CLI client example
 
 import 'dart:async';
@@ -31,9 +31,6 @@ class User extends AggregateRoot {
   final String email;
   final String passwordHash;
   final List<String> roles;
-
-  @override
-  List<Object?> get props => [id, username, email, passwordHash, roles];
 }
 
 // Custom JWT claims

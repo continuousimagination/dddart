@@ -17,6 +17,10 @@ jobs:
       mongo: ${{ steps.matrix.outputs.mongo }}
       dynamodb: ${{ steps.matrix.outputs.dynamodb }}
       mysql: ${{ steps.matrix.outputs.mysql }}
+      example_unserviced: ${{ steps.matrix.outputs.example_unserviced }}
+      example_mongo: ${{ steps.matrix.outputs.example_mongo }}
+      example_dynamodb: ${{ steps.matrix.outputs.example_dynamodb }}
+      example_mysql: ${{ steps.matrix.outputs.example_mysql }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -41,7 +45,7 @@ jobs:
       - name: Check workspace inventory and dependency closures
         run: dart tool/validation/validate.dart check
 
-      - name: Derive package matrices from shared inventory
+      - name: Derive package and example matrices from shared inventory
         id: matrix
         shell: bash
         run: |
@@ -49,6 +53,10 @@ jobs:
           echo "mongo=$(dart tool/validation/validate.dart matrix --service-kind=mongo)" >> "$GITHUB_OUTPUT"
           echo "dynamodb=$(dart tool/validation/validate.dart matrix --service-kind=dynamodb)" >> "$GITHUB_OUTPUT"
           echo "mysql=$(dart tool/validation/validate.dart matrix --service-kind=mysql)" >> "$GITHUB_OUTPUT"
+          echo "example_unserviced=$(dart tool/validation/validate.dart example-matrix --service-kind=none)" >> "$GITHUB_OUTPUT"
+          echo "example_mongo=$(dart tool/validation/validate.dart example-matrix --service-kind=mongo)" >> "$GITHUB_OUTPUT"
+          echo "example_dynamodb=$(dart tool/validation/validate.dart example-matrix --service-kind=dynamodb)" >> "$GITHUB_OUTPUT"
+          echo "example_mysql=$(dart tool/validation/validate.dart example-matrix --service-kind=mysql)" >> "$GITHUB_OUTPUT"
 
   packages:
     needs: inventory
@@ -231,3 +239,164 @@ jobs:
         run: >-
           dart tool/validation/validate.dart consumer
           "${{ matrix.name }}"
+
+  examples:
+    needs: inventory
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.inventory.outputs.example_unserviced) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: 3.9.4
+
+      - name: Cache Dart dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            .dart_tool
+          key: dart-${{ runner.os }}-${{ hashFiles('**/pubspec.yaml') }}
+          restore-keys: |
+            dart-${{ runner.os }}-
+
+      - name: Resolve workspace dependencies
+        run: dart pub get
+
+      - name: Validate example
+        run: >-
+          dart tool/validation/validate.dart example
+          "${{ matrix.name }}" --mode=ci
+
+  mongo-examples:
+    needs: inventory
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.inventory.outputs.example_mongo) }}
+    services:
+      mongodb:
+        image: mongo:latest
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ ping: 1 })'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: 3.9.4
+
+      - name: Cache Dart dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            .dart_tool
+          key: dart-${{ runner.os }}-${{ hashFiles('**/pubspec.yaml') }}
+          restore-keys: |
+            dart-${{ runner.os }}-
+
+      - name: Resolve workspace dependencies
+        run: dart pub get
+
+      - name: Validate MongoDB example
+        run: >-
+          dart tool/validation/validate.dart example
+          "${{ matrix.name }}" --mode=ci
+
+  dynamodb-examples:
+    needs: inventory
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.inventory.outputs.example_dynamodb) }}
+    services:
+      dynamodb:
+        image: amazon/dynamodb-local:latest
+        ports:
+          - 8000:8000
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: 3.9.4
+
+      - name: Cache Dart dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            .dart_tool
+          key: dart-${{ runner.os }}-${{ hashFiles('**/pubspec.yaml') }}
+          restore-keys: |
+            dart-${{ runner.os }}-
+
+      - name: Resolve workspace dependencies
+        run: dart pub get
+
+      - name: Validate DynamoDB example
+        run: >-
+          dart tool/validation/validate.dart example
+          "${{ matrix.name }}" --mode=ci
+
+  mysql-examples:
+    needs: inventory
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.inventory.outputs.example_mysql) }}
+    services:
+      mysql:
+        image: mysql:8.0
+        ports:
+          - 3307:3306
+        env:
+          MYSQL_ROOT_PASSWORD: test_password
+          MYSQL_DATABASE: test_db
+        options: >-
+          --health-cmd "mysqladmin ping -h localhost -ptest_password"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+          --health-start-period 30s
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: 3.9.4
+
+      - name: Cache Dart dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            .dart_tool
+          key: dart-${{ runner.os }}-${{ hashFiles('**/pubspec.yaml') }}
+          restore-keys: |
+            dart-${{ runner.os }}-
+
+      - name: Resolve workspace dependencies
+        run: dart pub get
+
+      - name: Validate MySQL example
+        run: >-
+          dart tool/validation/validate.dart example
+          "${{ matrix.name }}" --mode=ci

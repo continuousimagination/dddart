@@ -1,4 +1,4 @@
-/// Property test for time-range queries.
+/// Legacy bulk-range property sketch deferred to EVENT-004.
 ///
 /// **Feature: distributed-events, Property 3: findSince returns events in time range**
 /// **Validates: Requirements 11.3**

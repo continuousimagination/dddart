@@ -533,56 +533,30 @@ Timer.periodic(const Duration(hours: 1), (_) async {
 });
 ```
 
-## Code Generation
+## Deferred registry generation
 
-The package includes a code generator that creates an event registry for deserialization:
-
-### build.yaml
-
-```yaml
-targets:
-  $default:
-    builders:
-      dddart_events_distributed|event_registry_builder:
-        enabled: true
-        generate_for:
-          - lib/**.dart
-```
-
-### Generated Event Registry
-
-The generator scans for `@Serializable` DomainEvent subclasses and creates:
-
-```dart
-// Generated file: lib/event_registry.g.dart
-final generatedEventRegistry = <String, DomainEvent Function(Map<String, dynamic>)>{
-  'UserCreatedEvent': UserCreatedEventSerializer.fromJson,
-  'OrderPurchasedEvent': OrderPurchasedEventSerializer.fromJson,
-  // ... all your event types
-};
-```
-
-See [GENERATOR_USAGE.md](GENERATOR_USAGE.md) for detailed generator documentation.
+The distributed event registry generator is a work-in-progress surface. Its
+generated contract and integration with the client and server remain deferred
+to EVENT-001 through EVENT-004, so it is not enabled by the active example and
+must not be treated as a supported registry workflow yet. The historical
+[generator notes](GENERATOR_USAGE.md) describe the intended direction only.
 
 ## Examples
 
-See the [example](example/) directory for comprehensive examples:
+See the [example status](example/README.md) for the current boundary. The only
+active example is
+[`custom_stored_event_json_example.dart`](example/custom_stored_event_json_example.dart),
+an independent JSON round-trip that makes no registry, transport, polling, or
+bulk-range claim. The former server, client, and end-to-end sketches are
+preserved under `example/legacy/` as deferred WIP files.
 
-- **[server_example.dart](example/server_example.dart)** - EventBusServer with HTTP endpoints
-- **[client_example.dart](example/client_example.dart)** - EventBusClient with polling
-- **[end_to_end_example.dart](example/end_to_end_example.dart)** - Bidirectional event flow
-
-Run the examples:
+Run the JSON-only example from this package directory:
 
 ```bash
-# Server example
-dart run example/server_example.dart
-
-# Client example (run server first)
-dart run example/client_example.dart
-
-# End-to-end example
-dart run example/end_to_end_example.dart
+cd example
+dart pub get
+dart run build_runner build --delete-conflicting-outputs
+dart run custom_stored_event_json_example.dart
 ```
 
 ## Architecture

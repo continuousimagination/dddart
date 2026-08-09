@@ -24,15 +24,12 @@ Demonstrates JWT authentication with in-memory storage:
 
 **Run:** `dart run self_hosted_auth_example.dart`
 
-### 3. Self-Hosted Auth with MongoDB (`self_hosted_auth_mongodb_example.dart`)
+### 3. Legacy Self-Hosted Auth with MongoDB Sketch
 
-Production-ready authentication setup:
-- MongoDB persistence for refresh tokens
-- Extending RefreshToken and DeviceCode
-- Code generation for repositories
-- Production security considerations
-
-**Note:** Conceptual example showing structure. Requires MongoDB setup.
+The former `self_hosted_auth_mongodb_example.dart` is retained as
+`legacy/self_hosted_auth_mongodb_example.dart.skip`. It is a labeled conceptual
+sketch, not a supported runnable example, because its proposed persistence and
+authentication composition is not implemented by the current public contracts.
 
 ### 4. OAuth/OIDC Authentication (`oauth_auth_example.dart`)
 

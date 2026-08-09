@@ -9,12 +9,12 @@ import 'dart:convert';
 
 import 'package:dddart/dddart.dart';
 import 'package:dddart_events_distributed/dddart_events_distributed.dart';
-// Import example events
-import 'package:dddart_events_distributed_example/example_events.dart';
 import 'package:http/http.dart' as http;
 import 'package:shelf/shelf.dart' as shelf;
 import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:test/test.dart';
+
+import 'test_helpers.dart';
 
 void main() {
   group('Authorization Integration Tests', () {

@@ -14,10 +14,12 @@ Then run any example:
 
 ```bash
 dart run basic_crud_example.dart
-dart run complex_aggregate_example.dart
 dart run custom_repository_example.dart
-dart run collection_examples.dart
 ```
+
+`complex_aggregate_example.dart` is an illustrative, compile-only sketch. It is
+analyzed and compiled by the shared example gate but is not run because the
+current generator does not yet persist nested entity collections.
 
 ## Examples
 
@@ -37,7 +39,9 @@ Demonstrates basic Create, Read, Update, Delete operations with a simple aggrega
 
 ### 2. Complex Aggregate Example (`complex_aggregate_example.dart`)
 
-**Note:** This example demonstrates the intended design but currently has limitations due to incomplete multi-table persistence in the generator.
+**Note:** This compile-only example demonstrates the intended design but
+currently has limitations due to incomplete multi-table persistence in the
+generator.
 
 **Intended Features:**
 - Aggregate with nested entities (OrderItem)
@@ -62,35 +66,14 @@ Demonstrates how to extend generated repositories with custom query methods.
 - Custom repository interface with domain-specific methods
 - Custom SQL queries
 - JOIN operations
-- Access to protected connection and serializer members
+- Access to library-private connection and serializer members from the
+  handwritten `part` implementation
 
-### 4. Collection Examples (`collection_examples.dart`)
+### Legacy Collection Sketch
 
-Comprehensive demonstration of collection support in SQLite repositories.
-
-**Features:**
-- Primitive collections (List, Set, Map with int, String, DateTime, etc.)
-- Value object collections (List, Set, Map with embedded value objects)
-- Entity collections (List, Set, Map with entities)
-- Nullable collections and empty collections
-- Cascade delete behavior
-- Order preservation for lists
-- Uniqueness enforcement for sets
-- Key-value mappings for maps
-
-**Domain Models:**
-- `User`: Aggregate with primitive collections (favoriteNumbers, tags, scoresByGame)
-- `Order`: Aggregate with value object collections (payments, deliveryLocations, discountsByCode)
-- `ShoppingCart`: Aggregate with entity collections (items, appliedDiscounts, savedItems)
-- `Product`: Aggregate demonstrating nullable collections
-
-**Collection Types Demonstrated:**
-- `List<int>`, `Set<String>`, `Map<String, int>` - Primitive collections
-- `List<Money>`, `Set<Address>`, `Map<String, Money>` - Value object collections
-- `List<CartItem>`, `Set<Discount>`, `Map<String, CartItem>` - Entity collections
-- `List<DateTime>` - DateTime collections with ISO8601 storage
-- `List<int?>` - Nullable element collections
-- `Set<String>?` - Nullable collection fields
+The former `collection_examples.dart` is retained under `legacy/` as a labeled
+design sketch. It is not part of the supported runnable inventory because it
+depends on collection behavior that the current generator does not provide.
 
 ## Domain Models
 

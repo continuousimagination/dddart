@@ -7,7 +7,7 @@ part of 'user_with_custom_repo.dart';
 class UserWithCustomRepoMongoRepository
     extends UserWithCustomRepoMongoRepositoryBase {
   /// Creates a repository instance.
-  UserWithCustomRepoMongoRepository(Db database) : super(database);
+  UserWithCustomRepoMongoRepository(super.database);
 
   /// Finds a user by their email address.
   @override

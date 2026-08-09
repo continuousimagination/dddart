@@ -31,7 +31,6 @@
 /// }
 ///
 /// part 'user.g.dart';
-/// part 'user.dynamo_repository.g.dart';
 ///
 /// // Usage:
 /// final connection = DynamoConnection(
@@ -95,7 +94,6 @@
 /// }
 ///
 /// part 'user.g.dart';
-/// part 'user.dynamo_repository.g.dart';
 ///
 /// // Extend generated base class and implement custom methods
 /// class UserDynamoRepository extends UserDynamoRepositoryBase {
@@ -165,11 +163,7 @@
 /// The generated repository includes helper methods for table creation:
 ///
 /// ```dart
-/// // Get CreateTableInput for programmatic creation
-/// final tableInput = UserDynamoRepository.createTableDefinition('users');
-/// await connection.client.createTable(tableInput);
-///
-/// // Or use the instance method
+/// // Create the configured table with the instance method
 /// await userRepo.createTable();
 ///
 /// // Get AWS CLI command

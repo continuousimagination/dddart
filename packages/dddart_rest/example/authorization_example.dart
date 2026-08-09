@@ -6,7 +6,7 @@
 // - Combining authentication and authorization
 // - Different authorization rules for different operations
 //
-// Run: dart run example/authorization_example.dart
+// Run from this example directory: dart run authorization_example.dart
 // Then test with curl using JWT tokens
 
 import 'dart:async';
@@ -31,9 +31,6 @@ class Document extends AggregateRoot {
   final String content;
   final String ownerId; // User ID who owns this document
   final bool isPublic;
-
-  @override
-  List<Object?> get props => [id, title, content, ownerId, isPublic];
 }
 
 // Custom JWT claims with user ID
@@ -106,7 +103,6 @@ class DocumentAuthorizationHandler
   ) async {
     // For delete, we need to fetch the document to check ownership
     // In production, consider passing the aggregate or using a cache
-    final userId = authResult.claims!.userId;
     final isAdmin = authResult.claims!.isAdmin;
 
     // Admins can delete any document

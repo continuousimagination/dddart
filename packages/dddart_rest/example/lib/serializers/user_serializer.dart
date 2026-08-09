@@ -22,6 +22,7 @@ class UserSerializer extends ExampleJsonSerializer<User> {
   }
 
   /// Converts a User to a JSON map
+  @override
   Map<String, dynamic> toJson(User user, [dynamic config]) {
     return {
       'id': user.id.toString(),
@@ -36,6 +37,7 @@ class UserSerializer extends ExampleJsonSerializer<User> {
   }
 
   /// Converts a JSON map to a User
+  @override
   User fromJson(dynamic json, [dynamic config]) {
     return User(
       id: UuidValue.fromString(json['id']),

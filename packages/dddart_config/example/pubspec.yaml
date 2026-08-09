@@ -9,3 +9,6 @@ environment:
 dependencies:
   dddart_config:
     resolution: workspace
+
+dev_dependencies:
+  lints: ^3.0.0

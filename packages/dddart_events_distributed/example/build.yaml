@@ -2,4 +2,8 @@ targets:
   $default:
     builders:
       dddart_events_distributed:event_registry:
+        enabled: false
+      dddart_json:json_serializable:
         enabled: true
+        generate_for:
+          - lib/custom_stored_event.dart

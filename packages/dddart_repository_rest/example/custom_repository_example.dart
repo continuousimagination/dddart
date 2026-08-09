@@ -4,7 +4,7 @@
 /// - Defining a custom repository interface
 /// - Extending the generated base class
 /// - Implementing domain-specific query methods
-/// - Using protected members (_connection, _serializer, _resourcePath)
+/// - Sharing library-private generated members through a `part` file
 /// - Handling errors in custom methods
 ///
 /// To run this example, you need a REST API server running at
@@ -18,7 +18,7 @@ import 'package:dddart_repository_rest/dddart_repository_rest.dart';
 import 'lib/product.dart';
 
 // The ProductRestRepository implementation is now in lib/product.dart
-// This allows it to access the protected members from the generated base class
+// This shares library-private generated members within the owning Dart library.
 
 Future<void> main() async {
   print('=== Custom Repository Example ===\n');
