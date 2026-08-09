@@ -65,6 +65,7 @@ class _MockJwtAuthHandler extends JwtAuthHandler<StandardClaims, RefreshToken> {
       : super(
           secret: 'test-secret',
           refreshTokenRepository: InMemoryRepository<RefreshToken>(),
+          refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
           claimsLoader: (userId) async => StandardClaims(sub: userId),
           parseClaimsFromJson: StandardClaims.fromJson,
           claimsToJson: (claims) => claims.toJson(),

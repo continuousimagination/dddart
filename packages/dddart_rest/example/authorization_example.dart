@@ -202,6 +202,7 @@ void main() async {
   final authHandler = JwtAuthHandler<UserClaims, RefreshToken>(
     secret: 'your-256-bit-secret-key-change-in-production',
     refreshTokenRepository: refreshTokenRepo,
+    refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
     claimsLoader: (userId) async => claimsByUserId[userId],
     issuer: 'https://api.example.com',
     audience: 'example-app',
@@ -218,6 +219,7 @@ void main() async {
   final authEndpoints = AuthEndpoints(
     authHandler: authHandler,
     deviceCodeRepository: deviceCodeRepo,
+    deviceCodeLifecycle: const StandardDeviceCodeLifecycle(),
     userValidator: (username, password) async {
       // Simplified user validation
       // In production, check against user database with proper password hashing

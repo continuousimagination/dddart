@@ -5,6 +5,7 @@ import 'package:dddart/dddart.dart' hide UuidValue;
 import 'package:dddart/dddart.dart' as dddart show UuidValue;
 import 'package:dddart_rest/src/auth_error_mapper.dart';
 import 'package:dddart_rest/src/device_code.dart';
+import 'package:dddart_rest/src/device_code_lifecycle.dart';
 import 'package:dddart_rest/src/jwt_auth_handler.dart';
 import 'package:dddart_rest/src/refresh_token.dart';
 import 'package:dddart_rest/src/repository_query_support.dart';
@@ -23,6 +24,7 @@ import 'package:uuid/uuid.dart';
 /// final authEndpoints = AuthEndpoints<UserClaims, RefreshToken, DeviceCode>(
 ///   authHandler: jwtAuthHandler,
 ///   deviceCodeRepository: deviceCodeRepo,
+///   deviceCodeLifecycle: const StandardDeviceCodeLifecycle(),
 ///   userValidator: (username, password) async {
 ///     // Validate credentials and return user ID
 ///     if (username == 'admin' && password == 'secret') {
@@ -38,6 +40,7 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
   AuthEndpoints({
     required this.authHandler,
     required this.deviceCodeRepository,
+    required this.deviceCodeLifecycle,
     required this.userValidator,
     this.verificationUri = '/auth/device/verify',
     this.deviceCodeExpiration = const Duration(minutes: 10),
@@ -49,6 +52,9 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
 
   /// Repository for storing device codes
   final Repository<TDeviceCode> deviceCodeRepository;
+
+  /// Typed construction and transition behavior for device codes.
+  final DeviceCodeLifecycle<TDeviceCode> deviceCodeLifecycle;
 
   /// Callback to validate username/password and return user ID
   /// Returns user ID if valid, null if invalid
@@ -262,13 +268,14 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
       final now = DateTime.now();
       final expiresAt = now.add(deviceCodeExpiration);
 
-      final deviceCode = DeviceCode(
+      final deviceCode = deviceCodeLifecycle.create(
         id: dddart.UuidValue.generate(),
         deviceCode: deviceCodeString,
         userCode: userCode,
         clientId: clientId,
         expiresAt: expiresAt,
-      ) as TDeviceCode;
+        createdAt: now,
+      );
 
       // Store in repository
       await deviceCodeRepository.save(deviceCode);
@@ -416,7 +423,11 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
       }
 
       // Approve device code
-      final approvedCode = deviceCode.approve(userId) as TDeviceCode;
+      final approvedCode = deviceCodeLifecycle.approve(
+        deviceCode,
+        userId: userId,
+        approvedAt: DateTime.now(),
+      );
       await deviceCodeRepository.save(approvedCode);
 
       // Return success page
@@ -678,7 +689,7 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
     return code.toString();
   }
 
-  Future<DeviceCode?> _findDeviceCodeByUserCode(String userCode) async {
+  Future<TDeviceCode?> _findDeviceCodeByUserCode(String userCode) async {
     try {
       return await findFirstItem(
         deviceCodeRepository,
@@ -690,7 +701,7 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
     }
   }
 
-  Future<DeviceCode?> _findDeviceCodeByDeviceCode(
+  Future<TDeviceCode?> _findDeviceCodeByDeviceCode(
     String deviceCodeString,
   ) async {
     try {

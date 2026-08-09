@@ -29,6 +29,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **BREAKING:** `AuthEndpoints` no longer accepts `claimsBuilder`; claim loading
   belongs to `JwtAuthHandler`. Application claims are included only in access
   tokens, never in opaque refresh tokens.
+- **BREAKING:** `JwtAuthHandler` now requires a typed
+  `RefreshTokenLifecycle<TRefreshToken>`, and `AuthEndpoints` requires a typed
+  `DeviceCodeLifecycle<TDeviceCode>`. Standard implementations support the base
+  token types; custom lifecycles preserve custom runtime types and state through
+  creation, transition, lookup, and repository save.
+- Authentication persistence guidance no longer presents generated MongoDB CRUD
+  repositories as production-ready authentication adapters. No verified MongoDB
+  authentication adapter is currently shipped.
 
 ### Added
 

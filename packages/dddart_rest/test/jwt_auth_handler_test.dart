@@ -2,6 +2,7 @@ import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/src/jwt_auth_handler.dart';
 import 'package:dddart_rest/src/refresh_token.dart';
+import 'package:dddart_rest/src/refresh_token_lifecycle.dart';
 import 'package:dddart_rest/src/standard_claims.dart';
 import 'package:shelf/shelf.dart';
 import 'package:test/test.dart';
@@ -24,6 +25,7 @@ void main() {
       authHandler = JwtAuthHandler<StandardClaims, RefreshToken>(
         secret: 'test-secret-key-for-testing',
         refreshTokenRepository: refreshTokenRepo,
+        refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
         claimsLoader: (userId) async {
           claimsLoaderCalls.add(userId);
           final claims = currentClaims;
@@ -85,6 +87,7 @@ void main() {
         final expiredHandler = JwtAuthHandler<StandardClaims, RefreshToken>(
           secret: 'test-secret-key-for-testing',
           refreshTokenRepository: refreshTokenRepo,
+          refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
           claimsLoader: (userId) async => StandardClaims(
             sub: userId,
             email: 'test@example.com',
@@ -136,6 +139,7 @@ void main() {
             JwtAuthHandler<StandardClaims, RefreshToken>(
           secret: 'test-secret-key-for-testing',
           refreshTokenRepository: refreshTokenRepo,
+          refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
           claimsLoader: (userId) async => StandardClaims(sub: userId),
           parseClaimsFromJson: StandardClaims.fromJson,
           claimsToJson: (claims) => claims.toJson(),
@@ -163,6 +167,7 @@ void main() {
             JwtAuthHandler<StandardClaims, RefreshToken>(
           secret: 'test-secret-key-for-testing',
           refreshTokenRepository: refreshTokenRepo,
+          refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
           claimsLoader: (userId) async => StandardClaims(sub: userId),
           parseClaimsFromJson: StandardClaims.fromJson,
           claimsToJson: (claims) => claims.toJson(),
@@ -243,6 +248,7 @@ void main() {
         final handler = JwtAuthHandler<Map<String, dynamic>, RefreshToken>(
           secret: 'test-secret-key-for-testing',
           refreshTokenRepository: InMemoryRepository<RefreshToken>(),
+          refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
           claimsLoader: (userId) async => maliciousClaims,
           parseClaimsFromJson: (_) => maliciousClaims,
           claimsToJson: (claims) => claims,
@@ -317,6 +323,7 @@ void main() {
         final handler = JwtAuthHandler<_ApplicationClaims, RefreshToken>(
           secret: 'test-secret-key-for-testing',
           refreshTokenRepository: repository,
+          refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
           claimsLoader: (userId) async {
             loaderCalls.add(userId);
             return currentClaims;
@@ -405,6 +412,7 @@ void main() {
             JwtAuthHandler<StandardClaims, RefreshToken>(
           secret: 'test-secret-key-for-testing',
           refreshTokenRepository: refreshTokenRepo,
+          refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
           claimsLoader: (userId) async {
             shortDurationLoaderCalls++;
             return StandardClaims(sub: userId);
@@ -456,6 +464,7 @@ void main() {
           final handler = JwtAuthHandler<StandardClaims, RefreshToken>(
             secret: 'test-secret-key-for-testing',
             refreshTokenRepository: repository,
+            refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
             claimsLoader: (userId) async {
               if (!userExists || !userEnabled) {
                 return null;
@@ -515,6 +524,7 @@ void main() {
         final failingHandler = JwtAuthHandler<StandardClaims, RefreshToken>(
           secret: 'test-secret-key-for-testing',
           refreshTokenRepository: const _FailingRefreshTokenRepository(failure),
+          refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
           claimsLoader: (userId) async => StandardClaims(sub: userId),
           parseClaimsFromJson: StandardClaims.fromJson,
           claimsToJson: (claims) => claims.toJson(),

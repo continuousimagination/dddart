@@ -45,6 +45,7 @@ import 'package:meta/meta.dart';
 /// final authHandler = JwtAuthHandler<UserClaims, RefreshToken>(
 ///   secret: 'secret',
 ///   refreshTokenRepository: repo,
+///   refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
 ///   claimsLoader: loadCurrentUserClaims,
 ///   parseClaimsFromJson: UserClaims.fromJson,
 ///   claimsToJson: (claims) => claims.toJson(),

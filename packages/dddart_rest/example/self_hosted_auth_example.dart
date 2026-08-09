@@ -106,6 +106,7 @@ void main() async {
   final authHandler = JwtAuthHandler<UserClaims, RefreshToken>(
     secret: 'your-256-bit-secret-key-change-in-production',
     refreshTokenRepository: refreshTokenRepo,
+    refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
     claimsLoader: (userId) async {
       final users = await userRepo.getAll();
       final user =
@@ -133,6 +134,7 @@ void main() async {
   final authEndpoints = AuthEndpoints(
     authHandler: authHandler,
     deviceCodeRepository: deviceCodeRepo,
+    deviceCodeLifecycle: const StandardDeviceCodeLifecycle(),
     userValidator: (username, password) async {
       // Find user by username
       final users = await userRepo.getAll();

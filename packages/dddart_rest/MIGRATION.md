@@ -1,5 +1,63 @@
 # Migration Guide
 
+## Typed token lifecycles (Unreleased)
+
+`JwtAuthHandler` and `AuthEndpoints` no longer construct base token values and
+cast them to their generic types. Both constructors now require a lifecycle
+whose type exactly matches the corresponding repository:
+
+```dart
+final handler = JwtAuthHandler<UserClaims, RefreshToken>(
+  secret: secret,
+  refreshTokenRepository: refreshTokenRepository,
+  refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
+  claimsLoader: loadCurrentClaims,
+  parseClaimsFromJson: UserClaims.fromJson,
+  claimsToJson: (claims) => claims.toJson(),
+);
+
+final endpoints = AuthEndpoints<UserClaims, RefreshToken, DeviceCode>(
+  authHandler: handler,
+  deviceCodeRepository: deviceCodeRepository,
+  deviceCodeLifecycle: const StandardDeviceCodeLifecycle(),
+  userValidator: validateUser,
+);
+```
+
+The standard implementations are only for the base `RefreshToken` and
+`DeviceCode` types. For a custom subtype, implement the matching typed
+contract and use the same type consistently:
+
+```dart
+final handler = JwtAuthHandler<UserClaims, AppRefreshToken>(
+  secret: secret,
+  refreshTokenRepository: appRefreshTokenRepository,
+  refreshTokenLifecycle: const AppRefreshTokenLifecycle(),
+  claimsLoader: loadCurrentClaims,
+  parseClaimsFromJson: UserClaims.fromJson,
+  claimsToJson: (claims) => claims.toJson(),
+);
+
+final endpoints =
+    AuthEndpoints<UserClaims, AppRefreshToken, AppDeviceCode>(
+  authHandler: handler,
+  deviceCodeRepository: appDeviceCodeRepository,
+  deviceCodeLifecycle: const AppDeviceCodeLifecycle(),
+  userValidator: validateUser,
+);
+```
+
+`RefreshTokenLifecycle<T>` constructs `T` and revokes an existing `T`.
+`DeviceCodeLifecycle<T>` constructs `T` and approves an existing `T`. Every
+creation must initialize the subtype-specific fields. Every transition must
+return the requested runtime subtype, preserve those fields, and apply the
+base-state transition before it is saved back through `Repository<T>`.
+
+Production storage also needs an adapter that implements the authentication
+flows' required lookup and transition behavior. A plain generated MongoDB CRUD
+repository is not documented as sufficient, and dddart does not currently ship
+a verified MongoDB authentication adapter.
+
 ## Authoritative application claims (Unreleased)
 
 `JwtAuthHandler` now owns the authoritative application-claims loader used for
@@ -27,6 +85,7 @@ await handler.issueTokens(userId, claims);
 final handler = JwtAuthHandler<UserClaims, RefreshToken>(
   secret: secret,
   refreshTokenRepository: refreshTokenRepository,
+  refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
   claimsLoader: loadCurrentClaims,
   parseClaimsFromJson: UserClaims.fromJson,
   claimsToJson: (claims) => claims.toJson(),
@@ -34,6 +93,7 @@ final handler = JwtAuthHandler<UserClaims, RefreshToken>(
 final endpoints = AuthEndpoints(
   authHandler: handler,
   deviceCodeRepository: deviceCodeRepository,
+  deviceCodeLifecycle: const StandardDeviceCodeLifecycle(),
   userValidator: validateUser,
 );
 await handler.issueTokens(userId);

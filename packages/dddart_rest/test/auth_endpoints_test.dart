@@ -25,6 +25,7 @@ void main() {
       authHandler = JwtAuthHandler<StandardClaims, RefreshToken>(
         secret: 'test-secret-key',
         refreshTokenRepository: refreshTokenRepo,
+        refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
         claimsLoader: (userId) async {
           final claims = currentClaims;
           if (claims == null) {
@@ -51,6 +52,7 @@ void main() {
       authEndpoints = AuthEndpoints<StandardClaims, RefreshToken, DeviceCode>(
         authHandler: authHandler,
         deviceCodeRepository: deviceCodeRepo,
+        deviceCodeLifecycle: const StandardDeviceCodeLifecycle(),
         userValidator: (username, password) async {
           if (username == 'testuser' && password == 'testpass') {
             return 'user123';
@@ -149,6 +151,7 @@ void main() {
             AuthEndpoints<StandardClaims, RefreshToken, DeviceCode>(
           authHandler: authHandler,
           deviceCodeRepository: deviceCodeRepo,
+          deviceCodeLifecycle: const StandardDeviceCodeLifecycle(),
           userValidator: (_, __) =>
               throw Exception('sentinel-secret <script>alert(1)</script>'),
         );
@@ -525,6 +528,7 @@ void main() {
             AuthEndpoints<StandardClaims, RefreshToken, DeviceCode>(
           authHandler: authHandler,
           deviceCodeRepository: deviceCodeRepo,
+          deviceCodeLifecycle: const StandardDeviceCodeLifecycle(),
           userValidator: (_, __) =>
               throw Exception('sentinel-secret <script>alert(1)</script>'),
         );

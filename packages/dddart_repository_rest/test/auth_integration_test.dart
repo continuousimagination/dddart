@@ -120,6 +120,7 @@ Future<AuthenticatedTestServer> createAuthenticatedTestServer({
   final authHandler = JwtAuthHandler<TestClaims, RefreshToken>(
     secret: secret,
     refreshTokenRepository: refreshTokenRepository,
+    refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
     claimsLoader: (userId) async => TestClaims(
       userId: userId,
       email: 'test@example.com',
@@ -132,6 +133,7 @@ Future<AuthenticatedTestServer> createAuthenticatedTestServer({
   final authEndpoints = AuthEndpoints<TestClaims, RefreshToken, DeviceCode>(
     authHandler: authHandler,
     deviceCodeRepository: deviceCodeRepository,
+    deviceCodeLifecycle: const StandardDeviceCodeLifecycle(),
     userValidator: (username, password) async {
       // Simple test validator
       if (username == 'testuser' && password == 'testpass') {

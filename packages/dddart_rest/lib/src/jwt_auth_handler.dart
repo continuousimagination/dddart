@@ -6,6 +6,7 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/src/authentication_handler.dart';
 import 'package:dddart_rest/src/authentication_result.dart';
 import 'package:dddart_rest/src/refresh_token.dart';
+import 'package:dddart_rest/src/refresh_token_lifecycle.dart';
 import 'package:dddart_rest/src/repository_query_support.dart';
 import 'package:dddart_rest/src/tokens.dart';
 import 'package:shelf/shelf.dart';
@@ -33,6 +34,7 @@ typedef ApplicationClaimsLoader<TClaims> = Future<TClaims?> Function(
 /// final authHandler = JwtAuthHandler<UserClaims, RefreshToken>(
 ///   secret: 'your-secret-key',
 ///   refreshTokenRepository: refreshTokenRepo,
+///   refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
 ///   claimsLoader: (userId) => loadCurrentClaims(userId),
 ///   parseClaimsFromJson: (json) => UserClaims.fromJson(json),
 ///   claimsToJson: (claims) => claims.toJson(),
@@ -46,6 +48,7 @@ class JwtAuthHandler<TClaims, TRefreshToken extends RefreshToken>
   JwtAuthHandler({
     required this.secret,
     required this.refreshTokenRepository,
+    required this.refreshTokenLifecycle,
     required ApplicationClaimsLoader<TClaims> claimsLoader,
     required TClaims Function(Map<String, dynamic>) parseClaimsFromJson,
     required Map<String, dynamic> Function(TClaims) claimsToJson,
@@ -63,6 +66,9 @@ class JwtAuthHandler<TClaims, TRefreshToken extends RefreshToken>
   /// Repository for storing refresh tokens
   /// Accepts Repository<TRefreshToken> where TRefreshToken extends RefreshToken
   final Repository<TRefreshToken> refreshTokenRepository;
+
+  /// Typed construction and transition behavior for refresh tokens.
+  final RefreshTokenLifecycle<TRefreshToken> refreshTokenLifecycle;
 
   /// Optional issuer claim for JWTs
   final String? issuer;
@@ -170,13 +176,14 @@ class JwtAuthHandler<TClaims, TRefreshToken extends RefreshToken>
     final refreshTokenExpiration = now.add(refreshTokenDuration);
 
     // Store refresh token in repository
-    final refreshToken = RefreshToken(
+    final refreshToken = refreshTokenLifecycle.create(
       id: UuidValue.generate(),
       userId: userId,
       token: refreshTokenString,
       expiresAt: refreshTokenExpiration,
       deviceInfo: deviceInfo,
-    ) as TRefreshToken;
+      createdAt: now,
+    );
 
     await refreshTokenRepository.save(refreshToken);
 
@@ -199,7 +206,7 @@ class JwtAuthHandler<TClaims, TRefreshToken extends RefreshToken>
   /// ```
   Future<Tokens> refresh(String refreshTokenString) async {
     // Look up refresh token in repository
-    final RefreshToken refreshToken;
+    final TRefreshToken refreshToken;
     try {
       refreshToken = await findFirstItem(
         refreshTokenRepository,
@@ -258,7 +265,10 @@ class JwtAuthHandler<TClaims, TRefreshToken extends RefreshToken>
     }
 
     // Mark as revoked
-    final revokedToken = refreshToken.revoke() as TRefreshToken;
+    final revokedToken = refreshTokenLifecycle.revoke(
+      refreshToken,
+      revokedAt: DateTime.now(),
+    );
     await refreshTokenRepository.save(revokedToken);
   }
 

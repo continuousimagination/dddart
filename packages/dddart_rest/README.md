@@ -894,54 +894,46 @@ final refreshTokenRepo = InMemoryRepository<RefreshToken>();
 final deviceCodeRepo = InMemoryRepository<DeviceCode>();
 ```
 
-**Option B: MongoDB (Production)**
+**Production persistence**
 
-Extend the base classes and annotate for code generation:
+Use an authentication-specific persistence adapter that implements and tests
+the lookup and state-transition behavior required by the refresh-token and
+device-code flows. Do not assume that a generated CRUD repository is a
+production authentication adapter. In particular, the generated MongoDB
+repositories have not been verified as sufficient for these flows, and dddart
+does not currently ship a verified MongoDB authentication adapter.
+
+If an application stores custom `RefreshToken` or `DeviceCode` subtypes, keep
+the same concrete type in the repository, handler or endpoints, and lifecycle:
 
 ```dart
-import 'package:dddart_rest/dddart_rest.dart';
-import 'package:dddart_repository_mongodb/dddart_repository_mongodb.dart';
+final authHandler = JwtAuthHandler<UserClaims, AppRefreshToken>(
+  secret: secret,
+  refreshTokenRepository: appRefreshTokenRepository,
+  refreshTokenLifecycle: const AppRefreshTokenLifecycle(),
+  claimsLoader: loadCurrentClaims,
+  parseClaimsFromJson: UserClaims.fromJson,
+  claimsToJson: (claims) => claims.toJson(),
+);
 
-@Serializable()
-@GenerateMongoRepository()
-class AppRefreshToken extends RefreshToken {
-  AppRefreshToken({
-    required super.id,
-    required super.userId,
-    required super.token,
-    required super.expiresAt,
-    super.revoked,
-    super.deviceInfo,
-  });
-}
-
-@Serializable()
-@GenerateMongoRepository()
-class AppDeviceCode extends DeviceCode {
-  AppDeviceCode({
-    required super.id,
-    required super.deviceCode,
-    required super.userCode,
-    required super.clientId,
-    required super.expiresAt,
-    super.userId,
-    super.status,
-  });
-}
-
-part 'auth_models.g.dart';
+final authEndpoints =
+    AuthEndpoints<UserClaims, AppRefreshToken, AppDeviceCode>(
+  authHandler: authHandler,
+  deviceCodeRepository: appDeviceCodeRepository,
+  deviceCodeLifecycle: const AppDeviceCodeLifecycle(),
+  userValidator: validateUser,
+);
 ```
 
-Run code generation:
-```bash
-dart run build_runner build
-```
-
-Then create repository instances:
-```dart
-final refreshTokenRepo = AppRefreshTokenMongoRepository(database);
-final deviceCodeRepo = AppDeviceCodeMongoRepository(database);
-```
+`AppRefreshTokenLifecycle` implements
+`RefreshTokenLifecycle<AppRefreshToken>` and returns `AppRefreshToken` from
+both `create` and `revoke`. `AppDeviceCodeLifecycle` implements
+`DeviceCodeLifecycle<AppDeviceCode>` and returns `AppDeviceCode` from both
+`create` and `approve`. Each `create` method initializes the subtype-specific
+fields, and transition methods copy those fields from the current value while
+applying the required base-state change. This keeps the runtime subtype and
+custom state intact through lookup, transition, and
+`Repository<CustomType>.save`.
 
 #### 3. Create Auth Handler
 
@@ -949,6 +941,7 @@ final deviceCodeRepo = AppDeviceCodeMongoRepository(database);
 final authHandler = JwtAuthHandler<UserClaims, RefreshToken>(
   secret: 'your-256-bit-secret',  // Store in environment variable!
   refreshTokenRepository: refreshTokenRepo,
+  refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
   claimsLoader: (userId) async {
     // Read current application state every time a token is issued.
     final user = await userDirectory.findActiveById(userId);
@@ -984,6 +977,7 @@ old access token.
 final authEndpoints = AuthEndpoints(
   authHandler: authHandler,
   deviceCodeRepository: deviceCodeRepo,
+  deviceCodeLifecycle: const StandardDeviceCodeLifecycle(),
   userValidator: (username, password) async {
     // Validate credentials against your user database
     final user = await userRepo.findByUsername(username);
@@ -1263,6 +1257,7 @@ For simple cases, use the pre-generated `StandardClaims` class:
 final authHandler = JwtAuthHandler<StandardClaims, RefreshToken>(
   secret: 'your-secret',
   refreshTokenRepository: refreshTokenRepo,
+  refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
   claimsLoader: loadCurrentStandardClaims,
   parseClaimsFromJson: StandardClaims.fromJson,
   claimsToJson: (claims) => claims.toJson(),
