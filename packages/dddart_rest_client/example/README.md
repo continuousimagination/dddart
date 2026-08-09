@@ -140,12 +140,12 @@ The client library automatically refreshes expired tokens:
 
 ```dart
 // First request - uses stored access token
-await client.get('/users');
+await client.getPath('/users');
 
 // ... 15 minutes pass, access token expires ...
 
 // Next request - automatically refreshes token before making request
-await client.get('/users');  // Seamless! No error, no manual refresh
+await client.getPath('/users'); // Seamless: no manual refresh.
 ```
 
 **How it works:**
@@ -174,7 +174,7 @@ Use the `cli_tool_example.dart` as a template:
 4. **Implement command methods**:
    ```dart
    Future<void> yourCommand() async {
-     final response = await client.get('/your-endpoint');
+     final response = await client.getPath('/your-endpoint');
      // Handle response
    }
    ```

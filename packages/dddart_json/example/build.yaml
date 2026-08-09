@@ -1,7 +1,7 @@
 targets:
   $default:
     builders:
-      dddart_json|json_serializer_generator:
+      dddart_json:json_serializable:
         enabled: true
         generate_for:
           - lib/domain/*.dart

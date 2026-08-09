@@ -9,7 +9,8 @@ import 'package:dddart/dddart.dart';
 /// - Transmit events over HTTP/WebSocket
 /// - Implement event sourcing
 ///
-/// Run with: dart run example/event_serialization_example.dart
+/// Run from this example directory with:
+/// `dart run event_serialization_example.dart`.
 void main() {
   print('🔄 Domain Event Serialization Example\n');
 

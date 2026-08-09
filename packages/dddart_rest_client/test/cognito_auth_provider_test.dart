@@ -519,8 +519,10 @@ void main() {
         scopes: ['openid', 'email'],
       );
 
-      expect(provider.cognitoDomain,
-          equals('https://test.auth.us-east-1.amazoncognito.com'));
+      expect(
+        provider.cognitoDomain,
+        equals('https://test.auth.us-east-1.amazoncognito.com'),
+      );
       expect(provider.clientId, equals('test-client-123'));
       expect(provider.scopes, equals(['openid', 'email']));
       expect(provider.callbackStrategy.getRedirectUri(), contains('localhost'));
@@ -560,8 +562,10 @@ void main() {
 
       final mockClient = MockClient((request) async {
         if (request.url.host.contains('cognito-idp')) {
-          expect(request.headers['X-Amz-Target'],
-              equals('AWSCognitoIdentityProviderService.DeleteUser'));
+          expect(
+            request.headers['X-Amz-Target'],
+            equals('AWSCognitoIdentityProviderService.DeleteUser'),
+          );
           final body = jsonDecode(request.body) as Map<String, dynamic>;
           expect(body['AccessToken'], equals('valid-token'));
           return http.Response('{}', 200);

@@ -4,11 +4,10 @@
 /// - Defining a custom repository interface
 /// - Extending the generated abstract base class
 /// - Implementing custom SQL queries
-/// - Using protected connection and serializer members
+/// - Sharing library-private connection and serializer members through parts
 /// - Domain-specific query methods
 library;
 
-import 'package:dddart/dddart.dart';
 import 'package:dddart_repository_sqlite/dddart_repository_sqlite.dart';
 
 import 'lib/custom_user.dart';
@@ -115,6 +114,7 @@ Future<void> main() async {
   } catch (e, stackTrace) {
     print('✗ Error: $e');
     print(stackTrace);
+    rethrow;
   } finally {
     await connection.close();
     print('\n✓ Database connection closed');

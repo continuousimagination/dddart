@@ -2,6 +2,7 @@
 
 import 'package:dddart/dddart.dart';
 import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';
+import 'lib/dynamodb_example_tables.dart';
 import 'lib/domain/user.dart';
 
 /// Basic CRUD example demonstrating DynamoDB repository usage.
@@ -17,7 +18,7 @@ import 'lib/domain/user.dart';
 /// Prerequisites:
 /// - DynamoDB Local running on localhost:8000
 /// - Or update connection parameters below
-/// - Table 'users' must exist (see table_creation_example.dart)
+/// - The example creates the `users` table when needed
 Future<void> main() async {
   print('=== Basic CRUD Example ===\n');
 
@@ -32,6 +33,13 @@ Future<void> main() async {
   print('   ✓ Repository created\n');
 
   try {
+    await ensureDynamoTable(
+      connection: connection,
+      tableName: userRepo.tableName,
+      createTable: userRepo.createTable,
+    );
+    print('   ✓ Table ready: ${userRepo.tableName}\n');
+
     // Step 3: Create and save a new user
     print('3. Creating and saving a new user...');
     final user = User(
@@ -80,12 +88,12 @@ Future<void> main() async {
     print('8. Verifying deletion...');
     try {
       await userRepo.getById(user.id);
-      print('   ✗ User still exists (unexpected)');
+      throw StateError('User still exists after deletion');
     } on RepositoryException catch (e) {
       if (e.type == RepositoryExceptionType.notFound) {
         print('   ✓ User not found (expected)');
       } else {
-        print('   ✗ Unexpected error: ${e.message}');
+        rethrow;
       }
     }
 
@@ -93,6 +101,7 @@ Future<void> main() async {
   } catch (e, stackTrace) {
     print('\n✗ Error: $e');
     print('Stack trace: $stackTrace');
+    rethrow;
   } finally {
     // Step 9: Clean up connection
     print('\n9. Disposing connection...');

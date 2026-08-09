@@ -193,6 +193,18 @@ class User extends AggregateRoot {
       expect(output, contains("String get _resourcePath => '/users'"));
       expect(output, contains('final _serializer = UserJsonSerializer()'));
       expect(output, contains('RepositoryException _mapHttpException'));
+      expect(
+        output,
+        contains("headers: {'Accept': 'application/json'}"),
+      );
+      expect(
+        output,
+        contains("'Content-Type': 'application/json'"),
+      );
+      expect(
+        RegExp(r"headers: \{'Accept': 'application/json'\}").allMatches(output),
+        hasLength(2),
+      );
     });
 
     test('custom methods preserve Dart parameter and type parameter forms',

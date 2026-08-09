@@ -16,7 +16,7 @@ import 'lib/order_shipped_event.dart';
 /// - Complete event lifecycle management
 /// - Real-world e-commerce workflow scenario
 ///
-/// Run with: dart run example/events_example.dart
+/// Run from this example directory with: `dart run events_example.dart`.
 Future<void> main() async {
   final example = EventsExample();
   await example.runAll();
@@ -370,7 +370,7 @@ class EventsExample {
     eventBus.publish(orderShipped);
     await Future.delayed(Duration(milliseconds: 100));
 
-    print('\n' + '=' * 40);
+    print('\n${'=' * 40}');
     print('Workflow completed successfully!');
     print('All services were notified and processed their tasks.');
 

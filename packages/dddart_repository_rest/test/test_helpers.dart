@@ -126,7 +126,7 @@ Future<TestServer> createTestServer<T extends AggregateRoot>({
     CrudResource<T, void>(
       path: path,
       repository: repository,
-      serializers: {'application/json': serializer},
+      serializer: serializer,
     ),
   );
 

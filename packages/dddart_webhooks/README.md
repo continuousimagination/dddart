@@ -180,6 +180,11 @@ WebhookResource<String, MyVerificationResult>(
 
 ## Error Handling
 
+If a verifier returns an invalid result, `WebhookResource` returns a sanitized
+401 response. If verifier code throws, the resource logs the exception and stack
+trace internally and returns a generic 500 response. Neither response includes
+provider error details, request payloads, signatures, or signing secrets.
+
 ### Custom Deserialization Error Handler
 
 ```dart

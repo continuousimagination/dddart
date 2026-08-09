@@ -13,7 +13,7 @@ import 'lib/user_registered_event.dart';
 /// - Hierarchical logger structure (dddart.eventbus, dddart.repository)
 /// - Fine-grained control over logging verbosity
 ///
-/// Run with: dart run example/logging_hierarchical.dart
+/// Run from this example directory with: `dart run logging_hierarchical.dart`.
 Future<void> main() async {
   print('🌳 DDDart Hierarchical Logging Configuration Example\n');
   print('=' * 60);
@@ -26,7 +26,7 @@ Future<void> main() async {
   await _demonstrateParentChildRelationship();
   await _demonstrateSelectiveLogging();
 
-  print('\n' + '=' * 60);
+  print('\n${'=' * 60}');
   print('✅ Hierarchical logging example completed!');
   print('=' * 60);
 }

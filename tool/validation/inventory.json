@@ -1,0 +1,958 @@
+{
+  "schemaVersion": 2,
+  "packages": [
+    {
+      "name": "dddart",
+      "path": "packages/dddart",
+      "generation": "none",
+      "allowedLocalPackages": ["dddart"]
+    },
+    {
+      "name": "dddart_serialization",
+      "path": "packages/dddart_serialization",
+      "generation": "none",
+      "allowedLocalPackages": ["dddart", "dddart_serialization"]
+    },
+    {
+      "name": "dddart_json",
+      "path": "packages/dddart_json",
+      "generation": "required",
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_serialization",
+        "dddart_json"
+      ]
+    },
+    {
+      "name": "dddart_rest",
+      "path": "packages/dddart_rest",
+      "generation": "required",
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_serialization",
+        "dddart_json",
+        "dddart_rest"
+      ]
+    },
+    {
+      "name": "dddart_rest_client",
+      "path": "packages/dddart_rest_client",
+      "generation": "none",
+      "allowedLocalPackages": ["dddart_rest_client"]
+    },
+    {
+      "name": "dddart_config",
+      "path": "packages/dddart_config",
+      "generation": "none",
+      "allowedLocalPackages": ["dddart_config"]
+    },
+    {
+      "name": "dddart_repository_mongodb",
+      "path": "packages/dddart_repository_mongodb",
+      "generation": "required",
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_serialization",
+        "dddart_json",
+        "dddart_repository_mongodb"
+      ]
+    },
+    {
+      "name": "dddart_repository_dynamodb",
+      "path": "packages/dddart_repository_dynamodb",
+      "generation": "required",
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_serialization",
+        "dddart_json",
+        "dddart_repository_dynamodb"
+      ]
+    },
+    {
+      "name": "dddart_repository_rest",
+      "path": "packages/dddart_repository_rest",
+      "generation": "required",
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_serialization",
+        "dddart_json",
+        "dddart_rest_client",
+        "dddart_repository_rest"
+      ],
+      "generationPrerequisites": ["dddart_rest"]
+    },
+    {
+      "name": "dddart_repository_sql",
+      "path": "packages/dddart_repository_sql",
+      "generation": "required",
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_serialization",
+        "dddart_repository_sql"
+      ]
+    },
+    {
+      "name": "dddart_repository_sqlite",
+      "path": "packages/dddart_repository_sqlite",
+      "generation": "required",
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_serialization",
+        "dddart_json",
+        "dddart_repository_sql",
+        "dddart_repository_sqlite"
+      ]
+    },
+    {
+      "name": "dddart_repository_mysql",
+      "path": "packages/dddart_repository_mysql",
+      "generation": "required",
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_serialization",
+        "dddart_repository_sql",
+        "dddart_repository_mysql"
+      ]
+    },
+    {
+      "name": "dddart_webhooks",
+      "path": "packages/dddart_webhooks",
+      "generation": "none",
+      "allowedLocalPackages": ["dddart_webhooks"]
+    },
+    {
+      "name": "dddart_webhooks_slack",
+      "path": "packages/dddart_webhooks_slack",
+      "generation": "none",
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_webhooks",
+        "dddart_webhooks_slack"
+      ]
+    },
+    {
+      "name": "dddart_events_distributed",
+      "path": "packages/dddart_events_distributed",
+      "generation": "required",
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_serialization",
+        "dddart_json",
+        "dddart_events_distributed"
+      ]
+    }
+  ],
+  "examples": [
+    {
+      "name": "dddart_events_example",
+      "path": "packages/dddart/example",
+      "category": "runnable",
+      "status": "active",
+      "owners": ["dddart"],
+      "allowedLocalPackages": ["dddart"],
+      "resolution": "standalone",
+      "generation": {
+        "action": "none",
+        "builders": [],
+        "disabledBuilders": [],
+        "outputs": []
+      },
+      "entrypoints": [
+        {
+          "path": "error_handling_example.dart",
+          "classification": "runnable",
+          "action": "run",
+          "reason": "Finite in-process domain-event error-handling demonstration."
+        },
+        {
+          "path": "event_serialization_example.dart",
+          "classification": "runnable",
+          "action": "run",
+          "reason": "Finite manual domain-event serialization demonstration."
+        },
+        {
+          "path": "events_example.dart",
+          "classification": "runnable",
+          "action": "run",
+          "reason": "Finite in-process domain-event demonstration."
+        },
+        {
+          "path": "logging_console.dart",
+          "classification": "runnable",
+          "action": "run",
+          "reason": "Finite console logging demonstration."
+        },
+        {
+          "path": "logging_file.dart",
+          "classification": "runnable",
+          "action": "run",
+          "reason": "Finite logging demonstration isolated in a system temporary directory."
+        },
+        {
+          "path": "logging_hierarchical.dart",
+          "classification": "runnable",
+          "action": "run",
+          "reason": "Finite hierarchical logging demonstration."
+        }
+      ],
+      "sourceOverrides": [],
+      "externalService": {
+        "kind": "none",
+        "localAction": "not-required",
+        "ciAction": "not-required",
+        "reason": "All runnable entrypoints are finite and in-process."
+      }
+    },
+    {
+      "name": "dddart_config_example",
+      "path": "packages/dddart_config/example",
+      "category": "runnable",
+      "status": "active",
+      "owners": ["dddart_config"],
+      "allowedLocalPackages": ["dddart_config"],
+      "resolution": "workspace",
+      "generation": {
+        "action": "none",
+        "builders": [],
+        "disabledBuilders": [],
+        "outputs": []
+      },
+      "entrypoints": [
+        {
+          "path": "basic_usage.dart",
+          "classification": "runnable",
+          "action": "run",
+          "reason": "Finite script-relative YAML configuration demonstration."
+        },
+        {
+          "path": "reload_example.dart",
+          "classification": "runnable",
+          "action": "run",
+          "reason": "Finite reload demonstration using a system temporary file."
+        },
+        {
+          "path": "section_access.dart",
+          "classification": "runnable",
+          "action": "run",
+          "reason": "Finite section-access demonstration."
+        },
+        {
+          "path": "underscore_demo.dart",
+          "classification": "runnable",
+          "action": "run",
+          "reason": "Finite environment-key mapping demonstration."
+        },
+        {
+          "path": "validation_example.dart",
+          "classification": "runnable",
+          "action": "run",
+          "reason": "Finite configuration-validation demonstration."
+        }
+      ],
+      "sourceOverrides": [],
+      "externalService": {
+        "kind": "none",
+        "localAction": "not-required",
+        "ciAction": "not-required",
+        "reason": "No external service is used."
+      }
+    },
+    {
+      "name": "dddart_json_example",
+      "path": "packages/dddart_json/example",
+      "category": "runnable",
+      "status": "active",
+      "owners": ["dddart_json"],
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_serialization",
+        "dddart_json"
+      ],
+      "resolution": "workspace",
+      "generation": {
+        "action": "required",
+        "builders": ["dddart_json:json_serializable"],
+        "disabledBuilders": [],
+        "outputs": [
+          "lib/domain/address.g.dart",
+          "lib/domain/customer.g.dart",
+          "lib/domain/enum_example.g.dart",
+          "lib/domain/money.g.dart",
+          "lib/domain/order.g.dart",
+          "lib/domain/order_item.g.dart",
+          "lib/domain/product_info.g.dart"
+        ]
+      },
+      "entrypoints": [
+        {
+          "path": "enum_example_runner.dart",
+          "classification": "runnable",
+          "action": "run",
+          "reason": "Finite generated enum round-trip demonstration."
+        },
+        {
+          "path": "serialization_example.dart",
+          "classification": "runnable",
+          "action": "run",
+          "reason": "Finite generated aggregate serialization demonstration."
+        }
+      ],
+      "sourceOverrides": [],
+      "externalService": {
+        "kind": "none",
+        "localAction": "not-required",
+        "ciAction": "not-required",
+        "reason": "No external service is used."
+      }
+    },
+    {
+      "name": "dddart_rest_client_example",
+      "path": "packages/dddart_rest_client/example",
+      "category": "runnable",
+      "status": "active",
+      "owners": ["dddart_rest_client", "dddart_rest"],
+      "allowedLocalPackages": ["dddart_rest_client"],
+      "resolution": "workspace",
+      "generation": {
+        "action": "none",
+        "builders": [],
+        "disabledBuilders": [],
+        "outputs": []
+      },
+      "entrypoints": [
+        {
+          "path": "basic_usage.dart",
+          "classification": "illustrative",
+          "action": "compile",
+          "reason": "Targets placeholder API and authentication endpoints and must not make network requests in validation."
+        },
+        {
+          "path": "cli_tool_example.dart",
+          "classification": "runnable",
+          "action": "compile",
+          "reason": "Requires a separately configured authenticated dddart_rest server; validation compiles it without accessing credentials or the network."
+        }
+      ],
+      "sourceOverrides": [],
+      "externalService": {
+        "kind": "none",
+        "localAction": "not-required",
+        "ciAction": "not-required",
+        "reason": "The cross-package authenticated server fixture is not provisioned by example validation."
+      }
+    },
+    {
+      "name": "dddart_rest_example",
+      "path": "packages/dddart_rest/example",
+      "category": "runnable",
+      "status": "active",
+      "owners": ["dddart_rest"],
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_serialization",
+        "dddart_json",
+        "dddart_rest"
+      ],
+      "resolution": "standalone",
+      "generation": {
+        "action": "none",
+        "builders": [],
+        "disabledBuilders": [],
+        "outputs": []
+      },
+      "entrypoints": [
+        {
+          "path": "authorization_example.dart",
+          "classification": "runnable",
+          "action": "compile",
+          "reason": "Long-running HTTP server; compile validation avoids binding a shared port."
+        },
+        {
+          "path": "custom_routes_example.dart",
+          "classification": "runnable",
+          "action": "compile",
+          "reason": "Long-running HTTP server; compile validation avoids binding a shared port."
+        },
+        {
+          "path": "etag_concurrency_example.dart",
+          "classification": "runnable",
+          "action": "compile",
+          "reason": "HTTP concurrency demonstration requires an interactive server lifecycle."
+        },
+        {
+          "path": "main.dart",
+          "classification": "runnable",
+          "action": "compile",
+          "reason": "Long-running HTTP server; compile validation avoids binding a shared port."
+        },
+        {
+          "path": "oauth_auth_example.dart",
+          "classification": "illustrative",
+          "action": "compile",
+          "reason": "Requires user-supplied OAuth/OIDC configuration and tokens."
+        },
+        {
+          "path": "self_hosted_auth_example.dart",
+          "classification": "runnable",
+          "action": "compile",
+          "reason": "Long-running authenticated HTTP server; compile validation avoids binding a shared port."
+        },
+        {
+          "path": "legacy/self_hosted_auth_mongodb_example.dart.skip",
+          "classification": "legacy",
+          "action": "excluded",
+          "reason": "Conceptual MongoDB authentication sketch uses obsolete constructors and never represented a runnable generated boundary."
+        }
+      ],
+      "sourceOverrides": [],
+      "externalService": {
+        "kind": "none",
+        "localAction": "not-required",
+        "ciAction": "not-required",
+        "reason": "Runnable server entrypoints are compile-only; OAuth and conceptual MongoDB infrastructure are not assumed."
+      }
+    },
+    {
+      "name": "dddart_repository_rest_example",
+      "path": "packages/dddart_repository_rest/example",
+      "category": "runnable",
+      "status": "active",
+      "owners": [
+        "dddart_repository_rest",
+        "dddart_rest_client",
+        "dddart_rest"
+      ],
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_serialization",
+        "dddart_json",
+        "dddart_rest_client",
+        "dddart_repository_rest"
+      ],
+      "resolution": "workspace",
+      "generation": {
+        "action": "required",
+        "builders": [
+          "dddart_json:json_serializable",
+          "dddart_repository_rest:rest_repository"
+        ],
+        "disabledBuilders": [],
+        "outputs": ["lib/product.g.dart", "lib/user.g.dart"]
+      },
+      "entrypoints": [
+        {
+          "path": "authentication_example.dart",
+          "classification": "runnable",
+          "action": "compile",
+          "reason": "Requires a separately running authenticated REST server."
+        },
+        {
+          "path": "basic_crud_example.dart",
+          "classification": "runnable",
+          "action": "compile",
+          "reason": "Requires the documented REST server fixture on localhost."
+        },
+        {
+          "path": "custom_repository_example.dart",
+          "classification": "runnable",
+          "action": "compile",
+          "reason": "Requires custom query routes on a separately running REST server."
+        },
+        {
+          "path": "error_handling_example.dart",
+          "classification": "runnable",
+          "action": "compile",
+          "reason": "Requires a separately running REST server to exercise transport failures."
+        }
+      ],
+      "sourceOverrides": [],
+      "externalService": {
+        "kind": "none",
+        "localAction": "not-required",
+        "ciAction": "not-required",
+        "reason": "The cross-package REST server fixture is documented but not provisioned by this compile gate."
+      }
+    },
+    {
+      "name": "dddart_repository_sqlite_example",
+      "path": "packages/dddart_repository_sqlite/example",
+      "category": "runnable",
+      "status": "active",
+      "owners": ["dddart_repository_sqlite"],
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_serialization",
+        "dddart_json",
+        "dddart_repository_sql",
+        "dddart_repository_sqlite"
+      ],
+      "resolution": "workspace",
+      "generation": {
+        "action": "required",
+        "builders": [
+          "dddart_json:json_serializable",
+          "dddart_repository_sqlite:sqlite_repository"
+        ],
+        "disabledBuilders": [],
+        "outputs": [
+          "lib/complex_order.g.dart",
+          "lib/custom_user.g.dart",
+          "lib/simple_user.g.dart"
+        ]
+      },
+      "entrypoints": [
+        {
+          "path": "basic_crud_example.dart",
+          "classification": "runnable",
+          "action": "run",
+          "reason": "Finite in-memory SQLite CRUD demonstration."
+        },
+        {
+          "path": "complex_aggregate_example.dart",
+          "classification": "illustrative",
+          "action": "compile",
+          "reason": "Illustrates the intended nested aggregate design; the current generator does not yet persist nested entity collections."
+        },
+        {
+          "path": "custom_repository_example.dart",
+          "classification": "runnable",
+          "action": "run",
+          "reason": "Finite in-memory SQLite custom repository demonstration."
+        },
+        {
+          "path": "legacy/collection_examples.dart.skip",
+          "classification": "legacy",
+          "action": "excluded",
+          "reason": "Obsolete collection-mapping sketch uses removed entity and connection APIs and is retained only for historical context."
+        }
+      ],
+      "sourceOverrides": [],
+      "externalService": {
+        "kind": "none",
+        "localAction": "not-required",
+        "ciAction": "not-required",
+        "reason": "Examples use in-memory SQLite databases and require no external service."
+      }
+    },
+    {
+      "name": "dddart_repository_mysql_example",
+      "path": "packages/dddart_repository_mysql/example",
+      "category": "runnable",
+      "status": "active",
+      "owners": ["dddart_repository_mysql"],
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_serialization",
+        "dddart_json",
+        "dddart_repository_sql",
+        "dddart_repository_mysql"
+      ],
+      "resolution": "workspace",
+      "generation": {
+        "action": "required",
+        "builders": [
+          "dddart_json:json_serializable",
+          "dddart_repository_mysql:mysql_repository"
+        ],
+        "disabledBuilders": [],
+        "outputs": [
+          "lib/domain/address.g.dart",
+          "lib/domain/money.g.dart",
+          "lib/domain/order.g.dart",
+          "lib/domain/order_item.g.dart",
+          "lib/domain/order_with_custom_repo.g.dart"
+        ]
+      },
+      "entrypoints": [
+        {
+          "path": "basic_crud_example.dart",
+          "classification": "runnable",
+          "action": "service",
+          "reason": "Finite CRUD demonstration backed by the policy-provisioned MySQL database."
+        },
+        {
+          "path": "connection_management_example.dart",
+          "classification": "runnable",
+          "action": "service",
+          "reason": "Finite connection lifecycle demonstration backed by MySQL."
+        },
+        {
+          "path": "custom_repository_example.dart",
+          "classification": "runnable",
+          "action": "service",
+          "reason": "Finite generated custom repository demonstration backed by MySQL."
+        },
+        {
+          "path": "error_handling_example.dart",
+          "classification": "runnable",
+          "action": "service",
+          "reason": "Finite repository error-mapping demonstration backed by MySQL."
+        },
+        {
+          "path": "legacy/collection_examples.dart.skip",
+          "classification": "legacy",
+          "action": "excluded",
+          "reason": "Obsolete collection sketch is retained for historical context and is not supported by the current generator."
+        }
+      ],
+      "sourceOverrides": [],
+      "externalService": {
+        "kind": "mysql",
+        "localAction": "compile",
+        "ciAction": "run",
+        "testTag": "requires-mysql",
+        "reason": "Local validation does not assume MySQL; CI provisions the documented ephemeral test database."
+      }
+    },
+    {
+      "name": "dddart_repository_mongodb_example",
+      "path": "packages/dddart_repository_mongodb/example",
+      "category": "runnable",
+      "status": "active",
+      "owners": ["dddart_repository_mongodb", "dddart_config"],
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_serialization",
+        "dddart_json",
+        "dddart_config",
+        "dddart_repository_mongodb"
+      ],
+      "resolution": "standalone",
+      "generation": {
+        "action": "required",
+        "builders": [
+          "dddart_json:json_serializable",
+          "dddart_repository_mongodb:mongo_repository"
+        ],
+        "disabledBuilders": [],
+        "outputs": [
+          "lib/domain/product.g.dart",
+          "lib/domain/user.g.dart",
+          "lib/domain/user_with_custom_repo.g.dart"
+        ]
+      },
+      "entrypoints": [
+        {
+          "path": "basic_crud_example.dart",
+          "classification": "runnable",
+          "action": "service",
+          "reason": "Finite CRUD demonstration backed by the policy-provisioned MongoDB service."
+        },
+        {
+          "path": "config_integration_example.dart",
+          "classification": "runnable",
+          "action": "service",
+          "reason": "Finite configuration integration backed by MongoDB."
+        },
+        {
+          "path": "custom_interface_example.dart",
+          "classification": "runnable",
+          "action": "service",
+          "reason": "Finite generated custom repository demonstration backed by MongoDB."
+        },
+        {
+          "path": "error_handling_example.dart",
+          "classification": "runnable",
+          "action": "service",
+          "reason": "Finite repository error-mapping demonstration backed by MongoDB."
+        },
+        {
+          "path": "repository_swapping_example.dart",
+          "classification": "runnable",
+          "action": "service",
+          "reason": "Finite repository swapping demonstration backed by MongoDB."
+        }
+      ],
+      "sourceOverrides": [],
+      "externalService": {
+        "kind": "mongo",
+        "localAction": "compile",
+        "ciAction": "run",
+        "testTag": "requires-mongo",
+        "reason": "Local validation does not assume MongoDB; CI provisions an ephemeral service."
+      }
+    },
+    {
+      "name": "dddart_repository_dynamodb_example",
+      "path": "packages/dddart_repository_dynamodb/example",
+      "category": "runnable",
+      "status": "active",
+      "owners": ["dddart_repository_dynamodb"],
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_serialization",
+        "dddart_json",
+        "dddart_repository_dynamodb"
+      ],
+      "resolution": "standalone",
+      "generation": {
+        "action": "required",
+        "builders": [
+          "dddart_json:json_serializable",
+          "dddart_repository_dynamodb:dynamo_repository"
+        ],
+        "disabledBuilders": [],
+        "outputs": [
+          "lib/domain/product.g.dart",
+          "lib/domain/user.g.dart",
+          "lib/domain/user_with_custom_repo.g.dart"
+        ]
+      },
+      "entrypoints": [
+        {
+          "path": "basic_crud_example.dart",
+          "classification": "runnable",
+          "action": "service",
+          "reason": "Finite CRUD demonstration backed by DynamoDB Local."
+        },
+        {
+          "path": "custom_interface_example.dart",
+          "classification": "runnable",
+          "action": "service",
+          "reason": "Finite generated custom repository demonstration backed by DynamoDB Local."
+        },
+        {
+          "path": "error_handling_example.dart",
+          "classification": "runnable",
+          "action": "service",
+          "reason": "Finite repository error-mapping demonstration backed by DynamoDB Local."
+        },
+        {
+          "path": "local_development_example.dart",
+          "classification": "runnable",
+          "action": "service",
+          "reason": "Finite DynamoDB Local development demonstration."
+        },
+        {
+          "path": "table_creation_example.dart",
+          "classification": "runnable",
+          "action": "service",
+          "reason": "Finite DynamoDB Local table creation demonstration."
+        }
+      ],
+      "sourceOverrides": [],
+      "externalService": {
+        "kind": "dynamodb",
+        "localAction": "compile",
+        "ciAction": "run",
+        "testTag": "requires-dynamodb",
+        "reason": "Local validation does not assume DynamoDB Local; CI provisions an ephemeral service."
+      }
+    },
+    {
+      "name": "dddart_webhooks_example",
+      "path": "packages/dddart_webhooks/example",
+      "category": "runnable",
+      "status": "active",
+      "owners": ["dddart_webhooks"],
+      "allowedLocalPackages": ["dddart_webhooks"],
+      "resolution": "standalone",
+      "generation": {
+        "action": "none",
+        "builders": [],
+        "disabledBuilders": [],
+        "outputs": []
+      },
+      "entrypoints": [
+        {
+          "path": "combined_with_rest_example.dart",
+          "classification": "illustrative",
+          "action": "compile",
+          "reason": "Print-only composition sketch; retained as an illustrative integration pattern."
+        },
+        {
+          "path": "custom_verifier_example.dart",
+          "classification": "runnable",
+          "action": "compile",
+          "reason": "Long-running webhook server; compile validation avoids binding a shared port."
+        },
+        {
+          "path": "form_encoded_example.dart",
+          "classification": "runnable",
+          "action": "compile",
+          "reason": "Long-running webhook server; compile validation avoids binding a shared port."
+        },
+        {
+          "path": "raw_json_example.dart",
+          "classification": "runnable",
+          "action": "compile",
+          "reason": "Long-running webhook server; compile validation avoids binding a shared port."
+        }
+      ],
+      "sourceOverrides": [],
+      "externalService": {
+        "kind": "none",
+        "localAction": "not-required",
+        "ciAction": "not-required",
+        "reason": "Webhook entrypoints are compile-only and require no provisioned service."
+      }
+    },
+    {
+      "name": "dddart_webhooks_slack_example",
+      "path": "packages/dddart_webhooks_slack/example",
+      "category": "runnable",
+      "status": "active",
+      "owners": ["dddart_webhooks_slack", "dddart_webhooks"],
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_webhooks",
+        "dddart_webhooks_slack"
+      ],
+      "resolution": "standalone",
+      "generation": {
+        "action": "none",
+        "builders": [],
+        "disabledBuilders": [],
+        "outputs": []
+      },
+      "entrypoints": [
+        {
+          "path": "interactive_message_example.dart",
+          "classification": "runnable",
+          "action": "compile",
+          "reason": "Requires Slack signing secrets, interactive requests, and a public callback URL."
+        },
+        {
+          "path": "slash_command_example.dart",
+          "classification": "runnable",
+          "action": "compile",
+          "reason": "Requires Slack signing secrets, slash-command requests, and a public callback URL."
+        }
+      ],
+      "sourceOverrides": [],
+      "externalService": {
+        "kind": "slack",
+        "localAction": "compile",
+        "ciAction": "compile",
+        "reason": "Validation never assumes Slack credentials, signed requests, or public ingress."
+      }
+    },
+    {
+      "name": "dddart_events_distributed_example",
+      "path": "packages/dddart_events_distributed/example",
+      "category": "legacy",
+      "status": "wip",
+      "owners": ["dddart_events_distributed", "dddart_json"],
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_serialization",
+        "dddart_json",
+        "dddart_events_distributed"
+      ],
+      "resolution": "workspace",
+      "generation": {
+        "action": "required",
+        "builders": ["dddart_json:json_serializable"],
+        "disabledBuilders": ["dddart_events_distributed:event_registry"],
+        "outputs": ["lib/custom_stored_event.g.dart"]
+      },
+      "entrypoints": [
+        {
+          "path": "custom_stored_event_json_example.dart",
+          "classification": "runnable",
+          "action": "run",
+          "reason": "Independent JSON-004 round-trip for a StoredEvent subtype; it exercises no distributed-event transport or registry contract."
+        },
+        {
+          "path": "legacy/client_example.dart.skip",
+          "classification": "legacy",
+          "action": "excluded",
+          "reason": "Deferred WIP surface pending EVENT-001 through EVENT-004."
+        },
+        {
+          "path": "legacy/end_to_end_example.dart.skip",
+          "classification": "legacy",
+          "action": "excluded",
+          "reason": "Deferred WIP surface pending EVENT-001 through EVENT-004."
+        },
+        {
+          "path": "legacy/server_example.dart.skip",
+          "classification": "legacy",
+          "action": "excluded",
+          "reason": "Deferred WIP surface pending EVENT-001 through EVENT-004."
+        }
+      ],
+      "sourceOverrides": [
+        {
+          "path": "lib/custom_stored_event.dart",
+          "classification": "runnable",
+          "action": "analyze",
+          "reason": "Safe JSON-004 serializer input independent of deferred EVENT behavior."
+        },
+        {
+          "path": "legacy/lib/event_registry.dart.skip",
+          "classification": "legacy",
+          "action": "excluded",
+          "reason": "Handwritten registry conflicts with the deferred event-registry generator contract."
+        },
+        {
+          "path": "legacy/lib/example_events.dart.skip",
+          "classification": "legacy",
+          "action": "excluded",
+          "reason": "Event classes supported only the deferred transport and registry sketches."
+        },
+        {
+          "path": "legacy/test/time_range_query_property_test.dart.skip",
+          "classification": "legacy",
+          "action": "excluded",
+          "reason": "Bulk-range semantics remain deferred to EVENT-004."
+        }
+      ],
+      "externalService": {
+        "kind": "none",
+        "localAction": "not-required",
+        "ciAction": "not-required",
+        "reason": "Only the independent JSON-004 round-trip is runnable; all EVENT integration surfaces are legacy WIP exclusions."
+      }
+    }
+  ],
+  "workspaceExemptions": [],
+  "testTagPolicies": [
+    {
+      "tag": "requires-mongo",
+      "packages": ["dddart_repository_mongodb"],
+      "localAction": "exclude",
+      "ciAction": "run",
+      "reason": "Local validation does not assume a MongoDB service; CI supplies MongoDB on localhost:27017.",
+      "service": {
+        "kind": "mongo",
+        "host": "127.0.0.1",
+        "port": 27017,
+        "timeoutSeconds": 60
+      }
+    },
+    {
+      "tag": "requires-dynamodb",
+      "packages": ["dddart_repository_dynamodb"],
+      "localAction": "exclude",
+      "ciAction": "run",
+      "reason": "Local validation does not assume DynamoDB Local; CI supplies it on localhost:8000.",
+      "service": {
+        "kind": "dynamodb",
+        "host": "127.0.0.1",
+        "port": 8000,
+        "timeoutSeconds": 60
+      }
+    },
+    {
+      "tag": "requires-mysql",
+      "packages": ["dddart_repository_mysql"],
+      "localAction": "exclude",
+      "ciAction": "run",
+      "reason": "Local validation does not assume MySQL; CI supplies the documented test database on localhost:3307.",
+      "service": {
+        "kind": "mysql",
+        "host": "127.0.0.1",
+        "port": 3307,
+        "timeoutSeconds": 90
+      },
+      "ciEnvironment": {
+        "MYSQL_HOST": "127.0.0.1",
+        "MYSQL_PORT": "3307",
+        "MYSQL_USER": "root",
+        "MYSQL_PASSWORD": "test_password",
+        "MYSQL_DATABASE": "test_db"
+      }
+    }
+  ]
+}

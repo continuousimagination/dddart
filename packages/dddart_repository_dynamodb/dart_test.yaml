@@ -17,9 +17,6 @@ tags:
   requires-dynamodb:
     timeout: 2x
   
-  requires-dynamodb-local:
-    skip: "DynamoDB Local must be running on localhost:8000"
-
 # Override settings for specific test files
 override:
   generator_test.dart:

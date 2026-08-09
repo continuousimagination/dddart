@@ -1,11 +1,11 @@
 // ignore_for_file: avoid_print
 
 import 'package:dddart/dddart.dart';
-import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
-import 'lib/domain/address.dart';
-import 'lib/domain/money.dart';
-import 'lib/domain/order.dart';
-import 'lib/domain/order_item.dart';
+import 'package:dddart_repository_mysql_example/domain/address.dart';
+import 'package:dddart_repository_mysql_example/domain/money.dart';
+import 'package:dddart_repository_mysql_example/domain/order.dart';
+import 'package:dddart_repository_mysql_example/domain/order_item.dart';
+import 'package:dddart_repository_mysql_example/mysql_example_connection.dart';
 
 /// Basic CRUD example demonstrating MySQL repository usage.
 ///
@@ -19,21 +19,14 @@ import 'lib/domain/order_item.dart';
 /// - Connection closing
 ///
 /// Prerequisites:
-/// - MySQL running on localhost:3306
-/// - Database 'dddart_example' created
-/// - User 'root' with password 'password' (or update connection parameters)
+/// - MySQL configured through MYSQL_HOST, MYSQL_PORT, MYSQL_DATABASE,
+///   MYSQL_USER, and MYSQL_PASSWORD (documented local defaults are used)
 Future<void> main() async {
   print('=== Basic CRUD Example ===\n');
 
   // Step 1: Create and open connection
   print('1. Connecting to MySQL...');
-  final connection = MysqlConnection(
-    host: 'localhost',
-    port: 3306,
-    database: 'dddart_example',
-    user: 'root',
-    password: 'password',
-  );
+  final connection = createMysqlExampleConnection();
 
   try {
     await connection.open();
@@ -143,12 +136,12 @@ Future<void> main() async {
     print('9. Verifying deletion...');
     try {
       await orderRepo.getById(order.id);
-      print('   ✗ Order still exists (unexpected)');
+      throw StateError('Order still exists after deletion');
     } on RepositoryException catch (e) {
       if (e.type == RepositoryExceptionType.notFound) {
         print('   ✓ Order not found (expected)');
       } else {
-        print('   ✗ Unexpected error: ${e.message}');
+        rethrow;
       }
     }
 
@@ -156,6 +149,7 @@ Future<void> main() async {
   } catch (e, stackTrace) {
     print('\n✗ Error: $e');
     print('Stack trace: $stackTrace');
+    rethrow;
   } finally {
     // Step 10: Close connection
     print('\n10. Closing connection...');

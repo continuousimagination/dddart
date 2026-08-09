@@ -29,7 +29,7 @@ void main() {
   print('Deserialized order:');
   print('  Order Number: ${deserializedOrder.orderNumber}');
   print('  Status: ${deserializedOrder.status}');
-  print('  Status is enum: ${deserializedOrder.status is OrderStatus}');
+  print('  Status type: ${deserializedOrder.status.runtimeType}');
   print('');
 
   // Demonstrate all enum values

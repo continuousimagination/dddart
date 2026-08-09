@@ -1,11 +1,11 @@
 // ignore_for_file: avoid_print
 
 import 'package:dddart/dddart.dart';
-import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
-import 'lib/domain/address.dart';
-import 'lib/domain/money.dart';
-import 'lib/domain/order.dart';
-import 'lib/domain/order_item.dart';
+import 'package:dddart_repository_mysql_example/domain/address.dart';
+import 'package:dddart_repository_mysql_example/domain/money.dart';
+import 'package:dddart_repository_mysql_example/domain/order.dart';
+import 'package:dddart_repository_mysql_example/domain/order_item.dart';
+import 'package:dddart_repository_mysql_example/mysql_example_connection.dart';
 
 /// Error handling example demonstrating proper exception handling patterns.
 ///
@@ -16,9 +16,8 @@ import 'lib/domain/order_item.dart';
 /// - Error type checking and recovery
 ///
 /// Prerequisites:
-/// - MySQL running on localhost:3306 for successful connection test
-/// - Database 'dddart_example' created
-/// - Port 3307 should be unused (for connection error demonstration)
+/// - MySQL configured through MYSQL_HOST, MYSQL_PORT, MYSQL_DATABASE,
+///   MYSQL_USER, and MYSQL_PASSWORD
 Future<void> main() async {
   print('=== Error Handling Example ===\n');
 
@@ -38,13 +37,7 @@ Future<void> main() async {
 Future<void> _demonstrateNotFoundError() async {
   print('1. Demonstrating NOT FOUND error handling...');
 
-  final connection = MysqlConnection(
-    host: 'localhost',
-    port: 3306,
-    database: 'dddart_example',
-    user: 'root',
-    password: 'password',
-  );
+  final connection = createMysqlExampleConnection();
 
   try {
     await connection.open();
@@ -57,13 +50,13 @@ Future<void> _demonstrateNotFoundError() async {
 
     try {
       await orderRepo.getById(nonExistentId);
-      print('   ✗ Should have thrown RepositoryException.notFound');
+      throw StateError('Expected RepositoryException.notFound');
     } on RepositoryException catch (e) {
       if (e.type == RepositoryExceptionType.notFound) {
         print('   ✓ Caught RepositoryException.notFound');
         print('   Message: ${e.message}');
       } else {
-        print('   ✗ Unexpected exception type: ${e.type}');
+        rethrow;
       }
     }
 
@@ -71,13 +64,13 @@ Future<void> _demonstrateNotFoundError() async {
     print('\n   Attempting to delete non-existent order: $nonExistentId');
     try {
       await orderRepo.deleteById(nonExistentId);
-      print('   ✗ Should have thrown RepositoryException.notFound');
+      throw StateError('Expected RepositoryException.notFound');
     } on RepositoryException catch (e) {
       if (e.type == RepositoryExceptionType.notFound) {
         print('   ✓ Caught RepositoryException.notFound');
         print('   Message: ${e.message}');
       } else {
-        print('   ✗ Unexpected exception type: ${e.type}');
+        rethrow;
       }
     }
   } finally {
@@ -90,27 +83,31 @@ Future<void> _demonstrateConnectionError() async {
   print('2. Demonstrating CONNECTION error handling...');
 
   // Try to connect to a non-existent MySQL instance
-  final connection = MysqlConnection(
-    host: 'localhost',
-    port: 3307, // Wrong port - MySQL not running here
-    database: 'dddart_example',
-    user: 'root',
-    password: 'password',
+  final unavailablePort = mysqlExamplePort + 10000;
+  final connection = createMysqlExampleConnection(
+    port: unavailablePort,
   );
 
-  print('   Attempting to connect to localhost:3307 (should fail)...');
+  print(
+    '   Attempting to connect to $mysqlExampleHost:$unavailablePort '
+    '(should fail)...',
+  );
   try {
     await connection.open();
-    print('   ✗ Connection should have failed');
     await connection.close();
+    throw StateError(
+      'Connection unexpectedly succeeded on '
+      '$mysqlExampleHost:$unavailablePort',
+    );
   } on RepositoryException catch (e) {
     if (e.type == RepositoryExceptionType.connection) {
       print('   ✓ Caught RepositoryException.connection');
       print('   Message: ${e.message}');
     } else {
-      print('   ✗ Unexpected exception type: ${e.type}');
+      rethrow;
     }
   } catch (e) {
+    if (e is StateError) rethrow;
     print('   ✓ Caught connection error');
     print('   Error type: ${e.runtimeType}');
     print('   Message: ${e.toString().split('\n').first}');
@@ -121,13 +118,7 @@ Future<void> _demonstrateConnectionError() async {
 Future<void> _demonstrateProperErrorHandling() async {
   print('3. Demonstrating proper error handling with recovery...');
 
-  final connection = MysqlConnection(
-    host: 'localhost',
-    port: 3306,
-    database: 'dddart_example',
-    user: 'root',
-    password: 'password',
-  );
+  final connection = createMysqlExampleConnection();
 
   try {
     await connection.open();
@@ -181,6 +172,7 @@ Future<void> _demonstrateProperErrorHandling() async {
         print('   ✓ Delete failed (not found), continuing...');
       } else {
         print('   ✗ Unexpected error: ${e.message}');
+        rethrow;
       }
     }
 

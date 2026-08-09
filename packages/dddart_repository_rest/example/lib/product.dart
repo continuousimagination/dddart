@@ -55,8 +55,8 @@ class Product extends AggregateRoot {
 /// This class extends the generated ProductRestRepositoryBase and implements
 /// the custom query methods defined in the ProductRepository interface.
 ///
-/// Since this is in the same library as the generated code, it has access
-/// to the protected members (_connection, _serializer, _resourcePath, _mapHttpException).
+/// Since this class shares the generated part's Dart library, it can use the
+/// library-private connection, serializer, path, and error-mapping helpers.
 class ProductRestRepository extends ProductRestRepositoryBase {
   /// Creates a custom product repository.
   ProductRestRepository(super.connection);
@@ -64,21 +64,23 @@ class ProductRestRepository extends ProductRestRepositoryBase {
   @override
   Future<List<Product>> findByCategory(String category) async {
     try {
-      // Use the protected _connection member to make custom HTTP requests
-      final response = await _connection.httpClient.get(
-        Uri.parse('${_connection.baseUrl}$_resourcePath?category=$category'),
+      final response = await _connection.executeRequest(
+        () => _connection.client.get(
+          Uri.parse('${_connection.baseUrl}$_resourcePath?category=$category'),
+        ),
+        operation: 'find products by category',
       );
 
       if (response.statusCode == 200) {
         final jsonList = jsonDecode(response.body) as List<dynamic>;
 
-        // Use the protected _serializer member to deserialize responses
+        // Use the generated library-private serializer helper.
         return jsonList
             .map((json) => _serializer.fromJson(json as Map<String, dynamic>))
             .toList();
       }
 
-      // Use the protected _mapHttpException helper for consistent error handling
+      // Use the generated error mapper for consistent repository failures.
       throw _mapHttpException(response.statusCode, response.body);
     } catch (e) {
       if (e is RepositoryException) rethrow;
@@ -97,10 +99,13 @@ class ProductRestRepository extends ProductRestRepositoryBase {
   ) async {
     try {
       // Build query string with multiple parameters
-      final response = await _connection.httpClient.get(
-        Uri.parse(
-          '${_connection.baseUrl}$_resourcePath?minPrice=$minPrice&maxPrice=$maxPrice',
+      final response = await _connection.executeRequest(
+        () => _connection.client.get(
+          Uri.parse(
+            '${_connection.baseUrl}$_resourcePath?minPrice=$minPrice&maxPrice=$maxPrice',
+          ),
         ),
+        operation: 'find products by price range',
       );
 
       if (response.statusCode == 200) {

@@ -40,9 +40,10 @@ aws dynamodb list-tables --endpoint-url http://localhost:8000
 dart pub get
 ```
 
-2. Generate code (serializers and repositories):
+2. Generate code from a clean state (serializers and repositories):
 ```bash
-dart run build_runner build
+dart run build_runner clean
+dart run build_runner build --delete-conflicting-outputs
 ```
 
 ## Examples
@@ -130,7 +131,6 @@ dart run local_development_example.dart
 - Creating tables programmatically
 - Getting AWS CLI commands for table creation
 - Getting CloudFormation templates
-- Getting CreateTableInput definitions
 - Best practices for table management
 
 **Run:**
@@ -140,7 +140,6 @@ dart run table_creation_example.dart
 
 **Key concepts:**
 - `createTable()` method for programmatic creation
-- `createTableDefinition()` for CreateTableInput
 - `getCreateTableCommand()` for AWS CLI commands
 - `getCloudFormationTemplate()` for IaC
 - PAY_PER_REQUEST billing mode
@@ -198,11 +197,11 @@ Additional aggregate for examples:
 The examples use code generation for:
 
 1. **JSON Serialization** (`dddart_json`)
-   - Generates `*.g.dart` files with `JsonSerializer` classes
+   - Adds `JsonSerializer` classes to each combined `*.g.dart` part
    - Handles aggregate serialization to/from JSON
 
 2. **DynamoDB Repositories** (`dddart_repository_dynamodb`)
-   - Generates `*.dynamo_repository.g.dart` files
+   - Adds repository implementations to the same combined `*.g.dart` parts
    - Creates concrete or abstract base repository classes
    - Implements CRUD operations with DynamoDB AttributeValue conversion
 
@@ -226,7 +225,8 @@ dart run build_runner build --delete-conflicting-outputs
 **Error:** `ResourceNotFoundException` or table not found
 
 **Solution:**
-- Run `table_creation_example.dart` first to create tables
+- Each runnable example creates its required table idempotently and waits for
+  it to become active
 - Or manually create tables using AWS CLI:
 ```bash
 aws dynamodb create-table \

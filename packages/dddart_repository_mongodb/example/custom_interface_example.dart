@@ -67,7 +67,7 @@ Future<void> main() async {
       print('   ✓ Found user: ${foundByEmail.fullName}');
       print('   Email: ${foundByEmail.email}');
     } else {
-      print('   ✗ User not found');
+      throw StateError('Expected to find jane.doe@example.com');
     }
     print('');
 
@@ -92,7 +92,7 @@ Future<void> main() async {
     if (notFound == null) {
       print('   ✓ Correctly returned null for non-existent email');
     } else {
-      print('   ✗ Unexpected result');
+      throw StateError('Unexpectedly found nonexistent@example.com');
     }
     print("");
 
@@ -107,6 +107,7 @@ Future<void> main() async {
   } catch (e, stackTrace) {
     print('\n✗ Error: $e');
     print('Stack trace: $stackTrace');
+    rethrow;
   } finally {
     // Step 9: Close connection
     print('\n9. Closing connection...');

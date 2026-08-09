@@ -1,6 +1,8 @@
 /// Simple user aggregate for basic CRUD examples.
 library;
 
+import 'dart:convert';
+
 import 'package:dddart/dddart.dart';
 import 'package:dddart_json/dddart_json.dart';
 import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';

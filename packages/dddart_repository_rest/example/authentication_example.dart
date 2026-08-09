@@ -37,6 +37,9 @@ class ExampleAuthProvider implements AuthProvider {
   }
 
   @override
+  Future<String> getIdToken() async => _token;
+
+  @override
   Future<void> login() async {
     // In a real app, this would initiate the login flow
     print('   (Login flow would happen here)');

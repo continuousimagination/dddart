@@ -2,15 +2,107 @@ name: Test
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
+
+permissions:
+  contents: read
 
 jobs:
-  test:
+  inventory:
     runs-on: ubuntu-latest
-    
-    # Add MongoDB, DynamoDB Local, and MySQL services for integration tests
+    outputs:
+      unserviced: ${{ steps.matrix.outputs.unserviced }}
+      mongo: ${{ steps.matrix.outputs.mongo }}
+      dynamodb: ${{ steps.matrix.outputs.dynamodb }}
+      mysql: ${{ steps.matrix.outputs.mysql }}
+      example_unserviced: ${{ steps.matrix.outputs.example_unserviced }}
+      example_mongo: ${{ steps.matrix.outputs.example_mongo }}
+      example_dynamodb: ${{ steps.matrix.outputs.example_dynamodb }}
+      example_mysql: ${{ steps.matrix.outputs.example_mysql }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: 3.9.4
+
+      - name: Resolve workspace dependencies
+        run: dart pub get
+
+      - name: Analyze validation tooling
+        run: dart analyze --fatal-infos tool/validation
+
+      - name: Check validation-tool formatting
+        run: dart format --output=none --set-exit-if-changed tool/validation
+
+      - name: Test validation policy
+        run: dart tool/validation/self_test.dart
+
+      - name: Check workspace inventory and dependency closures
+        run: dart tool/validation/validate.dart check
+
+      - name: Derive package and example matrices from shared inventory
+        id: matrix
+        shell: bash
+        run: |
+          echo "unserviced=$(dart tool/validation/validate.dart matrix --service-kind=none)" >> "$GITHUB_OUTPUT"
+          echo "mongo=$(dart tool/validation/validate.dart matrix --service-kind=mongo)" >> "$GITHUB_OUTPUT"
+          echo "dynamodb=$(dart tool/validation/validate.dart matrix --service-kind=dynamodb)" >> "$GITHUB_OUTPUT"
+          echo "mysql=$(dart tool/validation/validate.dart matrix --service-kind=mysql)" >> "$GITHUB_OUTPUT"
+          echo "example_unserviced=$(dart tool/validation/validate.dart example-matrix --service-kind=none)" >> "$GITHUB_OUTPUT"
+          echo "example_mongo=$(dart tool/validation/validate.dart example-matrix --service-kind=mongo)" >> "$GITHUB_OUTPUT"
+          echo "example_dynamodb=$(dart tool/validation/validate.dart example-matrix --service-kind=dynamodb)" >> "$GITHUB_OUTPUT"
+          echo "example_mysql=$(dart tool/validation/validate.dart example-matrix --service-kind=mysql)" >> "$GITHUB_OUTPUT"
+
+  packages:
+    needs: inventory
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.inventory.outputs.unserviced) }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: 3.9.4
+
+      - name: Cache Dart dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            .dart_tool
+          key: dart-${{ runner.os }}-${{ hashFiles('**/pubspec.yaml') }}
+          restore-keys: |
+            dart-${{ runner.os }}-
+
+      - name: Resolve workspace dependencies
+        run: dart pub get
+
+      - name: Validate integrated package
+        run: >-
+          dart tool/validation/validate.dart package
+          "${{ matrix.name }}" --mode=ci
+
+      - name: Validate isolated minimal consumer
+        run: >-
+          dart tool/validation/validate.dart consumer
+          "${{ matrix.name }}"
+
+  mongo-packages:
+    needs: inventory
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.inventory.outputs.mongo) }}
     services:
       mongodb:
         image: mongo:latest
@@ -21,12 +113,88 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: 3.9.4
+
+      - name: Cache Dart dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            .dart_tool
+          key: dart-${{ runner.os }}-${{ hashFiles('**/pubspec.yaml') }}
+          restore-keys: |
+            dart-${{ runner.os }}-
+
+      - name: Resolve workspace dependencies
+        run: dart pub get
+
+      - name: Validate integrated package
+        run: >-
+          dart tool/validation/validate.dart package
+          "${{ matrix.name }}" --mode=ci
+
+      - name: Validate isolated minimal consumer
+        run: >-
+          dart tool/validation/validate.dart consumer
+          "${{ matrix.name }}"
+
+  dynamodb-packages:
+    needs: inventory
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.inventory.outputs.dynamodb) }}
+    services:
       dynamodb:
         image: amazon/dynamodb-local:latest
         ports:
           - 8000:8000
-      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: 3.9.4
+
+      - name: Cache Dart dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            .dart_tool
+          key: dart-${{ runner.os }}-${{ hashFiles('**/pubspec.yaml') }}
+          restore-keys: |
+            dart-${{ runner.os }}-
+
+      - name: Resolve workspace dependencies
+        run: dart pub get
+
+      - name: Validate integrated package
+        run: >-
+          dart tool/validation/validate.dart package
+          "${{ matrix.name }}" --mode=ci
+
+      - name: Validate isolated minimal consumer
+        run: >-
+          dart tool/validation/validate.dart consumer
+          "${{ matrix.name }}"
+
+  mysql-packages:
+    needs: inventory
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.inventory.outputs.mysql) }}
+    services:
       mysql:
         image: mysql:8.0
         ports:
@@ -40,37 +208,17 @@ jobs:
           --health-timeout 5s
           --health-retries 10
           --health-start-period 30s
-        # Used by dddart_repository_mysql for integration tests including collection support
-    
-    strategy:
-      matrix:
-        package:
-          - dddart
-          - dddart_serialization
-          - dddart_json
-          - dddart_rest
-          - dddart_config
-          - dddart_repository_mongodb
-          - dddart_repository_dynamodb
-          - dddart_repository_rest
-          - dddart_repository_sql
-          - dddart_repository_sqlite
-          - dddart_repository_mysql
-          - dddart_webhooks
-          - dddart_webhooks_slack
-          - dddart_events_distributed
-    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Setup Dart
         uses: dart-lang/setup-dart@v1
         with:
           sdk: 3.9.4
-      
+
       - name: Cache Dart dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.pub-cache
@@ -78,73 +226,177 @@ jobs:
           key: dart-${{ runner.os }}-${{ hashFiles('**/pubspec.yaml') }}
           restore-keys: |
             dart-${{ runner.os }}-
-      
-      - name: Get dependencies (workspace)
+
+      - name: Resolve workspace dependencies
         run: dart pub get
-      
-      - name: Run code generation for dependencies
-        run: |
-          # dddart_repository_rest tests depend on dddart_rest generated code
-          if [ "${{ matrix.package }}" = "dddart_repository_rest" ]; then
-            if [ -f "packages/dddart_rest/pubspec.yaml" ] && grep -q "build_runner" "packages/dddart_rest/pubspec.yaml"; then
-              echo "Generating code for dependency: dddart_rest"
-              cd packages/dddart_rest
-              if ! dart run build_runner build --delete-conflicting-outputs; then
-                echo "Code generation failed for dddart_rest"
-                exit 1
-              fi
-              cd - > /dev/null
-            fi
-          fi
-      
-      - name: Run code generation (if needed)
-        run: |
-          if grep -q "build_runner" pubspec.yaml; then
-            # Run code generation and capture exit code
-            # Warnings about analyzer version are expected and can be ignored
-            if ! dart run build_runner build --delete-conflicting-outputs; then
-              echo "Code generation failed with errors"
-              exit 1
-            fi
-          fi
-        working-directory: packages/${{ matrix.package }}
-      
-      - name: Analyze code
-        run: dart analyze --fatal-infos
-        working-directory: packages/${{ matrix.package }}
-      
-      - name: Format check
-        run: dart format --output=none --set-exit-if-changed .
-        working-directory: packages/${{ matrix.package }}
-      
-      - name: Wait for MySQL to be ready
-        if: matrix.package == 'dddart_repository_mysql'
-        run: |
-          echo "Waiting for MySQL to be fully ready..."
-          for i in {1..30}; do
-            if mysqladmin ping -h 127.0.0.1 -P 3307 -u root -ptest_password --silent; then
-              echo "MySQL is ready!"
-              # Give it a few more seconds to fully initialize
-              sleep 5
-              exit 0
-            fi
-            echo "Waiting for MySQL... ($i/30)"
-            sleep 2
-          done
-          echo "MySQL failed to become ready"
-          exit 1
-      
-      - name: Run tests
-        run: |
-          # Run all tests including integration tests with service containers
-          # MongoDB, DynamoDB, and MySQL services are available in CI
-          # Collection tests for MySQL are included (tagged with requires-mysql)
-          dart test
-        working-directory: packages/${{ matrix.package }}
+
+      - name: Validate integrated package
+        run: >-
+          dart tool/validation/validate.dart package
+          "${{ matrix.name }}" --mode=ci
+
+      - name: Validate isolated minimal consumer
+        run: >-
+          dart tool/validation/validate.dart consumer
+          "${{ matrix.name }}"
+
+  examples:
+    needs: inventory
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.inventory.outputs.example_unserviced) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: 3.9.4
+
+      - name: Cache Dart dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            .dart_tool
+          key: dart-${{ runner.os }}-${{ hashFiles('**/pubspec.yaml') }}
+          restore-keys: |
+            dart-${{ runner.os }}-
+
+      - name: Resolve workspace dependencies
+        run: dart pub get
+
+      - name: Validate example
+        run: >-
+          dart tool/validation/validate.dart example
+          "${{ matrix.name }}" --mode=ci
+
+  mongo-examples:
+    needs: inventory
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.inventory.outputs.example_mongo) }}
+    services:
+      mongodb:
+        image: mongo:latest
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ ping: 1 })'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: 3.9.4
+
+      - name: Cache Dart dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            .dart_tool
+          key: dart-${{ runner.os }}-${{ hashFiles('**/pubspec.yaml') }}
+          restore-keys: |
+            dart-${{ runner.os }}-
+
+      - name: Resolve workspace dependencies
+        run: dart pub get
+
+      - name: Validate MongoDB example
+        run: >-
+          dart tool/validation/validate.dart example
+          "${{ matrix.name }}" --mode=ci
+
+  dynamodb-examples:
+    needs: inventory
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.inventory.outputs.example_dynamodb) }}
+    services:
+      dynamodb:
+        image: amazon/dynamodb-local:latest
+        ports:
+          - 8000:8000
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: 3.9.4
+
+      - name: Cache Dart dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            .dart_tool
+          key: dart-${{ runner.os }}-${{ hashFiles('**/pubspec.yaml') }}
+          restore-keys: |
+            dart-${{ runner.os }}-
+
+      - name: Resolve workspace dependencies
+        run: dart pub get
+
+      - name: Validate DynamoDB example
+        run: >-
+          dart tool/validation/validate.dart example
+          "${{ matrix.name }}" --mode=ci
+
+  mysql-examples:
+    needs: inventory
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.inventory.outputs.example_mysql) }}
+    services:
+      mysql:
+        image: mysql:8.0
+        ports:
+          - 3307:3306
         env:
-          # MySQL connection settings for integration tests
-          MYSQL_HOST: 127.0.0.1
-          MYSQL_PORT: 3307
-          MYSQL_USER: root
-          MYSQL_PASSWORD: test_password
+          MYSQL_ROOT_PASSWORD: test_password
           MYSQL_DATABASE: test_db
+        options: >-
+          --health-cmd "mysqladmin ping -h localhost -ptest_password"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+          --health-start-period 30s
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: 3.9.4
+
+      - name: Cache Dart dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            .dart_tool
+          key: dart-${{ runner.os }}-${{ hashFiles('**/pubspec.yaml') }}
+          restore-keys: |
+            dart-${{ runner.os }}-
+
+      - name: Resolve workspace dependencies
+        run: dart pub get
+
+      - name: Validate MySQL example
+        run: >-
+          dart tool/validation/validate.dart example
+          "${{ matrix.name }}" --mode=ci

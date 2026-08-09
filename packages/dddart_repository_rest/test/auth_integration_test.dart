@@ -156,7 +156,7 @@ Future<AuthenticatedTestServer> createAuthenticatedTestServer({
     CrudResource<TestUser, TestClaims>(
       path: path,
       repository: userRepository,
-      serializers: {'application/json': serializer},
+      serializer: serializer,
       authenticationHandler: authHandler,
     ),
   );

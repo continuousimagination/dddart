@@ -1,4 +1,4 @@
-/// End-to-end example demonstrating bidirectional event flow.
+/// Legacy WIP bidirectional flow sketch deferred to EVENT-001 through EVENT-004.
 ///
 /// This example shows:
 /// - Server publishes event → Client receives it

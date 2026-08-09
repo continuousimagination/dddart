@@ -7,11 +7,16 @@ import 'package:test/test.dart';
 import 'test_models.dart';
 
 void main() {
-  test('generated JSON repository requests JSON responses', () async {
-    String? acceptHeader;
+  test('generated CRUD requests declare their JSON media contract', () async {
+    final requests = <http.Request>[];
     final client = MockClient((request) async {
-      acceptHeader = request.headers['accept'];
-      return http.Response('Not found', 404);
+      requests.add(request);
+      return switch (request.method) {
+        'GET' => http.Response('Not found', 404),
+        'PUT' => http.Response('', 200),
+        'DELETE' => http.Response('', 204),
+        _ => http.Response('Unexpected request', 500),
+      };
     });
     final connection = RestConnection(
       baseUrl: 'https://api.example.com',
@@ -24,7 +29,16 @@ void main() {
         repository.getById(UuidValue.generate()),
         throwsA(isA<RepositoryException>()),
       );
-      expect(acceptHeader, 'application/json');
+
+      final user = TestUser(name: 'Ada', email: 'ada@example.com');
+      await repository.save(user);
+      await repository.deleteById(user.id);
+
+      expect(requests, hasLength(3));
+      expect(requests[0].headers['accept'], 'application/json');
+      expect(requests[1].headers['accept'], 'application/json');
+      expect(requests[1].headers['content-type'], 'application/json');
+      expect(requests[2].headers['accept'], 'application/json');
     } finally {
       connection.dispose();
     }

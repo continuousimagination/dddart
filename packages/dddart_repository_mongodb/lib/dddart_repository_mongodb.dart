@@ -49,7 +49,6 @@
 /// }
 ///
 /// part 'user.g.dart';
-/// part 'user.mongo_repository.g.dart';
 /// ```
 ///
 /// 3. Generate code:
@@ -100,7 +99,6 @@
 /// }
 ///
 /// part 'user.g.dart';
-/// part 'user.mongo_repository.g.dart';
 ///
 /// class UserMongoRepository extends UserMongoRepositoryBase {
 ///   UserMongoRepository(super.database);

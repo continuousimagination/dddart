@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:dddart/dddart.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
+import 'package:dddart_json/dddart_json.dart';
 import 'package:shelf/shelf.dart';
 
 /// Constructs HTTP responses with proper status codes and serialization.
@@ -14,13 +14,11 @@ import 'package:shelf/shelf.dart';
 class ResponseBuilder<T extends AggregateRoot> {
   /// Builds a 200 OK response with serialized body
   ///
-  /// Uses the provided serializer to convert the aggregate to its string
-  /// representation and sets the Content-Type header to match the format.
+  /// Uses the provided JSON serializer and sets the JSON Content-Type header.
   ///
   /// Parameters:
   /// - [aggregate]: The aggregate root to serialize and return
   /// - [serializer]: The serializer to use for converting the aggregate
-  /// - [contentType]: The MIME type to set in the Content-Type header
   /// - [etag]: Optional ETag for optimistic concurrency control
   ///
   /// Returns: A [Response] with status 200 and serialized body
@@ -30,17 +28,15 @@ class ResponseBuilder<T extends AggregateRoot> {
   /// final response = responseBuilder.ok(
   ///   user,
   ///   jsonSerializer,
-  ///   'application/json',
   ///   etag: '"2024-01-15T10:30:00.000Z"',
   /// );
   /// ```
   Response ok(
     T aggregate,
-    Serializer<T> serializer,
-    String contentType, {
+    JsonSerializer<T> serializer, {
     String? etag,
   }) {
-    final headers = {'Content-Type': contentType};
+    final headers = {'Content-Type': 'application/json'};
     if (etag != null) {
       headers['ETag'] = etag;
     }
@@ -52,13 +48,11 @@ class ResponseBuilder<T extends AggregateRoot> {
 
   /// Builds a 201 Created response with serialized body
   ///
-  /// Uses the provided serializer to convert the newly created aggregate
-  /// to its string representation and sets the Content-Type header.
+  /// Uses the provided JSON serializer to convert the newly created aggregate.
   ///
   /// Parameters:
   /// - [aggregate]: The newly created aggregate root to serialize and return
   /// - [serializer]: The serializer to use for converting the aggregate
-  /// - [contentType]: The MIME type to set in the Content-Type header
   /// - [etag]: Optional ETag for optimistic concurrency control
   ///
   /// Returns: A [Response] with status 201 and serialized body
@@ -68,17 +62,15 @@ class ResponseBuilder<T extends AggregateRoot> {
   /// final response = responseBuilder.created(
   ///   newUser,
   ///   jsonSerializer,
-  ///   'application/json',
   ///   etag: '"2024-01-15T10:30:00.000Z"',
   /// );
   /// ```
   Response created(
     T aggregate,
-    Serializer<T> serializer,
-    String contentType, {
+    JsonSerializer<T> serializer, {
     String? etag,
   }) {
-    final headers = {'Content-Type': contentType};
+    final headers = {'Content-Type': 'application/json'};
     if (etag != null) {
       headers['ETag'] = etag;
     }
@@ -98,7 +90,6 @@ class ResponseBuilder<T extends AggregateRoot> {
   /// Parameters:
   /// - [aggregates]: The list of aggregate roots to serialize and return
   /// - [serializer]: The serializer to use for converting each aggregate
-  /// - [contentType]: The MIME type to set in the Content-Type header
   /// - [totalCount]: Optional total count of all matching items (for pagination)
   ///
   /// Returns: A [Response] with status 200, JSON array body, and optional X-Total-Count header
@@ -108,27 +99,20 @@ class ResponseBuilder<T extends AggregateRoot> {
   /// final response = responseBuilder.okList(
   ///   users,
   ///   jsonSerializer,
-  ///   'application/json',
   ///   totalCount: 150,
   /// );
   /// ```
   Response okList(
     List<T> aggregates,
-    Serializer<T> serializer,
-    String contentType, {
+    JsonSerializer<T> serializer, {
     int? totalCount,
   }) {
-    final headers = {'Content-Type': contentType};
+    final headers = {'Content-Type': 'application/json'};
     if (totalCount != null) {
       headers['X-Total-Count'] = totalCount.toString();
     }
 
-    // Serialize each aggregate and collect as a list
-    final serializedList =
-        aggregates.map((a) => serializer.serialize(a)).toList();
-
-    // Parse each serialized string as JSON and encode the array
-    final jsonList = serializedList.map(jsonDecode).toList();
+    final jsonList = aggregates.map(serializer.toJson).toList();
 
     return Response.ok(
       jsonEncode(jsonList),
@@ -175,6 +159,34 @@ class ResponseBuilder<T extends AggregateRoot> {
         'type': 'about:blank',
         'title': 'Bad Request',
         'status': 400,
+        'detail': message,
+      }),
+    );
+  }
+
+  /// Builds a 406 response for an unsupported response media type.
+  Response notAcceptable(String message) {
+    return Response(
+      406,
+      headers: {'Content-Type': 'application/problem+json'},
+      body: jsonEncode({
+        'type': 'about:blank',
+        'title': 'Not Acceptable',
+        'status': 406,
+        'detail': message,
+      }),
+    );
+  }
+
+  /// Builds a 415 response for an unsupported request media type.
+  Response unsupportedMediaType(String message) {
+    return Response(
+      415,
+      headers: {'Content-Type': 'application/problem+json'},
+      body: jsonEncode({
+        'type': 'about:blank',
+        'title': 'Unsupported Media Type',
+        'status': 415,
         'detail': message,
       }),
     );

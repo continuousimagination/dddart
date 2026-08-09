@@ -6,15 +6,16 @@
 // - Protecting resources with authentication
 // - Using in-memory repositories for quick start
 //
-// Run: dart run example/self_hosted_auth_example.dart
+// Run from this example directory: dart run self_hosted_auth_example.dart
 // Then test with curl or the CLI client example
 
 import 'dart:async';
 import 'dart:convert';
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/dddart_rest.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:shelf/shelf.dart';
+
+import 'lib/json_serializer_support.dart';
 
 // Domain model
 class User extends AggregateRoot {
@@ -30,9 +31,6 @@ class User extends AggregateRoot {
   final String email;
   final String passwordHash;
   final List<String> roles;
-
-  @override
-  List<Object?> get props => [id, username, email, passwordHash, roles];
 }
 
 // Custom JWT claims
@@ -65,7 +63,7 @@ class UserClaims {
 }
 
 // Simple serializer for User
-class UserSerializer implements Serializer<User> {
+class UserSerializer extends ExampleJsonSerializer<User> {
   @override
   User deserialize(String data, [dynamic config]) {
     final json = jsonDecode(data) as Map<String, dynamic>;
@@ -163,7 +161,7 @@ void main() async {
     CrudResource<User, UserClaims>(
       path: '/users',
       repository: userRepo,
-      serializers: {'application/json': UserSerializer()},
+      serializer: UserSerializer(),
       authenticationHandler: authHandler,
       queryHandlers: {
         'me': (repo, params, skip, take, authResult) async {

@@ -8,9 +8,9 @@ import 'dart:async';
 
 import 'package:dddart/dddart.dart';
 import 'package:dddart_events_distributed/dddart_events_distributed.dart';
-// Import example events
-import 'package:dddart_events_distributed_example/example_events.dart';
 import 'package:test/test.dart';
+
+import 'test_helpers.dart';
 
 void main() {
   group('Cleanup Integration Tests', () {

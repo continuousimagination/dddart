@@ -14,8 +14,9 @@ import 'package:source_gen/source_gen.dart';
 /// This function is referenced in build.yaml and creates the builder
 /// that generates DynamoDB repository implementations.
 ///
-/// The builder uses [SharedPartBuilder] to generate `.dynamo_repository.g.dart`
-/// files for classes annotated with [@GenerateDynamoRepository].
+/// The builder uses [SharedPartBuilder] to emit internal
+/// `.dynamo_repository.g.part` fragments. The combining builder merges those
+/// fragments into each owning library's declared `*.g.dart` part.
 Builder dynamoRepositoryBuilder(BuilderOptions options) {
   return SharedPartBuilder(
     [DynamoRepositoryGenerator()],

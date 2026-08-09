@@ -11,15 +11,16 @@
 // - User Pool ID and Client ID
 // - JWKS endpoint URL
 //
-// Run: dart run example/oauth_auth_example.dart
+// Run from this example directory: dart run oauth_auth_example.dart
 // Then test with a JWT from Cognito
 
 import 'dart:async';
 import 'dart:convert';
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/dddart_rest.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:shelf/shelf.dart';
+
+import 'lib/json_serializer_support.dart';
 
 // Domain model
 class User extends AggregateRoot {
@@ -33,9 +34,6 @@ class User extends AggregateRoot {
   final String email;
   final String name;
   final List<String> cognitoGroups;
-
-  @override
-  List<Object?> get props => [id, email, name, cognitoGroups];
 }
 
 // Cognito JWT claims
@@ -74,7 +72,7 @@ class CognitoClaims {
 }
 
 // Simple serializer for User
-class UserSerializer implements Serializer<User> {
+class UserSerializer extends ExampleJsonSerializer<User> {
   @override
   User deserialize(String data, [dynamic config]) {
     final json = jsonDecode(data) as Map<String, dynamic>;
@@ -140,7 +138,7 @@ void main() async {
     CrudResource<User, CognitoClaims>(
       path: '/users',
       repository: userRepo,
-      serializers: {'application/json': UserSerializer()},
+      serializer: UserSerializer(),
       authenticationHandler: authHandler,
       queryHandlers: {
         'me': (repo, params, skip, take, authResult) async {

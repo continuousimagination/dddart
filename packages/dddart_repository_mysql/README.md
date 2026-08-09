@@ -10,7 +10,7 @@ MySQL database repository implementation for DDDart aggregate roots with automat
 - 🔗 **Relationship Mapping**: Automatic foreign key generation with CASCADE DELETE
 - 📦 **Collection Support**: Full support for List, Set, and Map collections with primitives, value objects, and entities
 - 🔒 **Transaction Support**: Multi-table operations with nested transaction handling
-- 🔌 **Connection Pooling**: Configurable connection pool for concurrent operations
+- 🔌 **Connection Lifecycle**: Explicit lifecycle for one MySQL connection
 - 🎯 **Type Safety**: Compile-time code generation ensures type-safe operations
 - 🚀 **Zero Boilerplate**: Annotate your aggregate roots and generate repositories
 - 🔐 **Efficient UUID Storage**: UUIDs stored as BINARY(16) for optimal performance
@@ -94,7 +94,6 @@ void main() async {
     database: 'myapp',
     user: 'myapp_user',
     password: 'secure_password',
-    maxConnections: 10,  // Connection pool size
   );
   await connection.open();
 
@@ -283,37 +282,18 @@ final connection = MysqlConnection(
   database: 'myapp',           // Database name
   user: 'myapp_user',          // MySQL user
   password: 'secure_password', // MySQL password
-  maxConnections: 10,          // Connection pool size (default: 5)
   timeout: Duration(seconds: 30), // Connection timeout (default: 30s)
 );
 ```
 
-### Connection Pooling
+### Single-Connection Behavior
 
-The MySQL connection maintains a pool of reusable connections:
-
-**Pool Size:**
-- Default: 5 connections
-- Increase for high-concurrency applications
-- Monitor pool usage in production
-
-**Benefits:**
-- Reduced connection overhead
-- Better resource utilization
-- Improved throughput under load
-
-**Example:**
-```dart
-// High-traffic application
-final connection = MysqlConnection(
-  host: 'db.example.com',
-  port: 3306,
-  database: 'production_db',
-  user: 'app_user',
-  password: env['DB_PASSWORD']!,
-  maxConnections: 20,  // Larger pool for high concurrency
-);
-```
+`MysqlConnection` opens and owns exactly one driver connection. The deprecated
+`maxConnections` constructor parameter is retained temporarily for source
+compatibility but has no effect and will be removed in the next appropriate
+breaking release. If pooling is needed in the future, it will be introduced as
+a separate abstraction with explicit acquisition, transaction, and lifecycle
+semantics.
 
 ### SSL/TLS Connections
 
@@ -341,7 +321,6 @@ final connection = MysqlConnection(
   database: Platform.environment['DB_NAME']!,
   user: Platform.environment['DB_USER']!,
   password: Platform.environment['DB_PASSWORD']!,
-  maxConnections: int.parse(Platform.environment['DB_POOL_SIZE'] ?? '10'),
 );
 ```
 
@@ -375,7 +354,7 @@ Future<bool> isDatabaseHealthy(MysqlConnection connection) async {
 ```
 
 **4. Monitoring:**
-- Monitor connection pool usage
+- Monitor connection availability and reconnect failures
 - Track query performance
 - Set up slow query logging in MySQL
 - Monitor transaction rollback rates
@@ -723,7 +702,7 @@ await mysqlConn.close();
 | DateTime Storage | INTEGER (Unix timestamp) | TIMESTAMP |
 | Engine | N/A | InnoDB |
 | Charset | N/A | utf8mb4 |
-| Connection Pooling | No | Yes (configurable) |
+| Connection Pooling | No | No (one connection per `MysqlConnection`) |
 | Upsert Syntax | INSERT OR REPLACE | INSERT ... ON DUPLICATE KEY UPDATE |
 
 **No changes required to:**

@@ -12,8 +12,8 @@ import 'package:mysql_client/mysql_client.dart';
 
 /// MySQL database connection implementation.
 ///
-/// Manages the lifecycle of a MySQL database connection pool and provides
-/// methods for executing queries and transactions.
+/// Manages the lifecycle of one MySQL database connection and provides methods
+/// for executing queries and transactions.
 ///
 /// Example:
 /// ```dart
@@ -36,6 +36,10 @@ class MysqlConnection implements SqlConnection {
     required this.database,
     required this.user,
     required this.password,
+    @Deprecated(
+      'maxConnections is ignored because MysqlConnection uses one connection. '
+      'It will be removed in the next breaking release.',
+    )
     this.maxConnections = 5,
     this.timeout = const Duration(seconds: 30),
   });
@@ -55,7 +59,14 @@ class MysqlConnection implements SqlConnection {
   /// Database password.
   final String password;
 
-  /// Maximum number of connections in the pool.
+  /// Legacy no-op retained for source compatibility.
+  ///
+  /// [MysqlConnection] always opens one connection. Pooling, if added in the
+  /// future, will use a separate abstraction with explicit lifecycle rules.
+  @Deprecated(
+    'maxConnections is ignored because MysqlConnection uses one connection. '
+    'It will be removed in the next breaking release.',
+  )
   final int maxConnections;
 
   /// Connection timeout duration.

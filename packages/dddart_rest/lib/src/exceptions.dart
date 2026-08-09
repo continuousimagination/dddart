@@ -1,12 +1,8 @@
-/// Exception thrown when client requests unsupported media type
+/// Exception retained for unsupported response media type failures.
 ///
-/// This exception is thrown during content negotiation when:
-/// - A client sends a request with an unsupported Content-Type header (POST/PUT)
-/// - A client requests a response with an unsupported Accept header (GET)
-///
-/// The exception is mapped to HTTP status codes:
-/// - 415 Unsupported Media Type (for Content-Type issues)
-/// - 406 Not Acceptable (for Accept header issues)
+/// The REST error mapper maps this exception to 406 Not Acceptable. `CrudResource`
+/// validates its JSON-only Accept and Content-Type contract directly, returning
+/// 406 or 415 before invoking request side effects.
 class UnsupportedMediaTypeException implements Exception {
   /// Creates an UnsupportedMediaTypeException with the given message
   ///

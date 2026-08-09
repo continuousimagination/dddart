@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Deprecated
+
+- `MysqlConnection.maxConnections`, which has always been a no-op on the
+  single-connection implementation. It will be removed in the next appropriate
+  breaking release; any future pooling support will use a separate abstraction.
+
 ## [2.0.0] - 2024-12-04
 
 ### Changed
@@ -74,7 +82,7 @@ If you have custom implementations that directly import `mysql1`, you may need t
 ### Added
 
 - Initial release of dddart_repository_mysql
-- MysqlConnection implementation with connection pooling
+- MysqlConnection single-connection implementation
 - MysqlDialect with MySQL-specific SQL syntax and type mappings
 - MysqlRepositoryGenerator for automatic repository code generation
 - @GenerateMysqlRepository annotation

@@ -1,21 +1,20 @@
 import 'dart:convert';
 
 import 'package:dddart/dddart.dart';
+import 'package:dddart_json/dddart_json.dart';
 import 'package:dddart_rest/src/authentication_handler.dart';
 import 'package:dddart_rest/src/authentication_result.dart';
 import 'package:dddart_rest/src/authorization_handler.dart';
 import 'package:dddart_rest/src/error_mapper.dart';
 import 'package:dddart_rest/src/etag_generator.dart';
-import 'package:dddart_rest/src/exceptions.dart';
 import 'package:dddart_rest/src/query_handler.dart';
 import 'package:dddart_rest/src/repository_query_support.dart';
 import 'package:dddart_rest/src/response_builder.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:shelf/shelf.dart';
 
 /// Main class that handles HTTP CRUD operations for an aggregate root.
 ///
-/// CrudResource combines configuration (repository, serializers, query handlers)
+/// CrudResource combines configuration (repository, JSON serializer, query handlers)
 /// with request handling logic for standard CRUD operations. Each instance is
 /// configured for a specific aggregate type and can be registered with an HTTP server.
 ///
@@ -27,9 +26,7 @@ import 'package:shelf/shelf.dart';
 /// final userResource = CrudResource<User>(
 ///   path: '/users',
 ///   repository: userRepository,
-///   serializers: {
-///     'application/json': jsonSerializer,
-///   },
+///   serializer: jsonSerializer,
 /// );
 /// ```
 ///
@@ -38,9 +35,7 @@ import 'package:shelf/shelf.dart';
 /// final userResource = CrudResource<User, UserClaims>(
 ///   path: '/users',
 ///   repository: userRepository,
-///   serializers: {
-///     'application/json': jsonSerializer,
-///   },
+///   serializer: jsonSerializer,
 ///   authenticationHandler: jwtAuthHandler,
 /// );
 /// ```
@@ -50,7 +45,7 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   /// Parameters:
   /// - [path]: The base path for this resource (e.g., '/users')
   /// - [repository]: Repository instance for persistence operations
-  /// - [serializers]: Map of content types to serializers for content negotiation
+  /// - [serializer]: JSON serializer for request and response bodies
   /// - [authenticationHandler]: Optional authentication handler. When provided, all CRUD operations require authentication
   /// - [authorizationHandler]: Optional authorization handler. When provided, operations are authorized after authentication
   /// - [queryHandlers]: Map of query parameter names to handler functions
@@ -63,11 +58,10 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   ///
   /// Throws [ArgumentError] if:
   /// - [path] is null or empty
-  /// - [serializers] map is empty
   CrudResource({
     required this.path,
     required this.repository,
-    required this.serializers,
+    required this.serializer,
     this.authenticationHandler,
     this.authorizationHandler,
     this.queryHandlers = const {},
@@ -83,19 +77,10 @@ class CrudResource<T extends AggregateRoot, TClaims> {
       throw ArgumentError('path cannot be empty');
     }
 
-    // Validate serializers map is not empty
-    if (serializers.isEmpty) {
-      throw ArgumentError(
-        'serializers map cannot be empty. At least one serializer must be provided.',
-      );
-    }
-
     // Initialize ETag generator
     _etagGenerator = ETagGenerator<T>(
       strategy: etagStrategy,
-      serializer: etagStrategy == ETagStrategy.contentHash
-          ? serializers.values.first
-          : null,
+      serializer: etagStrategy == ETagStrategy.contentHash ? serializer : null,
     );
   }
 
@@ -107,13 +92,8 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   /// All repositories implement Repository<T> interface with getById, save, deleteById methods
   final Repository<T> repository;
 
-  /// Map of content types to serializers for content negotiation
-  ///
-  /// Key: MIME type (e.g., 'application/json', 'application/yaml')
-  /// Value: Serializer instance for that content type
-  /// The first entry is used as the default for responses when Accept header is */* or missing
-  /// At least one serializer must be provided
-  final Map<String, Serializer<T>> serializers;
+  /// JSON serializer used for all request and success response bodies.
+  final JsonSerializer<T> serializer;
 
   /// Optional authentication handler
   ///
@@ -215,8 +195,8 @@ class CrudResource<T extends AggregateRoot, TClaims> {
 
   /// Handles GET /resource/:id
   ///
-  /// Parses the ID, calls repository.getById(), and returns serialized aggregate
-  /// Uses Accept header for content negotiation
+  /// Parses the ID, calls repository.getById(), and returns a JSON aggregate.
+  /// The Accept header must allow JSON when it is present.
   ///
   /// Includes ETag header in response for optimistic concurrency control.
   ///
@@ -230,6 +210,12 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   Future<Response> handleGetById(Request request, String id) async {
     _logger.info('GET /$path/$id - Retrieving $T');
     try {
+      final negotiationError = _validateAcceptHeader(request.headers['accept']);
+      if (negotiationError != null) {
+        _logger.fine('GET /$path/$id - ${negotiationError.statusCode}');
+        return negotiationError;
+      }
+
       // Authenticate if handler is configured
       final authCheck = await _authenticate(request);
       if (authCheck.response != null) {
@@ -239,15 +225,13 @@ class CrudResource<T extends AggregateRoot, TClaims> {
 
       final uuid = UuidValue.fromString(id);
       final aggregate = await repository.getById(uuid);
-      final serializerEntry = _selectSerializer(request.headers['accept']);
 
       // Generate ETag for the aggregate
       final etag = _etagGenerator.generate(aggregate);
 
       final response = _responseBuilder.ok(
         aggregate,
-        serializerEntry.serializer,
-        serializerEntry.contentType,
+        serializer,
         etag: etag,
       );
       _logger.fine('GET /$path/$id - ${response.statusCode}');
@@ -276,6 +260,14 @@ class CrudResource<T extends AggregateRoot, TClaims> {
         request.url.query.isEmpty ? '' : '?${request.url.query}';
     _logger.info('GET /$path$queryString - Querying $T');
     try {
+      final negotiationError = _validateAcceptHeader(request.headers['accept']);
+      if (negotiationError != null) {
+        _logger.fine(
+          'GET /$path$queryString - ${negotiationError.statusCode}',
+        );
+        return negotiationError;
+      }
+
       // Authenticate if handler is configured
       final authCheck = await _authenticate(request);
       if (authCheck.response != null) {
@@ -350,11 +342,9 @@ class CrudResource<T extends AggregateRoot, TClaims> {
         );
       }
 
-      final serializerEntry = _selectSerializer(request.headers['accept']);
       final response = _responseBuilder.okList(
         result.items,
-        serializerEntry.serializer,
-        serializerEntry.contentType,
+        serializer,
         totalCount: result.totalCount,
       );
       _logger.fine('GET /$path$queryString - ${response.statusCode}');
@@ -366,8 +356,9 @@ class CrudResource<T extends AggregateRoot, TClaims> {
 
   /// Handles POST /resource
   ///
-  /// Deserializes request body using Content-Type header, calls repository.save(),
-  /// returns created aggregate. Uses Accept header for response content negotiation.
+  /// Deserializes a JSON request body, calls repository.save(), and returns the
+  /// created aggregate as JSON. Content-Type must be application/json and the
+  /// Accept header must allow JSON.
   ///
   /// Includes ETag header in response for optimistic concurrency control.
   ///
@@ -381,6 +372,19 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   Future<Response> handleCreate(Request request) async {
     _logger.info('POST /$path - Creating $T');
     try {
+      final negotiationError = _validateAcceptHeader(request.headers['accept']);
+      if (negotiationError != null) {
+        _logger.fine('POST /$path - ${negotiationError.statusCode}');
+        return negotiationError;
+      }
+
+      final contentTypeError =
+          _validateJsonContentType(request.headers['content-type']);
+      if (contentTypeError != null) {
+        _logger.fine('POST /$path - ${contentTypeError.statusCode}');
+        return contentTypeError;
+      }
+
       // Authenticate if handler is configured
       final authCheck = await _authenticate(request);
       if (authCheck.response != null) {
@@ -388,40 +392,10 @@ class CrudResource<T extends AggregateRoot, TClaims> {
         return authCheck.response!;
       }
 
-      final contentTypeHeader =
-          request.headers['content-type'] ?? serializers.keys.first;
-      // Extract media type, removing charset and other parameters
-      final contentType = _extractMediaType(contentTypeHeader);
-
-      // Case-insensitive lookup
-      Serializer<T>? requestSerializer;
-      for (final entry in serializers.entries) {
-        if (entry.key.toLowerCase() == contentType.toLowerCase()) {
-          requestSerializer = entry.value;
-          break;
-        }
-      }
-
-      if (requestSerializer == null) {
-        final response = Response(
-          415,
-          headers: {'Content-Type': 'application/problem+json'},
-          body: jsonEncode({
-            'type': 'about:blank',
-            'title': 'Unsupported Media Type',
-            'status': 415,
-            'detail': 'Content-Type $contentType is not supported. '
-                'Supported types: ${serializers.keys.join(", ")}',
-          }),
-        );
-        _logger.fine('POST /$path - ${response.statusCode}');
-        return response;
-      }
-
       final body = await request.readAsString();
       T aggregate;
       try {
-        aggregate = requestSerializer.deserialize(body);
+        aggregate = serializer.deserialize(body);
       } catch (e) {
         _logger.warning('POST /$path - Deserialization failed: $e');
         rethrow;
@@ -456,16 +430,12 @@ class CrudResource<T extends AggregateRoot, TClaims> {
 
       await repository.save(aggregate);
 
-      final responseSerializerEntry =
-          _selectSerializer(request.headers['accept']);
-
       // Generate ETag for the created aggregate
       final etag = _etagGenerator.generate(aggregate);
 
       final response = _responseBuilder.created(
         aggregate,
-        responseSerializerEntry.serializer,
-        responseSerializerEntry.contentType,
+        serializer,
         etag: etag,
       );
       _logger.fine('POST /$path - ${response.statusCode}');
@@ -477,8 +447,12 @@ class CrudResource<T extends AggregateRoot, TClaims> {
 
   /// Handles PUT /resource/:id
   ///
-  /// Deserializes request body using Content-Type header, calls repository.save(),
-  /// returns updated aggregate. Uses Accept header for response content negotiation.
+  /// Deserializes a JSON request body, calls repository.save(), and returns the
+  /// updated aggregate as JSON. Content-Type must be application/json and the
+  /// Accept header must allow JSON.
+  ///
+  /// The route ID is authoritative and must match the deserialized aggregate
+  /// ID. A mismatch returns 400 before authorization, ETag lookup, or saving.
   ///
   /// Supports optimistic concurrency control via If-Match header:
   /// - If If-Match header is present, validates ETag before updating
@@ -498,6 +472,19 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   Future<Response> handleUpdate(Request request, String id) async {
     _logger.info('PUT /$path/$id - Updating $T');
     try {
+      final negotiationError = _validateAcceptHeader(request.headers['accept']);
+      if (negotiationError != null) {
+        _logger.fine('PUT /$path/$id - ${negotiationError.statusCode}');
+        return negotiationError;
+      }
+
+      final contentTypeError =
+          _validateJsonContentType(request.headers['content-type']);
+      if (contentTypeError != null) {
+        _logger.fine('PUT /$path/$id - ${contentTypeError.statusCode}');
+        return contentTypeError;
+      }
+
       // Authenticate if handler is configured
       final authCheck = await _authenticate(request);
       if (authCheck.response != null) {
@@ -505,7 +492,23 @@ class CrudResource<T extends AggregateRoot, TClaims> {
         return authCheck.response!;
       }
 
+      final body = await request.readAsString();
+      T aggregate;
+      try {
+        aggregate = serializer.deserialize(body);
+      } catch (e) {
+        _logger.warning('PUT /$path/$id - Deserialization failed: $e');
+        rethrow;
+      }
+
       final uuid = UuidValue.fromString(id);
+      if (aggregate.id != uuid) {
+        final response = _responseBuilder.badRequest(
+          'Route ID $uuid does not match request body ID ${aggregate.id}.',
+        );
+        _logger.fine('PUT /$path/$id - ${response.statusCode} (ID mismatch)');
+        return response;
+      }
 
       // Check If-Match header for optimistic concurrency control
       final ifMatch = request.headers['if-match'];
@@ -536,45 +539,6 @@ class CrudResource<T extends AggregateRoot, TClaims> {
         }
       }
 
-      final contentTypeHeader =
-          request.headers['content-type'] ?? serializers.keys.first;
-      // Extract media type, removing charset and other parameters
-      final contentType = _extractMediaType(contentTypeHeader);
-
-      // Case-insensitive lookup
-      Serializer<T>? requestSerializer;
-      for (final entry in serializers.entries) {
-        if (entry.key.toLowerCase() == contentType.toLowerCase()) {
-          requestSerializer = entry.value;
-          break;
-        }
-      }
-
-      if (requestSerializer == null) {
-        final response = Response(
-          415,
-          headers: {'Content-Type': 'application/problem+json'},
-          body: jsonEncode({
-            'type': 'about:blank',
-            'title': 'Unsupported Media Type',
-            'status': 415,
-            'detail': 'Content-Type $contentType is not supported. '
-                'Supported types: ${serializers.keys.join(", ")}',
-          }),
-        );
-        _logger.fine('PUT /$path/$id - ${response.statusCode}');
-        return response;
-      }
-
-      final body = await request.readAsString();
-      T aggregate;
-      try {
-        aggregate = requestSerializer.deserialize(body);
-      } catch (e) {
-        _logger.warning('PUT /$path/$id - Deserialization failed: $e');
-        rethrow;
-      }
-
       // Authorize if handler is configured
       if (authorizationHandler != null && authCheck.authResult != null) {
         final authzResult = await authorizationHandler!.authorizeUpdate(
@@ -599,16 +563,12 @@ class CrudResource<T extends AggregateRoot, TClaims> {
 
       await repository.save(aggregate);
 
-      final responseSerializerEntry =
-          _selectSerializer(request.headers['accept']);
-
       // Generate ETag for the updated aggregate
       final etag = _etagGenerator.generate(aggregate);
 
       final response = _responseBuilder.ok(
         aggregate,
-        responseSerializerEntry.serializer,
-        responseSerializerEntry.contentType,
+        serializer,
         etag: etag,
       );
       _logger.fine('PUT /$path/$id - ${response.statusCode}');
@@ -633,6 +593,12 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   Future<Response> handleDelete(Request request, String id) async {
     _logger.info('DELETE /$path/$id - Deleting $T');
     try {
+      final negotiationError = _validateAcceptHeader(request.headers['accept']);
+      if (negotiationError != null) {
+        _logger.fine('DELETE /$path/$id - ${negotiationError.statusCode}');
+        return negotiationError;
+      }
+
       // Authenticate if handler is configured
       final authCheck = await _authenticate(request);
       if (authCheck.response != null) {
@@ -673,66 +639,73 @@ class CrudResource<T extends AggregateRoot, TClaims> {
     }
   }
 
-  /// Selects appropriate serializer based on Accept header
-  ///
-  /// Returns first serializer (default) if Accept is */*, missing, or empty.
-  /// Throws UnsupportedMediaTypeException if Accept header specifies unsupported type.
-  ///
-  /// Edge cases handled:
-  /// - Parses quality values (q=) and selects highest priority supported type
-  /// - Case-insensitive media type matching
-  ///
-  /// Parameters:
-  /// - [acceptHeader]: The Accept header value from the request
-  ///
-  /// Returns: A _SerializerEntry containing the serializer and content type
-  _SerializerEntry<T> _selectSerializer(String? acceptHeader) {
-    if (acceptHeader == null || acceptHeader == '*/*' || acceptHeader.isEmpty) {
-      final firstEntry = serializers.entries.first;
-      return _SerializerEntry(firstEntry.value, firstEntry.key);
+  /// Validates that the client accepts the stock JSON response representation.
+  Response? _validateAcceptHeader(String? acceptHeader) {
+    if (acceptHeader == null || acceptHeader.trim().isEmpty) {
+      return null;
     }
 
-    // Parse Accept header with quality values
-    final acceptedTypes = <_AcceptType>[];
+    var selectedSpecificity = -1;
+    var selectedQuality = 0.0;
+
     for (final part in acceptHeader.split(',')) {
       final segments = part.trim().split(';');
-      final mediaType = segments.first.trim();
+      final mediaType = segments.first.trim().toLowerCase();
+      final specificity = switch (mediaType) {
+        'application/json' => 2,
+        'application/*' => 1,
+        '*/*' => 0,
+        _ => null,
+      };
+      if (specificity == null) continue;
 
-      // Parse quality value (default to 1.0)
       var quality = 1.0;
+
       for (var i = 1; i < segments.length; i++) {
-        final param = segments[i].trim();
-        if (param.startsWith('q=')) {
-          quality = double.tryParse(param.substring(2)) ?? 1.0;
+        final parameter = segments[i].trim();
+        final separator = parameter.indexOf('=');
+        if (separator == -1) continue;
+        final name = parameter.substring(0, separator).trim().toLowerCase();
+        if (name == 'q') {
+          quality =
+              double.tryParse(parameter.substring(separator + 1).trim()) ?? 0;
+          if (quality < 0 || quality > 1) quality = 0;
           break;
         }
       }
 
-      acceptedTypes.add(_AcceptType(mediaType, quality));
-    }
-
-    // Sort by quality (highest first)
-    acceptedTypes.sort((a, b) => b.quality.compareTo(a.quality));
-
-    // Try to match in order of quality
-    for (final acceptedType in acceptedTypes) {
-      if (acceptedType.mediaType == '*/*') {
-        final firstEntry = serializers.entries.first;
-        return _SerializerEntry(firstEntry.value, firstEntry.key);
-      }
-
-      // Case-insensitive matching
-      for (final entry in serializers.entries) {
-        if (entry.key.toLowerCase() == acceptedType.mediaType.toLowerCase()) {
-          return _SerializerEntry(entry.value, entry.key);
-        }
+      if (specificity > selectedSpecificity) {
+        selectedSpecificity = specificity;
+        selectedQuality = quality;
+      } else if (specificity == selectedSpecificity &&
+          quality > selectedQuality) {
+        selectedQuality = quality;
       }
     }
 
-    // No match found - throw exception that will be caught and converted to 406
-    throw UnsupportedMediaTypeException(
-      'Accept header specifies unsupported media type(s): $acceptHeader. '
-      'Supported types: ${serializers.keys.join(", ")}',
+    if (selectedQuality > 0) return null;
+
+    return _responseBuilder.notAcceptable(
+      'Accept header does not allow application/json: $acceptHeader',
+    );
+  }
+
+  /// Validates the JSON media type required for POST and PUT request bodies.
+  Response? _validateJsonContentType(String? contentTypeHeader) {
+    if (contentTypeHeader == null || contentTypeHeader.trim().isEmpty) {
+      return _responseBuilder.unsupportedMediaType(
+        'Content-Type application/json is required.',
+      );
+    }
+
+    final contentType = _extractMediaType(contentTypeHeader).toLowerCase();
+    if (contentType == 'application/json') {
+      return null;
+    }
+
+    return _responseBuilder.unsupportedMediaType(
+      'Content-Type $contentType is not supported. '
+      'Supported type: application/json',
     );
   }
 
@@ -835,18 +808,4 @@ class _PaginationParams {
   _PaginationParams(this.skip, this.take);
   final int skip;
   final int take;
-}
-
-/// Internal class to hold serializer and content type together
-class _SerializerEntry<T extends AggregateRoot> {
-  _SerializerEntry(this.serializer, this.contentType);
-  final Serializer<T> serializer;
-  final String contentType;
-}
-
-/// Internal class to hold Accept header media type with quality value
-class _AcceptType {
-  _AcceptType(this.mediaType, this.quality);
-  final String mediaType;
-  final double quality;
 }

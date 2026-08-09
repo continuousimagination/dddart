@@ -4,7 +4,7 @@ version: 1.0.0
 publish_to: none
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: '>=3.5.0 <4.0.0'
 
 dependencies:
   crypto: ^3.0.3
@@ -12,10 +12,6 @@ dependencies:
     path: ../
   shelf: ^1.4.0
   shelf_router: ^1.1.0
-
-dependency_overrides:
-  dddart_webhooks:
-    path: ../
 
 dev_dependencies:
   lints: ^3.0.0

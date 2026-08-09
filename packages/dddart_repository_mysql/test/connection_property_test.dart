@@ -577,7 +577,6 @@ MysqlConnection _generateRandomConnection(Random random) {
     database: 'test_db',
     user: 'root',
     password: 'test_password',
-    maxConnections: random.nextInt(5) + 1,
     timeout: Duration(seconds: random.nextInt(30) + 10),
   );
 }

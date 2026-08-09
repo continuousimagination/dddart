@@ -1,5 +1,56 @@
 # Migration Guide
 
+## JSON-only CRUD resources (Unreleased)
+
+`CrudResource<T>` now has one JSON representation. Replace the content-type
+serializer map with a single `JsonSerializer<T>`:
+
+```dart
+// Before
+CrudResource<User>(
+  path: '/users',
+  repository: userRepository,
+  serializers: {'application/json': userSerializer},
+);
+
+// After
+CrudResource<User>(
+  path: '/users',
+  repository: userRepository,
+  serializer: userJsonSerializer,
+);
+```
+
+The serializer must implement `JsonSerializer<T>` from `dddart_json`. CRUD
+clients must also follow these media rules:
+
+- Send `Content-Type: application/json` with `POST` and `PUT` bodies. Parameters
+  such as `charset=utf-8` are allowed. Missing or unsupported content types
+  return 415 before authentication, authorization, or repository work.
+- Omit `Accept`, use `*/*`, or include a positive-quality `application/json`
+  range. Headers that do not allow JSON return 406 before side effects.
+- Expect JSON objects for single-resource success responses, JSON arrays for
+  collection success responses, and `application/problem+json` for stock errors.
+- Ensure every `PUT /resource/:id` JSON body contains the same aggregate ID as
+  the route. A mismatch now returns 400 before authorization, ETag lookup, or
+  persistence; the route ID is authoritative.
+
+`ResponseBuilder<T>` is also JSON-specific. Remove the positional content-type
+argument and pass a `JsonSerializer<T>`:
+
+```dart
+// Before
+responseBuilder.ok(user, serializer, 'application/json');
+responseBuilder.okList(users, serializer, 'application/json');
+
+// After
+responseBuilder.ok(user, jsonSerializer);
+responseBuilder.okList(users, jsonSerializer);
+```
+
+The same change applies to `ResponseBuilder.created`. Successful responses set
+`Content-Type: application/json` themselves.
+
 ## Breaking Changes in v0.2.0
 
 ### AuthHandler → AuthenticationHandler Rename
@@ -59,7 +110,7 @@ class MyAuthHandler extends AuthenticationHandler<MyClaims> {
 final resource = CrudResource<User, StandardClaims>(
   path: '/users',
   repository: userRepo,
-  serializers: {'application/json': userSerializer},
+  serializer: userSerializer,
   authHandler: jwtAuthHandler,  // Old parameter name
 );
 
@@ -67,7 +118,7 @@ final resource = CrudResource<User, StandardClaims>(
 final resource = CrudResource<User, StandardClaims>(
   path: '/users',
   repository: userRepo,
-  serializers: {'application/json': userSerializer},
+  serializer: userSerializer,
   authenticationHandler: jwtAuthHandler,  // New parameter name
 );
 ```
@@ -168,7 +219,7 @@ class MyAuthorizationHandler extends AuthorizationHandler<User, MyClaims> {
 final resource = CrudResource<User, MyClaims>(
   path: '/users',
   repository: userRepo,
-  serializers: {'application/json': userSerializer},
+  serializer: userSerializer,
   authenticationHandler: jwtAuthHandler,  // Verifies identity
   authorizationHandler: myAuthzHandler,   // Verifies permissions
 );

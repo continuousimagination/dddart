@@ -394,7 +394,10 @@ class RestRepositoryGenerator
         () => _connection.client.put(
           Uri.parse('\${_connection.baseUrl}\$_resourcePath/\${aggregate.id.uuid}'),
           body: body,
-          headers: {'Content-Type': 'application/json'},
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
         ),
         operation: 'save $className',
       );
@@ -425,6 +428,7 @@ class RestRepositoryGenerator
       final response = await _connection.executeRequest(
         () => _connection.client.delete(
           Uri.parse('\${_connection.baseUrl}\$_resourcePath/\${id.uuid}'),
+          headers: {'Accept': 'application/json'},
         ),
         operation: 'delete $className',
       );

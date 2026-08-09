@@ -2,8 +2,9 @@ import 'dart:convert';
 
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/src/response_builder.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:test/test.dart';
+
+import 'json_serializer_test_support.dart';
 
 // Test aggregate root
 class TestUser extends AggregateRoot {
@@ -20,7 +21,7 @@ class TestUser extends AggregateRoot {
 }
 
 // Test serializer
-class TestUserSerializer implements Serializer<TestUser> {
+class TestUserSerializer extends TestJsonSerializer<TestUser> {
   @override
   String serialize(TestUser user, [dynamic config]) {
     return jsonEncode({
@@ -68,7 +69,6 @@ void main() {
       final response = responseBuilder.ok(
         testUser,
         serializer,
-        'application/json',
       );
 
       // Assert
@@ -89,7 +89,6 @@ void main() {
       final response = responseBuilder.created(
         testUser,
         serializer,
-        'application/json',
       );
 
       // Assert
@@ -103,27 +102,13 @@ void main() {
       expect(body['email'], equals('john@example.com'));
     });
 
-    test('Content-Type header is set correctly for different formats',
-        () async {
-      // Act - JSON
+    test('Content-Type is always application/json', () async {
       final jsonResponse = responseBuilder.ok(
         testUser,
         serializer,
-        'application/json',
       );
 
-      // Assert - JSON
       expect(jsonResponse.headers['Content-Type'], equals('application/json'));
-
-      // Act - YAML (hypothetical)
-      final yamlResponse = responseBuilder.ok(
-        testUser,
-        serializer,
-        'application/yaml',
-      );
-
-      // Assert - YAML
-      expect(yamlResponse.headers['Content-Type'], equals('application/yaml'));
     });
   });
 
@@ -143,7 +128,6 @@ void main() {
       final response = responseBuilder.okList(
         users,
         serializer,
-        'application/json',
       );
 
       // Assert
@@ -167,7 +151,6 @@ void main() {
       final response = responseBuilder.okList(
         users,
         serializer,
-        'application/json',
         totalCount: 150,
       );
 
@@ -184,7 +167,6 @@ void main() {
       final response = responseBuilder.okList(
         users,
         serializer,
-        'application/json',
       );
 
       // Assert
@@ -200,7 +182,6 @@ void main() {
       final response = responseBuilder.okList(
         users,
         serializer,
-        'application/json',
         totalCount: 1,
       );
 
@@ -216,7 +197,6 @@ void main() {
       final response = responseBuilder.okList(
         users,
         serializer,
-        'application/json',
         totalCount: 0,
       );
 

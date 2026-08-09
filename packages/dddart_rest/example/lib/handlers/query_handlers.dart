@@ -57,9 +57,7 @@ Future<QueryResult<User>> firstNameQueryHandler(
   }
 
   // Get all users from the repository
-  // Note: InMemoryRepository.getAll() is synchronous, but we use async
-  // for consistency with other repository implementations (e.g., database)
-  final allUsers = (repository as InMemoryRepository<User>).getAll();
+  final allUsers = await (repository as InMemoryRepository<User>).getAll();
 
   // Filter users by first name (case-insensitive for better UX)
   // In a production system with a database, this would be a SQL WHERE clause
@@ -127,7 +125,7 @@ Future<QueryResult<User>> emailQueryHandler(
   }
 
   // Get all users from the repository
-  final allUsers = (repository as InMemoryRepository<User>).getAll();
+  final allUsers = await (repository as InMemoryRepository<User>).getAll();
 
   // Filter users by email (case-insensitive per RFC 5321)
   // In production, this would be a database query with an index on email

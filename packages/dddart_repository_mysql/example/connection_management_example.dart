@@ -1,10 +1,10 @@
 // ignore_for_file: avoid_print
 
-import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
-import 'lib/domain/address.dart';
-import 'lib/domain/money.dart';
-import 'lib/domain/order.dart';
-import 'lib/domain/order_item.dart';
+import 'package:dddart_repository_mysql_example/domain/address.dart';
+import 'package:dddart_repository_mysql_example/domain/money.dart';
+import 'package:dddart_repository_mysql_example/domain/order.dart';
+import 'package:dddart_repository_mysql_example/domain/order_item.dart';
+import 'package:dddart_repository_mysql_example/mysql_example_connection.dart';
 
 /// Connection management example demonstrating connection lifecycle.
 ///
@@ -12,21 +12,20 @@ import 'lib/domain/order_item.dart';
 /// - Creating a connection with custom parameters
 /// - Opening and closing connections
 /// - Connection state checking
-/// - Connection pooling configuration
+/// - Reusing one connection for multiple operations
 /// - Transaction management
 /// - Proper resource cleanup
 ///
 /// Prerequisites:
-/// - MySQL running on localhost:3306
-/// - Database 'dddart_example' created
-/// - User 'root' with password 'password' (or update connection parameters)
+/// - MySQL configured through MYSQL_HOST, MYSQL_PORT, MYSQL_DATABASE,
+///   MYSQL_USER, and MYSQL_PASSWORD (documented local defaults are used)
 Future<void> main() async {
   print('=== Connection Management Example ===\n');
 
   await _demonstrateBasicConnectionLifecycle();
   print('');
 
-  await _demonstrateConnectionPooling();
+  await _demonstrateSingleConnectionReuse();
   print('');
 
   await _demonstrateTransactionManagement();
@@ -41,13 +40,7 @@ Future<void> _demonstrateBasicConnectionLifecycle() async {
 
   // Create connection with custom parameters
   print('   Creating connection...');
-  final connection = MysqlConnection(
-    host: 'localhost',
-    port: 3306,
-    database: 'dddart_example',
-    user: 'root',
-    password: 'password',
-  );
+  final connection = createMysqlExampleConnection();
   print('   ✓ Connection created (not yet open)');
   print('   Is open: ${connection.isOpen}');
 
@@ -71,58 +64,48 @@ Future<void> _demonstrateBasicConnectionLifecycle() async {
 
   // Try to use closed connection (should fail)
   print('\n   Attempting to use closed connection...');
+  Object? closedConnectionError;
   try {
     await connection.execute('SELECT 1');
-    print('   ✗ Should have thrown StateError');
   } catch (e) {
-    if (e is StateError) {
-      print('   ✓ Caught StateError: ${e.message}');
-    } else {
-      rethrow;
-    }
+    closedConnectionError = e;
+  }
+  if (closedConnectionError case final StateError error) {
+    print('   ✓ Caught StateError: ${error.message}');
+  } else if (closedConnectionError != null) {
+    throw closedConnectionError;
+  } else {
+    throw StateError('A closed connection unexpectedly executed a query');
   }
 }
 
-/// Demonstrates connection pooling configuration.
-Future<void> _demonstrateConnectionPooling() async {
-  print('2. Demonstrating connection pooling...');
+/// Demonstrates reusing the same connection for multiple operations.
+Future<void> _demonstrateSingleConnectionReuse() async {
+  print('2. Demonstrating single-connection reuse...');
 
-  // Create connection with larger pool for high concurrency
-  print('   Creating connection with pool size 10...');
-  final connection = MysqlConnection(
-    host: 'localhost',
-    port: 3306,
-    database: 'dddart_example',
-    user: 'root',
-    password: 'password',
-    maxConnections: 10, // Larger pool for concurrent operations
-  );
+  print('   Creating one connection...');
+  final connection = createMysqlExampleConnection();
 
   try {
     await connection.open();
-    print('   ✓ Connection pool opened');
+    print('   ✓ Connection opened');
 
     final orderRepo = OrderMysqlRepository(connection);
     await orderRepo.createTables();
 
-    // Simulate concurrent operations
-    print('\n   Executing concurrent operations...');
-    final futures = <Future<void>>[];
+    print('\n   Executing operations on the same connection...');
     for (var i = 0; i < 5; i++) {
-      futures.add(_createAndSaveOrder(orderRepo, i));
+      await _createAndSaveOrder(orderRepo, i);
     }
-
-    await Future.wait(futures);
-    print('   ✓ All concurrent operations completed');
+    print('   ✓ All operations completed');
 
     // Clean up
     print('\n   Cleaning up test data...');
     await connection.execute('DELETE FROM orders');
-    await connection.execute('DELETE FROM order_items');
     print('   ✓ Test data cleaned up');
   } finally {
     await connection.close();
-    print('\n   ✓ Connection pool closed');
+    print('\n   ✓ Connection closed');
   }
 }
 
@@ -157,13 +140,7 @@ Future<void> _createAndSaveOrder(
 Future<void> _demonstrateTransactionManagement() async {
   print('3. Demonstrating transaction management...');
 
-  final connection = MysqlConnection(
-    host: 'localhost',
-    port: 3306,
-    database: 'dddart_example',
-    user: 'root',
-    password: 'password',
-  );
+  final connection = createMysqlExampleConnection();
 
   try {
     await connection.open();
@@ -259,13 +236,12 @@ Future<void> _demonstrateTransactionManagement() async {
     if (count == 0) {
       print('   ✓ Rollback verified - order 3 was not saved');
     } else {
-      print('   ✗ Rollback failed - order 3 was saved');
+      throw StateError('Rollback failed: order 3 was saved');
     }
 
     // Clean up
     print('\n   Cleaning up test data...');
     await connection.execute('DELETE FROM orders');
-    await connection.execute('DELETE FROM order_items');
     print('   ✓ Test data cleaned up');
   } finally {
     await connection.close();

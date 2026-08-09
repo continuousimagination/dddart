@@ -17,7 +17,7 @@ Demonstrates how to create a custom webhook verifier with:
 
 **Run:**
 ```bash
-dart run example/custom_verifier_example.dart
+dart run custom_verifier_example.dart
 ```
 
 **Test:**
@@ -47,7 +47,7 @@ Demonstrates handling JSON webhook payloads with:
 
 **Run:**
 ```bash
-dart run example/raw_json_example.dart
+dart run raw_json_example.dart
 ```
 
 **Test:**
@@ -83,7 +83,7 @@ Demonstrates handling form-encoded webhook payloads with:
 
 **Run:**
 ```bash
-dart run example/form_encoded_example.dart
+dart run form_encoded_example.dart
 ```
 
 **Test:**

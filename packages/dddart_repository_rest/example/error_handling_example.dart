@@ -161,6 +161,10 @@ Future<void> demonstrateErrorPatterns(UserRestRepository repository) async {
         print('   Connection error, will retry later');
       case RepositoryExceptionType.timeout:
         print('   Request timed out, retrying...');
+      case RepositoryExceptionType.unauthorized:
+        print('   Authentication is required');
+      case RepositoryExceptionType.forbidden:
+        print('   Operation is not permitted');
       case RepositoryExceptionType.duplicate:
         print('   Duplicate detected, using existing');
       case RepositoryExceptionType.unknown:

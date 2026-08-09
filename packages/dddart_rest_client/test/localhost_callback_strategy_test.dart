@@ -34,14 +34,18 @@ void main() {
       final strategy = LocalhostCallbackStrategy();
 
       expect(
-          strategy.getRedirectUri(), equals('http://localhost:8080/callback'));
+        strategy.getRedirectUri(),
+        equals('http://localhost:8080/callback'),
+      );
     });
 
     test('Property 16: Redirect URI Construction - custom port', () {
       final strategy = LocalhostCallbackStrategy(port: 3000);
 
       expect(
-          strategy.getRedirectUri(), equals('http://localhost:3000/callback'));
+        strategy.getRedirectUri(),
+        equals('http://localhost:3000/callback'),
+      );
     });
 
     test('Property 16: Redirect URI Construction - custom path', () {

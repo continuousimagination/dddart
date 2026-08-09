@@ -3,8 +3,9 @@ import 'dart:io';
 
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/dddart_rest.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:shelf/shelf.dart';
+
+import 'lib/json_serializer_support.dart';
 
 /// Example showing how to add custom routes to HttpServer alongside CRUD endpoints.
 ///
@@ -23,7 +24,7 @@ void main() async {
   final userResource = CrudResource<User, void>(
     path: '/users',
     repository: userRepository,
-    serializers: {'application/json': UserSerializer()},
+    serializer: UserSerializer(),
   );
 
   // Create HTTP server
@@ -88,7 +89,7 @@ class User extends AggregateRoot {
 }
 
 // User serializer for example
-class UserSerializer implements Serializer<User> {
+class UserSerializer extends ExampleJsonSerializer<User> {
   @override
   String serialize(User user, [dynamic config]) {
     return jsonEncode({

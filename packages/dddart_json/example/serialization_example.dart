@@ -10,7 +10,7 @@ import 'lib/example.dart';
 /// - Error handling scenarios
 /// - Performance characteristics
 ///
-/// Run with: dart run example/serialization_example.dart
+/// Run from this example directory with: `dart run serialization_example.dart`.
 void main() {
   final example = SerializationExample();
   example.runAll();

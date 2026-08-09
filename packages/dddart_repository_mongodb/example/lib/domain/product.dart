@@ -1,6 +1,12 @@
+import 'dart:convert';
+
 import 'package:dddart/dddart.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
+import 'package:dddart_json/dddart_json.dart';
 import 'package:dddart_repository_mongodb/dddart_repository_mongodb.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
+// The generated repository part uses mongo_dart's public database types.
+// ignore: unused_import
+import 'package:mongo_dart/mongo_dart.dart';
 
 part 'product.g.dart';
 
@@ -14,8 +20,10 @@ class Product extends AggregateRoot {
     required this.description,
     required this.price,
     required this.inStock,
-    UuidValue? id,
-  }) : super(id: id);
+    super.id,
+    super.createdAt,
+    super.updatedAt,
+  });
 
   /// Product name.
   final String name;

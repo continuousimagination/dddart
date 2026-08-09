@@ -71,7 +71,7 @@ class HttpServer {
   /// server.registerResource(CrudResource<User>(
   ///   path: '/users',
   ///   repository: userRepository,
-  ///   serializers: {'application/json': jsonSerializer},
+  ///   serializer: jsonSerializer,
   /// ));
   /// ```
   void registerResource(CrudResource resource) {

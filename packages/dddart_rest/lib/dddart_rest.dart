@@ -1,8 +1,8 @@
 /// RESTful CRUD API framework for DDDart
 ///
 /// Provides a declarative, type-safe way to expose aggregate roots through
-/// RESTful HTTP endpoints with support for content negotiation, custom query
-/// handlers, and extensible error handling.
+/// RESTful HTTP endpoints with a JSON media contract, custom query handlers,
+/// and extensible error handling.
 library dddart_rest;
 
 export 'src/auth_endpoints.dart';

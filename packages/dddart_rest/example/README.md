@@ -24,15 +24,12 @@ Demonstrates JWT authentication with in-memory storage:
 
 **Run:** `dart run self_hosted_auth_example.dart`
 
-### 3. Self-Hosted Auth with MongoDB (`self_hosted_auth_mongodb_example.dart`)
+### 3. Legacy Self-Hosted Auth with MongoDB Sketch
 
-Production-ready authentication setup:
-- MongoDB persistence for refresh tokens
-- Extending RefreshToken and DeviceCode
-- Code generation for repositories
-- Production security considerations
-
-**Note:** Conceptual example showing structure. Requires MongoDB setup.
+The former `self_hosted_auth_mongodb_example.dart` is retained as
+`legacy/self_hosted_auth_mongodb_example.dart.skip`. It is a labeled conceptual
+sketch, not a supported runnable example, because its proposed persistence and
+authentication composition is not implemented by the current public contracts.
 
 ### 4. OAuth/OIDC Authentication (`oauth_auth_example.dart`)
 
@@ -95,7 +92,7 @@ This is a complete, working example that shows:
   - Custom query handlers for filtering (by firstName, by email)
   - Custom exception handlers for domain errors
   - Pagination with skip/take parameters
-  - Content negotiation (Accept/Content-Type headers)
+  - JSON media validation (`Accept` and `Content-Type` headers)
   - RFC 7807 error responses
 
 - **Best Practices**:
@@ -512,7 +509,7 @@ All errors follow **RFC 7807 Problem Details** format with `Content-Type: applic
   "type": "about:blank",
   "title": "Unsupported Media Type",
   "status": 415,
-  "detail": "Content-Type text/plain is not supported. Supported types: application/json"
+  "detail": "Content-Type text/plain is not supported. Supported type: application/json"
 }
 ```
 
@@ -656,7 +653,7 @@ curl http://localhost:8080/users?skip=2&take=3
 2. **Modify the Domain**: Add new fields to User, create new value objects
 3. **Add Query Handlers**: Implement filtering by lastName, city, etc.
 4. **Add Validation**: Throw InvalidEmailException in User constructor
-5. **Try Different Serializers**: Implement YAML or XML serializer
+5. **Extend the JSON Model**: Add nested objects and collection fields
 6. **Add Business Logic**: Implement domain methods on User aggregate
 
 ---

@@ -68,10 +68,12 @@ Future<void> _demonstrateInMemoryRepository() async {
   // Verify deletion
   try {
     await userRepo.getById(user2.id);
-    print('   ✗ User should have been deleted');
+    throw StateError('User should have been deleted');
   } on RepositoryException catch (e) {
     if (e.type == RepositoryExceptionType.notFound) {
       print('   ✓ Confirmed deletion');
+    } else {
+      rethrow;
     }
   }
 

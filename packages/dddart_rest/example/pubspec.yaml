@@ -4,24 +4,25 @@ version: 1.0.0
 publish_to: none
 
 environment:
-  sdk: ^3.0.0
+  sdk: '>=3.5.0 <4.0.0'
 
 dependencies:
   dddart:
     path: ../../dddart
-  dddart_serialization:
-    path: ../../dddart_serialization
+  dddart_json:
+    path: ../../dddart_json
   dddart_rest:
     path: ../
+  http: ^1.2.0
   shelf: ^1.4.0
 
 dependency_overrides:
   dddart:
     path: ../../dddart
+  dddart_json:
+    path: ../../dddart_json
   dddart_serialization:
     path: ../../dddart_serialization
-  dddart_rest:
-    path: ../
 
 dev_dependencies:
   lints: ^3.0.0

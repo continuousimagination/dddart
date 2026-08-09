@@ -2,6 +2,7 @@
 
 import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';
 
+import 'lib/dynamodb_example_tables.dart';
 import 'lib/domain/product.dart';
 import 'lib/domain/user.dart';
 
@@ -48,29 +49,18 @@ Future<void> main() async {
     final userRepo = UserDynamoRepository(connection);
     final productRepo = ProductDynamoRepository(connection);
 
-    try {
-      await userRepo.createTable();
-      print('   ✓ Created table: users');
-    } catch (e) {
-      if (e.toString().contains('ResourceInUseException') ||
-          e.toString().contains('Table already exists')) {
-        print('   ✓ Table already exists: users');
-      } else {
-        rethrow;
-      }
-    }
-
-    try {
-      await productRepo.createTable();
-      print('   ✓ Created table: products');
-    } catch (e) {
-      if (e.toString().contains('ResourceInUseException') ||
-          e.toString().contains('Table already exists')) {
-        print('   ✓ Table already exists: products');
-      } else {
-        rethrow;
-      }
-    }
+    await ensureDynamoTable(
+      connection: connection,
+      tableName: userRepo.tableName,
+      createTable: userRepo.createTable,
+    );
+    print('   ✓ Table ready: ${userRepo.tableName}');
+    await ensureDynamoTable(
+      connection: connection,
+      tableName: productRepo.tableName,
+      createTable: productRepo.createTable,
+    );
+    print('   ✓ Table ready: ${productRepo.tableName}');
     print('');
 
     // Step 6: List all tables
@@ -101,6 +91,7 @@ Future<void> main() async {
   } catch (e, stackTrace) {
     print('\n✗ Error: $e');
     print('Stack trace: $stackTrace');
+    rethrow;
   } finally {
     // Step 9: Clean up connection
     print('\n9. Disposing connection...');
