@@ -1,5 +1,50 @@
 # Migration Guide
 
+## Authoritative application claims (Unreleased)
+
+`JwtAuthHandler` now owns the authoritative application-claims loader used for
+both initial token issuance and refresh. Move `claimsBuilder` from
+`AuthEndpoints` to the handler and remove the claims argument from
+`issueTokens`:
+
+```dart
+// Before
+final handler = JwtAuthHandler<UserClaims, RefreshToken>(
+  secret: secret,
+  refreshTokenRepository: refreshTokenRepository,
+  parseClaimsFromJson: UserClaims.fromJson,
+  claimsToJson: (claims) => claims.toJson(),
+);
+final endpoints = AuthEndpoints(
+  authHandler: handler,
+  deviceCodeRepository: deviceCodeRepository,
+  userValidator: validateUser,
+  claimsBuilder: loadClaims,
+);
+await handler.issueTokens(userId, claims);
+
+// After
+final handler = JwtAuthHandler<UserClaims, RefreshToken>(
+  secret: secret,
+  refreshTokenRepository: refreshTokenRepository,
+  claimsLoader: loadCurrentClaims,
+  parseClaimsFromJson: UserClaims.fromJson,
+  claimsToJson: (claims) => claims.toJson(),
+);
+final endpoints = AuthEndpoints(
+  authHandler: handler,
+  deviceCodeRepository: deviceCodeRepository,
+  userValidator: validateUser,
+);
+await handler.issueTokens(userId);
+```
+
+The loader is asynchronous and keyed by a validated user ID. It must read
+current application state and return `null` for missing, disabled, or otherwise
+ineligible users. Role, tenant, and profile changes therefore appear after
+refresh. Application claims remain access-token-only; refresh tokens stay
+opaque and contain no claim snapshot.
+
 ## JSON-only CRUD resources (Unreleased)
 
 `CrudResource<T>` now has one JSON representation. Replace the content-type

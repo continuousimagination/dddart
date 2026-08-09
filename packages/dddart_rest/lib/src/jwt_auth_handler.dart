@@ -10,6 +10,15 @@ import 'package:dddart_rest/src/repository_query_support.dart';
 import 'package:dddart_rest/src/tokens.dart';
 import 'package:shelf/shelf.dart';
 
+/// Loads the current application claims for a validated user ID.
+///
+/// Returning `null` means the user is missing, disabled, or otherwise no longer
+/// eligible to receive tokens. Implementations should read authoritative
+/// application state on every call rather than caching claim snapshots.
+typedef ApplicationClaimsLoader<TClaims> = Future<TClaims?> Function(
+  String userId,
+);
+
 /// Handles JWT authentication for self-hosted mode
 ///
 /// Generic over [TClaims] (claims type) and [TRefreshToken] (refresh token type).
@@ -24,6 +33,7 @@ import 'package:shelf/shelf.dart';
 /// final authHandler = JwtAuthHandler<UserClaims, RefreshToken>(
 ///   secret: 'your-secret-key',
 ///   refreshTokenRepository: refreshTokenRepo,
+///   claimsLoader: (userId) => loadCurrentClaims(userId),
 ///   parseClaimsFromJson: (json) => UserClaims.fromJson(json),
 ///   claimsToJson: (claims) => claims.toJson(),
 ///   issuer: 'https://api.example.com',
@@ -36,13 +46,15 @@ class JwtAuthHandler<TClaims, TRefreshToken extends RefreshToken>
   JwtAuthHandler({
     required this.secret,
     required this.refreshTokenRepository,
+    required ApplicationClaimsLoader<TClaims> claimsLoader,
     required TClaims Function(Map<String, dynamic>) parseClaimsFromJson,
     required Map<String, dynamic> Function(TClaims) claimsToJson,
     this.issuer,
     this.audience,
     this.accessTokenDuration = const Duration(minutes: 15),
     this.refreshTokenDuration = const Duration(days: 7),
-  })  : _parseClaimsFromJson = parseClaimsFromJson,
+  })  : _claimsLoader = claimsLoader,
+        _parseClaimsFromJson = parseClaimsFromJson,
         _claimsToJson = claimsToJson;
 
   /// Secret key for signing JWTs
@@ -63,6 +75,9 @@ class JwtAuthHandler<TClaims, TRefreshToken extends RefreshToken>
 
   /// How long refresh tokens are valid
   final Duration refreshTokenDuration;
+
+  /// Loads current application claims for token issuance.
+  final ApplicationClaimsLoader<TClaims> _claimsLoader;
 
   /// Function to parse claims from JSON
   final TClaims Function(Map<String, dynamic>) _parseClaimsFromJson;
@@ -131,36 +146,24 @@ class JwtAuthHandler<TClaims, TRefreshToken extends RefreshToken>
 
   /// Issues new access and refresh tokens for a user
   ///
-  /// Generates a JWT access token with the provided claims and a random
-  /// refresh token. The refresh token is stored in the repository.
+  /// Loads the user's current application claims, generates a JWT access token
+  /// and a random refresh token, and stores the refresh token in the repository.
   ///
   /// Example:
   /// ```dart
   /// final tokens = await authHandler.issueTokens(
   ///   'user123',
-  ///   UserClaims(email: 'user@example.com', roles: ['admin']),
   ///   deviceInfo: 'CLI v1.0',
   /// );
   /// ```
   Future<Tokens> issueTokens(
-    String userId,
-    TClaims claims, {
+    String userId, {
     String? deviceInfo,
   }) async {
-    // Serialize claims using provided callback
-    final claimsJson = _claimsToJson(claims);
-
-    // Create JWT payload
+    // Load and sign authoritative application claims before persisting a
+    // refresh token. A missing or disabled user therefore receives no tokens.
+    final accessToken = await _issueAccessToken(userId);
     final now = DateTime.now();
-    final payload = _buildAccessTokenPayload(
-      userId: userId,
-      issuedAt: now,
-      customClaims: claimsJson,
-    );
-
-    // Sign JWT
-    final jwt = JWT(payload);
-    final accessToken = jwt.sign(SecretKey(secret));
 
     // Generate random refresh token
     final refreshTokenString = _generateRefreshToken();
@@ -187,7 +190,8 @@ class JwtAuthHandler<TClaims, TRefreshToken extends RefreshToken>
   /// Refreshes access token using refresh token
   ///
   /// Looks up the refresh token in the repository, validates it's not expired
-  /// or revoked, and issues a new access token with the same claims.
+  /// or revoked, reloads the user's current application claims, and issues a
+  /// new access token. The existing opaque refresh token is returned unchanged.
   ///
   /// Example:
   /// ```dart
@@ -216,22 +220,9 @@ class JwtAuthHandler<TClaims, TRefreshToken extends RefreshToken>
       throw Exception('Refresh token has been revoked');
     }
 
-    // Get user's current claims by creating a temporary JWT and parsing it
-    // In a real implementation, you might want to fetch fresh user data
-    // For now, we'll create minimal claims with just the user ID
-    final claimsJson = <String, dynamic>{'sub': refreshToken.userId};
-    final claims = _parseClaimsFromJson(claimsJson);
-
-    // Issue new access token (but not a new refresh token)
-    final now = DateTime.now();
-    final payload = _buildAccessTokenPayload(
-      userId: refreshToken.userId,
-      issuedAt: now,
-      customClaims: _claimsToJson(claims),
-    );
-
-    final jwt = JWT(payload);
-    final accessToken = jwt.sign(SecretKey(secret));
+    // Reload authoritative claims. Refresh never reconstructs claims from an
+    // access token or stores an application-claim snapshot.
+    final accessToken = await _issueAccessToken(refreshToken.userId);
 
     return Tokens(
       accessToken: accessToken,
@@ -269,6 +260,22 @@ class JwtAuthHandler<TClaims, TRefreshToken extends RefreshToken>
     // Mark as revoked
     final revokedToken = refreshToken.revoke() as TRefreshToken;
     await refreshTokenRepository.save(revokedToken);
+  }
+
+  Future<String> _issueAccessToken(String userId) async {
+    final claims = await _claimsLoader(userId);
+    if (claims == null) {
+      throw Exception('Authentication failed');
+    }
+
+    final issuedAt = DateTime.now();
+    final payload = _buildAccessTokenPayload(
+      userId: userId,
+      issuedAt: issuedAt,
+      customClaims: _claimsToJson(claims),
+    );
+
+    return JWT(payload).sign(SecretKey(secret));
   }
 
   Map<String, dynamic> _buildAccessTokenPayload({

@@ -23,6 +23,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   persistence.
 - `OAuthJwtAuthHandler` now rejects expired and not-yet-valid JWTs, with a
   configurable `clockSkewTolerance` that defaults to zero.
+- **BREAKING:** `JwtAuthHandler` now requires an asynchronous `claimsLoader`
+  keyed by validated user ID. It reloads authoritative application claims for
+  initial issuance and refresh, and a `null` result refuses token issuance.
+- **BREAKING:** `AuthEndpoints` no longer accepts `claimsBuilder`; claim loading
+  belongs to `JwtAuthHandler`. Application claims are included only in access
+  tokens, never in opaque refresh tokens.
 
 ### Added
 

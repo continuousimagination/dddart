@@ -838,7 +838,8 @@ dddart_rest provides comprehensive JWT-based authentication with support for bot
 
 #### 1. Define Custom Claims
 
-Create a class for your JWT claims and annotate with `@JwtSerializable()`:
+Create a class that can parse and serialize your JWT claims. The optional
+`@JwtSerializable()` annotation also generates convenience extension methods:
 
 ```dart
 import 'package:dddart_rest/dddart_rest.dart';
@@ -856,6 +857,18 @@ class UserClaims {
   final String userId;
   final String email;
   final List<String> roles;
+
+  factory UserClaims.fromJson(Map<String, dynamic> json) => UserClaims(
+    userId: json['userId'] as String,
+    email: json['email'] as String,
+    roles: (json['roles'] as List<dynamic>).cast<String>(),
+  );
+
+  Map<String, dynamic> toJson() => {
+    'userId': userId,
+    'email': email,
+    'roles': roles,
+  };
 }
 ```
 
@@ -864,7 +877,9 @@ Run code generation:
 dart run build_runner build
 ```
 
-This generates extension methods for serializing/deserializing claims.
+This generates convenience extension methods for serializing and deserializing
+claims. The auth handler constructor still requires explicit parser and
+serializer callbacks.
 
 #### 2. Set Up Repositories
 
@@ -934,12 +949,34 @@ final deviceCodeRepo = AppDeviceCodeMongoRepository(database);
 final authHandler = JwtAuthHandler<UserClaims, RefreshToken>(
   secret: 'your-256-bit-secret',  // Store in environment variable!
   refreshTokenRepository: refreshTokenRepo,
+  claimsLoader: (userId) async {
+    // Read current application state every time a token is issued.
+    final user = await userDirectory.findActiveById(userId);
+    if (user == null) {
+      // Missing and disabled users must not receive tokens.
+      return null;
+    }
+    return UserClaims(
+      userId: user.id,
+      email: user.email,
+      roles: user.roles,
+    );
+  },
+  parseClaimsFromJson: UserClaims.fromJson,
+  claimsToJson: (claims) => claims.toJson(),
   issuer: 'https://api.example.com',
   audience: 'my-app',
-  accessTokenDuration: Duration(minutes: 15),
-  refreshTokenDuration: Duration(days: 7),
+  accessTokenDuration: const Duration(minutes: 15),
+  refreshTokenDuration: const Duration(days: 7),
 );
 ```
+
+`claimsLoader` is the authoritative, asynchronous source of application
+claims. It runs for initial issuance and again for every refresh, so role,
+tenant, and profile changes appear in the next access token. Return `null` when
+the user is missing, disabled, or otherwise ineligible. Refresh tokens remain
+opaque and contain no application claims; refresh never copies claims from an
+old access token.
 
 #### 4. Set Up Auth Endpoints
 
@@ -954,15 +991,6 @@ final authEndpoints = AuthEndpoints(
       return user.id;
     }
     return null;
-  },
-  claimsBuilder: (userId) async {
-    // Build claims for the user
-    final user = await userRepo.getById(userId);
-    return UserClaims(
-      userId: user.id,
-      email: user.email,
-      roles: user.roles,
-    );
   },
 );
 
@@ -983,7 +1011,7 @@ server.registerResource(
     path: '/users',
     repository: userRepo,
     serializer: serializer,
-    authHandler: authHandler,  // Require authentication
+    authenticationHandler: authHandler,  // Require authentication
   ),
 );
 
@@ -993,7 +1021,7 @@ server.registerResource(
     path: '/products',
     repository: productRepo,
     serializer: serializer,
-    // No authHandler = public access
+    // No authenticationHandler = public access
   ),
 );
 ```
@@ -1192,7 +1220,8 @@ Poll for device flow tokens.
 
 ### JWT Claims Code Generation
 
-The `@JwtSerializable()` annotation generates extension methods for serializing and deserializing claims:
+The `@JwtSerializable()` annotation generates convenience extension methods on
+an existing compatible handler for serializing and deserializing claims:
 
 ```dart
 // Your claims class
@@ -1204,7 +1233,8 @@ class UserClaims {
 }
 
 // Generated extension (in user_claims.g.dart)
-extension JwtAuthHandlerUserClaimsExtension on JwtAuthHandler<UserClaims> {
+extension JwtAuthHandlerUserClaimsExtension
+    on JwtAuthHandler<UserClaims, dynamic> {
   UserClaims parseClaimsFromJson(Map<String, dynamic> json) {
     return UserClaims(
       userId: json['userId'] as String,
@@ -1221,7 +1251,9 @@ extension JwtAuthHandlerUserClaimsExtension on JwtAuthHandler<UserClaims> {
 }
 ```
 
-The extension methods are automatically used by the auth handler - no manual wiring needed!
+The generated methods are helpers; they are not automatically wired into the
+handler constructor. `JwtAuthHandler` still requires `claimsLoader`,
+`parseClaimsFromJson`, and `claimsToJson` callbacks, as shown above.
 
 ### Built-in StandardClaims
 
@@ -1231,6 +1263,9 @@ For simple cases, use the pre-generated `StandardClaims` class:
 final authHandler = JwtAuthHandler<StandardClaims, RefreshToken>(
   secret: 'your-secret',
   refreshTokenRepository: refreshTokenRepo,
+  claimsLoader: loadCurrentStandardClaims,
+  parseClaimsFromJson: StandardClaims.fromJson,
+  claimsToJson: (claims) => claims.toJson(),
 );
 
 // StandardClaims includes: sub, email, name

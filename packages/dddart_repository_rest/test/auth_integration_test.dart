@@ -120,6 +120,10 @@ Future<AuthenticatedTestServer> createAuthenticatedTestServer({
   final authHandler = JwtAuthHandler<TestClaims, RefreshToken>(
     secret: secret,
     refreshTokenRepository: refreshTokenRepository,
+    claimsLoader: (userId) async => TestClaims(
+      userId: userId,
+      email: 'test@example.com',
+    ),
     parseClaimsFromJson: TestClaims.fromJson,
     claimsToJson: (claims) => claims.toJson(),
   );
@@ -134,12 +138,6 @@ Future<AuthenticatedTestServer> createAuthenticatedTestServer({
         return 'user-123';
       }
       return null;
-    },
-    claimsBuilder: (userId) async {
-      return TestClaims(
-        userId: userId,
-        email: 'test@example.com',
-      );
     },
   );
 
@@ -283,18 +281,13 @@ void main() {
         refreshRequest,
       );
 
-      // Assert - Refresh succeeds or fails gracefully
-      // Note: Refresh may fail if the token lookup mechanism doesn't work
-      // with InMemoryRepository in the test environment
-      if (refreshResponse.statusCode == 200) {
-        final refreshBody = await refreshResponse.readAsString();
-        final refreshJson = jsonDecode(refreshBody) as Map<String, dynamic>;
-        expect(refreshJson['access_token'], isNotNull);
-      } else {
-        // Refresh failed - this is expected in test environment
-        // where InMemoryRepository doesn't support query operations
-        expect(refreshResponse.statusCode, greaterThanOrEqualTo(400));
-      }
+      // Assert - The queryable in-memory refresh-token repository supports the
+      // complete refresh flow.
+      expect(refreshResponse.statusCode, equals(200));
+      final refreshBody = await refreshResponse.readAsString();
+      final refreshJson = jsonDecode(refreshBody) as Map<String, dynamic>;
+      expect(refreshJson['access_token'], isA<String>());
+      expect(refreshJson['refresh_token'], equals(refreshToken));
     });
 
     test('multiple repositories should share authenticated connection',

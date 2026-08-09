@@ -179,10 +179,30 @@ void main() async {
   // Seed test documents
   await _seedDocuments(documentRepo);
 
+  // This represents the authoritative user directory for the example. The
+  // handler reloads it for login and refresh, so changes are reflected in the
+  // next access token and a removed user can no longer receive tokens.
+  final claimsByUserId = <String, UserClaims>{
+    'user-alice-id': const UserClaims(
+      userId: 'user-alice-id',
+      username: 'alice',
+    ),
+    'user-bob-id': const UserClaims(
+      userId: 'user-bob-id',
+      username: 'bob',
+    ),
+    'user-admin-id': const UserClaims(
+      userId: 'user-admin-id',
+      username: 'admin',
+      isAdmin: true,
+    ),
+  };
+
   // Create authentication handler
   final authHandler = JwtAuthHandler<UserClaims, RefreshToken>(
     secret: 'your-256-bit-secret-key-change-in-production',
     refreshTokenRepository: refreshTokenRepo,
+    claimsLoader: (userId) async => claimsByUserId[userId],
     issuer: 'https://api.example.com',
     audience: 'example-app',
     accessTokenDuration: const Duration(minutes: 15),
@@ -211,31 +231,6 @@ void main() async {
         return 'user-admin-id';
       }
       return null;
-    },
-    claimsBuilder: (userId) async {
-      // Build claims based on user ID
-      if (userId == 'user-alice-id') {
-        return const UserClaims(
-          userId: 'user-alice-id',
-          username: 'alice',
-          isAdmin: false,
-        );
-      }
-      if (userId == 'user-bob-id') {
-        return const UserClaims(
-          userId: 'user-bob-id',
-          username: 'bob',
-          isAdmin: false,
-        );
-      }
-      if (userId == 'user-admin-id') {
-        return const UserClaims(
-          userId: 'user-admin-id',
-          username: 'admin',
-          isAdmin: true,
-        );
-      }
-      throw Exception('User not found');
     },
   );
 

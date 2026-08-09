@@ -30,10 +30,6 @@ import 'package:uuid/uuid.dart';
 ///     }
 ///     return null;
 ///   },
-///   claimsBuilder: (userId) async {
-///     // Build claims for the user
-///     return UserClaims(userId: userId, email: 'user@example.com');
-///   },
 /// );
 /// ```
 class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
@@ -43,7 +39,6 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
     required this.authHandler,
     required this.deviceCodeRepository,
     required this.userValidator,
-    required this.claimsBuilder,
     this.verificationUri = '/auth/device/verify',
     this.deviceCodeExpiration = const Duration(minutes: 10),
     this.pollingInterval = 5,
@@ -59,9 +54,6 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
   /// Returns user ID if valid, null if invalid
   final Future<String?> Function(String username, String password)
       userValidator;
-
-  /// Callback to build claims for a user ID
-  final Future<TClaims> Function(String userId) claimsBuilder;
 
   /// Verification URI for device flow
   final String verificationUri;
@@ -120,13 +112,9 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
         );
       }
 
-      // Build claims
-      final claims = await claimsBuilder(userId);
-
       // Issue tokens
       final tokens = await authHandler.issueTokens(
         userId,
-        claims,
         deviceInfo: request.headers['user-agent'],
       );
 
@@ -639,13 +627,9 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
 
         if (deviceCode.status == DeviceCodeStatus.approved &&
             deviceCode.userId != null) {
-          // Build claims
-          final claims = await claimsBuilder(deviceCode.userId!);
-
           // Issue tokens
           final tokens = await authHandler.issueTokens(
             deviceCode.userId!,
-            claims,
             deviceInfo: 'Device Code Flow',
           );
 
