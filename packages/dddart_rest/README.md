@@ -7,7 +7,7 @@ RESTful CRUD API framework for DDDart - Provides REST endpoints for aggregate ro
 ## Features
 
 - **Automatic CRUD endpoints** - Expose aggregate roots through REST APIs with a single configuration
-- **ETag concurrency control** - Optimistic locking with If-Match headers to prevent lost updates
+- **ETag conditional checks** - Detect changed ETags before an update
 - **JWT Authentication** - Built-in support for self-hosted and OAuth/OIDC authentication
 - **Device Flow** - OAuth2 device flow for CLI tools and limited-input devices
 - **JSON media contract** - JSON success bodies, JSON arrays for collections, and RFC 7807 errors
@@ -500,16 +500,25 @@ All error responses use **RFC 7807 Problem Details** format with `Content-Type: 
 | Unsupported Content-Type | 415 | Unsupported Media Type |
 | Other exceptions | 500 | Internal Server Error |
 
-## ETag Concurrency Control
+## ETag Conditional Update Checks
 
-ETags provide optimistic concurrency control to prevent lost updates when multiple clients modify the same resource concurrently.
+`CrudResource` includes ETags in item responses and can compare an `If-Match`
+header with the currently stored aggregate before a PUT. This can detect a stale
+client when another update has already been persisted and produces a different
+ETag before the comparison.
+
+The comparison and `repository.save()` are separate operations. They are not an
+atomic conditional write, so overlapping requests can both pass validation and
+then overwrite one another. Treat this feature as best-effort stale-update
+detection, not guaranteed optimistic locking.
 
 ### How It Works
 
-1. **GET requests** include an `ETag` header with the resource version
+1. **GET requests** include an `ETag` header derived from the aggregate
 2. **PUT requests** can include an `If-Match` header with the ETag
-3. Server validates the ETag before updating
+3. The server reads the current aggregate and compares its ETag
 4. If ETag doesn't match, returns `412 Precondition Failed`
+5. If it matches, the server later performs an ordinary repository save
 
 ### Basic Usage
 
@@ -539,7 +548,7 @@ curl -X PUT http://localhost:8080/users/123 \
   -d '{"id":"123","name":"Updated",...}'
 
 # Success: 200 OK with new ETag
-# Conflict: 412 Precondition Failed with current ETag
+# Different current ETag: 412 Precondition Failed
 ```
 
 ### ETag Strategies
@@ -547,7 +556,7 @@ curl -X PUT http://localhost:8080/users/123 \
 **Timestamp Strategy** (default):
 - Uses aggregate's `updatedAt` timestamp
 - Fast and efficient
-- Detects changes based on modification time
+- Detects changes only when application code advances `updatedAt`
 
 ```dart
 etagStrategy: ETagStrategy.timestamp
@@ -555,8 +564,10 @@ etagStrategy: ETagStrategy.timestamp
 
 **Content Hash Strategy**:
 - Uses SHA-256 hash of serialized content
-- More precise - detects any content change
+- More precise - detects serialized-content changes at comparison time
 - Slightly slower due to hashing
+
+Neither strategy makes the subsequent repository save atomic.
 
 ```dart
 etagStrategy: ETagStrategy.contentHash
@@ -577,12 +588,12 @@ When a `412 Precondition Failed` response is received:
   "type": "about:blank",
   "title": "Precondition Failed",
   "status": 412,
-  "detail": "Resource was modified by another client"
+  "detail": "The provided ETag does not match the current resource state. Fetch the current representation before retrying."
 }
 ```
 
 **Headers:**
-- `ETag: "2024-01-15T11:00:00.000Z"` - Current resource version
+- `ETag: "2024-01-15T11:00:00.000Z"` - ETag derived from the current aggregate
 
 ### Backward Compatibility
 
@@ -593,7 +604,10 @@ ETags are **optional** - the `If-Match` header is not required:
 
 This allows gradual adoption without breaking existing clients.
 
-### Concurrent Update Example
+### Sequential Stale-Update Example
+
+This flow rejects Client B because Client A's save completes before Client B's
+PUT begins. It does not model two overlapping PUT operations.
 
 ```dart
 // Client A fetches user
@@ -604,14 +618,14 @@ final etagA = responseA.headers['etag'];
 final responseB = await client.get('/users/123');
 final etagB = responseB.headers['etag'];
 
-// Client A updates successfully
+// Client A's update completes successfully
 await client.put(
   '/users/123',
   headers: {'If-Match': etagA},
   body: updatedDataA,
 );
 
-// Client B's update is rejected (stale ETag)
+// Client B's later update is rejected (stale ETag)
 final responseBUpdate = await client.put(
   '/users/123',
   headers: {'If-Match': etagB},  // Stale!

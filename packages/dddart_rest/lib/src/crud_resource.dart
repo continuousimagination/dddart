@@ -167,7 +167,7 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   /// ResponseBuilder instance for creating HTTP responses
   late final ResponseBuilder<T> _responseBuilder = ResponseBuilder<T>();
 
-  /// ETag generator for optimistic concurrency control
+  /// ETag generator for conditional request checks
   late final ETagGenerator<T> _etagGenerator;
 
   /// Logger instance for REST API request/response logging
@@ -206,7 +206,7 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   /// Parses the ID, calls repository.getById(), and returns a JSON aggregate.
   /// The Accept header must allow JSON when it is present.
   ///
-  /// Includes ETag header in response for optimistic concurrency control.
+  /// Includes an ETag header for use in later conditional requests.
   ///
   /// If auth handler is configured, authenticates the request first.
   ///
@@ -383,7 +383,7 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   /// created aggregate as JSON. Content-Type must be application/json and the
   /// Accept header must allow JSON.
   ///
-  /// Includes ETag header in response for optimistic concurrency control.
+  /// Includes an ETag header for use in later conditional requests.
   ///
   /// If auth handler is configured, authenticates the request first.
   /// If authorization handler is configured, authorizes the request after authentication.
@@ -477,10 +477,14 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   /// The route ID is authoritative and must match the deserialized aggregate
   /// ID. A mismatch returns 400 before authorization, ETag lookup, or saving.
   ///
-  /// Supports optimistic concurrency control via If-Match header:
+  /// Supports best-effort stale-update detection via the If-Match header:
   /// - If If-Match header is present, validates ETag before updating
   /// - If ETag doesn't match, returns 412 Precondition Failed
   /// - If If-Match is not present, update proceeds without validation
+  ///
+  /// The ETag read/comparison and [Repository.save] are separate operations.
+  /// Overlapping updates can both pass validation before either save completes;
+  /// this is not an atomic conditional-write guarantee.
   ///
   /// Includes ETag header in response.
   ///
@@ -533,7 +537,7 @@ class CrudResource<T extends AggregateRoot, TClaims> {
         return response;
       }
 
-      // Check If-Match header for optimistic concurrency control
+      // Check If-Match before saving. This read/check is not atomic with save.
       final ifMatch = request.headers['if-match'];
       if (ifMatch != null) {
         // Fetch current aggregate to validate ETag
@@ -552,8 +556,8 @@ class CrudResource<T extends AggregateRoot, TClaims> {
               'type': 'about:blank',
               'title': 'Precondition Failed',
               'status': 412,
-              'detail': 'Resource was modified by another client. '
-                  'The provided ETag does not match the current resource state.',
+              'detail': 'The provided ETag does not match the current resource '
+                  'state. Fetch the current representation before retrying.',
             }),
           );
           _logger

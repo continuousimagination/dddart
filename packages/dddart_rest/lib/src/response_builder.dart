@@ -19,7 +19,7 @@ class ResponseBuilder<T extends AggregateRoot> {
   /// Parameters:
   /// - [aggregate]: The aggregate root to serialize and return
   /// - [serializer]: The serializer to use for converting the aggregate
-  /// - [etag]: Optional ETag for optimistic concurrency control
+  /// - [etag]: Optional ETag response validator
   ///
   /// Returns: A [Response] with status 200 and serialized body
   ///
@@ -53,7 +53,7 @@ class ResponseBuilder<T extends AggregateRoot> {
   /// Parameters:
   /// - [aggregate]: The newly created aggregate root to serialize and return
   /// - [serializer]: The serializer to use for converting the aggregate
-  /// - [etag]: Optional ETag for optimistic concurrency control
+  /// - [etag]: Optional ETag response validator
   ///
   /// Returns: A [Response] with status 201 and serialized body
   ///

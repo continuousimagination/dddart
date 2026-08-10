@@ -56,14 +56,17 @@ Shows how to add custom routes alongside CRUD resources:
 
 **Run:** `dart run custom_routes_example.dart`
 
-### 6. ETag Concurrency Control (`etag_concurrency_example.dart`)
+### 6. ETag Conditional Checks (`etag_concurrency_example.dart`)
 
-Demonstrates optimistic concurrency control using ETags:
-- Preventing lost updates from concurrent modifications
+Demonstrates best-effort stale-update detection using ETags:
+- Rejecting an update after an earlier persisted update changes the ETag
 - If-Match header validation
 - 412 Precondition Failed responses
 - Client retry logic after conflicts
 - Backward compatibility (If-Match is optional)
+
+The ETag comparison and repository save are not atomic, so overlapping writes
+can both pass validation.
 
 **Run:** `dart run etag_concurrency_example.dart`
 
