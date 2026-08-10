@@ -1,25 +1,18 @@
 import 'package:dddart/dddart.dart';
 
-/// Exception thrown when a conditional request fails due to ETag mismatch
+/// Describes a conditional request failure caused by an ETag mismatch.
 ///
-/// This exception indicates that the resource was modified by another client
-/// between when it was fetched and when the update was attempted.
+/// A mismatch means the supplied ETag differs from the current ETag. It does not
+/// identify what changed the aggregate and does not make a later repository
+/// save atomic.
 ///
-/// Clients should handle this by:
+/// Clients can respond by:
 /// 1. Fetching the latest version of the resource
 /// 2. Re-applying their changes
 /// 3. Retrying the update
 ///
-/// Example:
-/// ```dart
-/// try {
-///   await repository.save(user);
-/// } on ConcurrencyException catch (e) {
-///   // Resource was modified by another client
-///   final latest = await repository.getById(user.id);
-///   // Merge changes and retry
-/// }
-/// ```
+/// `CrudResource` currently returns a 412 response directly when ETags differ;
+/// ordinary [Repository.save] does not throw this exception.
 class ConcurrencyException implements Exception {
   /// Creates a concurrency exception
   ///

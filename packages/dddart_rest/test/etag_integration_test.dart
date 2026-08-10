@@ -356,7 +356,7 @@ void main() {
         expect(body['type'], equals('about:blank'));
         expect(body['title'], equals('Precondition Failed'));
         expect(body['status'], equals(412));
-        expect(body['detail'], contains('Resource was modified'));
+        expect(body['detail'], contains('provided ETag does not match'));
       });
 
       test('does not update aggregate when ETag mismatches', () async {
@@ -390,8 +390,9 @@ void main() {
       });
     });
 
-    group('concurrent update scenario', () {
-      test('prevents lost updates with If-Match', () async {
+    group('sequential stale update scenario', () {
+      test('rejects stale If-Match after an earlier update completes',
+          () async {
         // Client A fetches user
         await repository.save(testUser);
         final getRequest = Request(
@@ -405,7 +406,7 @@ void main() {
         // Client B fetches user (gets same ETag)
         final etagForClientB = etagForClientA;
 
-        // Client A updates successfully
+        // Client A's update completes before Client B sends its update.
         final clientAUpdate = jsonEncode({
           'id': testUser.id.toString(),
           'name': 'Updated by A',
@@ -430,7 +431,7 @@ void main() {
         );
         expect(clientAResponse.statusCode, equals(200));
 
-        // Client B tries to update with stale ETag
+        // Client B later tries to update with the now-stale ETag.
         final clientBUpdate = jsonEncode({
           'id': testUser.id.toString(),
           'name': 'Updated by B',

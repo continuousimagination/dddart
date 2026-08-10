@@ -48,17 +48,18 @@ class UserSerializer extends ExampleJsonSerializer<User> {
   }
 }
 
-/// Example demonstrating ETag-based optimistic concurrency control
+/// Example demonstrating ETag-based conditional update checks.
 ///
-/// This example shows how ETags prevent lost updates when multiple clients
-/// modify the same resource concurrently.
+/// This example shows how an `If-Match` check rejects a stale update after an
+/// earlier update has completed. The ETag comparison and repository save are
+/// not atomic, so overlapping writes can both pass validation.
 ///
 /// Run this example:
 /// ```bash
 /// dart run etag_concurrency_example.dart
 /// ```
 void main() async {
-  print('=== ETag Concurrency Control Example ===\n');
+  print('=== ETag Conditional Update Example ===\n');
 
   // Create repository and server
   final repository = InMemoryRepository<User>();
@@ -233,7 +234,7 @@ Future<void> _runConcurrencyDemo() async {
     }
 
     print('=== Summary ===');
-    print('✓ ETags prevent lost updates from concurrent modifications');
+    print('✓ If-Match rejected an update stale after an earlier save');
     print('✓ 412 Precondition Failed returned when ETag mismatches');
     print('✓ Current ETag included in 412 response for client retry');
     print('✓ Backward compatible - If-Match header is optional');

@@ -13,10 +13,12 @@ enum ETagStrategy {
   contentHash,
 }
 
-/// Generates ETags for aggregate roots to support optimistic concurrency control
+/// Generates ETags for aggregate roots to support conditional request checks.
 ///
-/// ETags are used in HTTP conditional requests (If-Match header) to prevent
-/// lost updates when multiple clients modify the same resource concurrently.
+/// `CrudResource` can compare an ETag from an HTTP `If-Match` header with the
+/// current aggregate before saving. Generating or comparing an ETag does not
+/// make the later repository save atomic, so overlapping writes can both pass
+/// that check.
 ///
 /// Two strategies are supported:
 /// - [ETagStrategy.timestamp]: Uses the aggregate's updatedAt timestamp

@@ -1,8 +1,7 @@
 # Unaddressed framework defects
 
-Snapshot: 2026-08-09, after the accepted authentication defects AUTH-001,
-AUTH-003, AUTH-005, and AUTH-006 were completed on
-`fix/auth-framework-defects`.
+Snapshot: 2026-08-10, after the authentication fixes and the
+QueryableRepository/DynamoDB cleanup were merged.
 
 This register contains the 6 implementation defects that remain. Resolved
 entries are removed once their completion tests pass. It is not an exhaustive
@@ -12,7 +11,7 @@ Suggested priorities are provisional:
 
 - **P1**: can cause incorrect data, authorization failures, or unsafe behavior;
 - **P2**: breaks a supported workflow or makes an API materially misleading;
-- **P3**: quality or validation debt that can conceal other failures.
+- **P3**: deferred or low-current-priority behavior, quality, or validation debt.
 
 ## Current disposition
 
@@ -20,7 +19,10 @@ Suggested priorities are provisional:
 
 - **EVENT-001** through **EVENT-004**: the distributed-events feature remains a
   work in progress.
-- **REST-004**: decide the intended ETag and atomic-concurrency contract first.
+- **REST-004**: accepted as a low-current-priority limitation. The existing
+  `If-Match` check can detect a change persisted before validation when that
+  change produces a different ETag, but it does not make the later repository
+  save atomic.
 - **AUTH-002**: revisit the authorization contract later.
 
 ## Summary
@@ -31,7 +33,7 @@ Suggested priorities are provisional:
 | EVENT-002 | P2 | Distributed events | POST ingestion ignores its server and cannot safely support a custom stored-event subtype. |
 | EVENT-003 | P1 | Distributed events | `autoForward` can forward a remotely polled event back to the server. |
 | EVENT-004 | P1 | Distributed events | Polling advances its cursor before an event is successfully reconstructed and published. |
-| REST-004 | P1 | REST server | ETag validation is a non-atomic read/check/save sequence. |
+| REST-004 | P3 | REST server | ETag validation is a non-atomic read/check/save sequence. |
 | AUTH-002 | P1 | Authorization | Item GET and unfiltered collection GET bypass `AuthorizationHandler`. |
 
 ## Confirmed generator and persistence defects
@@ -97,9 +99,12 @@ Suggested priorities are provisional:
 - **Impact:** two concurrent writers can both pass the comparison and overwrite
   one another. `If-Match` is also optional, so unconditional updates remain
   possible by design.
+- **Current disposition:** accepted as a documented, low-current-priority
+  limitation while dddart does not target high-contention multi-writer use.
 - **Done when:** a repository-level conditional write/version contract makes the
   compare-and-save atomic and a concurrency test proves only one stale writer
-  succeeds. If ETags remain advisory, the API and naming should say so plainly.
+  succeeds. Until then, public documentation must describe ETags as a
+  best-effort stale-update check rather than an atomic concurrency guarantee.
 
 ### AUTH-002 — authorization is not applied to two read paths
 

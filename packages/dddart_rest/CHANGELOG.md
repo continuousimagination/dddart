@@ -59,14 +59,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **ETag-based optimistic concurrency control** - Prevent lost updates from concurrent modifications
+- **ETag-based conditional update checks** - Can detect a different current ETag before a PUT
   - `ETag` header automatically included in GET, POST, and PUT responses
   - `If-Match` header validation in PUT requests
   - `412 Precondition Failed` response when ETag mismatches
   - Two ETag strategies: `timestamp` (default) and `contentHash`
   - `ETagGenerator` class for generating and validating ETags
-  - `ConcurrencyException` for handling concurrency conflicts
+  - `ConcurrencyException` value type for describing ETag mismatches; ordinary
+    repository saves do not throw it
   - Backward compatible - `If-Match` header is optional
+  - The ETag comparison and repository save are separate operations; overlapping
+    writes can both pass validation, so this is not atomic optimistic locking
   - Example: `example/etag_concurrency_example.dart`
 
 ## [0.9.0] - 2024-11-17
