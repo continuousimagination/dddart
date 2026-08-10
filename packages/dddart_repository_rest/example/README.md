@@ -69,6 +69,26 @@ Comprehensive error handling patterns:
 dart run error_handling_example.dart
 ```
 
+### 5. Agent Parallelism Experiment 001 (`product_price_range_server_example.dart`)
+
+Preserves the cross-boundary Product query used to study independently
+implementable client, server, and composition work. The current-main adaptation
+uses an explicit `ProductPriceRangeReadRepository`, the JSON-only
+`CrudResource`, and the single query key `priceRange=<min>,<max>`.
+The preserved client method returns the framework's default first page (up to 50
+matching products); it is not an exhaustive collection API.
+
+Run its peer-independent handler/client tests and real-HTTP integration test:
+
+```bash
+dart test test/product_query_handler_test.dart
+dart test test/product_rest_repository_price_range_test.dart
+dart test test/product_price_range_e2e_test.dart
+```
+
+The historical brief, results, and follow-up proposal live under the repository
+root and `docs/experiments/` / `docs/agent-native/`.
+
 ## Setting Up a Test Server
 
 To run these examples, you need a REST API server. Here's how to set one up using `dddart_rest`:

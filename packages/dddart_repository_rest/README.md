@@ -310,9 +310,12 @@ part 'product.g.dart';
 The generator creates `ProductRestRepositoryBase` with:
 - Concrete implementations of `getById()`, `save()`, `deleteById()`
 - Abstract declarations of custom methods
-- Protected members: `_connection`, `_serializer`, `_resourcePath`, `_mapHttpException()`
+- Library-private helpers: `_connection`, `_serializer`, `_resourcePath`,
+  `_mapHttpException()`
 
-Extend the base class and implement custom methods:
+Implement custom methods in the same Dart library as the generated part. Dart
+underscore members are library-private, so moving this class to a separately
+imported library would make those helpers inaccessible:
 
 ```dart
 class ProductRestRepository extends ProductRestRepositoryBase {
@@ -321,8 +324,12 @@ class ProductRestRepository extends ProductRestRepositoryBase {
   @override
   Future<List<Product>> findByCategory(String category) async {
     try {
-      final response = await _connection.client.get(
-        '$_resourcePath?category=$category',
+      final uri = Uri.parse(
+        '${_connection.baseUrl}$_resourcePath',
+      ).replace(queryParameters: {'category': category});
+      final response = await _connection.executeRequest(
+        () => _connection.client.get(uri),
+        operation: 'find products by category',
       );
 
       if (response.statusCode == 200) {
@@ -349,8 +356,13 @@ class ProductRestRepository extends ProductRestRepositoryBase {
     double maxPrice,
   ) async {
     try {
-      final response = await _connection.client.get(
-        '$_resourcePath?minPrice=$minPrice&maxPrice=$maxPrice',
+      // CrudResource dispatches one non-pagination query selector at a time.
+      final uri = Uri.parse(
+        '${_connection.baseUrl}$_resourcePath',
+      ).replace(queryParameters: {'priceRange': '$minPrice,$maxPrice'});
+      final response = await _connection.executeRequest(
+        () => _connection.client.get(uri),
+        operation: 'find products by price range',
       );
 
       if (response.statusCode == 200) {
@@ -373,14 +385,18 @@ class ProductRestRepository extends ProductRestRepositoryBase {
 }
 ```
 
-### Protected Members
+### Library-Private Generated Helpers
 
-When extending the generated base class, you have access to:
+When implementing the generated base in the same Dart library, you have access
+to:
 
 - **`_connection`**: The `RestConnection` instance for making HTTP requests
 - **`_serializer`**: The JSON serializer for the aggregate type
 - **`_resourcePath`**: The resource path string (e.g., `'users'`)
 - **`_mapHttpException()`**: Helper method for mapping HTTP status codes to `RepositoryException` types
+
+These are not protected members. A subclass in another Dart library cannot use
+them.
 
 ## Error Handling
 

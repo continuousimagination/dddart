@@ -120,8 +120,12 @@
 ///   @override
 ///   Future<User?> findByEmail(String email) async {
 ///     try {
-///       final response = await _connection.client.get(
-///         '$_resourcePath?email=$email',
+///       final uri = Uri.parse(
+///         '${_connection.baseUrl}$_resourcePath',
+///       ).replace(queryParameters: {'email': email});
+///       final response = await _connection.executeRequest(
+///         () => _connection.client.get(uri),
+///         operation: 'find user by email',
 ///       );
 ///
 ///       if (response.statusCode == 200) {
@@ -142,6 +146,9 @@
 ///   }
 /// }
 /// ```
+///
+/// The underscore-prefixed helpers are Dart library-private. Keep the concrete
+/// implementation in the same library as the generated part if it uses them.
 library dddart_repository_rest;
 
 // Annotations
