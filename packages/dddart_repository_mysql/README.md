@@ -573,7 +573,7 @@ try {
 **Timeout Errors (MySQL Errors 1205, 3024):**
 ```dart
 try {
-  final orders = await repository.getAll();
+  final orders = await orderRepository.findRecent(limit: 100);
 } on RepositoryException catch (e) {
   if (e.type == RepositoryExceptionType.timeout) {
     // Handle timeout - maybe return cached data
@@ -670,28 +670,10 @@ final repository = OrderMysqlRepository(connection);
 
 ### 6. Data Migration (Optional)
 
-If you need to migrate existing data:
-
-```dart
-// Export from SQLite
-final sqliteConn = SqliteConnection.file('orders.db');
-await sqliteConn.open();
-final sqliteRepo = OrderSqliteRepository(sqliteConn);
-final orders = await sqliteRepo.getAll();
-
-// Import to MySQL
-final mysqlConn = MysqlConnection(/* ... */);
-await mysqlConn.open();
-final mysqlRepo = OrderMysqlRepository(mysqlConn);
-await mysqlRepo.createTables();
-
-for (final order in orders) {
-  await mysqlRepo.save(order);
-}
-
-await sqliteConn.close();
-await mysqlConn.close();
-```
+Generated repositories intentionally expose CRUD operations only. For bulk
+migration, use database-native export/import tools or define an
+application-specific bounded read and process one batch at a time. This package
+does not supply a full-store export or generic pagination contract.
 
 ### Key Differences
 

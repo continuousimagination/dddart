@@ -1,5 +1,6 @@
 import 'package:dddart/src/aggregate_root.dart';
 import 'package:dddart/src/in_memory_repository.dart';
+import 'package:dddart/src/repository.dart';
 import 'package:dddart/src/repository_exception.dart';
 import 'package:dddart/src/uuid_value.dart';
 import 'package:logging/logging.dart';
@@ -221,6 +222,25 @@ void main() {
     });
 
     group('getAll', () {
+      test('is a concrete convenience on a Repository implementation', () {
+        final Repository<TestAggregate> baseRepository = repository;
+
+        expect(baseRepository, same(repository));
+      });
+
+      test('returns an unmodifiable asynchronous snapshot', () async {
+        final aggregate = TestAggregate(name: 'Test User');
+        await repository.save(aggregate);
+
+        final allAggregates = await repository.getAll();
+
+        expect(allAggregates, [aggregate]);
+        expect(
+          () => allAggregates.add(TestAggregate(name: 'Another')),
+          throwsUnsupportedError,
+        );
+      });
+
       test('returns all stored aggregates', () async {
         final aggregate1 = TestAggregate(name: 'User 1');
         final aggregate2 = TestAggregate(name: 'User 2');
@@ -244,9 +264,9 @@ void main() {
         expect(allAggregates, isEmpty);
       });
 
-      test('returns unmodifiable list', () {
+      test('returns unmodifiable synchronous snapshot', () async {
         final aggregate = TestAggregate(name: 'Test User');
-        repository.save(aggregate);
+        await repository.save(aggregate);
 
         final allAggregates = repository.getAllSync();
 
