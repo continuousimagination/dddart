@@ -1,6 +1,7 @@
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/dddart_rest.dart';
 import '../models/user.dart';
+import '../repositories/user_repository.dart';
 
 /// Query handler for filtering users by first name
 ///
@@ -20,7 +21,7 @@ import '../models/user.dart';
 ///    The CrudResource detects the 'firstName' parameter and invokes this handler
 ///
 /// 3. PARAMETERS:
-///    - repository: The repository instance to query (InMemoryRepository<User>)
+///    - repository: The repository instance to query (`UserRepository`)
 ///    - queryParams: All query parameters from the request (e.g., {'firstName': 'John'})
 ///    - skip: Pagination offset (from ?skip=N or default)
 ///    - take: Pagination limit (from ?take=M or default)
@@ -37,9 +38,22 @@ import '../models/user.dart';
 ///
 /// IMPLEMENTATION NOTES:
 /// - This example uses case-insensitive matching for better UX
-/// - In production, you might use database queries instead of in-memory filtering
-/// - The handler applies pagination AFTER filtering to get correct results
+/// - The repository owns selection and pagination
 /// - Empty/null parameter returns empty result (could also return 400 error)
+Future<QueryResult<User>> userCollectionHandler(
+  Repository<User> repository,
+  Map<String, String> queryParams,
+  int skip,
+  int take,
+  dynamic authResult,
+) async {
+  final page = await (repository as UserRepository).list(
+    skip: skip,
+    take: take,
+  );
+  return QueryResult(page.items, totalCount: page.totalCount);
+}
+
 Future<QueryResult<User>> firstNameQueryHandler(
   Repository<User> repository,
   Map<String, String> queryParams,
@@ -56,27 +70,18 @@ Future<QueryResult<User>> firstNameQueryHandler(
     return QueryResult<User>([], totalCount: 0);
   }
 
-  // Get all users from the repository
-  final allUsers = await (repository as InMemoryRepository<User>).getAll();
-
-  // Filter users by first name (case-insensitive for better UX)
-  // In a production system with a database, this would be a SQL WHERE clause
-  // or a database query to avoid loading all records into memory
-  final matchingUsers = allUsers
-      .where((user) => user.firstName.toLowerCase() == firstName.toLowerCase())
-      .toList();
-
-  // Apply pagination to the filtered results
-  // skip: number of items to skip (e.g., skip=10 starts at 11th item)
-  // take: number of items to return (e.g., take=5 returns 5 items)
-  final paginatedUsers = matchingUsers.skip(skip).take(take).toList();
+  final page = await (repository as UserRepository).findByFirstName(
+    firstName,
+    skip: skip,
+    take: take,
+  );
 
   // Return QueryResult with both the paginated items and total count
   // The total count is used for the X-Total-Count response header,
   // allowing clients to implement pagination UI (e.g., "Showing 1-10 of 25")
   return QueryResult<User>(
-    paginatedUsers,
-    totalCount: matchingUsers.length,
+    page.items,
+    totalCount: page.totalCount,
   );
 }
 
@@ -124,22 +129,16 @@ Future<QueryResult<User>> emailQueryHandler(
     return QueryResult<User>([], totalCount: 0);
   }
 
-  // Get all users from the repository
-  final allUsers = await (repository as InMemoryRepository<User>).getAll();
-
-  // Filter users by email (case-insensitive per RFC 5321)
-  // In production, this would be a database query with an index on email
-  final matchingUsers = allUsers
-      .where((user) => user.email.toLowerCase() == email.toLowerCase())
-      .toList();
-
-  // Apply pagination (usually returns 0 or 1 item for unique fields)
-  final paginatedUsers = matchingUsers.skip(skip).take(take).toList();
+  final page = await (repository as UserRepository).findByEmail(
+    email,
+    skip: skip,
+    take: take,
+  );
 
   // Return QueryResult
   // For unique fields, totalCount will typically be 0 (not found) or 1 (found)
   return QueryResult<User>(
-    paginatedUsers,
-    totalCount: matchingUsers.length,
+    page.items,
+    totalCount: page.totalCount,
   );
 }

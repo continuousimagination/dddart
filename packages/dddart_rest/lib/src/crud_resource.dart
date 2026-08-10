@@ -8,7 +8,6 @@ import 'package:dddart_rest/src/authorization_handler.dart';
 import 'package:dddart_rest/src/error_mapper.dart';
 import 'package:dddart_rest/src/etag_generator.dart';
 import 'package:dddart_rest/src/query_handler.dart';
-import 'package:dddart_rest/src/repository_query_support.dart';
 import 'package:dddart_rest/src/response_builder.dart';
 import 'package:shelf/shelf.dart';
 
@@ -23,7 +22,7 @@ import 'package:shelf/shelf.dart';
 ///
 /// Example without authentication:
 /// ```dart
-/// final userResource = CrudResource<User>(
+/// final userResource = CrudResource<User, void>(
 ///   path: '/users',
 ///   repository: userRepository,
 ///   serializer: jsonSerializer,
@@ -48,6 +47,7 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   /// - [serializer]: JSON serializer for request and response bodies
   /// - [authenticationHandler]: Optional authentication handler. When provided, all CRUD operations require authentication
   /// - [authorizationHandler]: Optional authorization handler. When provided, operations are authorized after authentication
+  /// - [collectionHandler]: Optional handler for unfiltered collection retrieval
   /// - [queryHandlers]: Map of query parameter names to handler functions
   /// - [customExceptionHandlers]: Map of exception types to error response handlers
   /// - [defaultSkip]: Default skip value for pagination (defaults to 0)
@@ -64,6 +64,7 @@ class CrudResource<T extends AggregateRoot, TClaims> {
     required this.serializer,
     this.authenticationHandler,
     this.authorizationHandler,
+    this.collectionHandler,
     this.queryHandlers = const {},
     this.customExceptionHandlers = const {},
     this.defaultSkip = 0,
@@ -108,6 +109,13 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   /// The handler is invoked after authentication but before executing the operation.
   /// If authorization fails, a 403 Forbidden response is returned.
   final AuthorizationHandler<T, TClaims>? authorizationHandler;
+
+  /// Optional handler for unfiltered collection retrieval.
+  ///
+  /// The handler owns datastore-side selection, ordering, pagination, and the
+  /// accurate total count. It receives an empty query-parameter map, normalized
+  /// pagination values, and the current authentication result.
+  final QueryHandler<T>? collectionHandler;
 
   /// Map of query parameter names to handler functions
   ///
@@ -243,7 +251,7 @@ class CrudResource<T extends AggregateRoot, TClaims> {
 
   /// Handles GET /resource with optional query parameters and pagination
   ///
-  /// - No query params: returns all items (paginated)
+  /// - No query params: invokes [collectionHandler], or returns 400 if absent
   /// - One query param: looks up and invokes corresponding query handler
   /// - Multiple query params: returns 400 error
   ///
@@ -311,8 +319,23 @@ class CrudResource<T extends AggregateRoot, TClaims> {
       QueryResult<T> result;
 
       if (filterParams.isEmpty) {
-        // No filters - return all items
-        result = await _getAllItems(pagination.skip, pagination.take);
+        final handler = collectionHandler;
+        if (handler == null) {
+          final response = _responseBuilder.badRequest(
+            'Unfiltered collection retrieval is unsupported for this resource. '
+            'Configure a collectionHandler.',
+          );
+          _logger.fine('GET /$path$queryString - ${response.statusCode}');
+          return response;
+        }
+
+        result = await handler(
+          repository,
+          const <String, String>{},
+          pagination.skip,
+          pagination.take,
+          authCheck.authResult,
+        );
       } else if (filterParams.length > 1) {
         // Multiple filters not allowed
         final response = _responseBuilder.badRequest(
@@ -747,7 +770,7 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   /// Edge cases:
   /// - Negative skip is treated as zero
   /// - Negative take is treated as defaultTake
-  /// - Zero take returns empty array
+  /// - Zero take is preserved for the selected collection handler
   /// - Take values exceeding maxTake are capped at maxTake
   ///
   /// Parameters:
@@ -774,32 +797,6 @@ class CrudResource<T extends AggregateRoot, TClaims> {
     }
 
     return _PaginationParams(skip, take);
-  }
-
-  /// Gets all items from the repository with pagination
-  ///
-  /// Note: This method requires repository item-enumeration capability
-  /// (a `getAll()` implementation). For large datasets, prefer registering
-  /// dedicated query handlers.
-  ///
-  /// Parameters:
-  /// - [skip]: Number of items to skip
-  /// - [take]: Number of items to return (if zero, returns empty array)
-  ///
-  /// Returns: A QueryResult with paginated items and total count
-  Future<QueryResult<T>> _getAllItems(int skip, int take) async {
-    final allItems = await getAllItems(
-      repository,
-      operationName: 'collection query',
-    );
-
-    // Handle zero take - return empty array
-    if (take == 0) {
-      return QueryResult([], totalCount: allItems.length);
-    }
-
-    final paginatedItems = allItems.skip(skip).take(take).toList();
-    return QueryResult(paginatedItems, totalCount: allItems.length);
   }
 }
 

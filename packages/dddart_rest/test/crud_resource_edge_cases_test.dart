@@ -64,6 +64,20 @@ Request createRequest({
   );
 }
 
+Future<QueryResult<TestUser>> pagedCollectionHandler(
+  Repository<TestUser> repository,
+  Map<String, String> queryParams,
+  int skip,
+  int take,
+  dynamic authResult,
+) async {
+  final items = (repository as InMemoryRepository<TestUser>).getAllSync();
+  return QueryResult<TestUser>(
+    items.skip(skip).take(take).toList(),
+    totalCount: items.length,
+  );
+}
+
 void main() {
   late InMemoryRepository<TestUser> repository;
   late TestUserSerializer serializer;
@@ -112,6 +126,7 @@ void main() {
         repository: repository,
         serializer: serializer,
         defaultTake: 10,
+        collectionHandler: pagedCollectionHandler,
       );
 
       final request = createRequest(path: '/users?skip=-5&take=3');
@@ -146,6 +161,7 @@ void main() {
         repository: repository,
         serializer: serializer,
         defaultTake: 3,
+        collectionHandler: pagedCollectionHandler,
       );
 
       final request = createRequest(path: '/users?take=-10');
@@ -175,10 +191,21 @@ void main() {
         await repository.save(user);
       }
 
+      var handlerCalls = 0;
       final resource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: repository,
         serializer: serializer,
+        collectionHandler: (repo, params, skip, take, authResult) {
+          handlerCalls++;
+          return pagedCollectionHandler(
+            repo,
+            params,
+            skip,
+            take,
+            authResult,
+          );
+        },
       );
 
       final request = createRequest(path: '/users?take=0');
@@ -192,6 +219,7 @@ void main() {
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString) as List;
       expect(body.length, equals(0));
+      expect(handlerCalls, equals(1));
 
       // X-Total-Count should still reflect total items
       expect(response.headers['X-Total-Count'], equals('5'));
@@ -214,6 +242,7 @@ void main() {
         path: '/users',
         repository: repository,
         serializer: serializer,
+        collectionHandler: pagedCollectionHandler,
       );
 
       final request = createRequest(path: '/users?skip=1000&take=10');

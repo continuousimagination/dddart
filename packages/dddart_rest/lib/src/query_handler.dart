@@ -27,13 +27,15 @@ class QueryResult<T extends AggregateRoot> {
 
 /// Function signature for query handlers
 ///
-/// Query handlers process query parameters and return filtered results.
-/// They are registered with a CrudResource and invoked when a GET request
-/// to a collection endpoint includes the corresponding query parameter.
+/// Query handlers process collection reads and return explicitly selected
+/// results. Named handlers are invoked when a GET request includes the
+/// corresponding query parameter. A `CrudResource` can also register one as its
+/// unfiltered collection handler; that handler receives an empty parameter map.
 ///
 /// Parameters:
 /// - [repository]: The repository instance to query
-/// - [queryParams]: All query parameters from the request (excluding skip/take)
+/// - [queryParams]: Filter parameters from the request (excluding skip/take), or
+///   an empty map for an unfiltered collection request
 /// - [skip]: Number of items to skip (for pagination)
 /// - [take]: Number of items to return (for pagination)
 /// - [authResult]: Optional authentication result if auth handler is configured
@@ -42,16 +44,28 @@ class QueryResult<T extends AggregateRoot> {
 ///
 /// Example:
 /// ```dart
+/// abstract interface class UserRepository implements Repository<User> {
+///   Future<({List<User> items, int totalCount})> findByFirstName(
+///     String firstName, {
+///     required int skip,
+///     required int take,
+///   });
+/// }
+///
 /// final firstNameHandler = (Repository<User> repository,
 ///                           Map<String, String> queryParams,
 ///                           int skip,
 ///                           int take,
-///                           AuthResult? authResult) async {
+///                           dynamic authResult) async {
 ///   final firstName = queryParams['firstName']!;
-///   final allMatches = await repository.getByFirstName(firstName);
+///   final page = await (repository as UserRepository).findByFirstName(
+///     firstName,
+///     skip: skip,
+///     take: take,
+///   );
 ///   return QueryResult(
-///     allMatches.skip(skip).take(take).toList(),
-///     totalCount: allMatches.length,
+///     page.items,
+///     totalCount: page.totalCount,
 ///   );
 /// };
 /// ```

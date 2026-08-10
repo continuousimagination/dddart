@@ -38,17 +38,18 @@ import 'package:dddart_rest/dddart_rest.dart';
 
 void main() async {
   // Create repository and serializer
-  final repository = InMemoryRepository<User>();
+  final UserReadRepository repository = UserDatabaseRepository();
   final serializer = UserJsonSerializer();
 
   // Create and configure HTTP server
   final server = HttpServer(port: 8080);
   
   server.registerResource(
-    CrudResource<User>(
+    CrudResource<User, void>(
       path: '/users',
       repository: repository,
       serializer: serializer,
+      collectionHandler: listUsers,
     ),
   );
 
@@ -58,7 +59,7 @@ void main() async {
 ```
 
 This creates the following endpoints:
-- `GET /users` - List all users
+- `GET /users` - List a datastore-paginated user collection
 - `GET /users/:id` - Get user by ID
 - `POST /users` - Create new user
 - `PUT /users/:id` - Update user
@@ -110,7 +111,13 @@ Response (200 OK):
 }
 ```
 
-#### GET - List all (collection)
+#### GET - Read a collection page
+
+This endpoint is available only when the resource configures a
+`collectionHandler`. The handler owns datastore-side selection, ordering,
+pagination, and the accurate total count. Without one, an unfiltered collection
+request returns a problem+json `400 Bad Request`; `CrudResource` never loads the
+repository and paginates it in memory.
 
 ```bash
 curl http://localhost:8080/users
@@ -134,7 +141,7 @@ Response (200 OK):
 ]
 ```
 
-Headers:
+Optional header (when the handler supplies `totalCount`):
 ```
 X-Total-Count: 150
 ```
@@ -202,7 +209,7 @@ Each CRUD resource uses one `JsonSerializer<T>`:
 
 ```dart
 server.registerResource(
-  CrudResource<User>(
+  CrudResource<User, void>(
     path: '/users',
     repository: repository,
     serializer: jsonSerializer,
@@ -256,7 +263,8 @@ All collection endpoints support pagination via query parameters:
 curl http://localhost:8080/users?skip=20&take=10
 ```
 
-Response includes `X-Total-Count` header with the total number of items:
+When a handler supplies `totalCount`, the response includes an
+`X-Total-Count` header:
 
 ```
 HTTP/1.1 200 OK
@@ -271,10 +279,11 @@ Content-Type: application/json
 Configure pagination defaults when registering a resource:
 
 ```dart
-CrudResource<User>(
+CrudResource<User, void>(
   path: '/users',
   repository: repository,
   serializer: serializer,
+  collectionHandler: listUsers,
   defaultSkip: 0,      // Default: 0
   defaultTake: 20,     // Default: 50
   maxTake: 100,        // Default: 100 (prevents excessive queries)
@@ -287,36 +296,58 @@ Pagination applies to:
 
 ### Custom Query Handlers
 
-Define custom query handlers to enable filtering by specific fields:
+Define explicit application read contracts and adapt them to collection and
+filter handlers:
 
 ```dart
-// Define a query handler
+abstract interface class UserReadRepository implements Repository<User> {
+  Future<QueryResult<User>> listPage({
+    required int skip,
+    required int take,
+  });
+
+  Future<QueryResult<User>> findByFirstName(
+    String firstName, {
+    required int skip,
+    required int take,
+  });
+}
+
+Future<QueryResult<User>> listUsers(
+  Repository<User> repository,
+  Map<String, String> queryParams,
+  int skip,
+  int take,
+  dynamic authResult,
+) {
+  return (repository as UserReadRepository).listPage(
+    skip: skip,
+    take: take,
+  );
+}
+
 Future<QueryResult<User>> firstNameHandler(
   Repository<User> repository,
   Map<String, String> queryParams,
   int skip,
   int take,
-) async {
+  dynamic authResult,
+) {
   final firstName = queryParams['firstName']!;
-  
-  // Filter results
-  final allUsers = await repository.getAll();
-  final matches = allUsers
-      .where((u) => u.firstName.toLowerCase() == firstName.toLowerCase())
-      .toList();
-  
-  // Apply pagination
-  final paginated = matches.skip(skip).take(take).toList();
-  
-  return QueryResult(paginated, totalCount: matches.length);
+  return (repository as UserReadRepository).findByFirstName(
+    firstName,
+    skip: skip,
+    take: take,
+  );
 }
 
 // Register the handler
 server.registerResource(
-  CrudResource<User>(
+  CrudResource<User, void>(
     path: '/users',
     repository: repository,
     serializer: serializer,
+    collectionHandler: listUsers,
     queryHandlers: {
       'firstName': firstNameHandler,
       'email': emailHandler,
@@ -340,7 +371,8 @@ curl http://localhost:8080/users?firstName=John&skip=0&take=10
 
 #### Query Handler Rules
 
-1. **No filter params** - Returns all items (paginated)
+1. **No filter params** - Invokes `collectionHandler`, or returns 400 when no
+   collection handler is configured
    ```bash
    GET /users
    GET /users?skip=10&take=5
@@ -424,7 +456,7 @@ Response handleDuplicateEmail(Object error) {
 
 // Register handlers
 server.registerResource(
-  CrudResource<User>(
+  CrudResource<User, void>(
     path: '/users',
     repository: repository,
     serializer: serializer,
@@ -484,7 +516,7 @@ ETags provide optimistic concurrency control to prevent lost updates when multip
 ```dart
 // Configure resource with ETag support (enabled by default)
 server.registerResource(
-  CrudResource<User>(
+  CrudResource<User, void>(
     path: '/users',
     repository: repository,
     serializer: serializer,
@@ -621,7 +653,7 @@ dart run main.dart
 Then test the endpoints:
 
 ```bash
-# List all users
+# Read the default user page
 curl http://localhost:8080/users
 
 # Get user by ID
@@ -646,22 +678,23 @@ Main server class that manages the shelf HTTP server lifecycle.
 class HttpServer {
   HttpServer({this.port = 8080});
   
-  void registerResource<T extends AggregateRoot>(CrudResource<T> resource);
+  void registerResource(CrudResource resource);
   Future<void> start();
   Future<void> stop();
 }
 ```
 
-### CrudResource<T>
+### CrudResource<T, TClaims>
 
 Configures and handles CRUD operations for an aggregate root type.
 
 ```dart
-class CrudResource<T extends AggregateRoot> {
+class CrudResource<T extends AggregateRoot, TClaims> {
   CrudResource({
     required String path,
     required Repository<T> repository,
     required JsonSerializer<T> serializer,
+    QueryHandler<T>? collectionHandler,
     Map<String, QueryHandler<T>> queryHandlers = const {},
     Map<Type, Response Function(Object)> customExceptionHandlers = const {},
     int defaultSkip = 0,
@@ -676,6 +709,9 @@ class CrudResource<T extends AggregateRoot> {
 - `path` - Base URL path for the resource (e.g., '/users')
 - `repository` - Repository instance for persistence operations
 - `serializer` - JSON serializer for request and success response bodies
+- `collectionHandler` - Optional handler for an unfiltered collection GET. It
+  owns selection, ordering, pagination, and `totalCount`; without it the request
+  returns 400.
 - `queryHandlers` - Map of query parameter names to handler functions
 - `customExceptionHandlers` - Map of exception types to error response handlers
 - `defaultSkip` - Default skip value for pagination (default: 0)
@@ -698,8 +734,13 @@ typedef QueryHandler<T extends AggregateRoot> = Future<QueryResult<T>> Function(
   Map<String, String> queryParams,
   int skip,
   int take,
+  dynamic authResult,
 );
 ```
+
+For `collectionHandler`, `queryParams` is empty. Both collection and named
+handlers receive normalized pagination values and the current authentication
+result.
 
 ### QueryResult<T>
 
@@ -755,7 +796,7 @@ Router (matches path + method)
 CrudResource (determines operation type)
     ↓
 ├─ handleGetById() → Repository.getById()
-├─ handleQuery() → Custom Query Handler or getAll()
+├─ handleQuery() → Explicit Collection or Named Query Handler
 ├─ handleCreate() → Deserialize + Repository.save()
 ├─ handleUpdate() → Deserialize + Repository.save()
 └─ handleDelete() → Repository.deleteById()
@@ -890,7 +931,7 @@ Choose your persistence strategy:
 ```dart
 import 'package:dddart_rest/dddart_rest.dart';
 
-final refreshTokenRepo = InMemoryRepository<RefreshToken>();
+final refreshTokenRepo = InMemoryRefreshTokenRepository<RefreshToken>();
 final deviceCodeRepo = InMemoryDeviceCodeRepository<DeviceCode>(
   lifecycle: const StandardDeviceCodeLifecycle(),
 );
@@ -898,12 +939,14 @@ final deviceCodeRepo = InMemoryDeviceCodeRepository<DeviceCode>(
 
 **Production persistence**
 
-Use an authentication-specific persistence adapter that implements and tests
-the lookup and state-transition behavior required by the refresh-token and
-device-code flows. Do not assume that a generated CRUD repository is a
-production authentication adapter. In particular, the generated MongoDB
-repositories have not been verified as sufficient for these flows, and dddart
-does not currently ship a verified MongoDB authentication adapter.
+Use authentication-specific persistence adapters that implement and test the
+lookup and state-transition behavior required by the refresh-token and
+device-code flows. A refresh-token adapter implements
+`RefreshTokenRepository<T>` and performs `findByToken(String token)` as a
+datastore query. Do not assume that a generated CRUD repository is a production
+authentication adapter. In particular, the generated MongoDB repositories have
+not been verified as sufficient for these flows, and dddart does not currently
+ship a verified MongoDB authentication adapter.
 
 A production device-code adapter must implement `DeviceCodeRepository<T>`,
 including lookup by user code and device code. Its `consumeApproved` operation
@@ -990,7 +1033,7 @@ final authEndpoints = AuthEndpoints(
     // Validate credentials against your user database
     final user = await userRepo.findByUsername(username);
     if (user != null && user.verifyPassword(password)) {
-      return user.id;
+      return user.id.toString();
     }
     return null;
   },
@@ -1019,7 +1062,7 @@ server.registerResource(
 
 // Public resource (no auth required)
 server.registerResource(
-  CrudResource<Product>(
+  CrudResource<Product, void>(
     path: '/products',
     repository: productRepo,
     serializer: serializer,
@@ -1101,7 +1144,7 @@ queryHandlers: {
     final isAdmin = authResult.claims.roles.contains('admin');
     
     // Return user's own data
-    final user = await repo.getById(userId);
+    final user = await repo.getById(UuidValue.fromString(userId));
     return QueryResult([user], totalCount: 1);
   },
 }
@@ -1330,7 +1373,7 @@ final client = RestClient(
 );
 
 // Tokens automatically included and refreshed
-final response = await client.get('/users');
+final response = await client.getPath('/users');
 ```
 
 See the [dddart_rest_client documentation](../dddart_rest_client/README.md) for details.

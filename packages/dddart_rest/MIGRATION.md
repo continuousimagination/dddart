@@ -1,5 +1,62 @@
 # Migration Guide
 
+## Explicit collection and refresh-token reads (Unreleased)
+
+`CrudResource<T, TClaims>` no longer treats full repository enumeration as a
+universal capability. An unfiltered `GET /resource` now requires an explicit
+`collectionHandler`:
+
+```dart
+// Before: CrudResource enumerated some repository implementations implicitly.
+CrudResource<User, void>(
+  path: '/users',
+  repository: userRepository,
+  serializer: userSerializer,
+);
+
+// After: application code owns the datastore query and its ordering/count.
+CrudResource<User, void>(
+  path: '/users',
+  repository: userRepository,
+  serializer: userSerializer,
+  collectionHandler: (
+    repository,
+    queryParams,
+    skip,
+    take,
+    authResult,
+  ) {
+    return (repository as UserReadRepository).listPage(
+      skip: skip,
+      take: take,
+    );
+  },
+);
+```
+
+The handler receives an empty filter map, normalized `skip` and `take`, and the
+current authentication result. It returns the selected items and an accurate
+pre-pagination `totalCount`. The JSON-array response, pagination defaults and
+limits, and optional `X-Total-Count` header are unchanged. Without a collection
+handler, an unfiltered collection request returns a problem+json 400 response.
+Named filter handlers continue to use `queryHandlers` unchanged.
+
+`JwtAuthHandler` now requires `RefreshTokenRepository<T>` rather than a plain
+`Repository<T>`:
+
+```dart
+// Before
+final refreshTokens = InMemoryRepository<RefreshToken>();
+
+// After (tests and prototypes)
+final refreshTokens = InMemoryRefreshTokenRepository<RefreshToken>();
+```
+
+Production adapters implement `findByToken(String token)` as a datastore query.
+A missing token returns `null`; backend failures must be rethrown. During
+refresh a missing token is invalid, while revoke treats it as an idempotent
+no-op. Custom refresh-token subtypes still require a matching typed lifecycle.
+
 ## Client-bound, single-use device grants (Unreleased)
 
 `AuthEndpoints` now requires a `DeviceCodeRepository<TDeviceCode>` instead of a
@@ -142,19 +199,19 @@ opaque and contain no claim snapshot.
 
 ## JSON-only CRUD resources (Unreleased)
 
-`CrudResource<T>` now has one JSON representation. Replace the content-type
-serializer map with a single `JsonSerializer<T>`:
+`CrudResource<T, TClaims>` now has one JSON representation. Replace the
+content-type serializer map with a single `JsonSerializer<T>`:
 
 ```dart
 // Before
-CrudResource<User>(
+CrudResource<User, void>(
   path: '/users',
   repository: userRepository,
   serializers: {'application/json': userSerializer},
 );
 
 // After
-CrudResource<User>(
+CrudResource<User, void>(
   path: '/users',
   repository: userRepository,
   serializer: userJsonSerializer,

@@ -3,6 +3,7 @@ import 'package:dddart_rest/dddart_rest.dart';
 import 'lib/models/user.dart';
 import 'lib/models/address.dart';
 import 'lib/models/profile.dart';
+import 'lib/repositories/user_repository.dart';
 import 'lib/serializers/user_serializer.dart';
 import 'lib/handlers/query_handlers.dart';
 import 'lib/handlers/exception_handlers.dart';
@@ -21,7 +22,7 @@ void main() async {
   print('Starting HTTP CRUD API Example...\n');
 
   // Create repository with some sample data
-  final repository = InMemoryRepository<User>();
+  final repository = InMemoryUserRepository();
   await _seedSampleData(repository);
 
   // Create serializer
@@ -36,6 +37,7 @@ void main() async {
       path: '/users',
       repository: repository,
       serializer: serializer,
+      collectionHandler: userCollectionHandler,
       queryHandlers: {
         'firstName': firstNameQueryHandler,
         'email': emailQueryHandler,
@@ -55,7 +57,7 @@ void main() async {
 
   print('Server running on http://localhost:8080');
   print('\nAvailable endpoints:');
-  print('  GET    /users           - List all users (paginated)');
+  print('  GET    /users           - List a user page');
   print('  GET    /users/:id       - Get user by ID');
   print('  GET    /users?firstName=John - Filter by first name');
   print('  GET    /users?email=john@example.com - Filter by email');
@@ -89,7 +91,7 @@ void main() async {
 ///
 /// 3. PAGINATION TESTING:
 ///    - 5 users total allows testing pagination
-///    - Default take=10 returns all 5
+///    - Default take=10 returns the five seeded users
 ///    - GET /users?skip=2&take=2 returns users 3-4
 ///    - GET /users?skip=10 returns empty array
 ///

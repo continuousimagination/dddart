@@ -20,11 +20,17 @@ import 'lib/json_serializer_support.dart';
 
 void main() async {
   // Set up CRUD resources
-  final userRepository = InMemoryRepository<User>();
+  final userRepository = InMemoryUserRepository();
   final userResource = CrudResource<User, void>(
     path: '/users',
     repository: userRepository,
     serializer: UserSerializer(),
+    collectionHandler: (repository, _, skip, take, __) {
+      return (repository as InMemoryUserRepository).listPage(
+        skip: skip,
+        take: take,
+      );
+    },
   );
 
   // Create HTTP server
@@ -44,7 +50,7 @@ void main() async {
   print('✅ Server running on http://localhost:${server.port}');
   print('');
   print('REST CRUD endpoints:');
-  print('  GET    /users       - List all users');
+  print('  GET    /users       - List a user page');
   print('  GET    /users/:id   - Get user by ID');
   print('  POST   /users       - Create user');
   print('  PUT    /users/:id   - Update user');
@@ -86,6 +92,25 @@ Future<Response> _handleHealthCheck(Request request) async {
 class User extends AggregateRoot {
   User({required this.name, super.id, super.createdAt, super.updatedAt});
   final String name;
+}
+
+/// Example application-specific read adapter.
+///
+/// A production adapter would perform the ordering, pagination, and count in
+/// its datastore. This in-memory implementation is only for the runnable
+/// example.
+final class InMemoryUserRepository extends InMemoryRepository<User> {
+  Future<QueryResult<User>> listPage({
+    required int skip,
+    required int take,
+  }) async {
+    final users = getAllSync().toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
+    return QueryResult(
+      users.skip(skip).take(take).toList(),
+      totalCount: users.length,
+    );
+  }
 }
 
 // User serializer for example

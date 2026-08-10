@@ -952,6 +952,9 @@ void main() {
           serializer: serializer,
           authenticationHandler: authHandler,
           authorizationHandler: authzHandler,
+          collectionHandler: (repo, params, skip, take, authResult) async {
+            return QueryResult<TestUser>([testUser], totalCount: 1);
+          },
         );
 
         final request = createRequest();

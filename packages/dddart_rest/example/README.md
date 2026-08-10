@@ -9,6 +9,8 @@ This directory contains examples demonstrating how to use the `dddart_rest` pack
 Complete example showing:
 - **Domain-Driven Design Patterns**: Aggregate Root, Child Entity, Value Object
 - **HTTP CRUD API Features**: RESTful endpoints, custom query handlers, pagination
+- **Explicit Collection Reads**: Application repository methods own selection,
+  ordering, pagination, and total counts
 - **Error Handling**: Custom exception handlers, RFC 7807 error responses
 
 **Run:** `dart run main.dart`
@@ -128,7 +130,7 @@ Seeded 5 sample users
 Server running on http://localhost:8080
 
 Available endpoints:
-  GET    /users           - List all users (paginated)
+  GET    /users           - List a user page
   GET    /users/:id       - Get user by ID
   GET    /users?firstName=John - Filter by first name
   GET    /users?email=john@example.com - Filter by email
@@ -147,7 +149,7 @@ Press Ctrl+C to stop the server
 Open a new terminal and try these commands:
 
 ```bash
-# List all users
+# Read the default user page
 curl http://localhost:8080/users
 
 # Get first user (copy an ID from the list above)
@@ -162,13 +164,16 @@ curl http://localhost:8080/users?email=john.doe@example.com
 
 ## API Reference
 
-### List All Users (Paginated)
+### Read a User Page
 
-Returns all users with pagination support.
+Returns one user page through the resource's explicit `collectionHandler`.
+`InMemoryUserRepository` implements the example's application-specific
+`UserRepository.list` method; a production adapter would perform this read and
+the total count in its datastore.
 
 **Request:**
 ```bash
-# Get all users (default: skip=0, take=10)
+# Get the default page (skip=0, take=10)
 curl http://localhost:8080/users
 
 # Get users 3-4 (skip first 2, return 2)
@@ -263,11 +268,11 @@ curl http://localhost:8080/users/123e4567-e89b-12d3-a456-426614174000
 
 ### Filter by First Name
 
-Returns all users with matching first name (case-insensitive).
+Returns a page of users with a matching first name (case-insensitive).
 
 **Request:**
 ```bash
-# Find all users named "John" (should return 2)
+# Find a page of users named "John" (should return 2)
 curl http://localhost:8080/users?firstName=John
 
 # With pagination
@@ -575,6 +580,7 @@ Query handlers enable filtering on collection endpoints:
 
 ```dart
 // Registered in main.dart
+collectionHandler: userCollectionHandler,
 queryHandlers: {
   'firstName': firstNameQueryHandler,
   'email': emailQueryHandler,
@@ -584,7 +590,10 @@ queryHandlers: {
 // Returns: QueryResult with filtered users and total count
 ```
 
-See `lib/handlers/query_handlers.dart` for detailed implementation comments.
+The handlers adapt the explicit `UserRepository.list`, `findByFirstName`, and
+`findByEmail` operations; they never assume that every `Repository<User>` can
+enumerate its datastore. See `lib/repositories/user_repository.dart` and
+`lib/handlers/query_handlers.dart` for the complete implementation.
 
 ### 5. Custom Exception Handlers
 
@@ -625,7 +634,7 @@ This data is designed to test:
 
 ## Pagination
 
-All collection endpoints support pagination:
+Configured collection and filter handlers receive normalized pagination:
 
 **Query Parameters:**
 - `skip` - Number of items to skip (default: 0)

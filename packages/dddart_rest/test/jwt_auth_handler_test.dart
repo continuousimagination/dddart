@@ -3,19 +3,20 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/src/jwt_auth_handler.dart';
 import 'package:dddart_rest/src/refresh_token.dart';
 import 'package:dddart_rest/src/refresh_token_lifecycle.dart';
+import 'package:dddart_rest/src/refresh_token_repository.dart';
 import 'package:dddart_rest/src/standard_claims.dart';
 import 'package:shelf/shelf.dart';
 import 'package:test/test.dart';
 
 void main() {
   group('JwtAuthHandler', () {
-    late Repository<RefreshToken> refreshTokenRepo;
+    late InMemoryRefreshTokenRepository<RefreshToken> refreshTokenRepo;
     late JwtAuthHandler<StandardClaims, RefreshToken> authHandler;
     late StandardClaims? currentClaims;
     late List<String> claimsLoaderCalls;
 
     setUp(() {
-      refreshTokenRepo = InMemoryRepository<RefreshToken>();
+      refreshTokenRepo = InMemoryRefreshTokenRepository<RefreshToken>();
       currentClaims = const StandardClaims(
         sub: 'user123',
         email: 'test@example.com',
@@ -207,8 +208,7 @@ void main() {
           deviceInfo: 'Test Device',
         );
 
-        final repo = refreshTokenRepo as InMemoryRepository<RefreshToken>;
-        final allTokens = repo.getAllSync();
+        final allTokens = refreshTokenRepo.getAllSync();
         final storedToken = allTokens.firstWhere(
           (token) => token.token == tokens.refreshToken,
         );
@@ -247,7 +247,8 @@ void main() {
         };
         final handler = JwtAuthHandler<Map<String, dynamic>, RefreshToken>(
           secret: 'test-secret-key-for-testing',
-          refreshTokenRepository: InMemoryRepository<RefreshToken>(),
+          refreshTokenRepository:
+              InMemoryRefreshTokenRepository<RefreshToken>(),
           refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
           claimsLoader: (userId) async => maliciousClaims,
           parseClaimsFromJson: (_) => maliciousClaims,
@@ -303,7 +304,7 @@ void main() {
         );
 
         expect(
-          (refreshTokenRepo as InMemoryRepository<RefreshToken>).getAllSync(),
+          refreshTokenRepo.getAllSync(),
           isEmpty,
         );
       });
@@ -311,7 +312,7 @@ void main() {
 
     group('refresh', () {
       test('reloads current roles, tenants, and profile claims', () async {
-        final repository = InMemoryRepository<RefreshToken>();
+        final repository = InMemoryRefreshTokenRepository<RefreshToken>();
         var currentClaims = const _ApplicationClaims(
           userId: 'user123',
           roles: ['reader'],
@@ -397,12 +398,62 @@ void main() {
         expect(newTokens.refreshToken, equals(originalTokens.refreshToken));
       });
 
+      test('uses one token-specific lookup without repository enumeration',
+          () async {
+        final now = DateTime.now();
+        final repository = _RecordingRefreshTokenRepository(
+          RefreshToken(
+            id: UuidValue.generate(),
+            userId: 'lookup-user',
+            token: 'lookup-token',
+            expiresAt: now.add(const Duration(hours: 1)),
+            createdAt: now,
+            updatedAt: now,
+          ),
+        );
+        final handler = JwtAuthHandler<StandardClaims, RefreshToken>(
+          secret: 'test-secret-key-for-testing',
+          refreshTokenRepository: repository,
+          refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
+          claimsLoader: (userId) async => StandardClaims(sub: userId),
+          parseClaimsFromJson: StandardClaims.fromJson,
+          claimsToJson: (claims) => claims.toJson(),
+        );
+
+        final tokens = await handler.refresh('lookup-token');
+
+        expect(tokens.refreshToken, 'lookup-token');
+        expect(repository.findByTokenCalls, 1);
+        expect(repository.lastLookupToken, 'lookup-token');
+        expect(repository.saveCalls, 0);
+      });
+
       test('should throw exception for invalid refresh token', () async {
         await expectLater(
           authHandler.refresh('invalid-token'),
           throwsA(isA<Exception>()),
         );
         expect(claimsLoaderCalls, isEmpty);
+      });
+
+      test('propagates token lookup backend failures unchanged', () async {
+        const failure = RepositoryException(
+          'refresh token store unavailable',
+          type: RepositoryExceptionType.connection,
+        );
+        final failingHandler = JwtAuthHandler<StandardClaims, RefreshToken>(
+          secret: 'test-secret-key-for-testing',
+          refreshTokenRepository: const _FailingRefreshTokenRepository(failure),
+          refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
+          claimsLoader: (userId) async => StandardClaims(sub: userId),
+          parseClaimsFromJson: StandardClaims.fromJson,
+          claimsToJson: (claims) => claims.toJson(),
+        );
+
+        await expectLater(
+          failingHandler.refresh('existing-token'),
+          throwsA(same(failure)),
+        );
       });
 
       test('should throw exception for expired refresh token', () async {
@@ -460,7 +511,7 @@ void main() {
         test('$unavailableState users cannot refresh', () async {
           var userExists = true;
           var userEnabled = true;
-          final repository = InMemoryRepository<RefreshToken>();
+          final repository = InMemoryRefreshTokenRepository<RefreshToken>();
           final handler = JwtAuthHandler<StandardClaims, RefreshToken>(
             secret: 'test-secret-key-for-testing',
             refreshTokenRepository: repository,
@@ -502,8 +553,7 @@ void main() {
 
         await authHandler.revoke(tokens.refreshToken);
 
-        final repo = refreshTokenRepo as InMemoryRepository<RefreshToken>;
-        final allTokens = repo.getAllSync();
+        final allTokens = refreshTokenRepo.getAllSync();
         final storedToken = allTokens.firstWhere(
           (token) => token.token == tokens.refreshToken,
         );
@@ -511,9 +561,52 @@ void main() {
         expect(storedToken.revoked, isTrue);
       });
 
+      test('uses one token-specific lookup before saving the revoked token',
+          () async {
+        final now = DateTime.now();
+        final original = RefreshToken(
+          id: UuidValue.generate(),
+          userId: 'lookup-user',
+          token: 'lookup-token',
+          expiresAt: now.add(const Duration(hours: 1)),
+          createdAt: now,
+          updatedAt: now,
+        );
+        final repository = _RecordingRefreshTokenRepository(original);
+        final handler = JwtAuthHandler<StandardClaims, RefreshToken>(
+          secret: 'test-secret-key-for-testing',
+          refreshTokenRepository: repository,
+          refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
+          claimsLoader: (userId) async => StandardClaims(sub: userId),
+          parseClaimsFromJson: StandardClaims.fromJson,
+          claimsToJson: (claims) => claims.toJson(),
+        );
+
+        await handler.revoke('lookup-token');
+
+        expect(repository.findByTokenCalls, 1);
+        expect(repository.lastLookupToken, 'lookup-token');
+        expect(repository.saveCalls, 1);
+        expect(repository.savedToken?.id, original.id);
+        expect(repository.savedToken?.revoked, isTrue);
+      });
+
       test('should not throw exception for non-existent token', () async {
-        // Should complete without error
-        await authHandler.revoke('non-existent-token');
+        final repository = _RecordingRefreshTokenRepository(null);
+        final handler = JwtAuthHandler<StandardClaims, RefreshToken>(
+          secret: 'test-secret-key-for-testing',
+          refreshTokenRepository: repository,
+          refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
+          claimsLoader: (userId) async => StandardClaims(sub: userId),
+          parseClaimsFromJson: StandardClaims.fromJson,
+          claimsToJson: (claims) => claims.toJson(),
+        );
+
+        await handler.revoke('non-existent-token');
+
+        expect(repository.findByTokenCalls, 1);
+        expect(repository.lastLookupToken, 'non-existent-token');
+        expect(repository.saveCalls, 0);
       });
 
       test('should propagate repository failures', () async {
@@ -625,7 +718,7 @@ class _ApplicationClaims {
 }
 
 class _FailingRefreshTokenRepository
-    implements QueryableRepository<RefreshToken> {
+    implements RefreshTokenRepository<RefreshToken> {
   const _FailingRefreshTokenRepository(this.failure);
 
   final RepositoryException failure;
@@ -634,11 +727,44 @@ class _FailingRefreshTokenRepository
   Future<void> deleteById(UuidValue id) => throw UnimplementedError();
 
   @override
-  Future<List<RefreshToken>> getAll() => throw failure;
+  Future<RefreshToken?> findByToken(String token) => throw failure;
 
   @override
   Future<RefreshToken> getById(UuidValue id) => throw UnimplementedError();
 
   @override
   Future<void> save(RefreshToken aggregate) => throw UnimplementedError();
+}
+
+class _RecordingRefreshTokenRepository
+    implements RefreshTokenRepository<RefreshToken> {
+  _RecordingRefreshTokenRepository(this._token);
+
+  RefreshToken? _token;
+  int findByTokenCalls = 0;
+  int saveCalls = 0;
+  String? lastLookupToken;
+  RefreshToken? savedToken;
+
+  @override
+  Future<RefreshToken?> findByToken(String token) {
+    findByTokenCalls++;
+    lastLookupToken = token;
+    final current = _token;
+    return Future.value(current?.token == token ? current : null);
+  }
+
+  @override
+  Future<void> save(RefreshToken aggregate) {
+    saveCalls++;
+    savedToken = aggregate;
+    _token = aggregate;
+    return Future.value();
+  }
+
+  @override
+  Future<void> deleteById(UuidValue id) => throw UnimplementedError();
+
+  @override
+  Future<RefreshToken> getById(UuidValue id) => throw UnimplementedError();
 }

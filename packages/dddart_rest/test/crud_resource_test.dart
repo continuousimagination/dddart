@@ -114,6 +114,24 @@ Request createRequest({
   );
 }
 
+Future<QueryResult<TestUser>> pagedCollectionHandler(
+  Repository<TestUser> repository,
+  Map<String, String> queryParams,
+  int skip,
+  int take,
+  dynamic authResult,
+) async {
+  final items = switch (repository) {
+    MockRepository() => repository.getAll(),
+    InMemoryRepository<TestUser>() => repository.getAllSync(),
+    _ => throw StateError('Unsupported test repository'),
+  };
+  return QueryResult<TestUser>(
+    items.skip(skip).take(take).toList(),
+    totalCount: items.length,
+  );
+}
+
 void main() {
   late MockRepository repository;
   late TestUserSerializer serializer;
@@ -260,7 +278,65 @@ void main() {
   });
 
   group('CrudResource - handleQuery with no filters', () {
-    test('returns all items with pagination', () async {
+    test('returns documented 400 when collection handler is absent', () async {
+      final response = await resource.handleQuery(createRequest());
+
+      expect(response.statusCode, equals(400));
+      expect(
+        response.headers['Content-Type'],
+        equals('application/problem+json'),
+      );
+      final body = jsonDecode(await response.readAsString());
+      expect(
+        body['detail'],
+        equals(
+          'Unfiltered collection retrieval is unsupported for this resource. '
+          'Configure a collectionHandler.',
+        ),
+      );
+    });
+
+    test('collection handler controls selection, pagination, and total count',
+        () async {
+      final selectedUser = TestUser(
+        name: 'Selected by handler',
+        email: 'selected@example.com',
+      );
+      Repository<TestUser>? receivedRepository;
+      Map<String, String>? receivedParams;
+      int? receivedSkip;
+      int? receivedTake;
+
+      final resourceWithHandler = CrudResource<TestUser, dynamic>(
+        path: '/users',
+        repository: repository,
+        serializer: serializer,
+        maxTake: 7,
+        collectionHandler: (repo, params, skip, take, authResult) async {
+          receivedRepository = repo;
+          receivedParams = params;
+          receivedSkip = skip;
+          receivedTake = take;
+          return QueryResult([selectedUser], totalCount: 42);
+        },
+      );
+
+      final response = await resourceWithHandler.handleQuery(
+        createRequest(path: '/users?skip=-5&take=200'),
+      );
+
+      expect(response.statusCode, equals(200));
+      expect(receivedRepository, same(repository));
+      expect(receivedParams, isEmpty);
+      expect(receivedSkip, equals(0));
+      expect(receivedTake, equals(7));
+      expect(response.headers['X-Total-Count'], equals('42'));
+      final body = jsonDecode(await response.readAsString()) as List;
+      expect(body, hasLength(1));
+      expect(body.single['name'], equals('Selected by handler'));
+    });
+
+    test('returns handler-selected items with pagination', () async {
       // Arrange - create multiple users
       final user1 = TestUser(
         id: UuidValue.fromString('111e4567-e89b-12d3-a456-426614174111'),
@@ -288,17 +364,12 @@ void main() {
       await repository.save(user2);
       await repository.save(user3);
 
-      // Use InMemoryRepository for getAll support
-      final inMemoryRepo = InMemoryRepository<TestUser>();
-      await inMemoryRepo.save(user1);
-      await inMemoryRepo.save(user2);
-      await inMemoryRepo.save(user3);
-
-      final inMemoryResource = CrudResource<TestUser, dynamic>(
+      final resourceWithHandler = CrudResource<TestUser, dynamic>(
         path: '/users',
-        repository: inMemoryRepo,
+        repository: repository,
         serializer: serializer,
         defaultTake: 2,
+        collectionHandler: pagedCollectionHandler,
       );
 
       final request = createRequest(
@@ -307,7 +378,7 @@ void main() {
       );
 
       // Act
-      final response = await inMemoryResource.handleQuery(request);
+      final response = await resourceWithHandler.handleQuery(request);
 
       // Assert
       expect(response.statusCode, equals(200));
@@ -319,22 +390,36 @@ void main() {
 
     test('default skip and take values are applied', () async {
       // Arrange
-      final inMemoryRepo = InMemoryRepository<TestUser>();
-      await inMemoryRepo.save(testUser);
+      await repository.save(testUser);
+      int? receivedSkip;
+      int? receivedTake;
 
-      final inMemoryResource = CrudResource<TestUser, dynamic>(
+      final resourceWithHandler = CrudResource<TestUser, dynamic>(
         path: '/users',
-        repository: inMemoryRepo,
+        repository: repository,
         serializer: serializer,
+        collectionHandler: (repo, params, skip, take, authResult) {
+          receivedSkip = skip;
+          receivedTake = take;
+          return pagedCollectionHandler(
+            repo,
+            params,
+            skip,
+            take,
+            authResult,
+          );
+        },
       );
 
       final request = createRequest();
 
       // Act
-      final response = await inMemoryResource.handleQuery(request);
+      final response = await resourceWithHandler.handleQuery(request);
 
       // Assert
       expect(response.statusCode, equals(200));
+      expect(receivedSkip, equals(0));
+      expect(receivedTake, equals(50));
 
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString) as List;
@@ -343,19 +428,19 @@ void main() {
 
     test('X-Total-Count header is included', () async {
       // Arrange
-      final inMemoryRepo = InMemoryRepository<TestUser>();
-      await inMemoryRepo.save(testUser);
+      await repository.save(testUser);
 
-      final inMemoryResource = CrudResource<TestUser, dynamic>(
+      final resourceWithHandler = CrudResource<TestUser, dynamic>(
         path: '/users',
-        repository: inMemoryRepo,
+        repository: repository,
         serializer: serializer,
+        collectionHandler: pagedCollectionHandler,
       );
 
       final request = createRequest();
 
       // Act
-      final response = await inMemoryResource.handleQuery(request);
+      final response = await resourceWithHandler.handleQuery(request);
 
       // Assert
       expect(response.statusCode, equals(200));
@@ -364,13 +449,13 @@ void main() {
 
     test('Accept header content negotiation', () async {
       // Arrange
-      final inMemoryRepo = InMemoryRepository<TestUser>();
-      await inMemoryRepo.save(testUser);
+      await repository.save(testUser);
 
-      final inMemoryResource = CrudResource<TestUser, dynamic>(
+      final resourceWithHandler = CrudResource<TestUser, dynamic>(
         path: '/users',
-        repository: inMemoryRepo,
+        repository: repository,
         serializer: serializer,
+        collectionHandler: pagedCollectionHandler,
       );
 
       final request = createRequest(
@@ -378,7 +463,7 @@ void main() {
       );
 
       // Act
-      final response = await inMemoryResource.handleQuery(request);
+      final response = await resourceWithHandler.handleQuery(request);
 
       // Assert
       expect(response.headers['Content-Type'], equals('application/json'));
@@ -554,6 +639,7 @@ void main() {
         path: '/users',
         repository: inMemoryRepo,
         serializer: serializer,
+        collectionHandler: pagedCollectionHandler,
       );
 
       final request = createRequest(path: '/users?skip=0&take=10');
@@ -1160,6 +1246,7 @@ void main() {
         path: '/users',
         repository: inMemoryRepo,
         serializer: serializer,
+        collectionHandler: pagedCollectionHandler,
       );
 
       final request = createRequest(path: '/users?skip=2&take=3');
@@ -1184,6 +1271,7 @@ void main() {
         path: '/users',
         repository: inMemoryRepo,
         serializer: serializer,
+        collectionHandler: pagedCollectionHandler,
       );
 
       final request = createRequest();
@@ -1217,6 +1305,7 @@ void main() {
         path: '/users',
         repository: inMemoryRepo,
         serializer: serializer,
+        collectionHandler: pagedCollectionHandler,
       );
 
       // Request more than maxTake

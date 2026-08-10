@@ -113,7 +113,7 @@ Future<AuthenticatedTestServer> createAuthenticatedTestServer({
 }) async {
   // Create repositories
   final userRepository = InMemoryRepository<TestUser>();
-  final refreshTokenRepository = InMemoryRepository<RefreshToken>();
+  final refreshTokenRepository = InMemoryRefreshTokenRepository<RefreshToken>();
   final deviceCodeRepository = InMemoryDeviceCodeRepository<DeviceCode>(
     lifecycle: const StandardDeviceCodeLifecycle(),
   );
@@ -285,8 +285,8 @@ void main() {
         refreshRequest,
       );
 
-      // Assert - The queryable in-memory refresh-token repository supports the
-      // complete refresh flow.
+      // Assert - The token-specific in-memory repository supports the complete
+      // refresh flow.
       expect(refreshResponse.statusCode, equals(200));
       final refreshBody = await refreshResponse.readAsString();
       final refreshJson = jsonDecode(refreshBody) as Map<String, dynamic>;

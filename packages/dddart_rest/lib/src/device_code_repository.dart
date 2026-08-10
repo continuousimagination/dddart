@@ -39,7 +39,7 @@ abstract interface class DeviceCodeRepository<T extends DeviceCode>
 /// so the approved-to-consumed check and replacement happen synchronously in one
 /// method invocation, before the returned [Future] completes.
 final class InMemoryDeviceCodeRepository<T extends DeviceCode>
-    implements DeviceCodeRepository<T>, QueryableRepository<T> {
+    implements DeviceCodeRepository<T> {
   /// Creates an empty repository using [lifecycle] for the typed consume
   /// transition.
   InMemoryDeviceCodeRepository({
@@ -132,12 +132,6 @@ final class InMemoryDeviceCodeRepository<T extends DeviceCode>
     return Future.value(consumed);
   }
 
-  @override
-  Future<List<T>> getAll() => Future.value(getAllSync());
-
   /// Returns an unmodifiable snapshot of all stored device codes.
   List<T> getAllSync() => List.unmodifiable(_storage.values);
-
-  /// Removes all stored device codes.
-  void clear() => _storage.clear();
 }

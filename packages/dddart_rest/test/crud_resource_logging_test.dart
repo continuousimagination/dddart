@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/src/crud_resource.dart';
+import 'package:dddart_rest/src/query_handler.dart';
 import 'package:logging/logging.dart';
 import 'package:shelf/shelf.dart';
 import 'package:test/test.dart';
@@ -253,6 +254,13 @@ void main() {
         path: 'users',
         repository: inMemoryRepo,
         serializer: serializer,
+        collectionHandler: (repo, params, skip, take, authResult) async {
+          final items = (repo as InMemoryRepository<TestUser>).getAllSync();
+          return QueryResult(
+            items.skip(skip).take(take).toList(),
+            totalCount: items.length,
+          );
+        },
       );
 
       final request = createRequest(path: '/users?skip=0&take=10');

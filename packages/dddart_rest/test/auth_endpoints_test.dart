@@ -1,20 +1,19 @@
 import 'dart:convert';
 
-import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/dddart_rest.dart';
 import 'package:shelf/shelf.dart';
 import 'package:test/test.dart';
 
 void main() {
   group('AuthEndpoints', () {
-    late InMemoryRepository<RefreshToken> refreshTokenRepo;
+    late InMemoryRefreshTokenRepository<RefreshToken> refreshTokenRepo;
     late InMemoryDeviceCodeRepository<DeviceCode> deviceCodeRepo;
     late JwtAuthHandler<StandardClaims, RefreshToken> authHandler;
     late AuthEndpoints<StandardClaims, RefreshToken, DeviceCode> authEndpoints;
     late StandardClaims? currentClaims;
 
     setUp(() {
-      refreshTokenRepo = InMemoryRepository<RefreshToken>();
+      refreshTokenRepo = InMemoryRefreshTokenRepository<RefreshToken>();
       deviceCodeRepo = InMemoryDeviceCodeRepository<DeviceCode>(
         lifecycle: const StandardDeviceCodeLifecycle(),
       );
