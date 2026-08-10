@@ -166,10 +166,13 @@ class DynamoRepositoryGenerator
   /// (including Repository<T>), but excludes methods from Object and other
   /// system classes.
   List<MethodElement> _getInterfaceMethods(InterfaceType interfaceType) {
-    final methods = <MethodElement>[];
+    final methodsByName = <String, MethodElement>{};
 
-    // Get methods from the interface itself
-    methods.addAll(interfaceType.methods);
+    // Add the most-derived declarations first so inherited declarations with
+    // the same name cannot produce duplicate abstract members.
+    for (final method in interfaceType.methods) {
+      methodsByName.putIfAbsent(method.name, () => method);
+    }
 
     // Get methods from all superinterfaces (including Repository<T>)
     // but exclude Object and system classes
@@ -181,10 +184,12 @@ class DynamoRepositoryGenerator
           supertype.element.library.name.startsWith('dart.')) {
         continue;
       }
-      methods.addAll(supertype.methods);
+      for (final method in supertype.methods) {
+        methodsByName.putIfAbsent(method.name, () => method);
+      }
     }
 
-    return methods;
+    return methodsByName.values.toList();
   }
 
   /// Converts a camelCase or PascalCase string to snake_case.
@@ -282,34 +287,6 @@ class DynamoRepositoryGenerator
       rethrow;
     } catch (e) {
       throw _mapDynamoException(e, 'deleteById');
-    }
-  }''';
-  }
-
-  /// Generates the getAll method implementation (full table scan).
-  String _generateGetAllMethod(String className) {
-    return '''
-  @override
-  Future<List<$className>> getAll() async {
-    try {
-      final items = <Map<String, AttributeValue>>[];
-      Map<String, AttributeValue>? exclusiveStartKey;
-
-      do {
-        final response = await _connection.client.scan(
-          tableName: tableName,
-          exclusiveStartKey: exclusiveStartKey,
-        );
-        items.addAll(response.items ?? const []);
-        exclusiveStartKey = response.lastEvaluatedKey;
-      } while (exclusiveStartKey != null && exclusiveStartKey.isNotEmpty);
-
-      return items.map((item) {
-        final json = AttributeValueConverter.attributeMapToJsonMap(item);
-        return _serializer.fromJson(json);
-      }).toList();
-    } catch (e) {
-      throw _mapDynamoException(e, 'getAll');
     }
   }''';
   }
@@ -497,7 +474,7 @@ Resources:
   }) {
     final interfaceClause = implements != null
         ? 'implements ${implements.element.name}'
-        : 'implements QueryableRepository<$className>';
+        : 'implements Repository<$className>';
 
     final buffer = StringBuffer();
 
@@ -540,8 +517,7 @@ Resources:
 
     buffer.writeln(_generateDeleteByIdMethod(className));
     buffer.writeln();
-    buffer.writeln(_generateGetAllMethod(className));
-    buffer.writeln();
+
     // Generate exception mapping helper
     buffer.writeln(_generateMapDynamoExceptionMethod());
     buffer.writeln();
@@ -615,9 +591,6 @@ Resources:
     buffer.writeln();
 
     buffer.writeln(_generateDeleteByIdMethod(className));
-    buffer.writeln();
-
-    buffer.writeln(_generateGetAllMethod(className));
     buffer.writeln();
 
     // Generate exception mapping helper

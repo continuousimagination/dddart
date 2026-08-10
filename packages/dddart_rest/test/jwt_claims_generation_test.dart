@@ -1,4 +1,3 @@
-import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/dddart_rest.dart';
 import 'package:test/test.dart';
 
@@ -64,7 +63,8 @@ class _MockJwtAuthHandler extends JwtAuthHandler<StandardClaims, RefreshToken> {
   _MockJwtAuthHandler()
       : super(
           secret: 'test-secret',
-          refreshTokenRepository: InMemoryRepository<RefreshToken>(),
+          refreshTokenRepository:
+              InMemoryRefreshTokenRepository<RefreshToken>(),
           refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
           claimsLoader: (userId) async => StandardClaims(sub: userId),
           parseClaimsFromJson: StandardClaims.fromJson,

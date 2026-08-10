@@ -173,7 +173,7 @@ void main() async {
 
   // Create repositories
   final documentRepo = InMemoryRepository<Document>();
-  final refreshTokenRepo = InMemoryRepository<RefreshToken>();
+  final refreshTokenRepo = InMemoryRefreshTokenRepository<RefreshToken>();
   final deviceCodeRepo = InMemoryDeviceCodeRepository<DeviceCode>(
     lifecycle: const StandardDeviceCodeLifecycle(),
   );

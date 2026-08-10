@@ -9,7 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **BREAKING:** `CrudResource<T>` now requires one `JsonSerializer<T>` through
+- **BREAKING:** `CrudResource<T, TClaims>` no longer enumerates repositories for
+  unfiltered collection GETs. Configure `collectionHandler` to perform
+  datastore-side selection, ordering, pagination, and total counting; without
+  one, the request returns 400.
+- **BREAKING:** Removed the repository-enumeration helpers (`getAllItems`,
+  `findFirstItem`, and their legacy aliases).
+- **BREAKING:** `JwtAuthHandler` now requires a
+  `RefreshTokenRepository<TRefreshToken>` with `findByToken`. Refresh and revoke
+  no longer enumerate stored tokens, and datastore failures are not relabeled
+  as token misses.
+- `InMemoryRefreshTokenRepository<T>` is the reference adapter for examples and
+  tests.
+- **BREAKING:** `CrudResource<T, TClaims>` now requires one `JsonSerializer<T>` through
   `serializer` instead of a content-type-to-serializer map.
 - **BREAKING:** `ResponseBuilder<T>.ok`, `.created`, and `.okList` now accept a
   `JsonSerializer<T>` and no longer take a positional content-type argument.

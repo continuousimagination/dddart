@@ -158,8 +158,10 @@ void main() {
     test(
       'refresh issuance, lookup, and revocation preserve custom subtype state',
       () async {
-        final inMemoryRepository = InMemoryRepository<CustomRefreshToken>();
-        final Repository<CustomRefreshToken> repository = inMemoryRepository;
+        final inMemoryRepository =
+            InMemoryRefreshTokenRepository<CustomRefreshToken>();
+        final RefreshTokenRepository<CustomRefreshToken> repository =
+            inMemoryRepository;
         final claimsLoaderCalls = <String>[];
         final handler = JwtAuthHandler<StandardClaims, CustomRefreshToken>(
           secret: 'test-secret-key-for-testing',
@@ -236,7 +238,7 @@ void main() {
     test(
       'device creation and approval preserve custom subtype state',
       () async {
-        final refreshTokens = InMemoryRepository<RefreshToken>();
+        final refreshTokens = InMemoryRefreshTokenRepository<RefreshToken>();
         final authHandler = JwtAuthHandler<StandardClaims, RefreshToken>(
           secret: 'test-secret-key-for-testing',
           refreshTokenRepository: refreshTokens,

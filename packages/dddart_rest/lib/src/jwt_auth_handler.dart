@@ -7,7 +7,7 @@ import 'package:dddart_rest/src/authentication_handler.dart';
 import 'package:dddart_rest/src/authentication_result.dart';
 import 'package:dddart_rest/src/refresh_token.dart';
 import 'package:dddart_rest/src/refresh_token_lifecycle.dart';
-import 'package:dddart_rest/src/repository_query_support.dart';
+import 'package:dddart_rest/src/refresh_token_repository.dart';
 import 'package:dddart_rest/src/tokens.dart';
 import 'package:shelf/shelf.dart';
 
@@ -63,9 +63,8 @@ class JwtAuthHandler<TClaims, TRefreshToken extends RefreshToken>
   /// Secret key for signing JWTs
   final String secret;
 
-  /// Repository for storing refresh tokens
-  /// Accepts Repository<TRefreshToken> where TRefreshToken extends RefreshToken
-  final Repository<TRefreshToken> refreshTokenRepository;
+  /// Repository for storing and looking up refresh tokens.
+  final RefreshTokenRepository<TRefreshToken> refreshTokenRepository;
 
   /// Typed construction and transition behavior for refresh tokens.
   final RefreshTokenLifecycle<TRefreshToken> refreshTokenLifecycle;
@@ -206,14 +205,9 @@ class JwtAuthHandler<TClaims, TRefreshToken extends RefreshToken>
   /// ```
   Future<Tokens> refresh(String refreshTokenString) async {
     // Look up refresh token in repository
-    final TRefreshToken refreshToken;
-    try {
-      refreshToken = await findFirstItem(
-        refreshTokenRepository,
-        (token) => token.token == refreshTokenString,
-        operationName: 'refresh token validation',
-      );
-    } catch (_) {
+    final refreshToken =
+        await refreshTokenRepository.findByToken(refreshTokenString);
+    if (refreshToken == null) {
       throw Exception('Invalid refresh token');
     }
 
@@ -248,17 +242,8 @@ class JwtAuthHandler<TClaims, TRefreshToken extends RefreshToken>
   /// await authHandler.revoke('refresh-token-string');
   /// ```
   Future<void> revoke(String refreshTokenString) async {
-    final refreshTokens = await getAllItems(
-      refreshTokenRepository,
-      operationName: 'refresh token revocation',
-    );
-    TRefreshToken? refreshToken;
-    for (final token in refreshTokens) {
-      if (token.token == refreshTokenString) {
-        refreshToken = token;
-        break;
-      }
-    }
+    final refreshToken =
+        await refreshTokenRepository.findByToken(refreshTokenString);
 
     if (refreshToken == null) {
       return;

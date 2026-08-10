@@ -14,11 +14,14 @@ part 'user_with_custom_repo_impl.dart';
 /// Custom repository interface with domain-specific query methods.
 abstract interface class UserRepository
     implements Repository<UserWithCustomRepo> {
-  /// Finds a user by email address.
+  /// Finds at most one user through the email global secondary index.
   Future<UserWithCustomRepo?> findByEmail(String email);
 
-  /// Finds all users with the given last name.
-  Future<List<UserWithCustomRepo>> findByLastName(String lastName);
+  /// Finds at most [limit] users with [lastName], ordered by email address.
+  Future<List<UserWithCustomRepo>> findByLastName(
+    String lastName, {
+    required int limit,
+  });
 }
 
 /// User aggregate demonstrating custom repository interface.

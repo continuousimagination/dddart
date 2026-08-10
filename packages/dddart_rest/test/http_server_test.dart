@@ -4,6 +4,7 @@ import 'dart:io' as io;
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/src/crud_resource.dart';
 import 'package:dddart_rest/src/http_server.dart';
+import 'package:dddart_rest/src/query_handler.dart';
 import 'package:test/test.dart';
 
 import 'json_serializer_test_support.dart';
@@ -88,6 +89,20 @@ class TestProductSerializer extends TestJsonSerializer<TestProduct> {
   }
 }
 
+Future<QueryResult<T>> inMemoryCollectionHandler<T extends AggregateRoot>(
+  Repository<T> repository,
+  Map<String, String> queryParams,
+  int skip,
+  int take,
+  dynamic authResult,
+) async {
+  final items = (repository as InMemoryRepository<T>).getAllSync();
+  return QueryResult<T>(
+    items.skip(skip).take(take).toList(),
+    totalCount: items.length,
+  );
+}
+
 void main() {
   group('HttpServer - Resource Registration', () {
     test('registerResource() adds resource to internal list', () async {
@@ -99,6 +114,7 @@ void main() {
         path: '/users',
         repository: repository,
         serializer: serializer,
+        collectionHandler: inMemoryCollectionHandler,
       );
 
       // Act
@@ -131,6 +147,7 @@ void main() {
         path: '/users',
         repository: userRepository,
         serializer: userSerializer,
+        collectionHandler: inMemoryCollectionHandler,
       );
 
       final productRepository = InMemoryRepository<TestProduct>();
@@ -139,6 +156,7 @@ void main() {
         path: '/products',
         repository: productRepository,
         serializer: productSerializer,
+        collectionHandler: inMemoryCollectionHandler,
       );
 
       // Act
@@ -177,6 +195,7 @@ void main() {
         path: '/users',
         repository: repository,
         serializer: serializer,
+        collectionHandler: inMemoryCollectionHandler,
       );
       server.registerResource(resource);
 
@@ -204,6 +223,7 @@ void main() {
         path: '/users',
         repository: repository,
         serializer: serializer,
+        collectionHandler: inMemoryCollectionHandler,
       );
       server.registerResource(resource);
       await server.start();
@@ -250,6 +270,7 @@ void main() {
         path: '/users',
         repository: repository,
         serializer: serializer,
+        collectionHandler: inMemoryCollectionHandler,
       );
       server.registerResource(resource);
       await server.start();
@@ -310,6 +331,7 @@ void main() {
         path: '/users',
         repository: repository,
         serializer: serializer,
+        collectionHandler: inMemoryCollectionHandler,
       );
       server.registerResource(resource);
       await server.start();
@@ -388,6 +410,7 @@ void main() {
         path: '/users',
         repository: userRepository,
         serializer: userSerializer,
+        collectionHandler: inMemoryCollectionHandler,
       );
 
       // Set up products resource
@@ -406,6 +429,7 @@ void main() {
         path: '/products',
         repository: productRepository,
         serializer: productSerializer,
+        collectionHandler: inMemoryCollectionHandler,
       );
 
       server.registerResource(userResource);
@@ -470,6 +494,7 @@ void main() {
         path: '/users',
         repository: repository,
         serializer: serializer,
+        collectionHandler: inMemoryCollectionHandler,
       );
       server.registerResource(resource);
       await server.start();

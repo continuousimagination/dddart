@@ -124,6 +124,20 @@ class HttpResponse {
   }
 }
 
+Future<QueryResult<T>> inMemoryCollectionHandler<T extends AggregateRoot>(
+  Repository<T> repository,
+  Map<String, String> queryParams,
+  int skip,
+  int take,
+  dynamic authResult,
+) async {
+  final items = (repository as InMemoryRepository<T>).getAllSync();
+  return QueryResult<T>(
+    items.skip(skip).take(take).toList(),
+    totalCount: items.length,
+  );
+}
+
 void main() {
   group('Integration Tests - Complete CRUD Lifecycle', () {
     late HttpServer server;
@@ -141,6 +155,7 @@ void main() {
           path: '/users',
           repository: repository,
           serializer: serializer,
+          collectionHandler: inMemoryCollectionHandler,
         ),
       );
 
@@ -288,6 +303,7 @@ void main() {
           path: '/users',
           repository: repository,
           serializer: serializer,
+          collectionHandler: inMemoryCollectionHandler,
           queryHandlers: {
             'name': (repo, params, skip, take, authResult) async {
               final name = params['name']!;
@@ -505,6 +521,7 @@ void main() {
           path: '/users',
           repository: repository,
           serializer: serializer,
+          collectionHandler: inMemoryCollectionHandler,
           queryHandlers: {
             'name': (repo, params, skip, take, authResult) async {
               final name = params['name']!;
@@ -746,6 +763,7 @@ void main() {
           path: '/users',
           repository: repository,
           serializer: serializer,
+          collectionHandler: inMemoryCollectionHandler,
           queryHandlers: {
             'name': (repo, params, skip, take, authResult) async {
               final name = params['name']!;

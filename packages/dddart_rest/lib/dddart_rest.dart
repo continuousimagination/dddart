@@ -26,7 +26,7 @@ export 'src/oauth_jwt_auth_handler.dart';
 export 'src/query_handler.dart';
 export 'src/refresh_token.dart';
 export 'src/refresh_token_lifecycle.dart';
-export 'src/repository_query_support.dart';
+export 'src/refresh_token_repository.dart';
 export 'src/response_builder.dart';
 export 'src/security_utils.dart';
 export 'src/standard_claims.dart';

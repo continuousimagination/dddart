@@ -4,7 +4,7 @@ Snapshot: 2026-08-09, after the accepted authentication defects AUTH-001,
 AUTH-003, AUTH-005, and AUTH-006 were completed on
 `fix/auth-framework-defects`.
 
-This register contains the 7 implementation defects that remain. Resolved
+This register contains the 6 implementation defects that remain. Resolved
 entries are removed once their completion tests pass. It is not an exhaustive
 issue tracker; source and executable tests remain authoritative.
 
@@ -20,7 +20,6 @@ Suggested priorities are provisional:
 
 - **EVENT-001** through **EVENT-004**: the distributed-events feature remains a
   work in progress.
-- **DYNAMO-002**: reconsider the intended role of `QueryableRepository` first.
 - **REST-004**: decide the intended ETag and atomic-concurrency contract first.
 - **AUTH-002**: revisit the authorization contract later.
 
@@ -32,7 +31,6 @@ Suggested priorities are provisional:
 | EVENT-002 | P2 | Distributed events | POST ingestion ignores its server and cannot safely support a custom stored-event subtype. |
 | EVENT-003 | P1 | Distributed events | `autoForward` can forward a remotely polled event back to the server. |
 | EVENT-004 | P1 | Distributed events | Polling advances its cursor before an event is successfully reconstructed and published. |
-| DYNAMO-002 | P2 | DynamoDB generation | Custom queryable interfaces can produce conflicting `getAll()` declarations. |
 | REST-004 | P1 | REST server | ETag validation is a non-atomic read/check/save sequence. |
 | AUTH-002 | P1 | Authorization | Item GET and unfiltered collection GET bypass `AuthorizationHandler`. |
 
@@ -51,20 +49,6 @@ Suggested priorities are provisional:
 - **Done when:** the factory, `build.yaml`, part/import topology, and event
   serialization contract agree and a clean consumer fixture compiles and uses
   the generated registry.
-
-### DYNAMO-002 — custom queryable repository topology is contradictory
-
-- **Evidence:** the generator's `baseRepositoryMethods` omits `getAll`. It emits
-  a concrete `getAll()` but can also classify inherited `getAll()` from a custom
-  `QueryableRepository<T>` interface as an abstract custom method. A generated
-  custom class can therefore contain conflicting declarations; a custom
-  interface that does not extend `QueryableRepository<T>` gets a callable
-  method without the nominal capability.
-- **Impact:** consumers cannot safely declare a custom DynamoDB repository as
-  queryable.
-- **Done when:** a generator fixture whose custom interface extends
-  `QueryableRepository<T>` compiles with exactly one concrete `getAll()` and
-  satisfies the interface at runtime.
 
 ## Distributed-event defects
 

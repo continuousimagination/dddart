@@ -6,6 +6,7 @@ import 'package:dddart_rest/src/authentication_result.dart';
 import 'package:dddart_rest/src/authorization_handler.dart';
 import 'package:dddart_rest/src/authorization_result.dart';
 import 'package:dddart_rest/src/crud_resource.dart';
+import 'package:dddart_rest/src/query_handler.dart';
 import 'package:shelf/shelf.dart';
 import 'package:test/test.dart';
 
@@ -40,7 +41,7 @@ class _TestUserSerializer extends TestJsonSerializer<_TestUser> {
   }
 }
 
-class _CountingRepository implements QueryableRepository<_TestUser> {
+class _CountingRepository implements Repository<_TestUser> {
   _CountingRepository([Iterable<_TestUser> initial = const []])
       : _items = {for (final item in initial) item.id: item};
 
@@ -63,7 +64,6 @@ class _CountingRepository implements QueryableRepository<_TestUser> {
     return item;
   }
 
-  @override
   Future<List<_TestUser>> getAll() async {
     getAllCalls++;
     return _items.values.toList();
@@ -422,6 +422,13 @@ void main() {
         path: '/users',
         repository: _CountingRepository(items),
         serializer: serializer,
+        collectionHandler: (repo, params, skip, take, authResult) async {
+          final allItems = await (repo as _CountingRepository).getAll();
+          return QueryResult(
+            allItems.skip(skip).take(take).toList(),
+            totalCount: allItems.length,
+          );
+        },
       );
       final response = await resource.handleQuery(
         _request('GET', '/users'),

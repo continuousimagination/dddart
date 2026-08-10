@@ -224,7 +224,7 @@ final class _DeviceGrantFixture {
     );
   }
 
-  final refreshTokens = InMemoryRepository<RefreshToken>();
+  final refreshTokens = InMemoryRefreshTokenRepository<RefreshToken>();
   final List<String> claimsLoaderCalls = [];
   final DeviceCodeRepository<DeviceCode> deviceCodes;
   late final JwtAuthHandler<StandardClaims, RefreshToken> authHandler;

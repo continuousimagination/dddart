@@ -33,6 +33,48 @@ class User extends AggregateRoot {
   final List<String> roles;
 }
 
+/// User-specific persistence contract used by the authentication flow.
+abstract interface class UserRepository implements Repository<User> {
+  /// Finds a user by login name.
+  Future<User?> findByUsername(String username);
+}
+
+/// Instance-local user repository for this example.
+final class InMemoryUserRepository implements UserRepository {
+  final InMemoryRepository<User> _repository = InMemoryRepository<User>();
+  final Map<String, UuidValue> _idsByUsername = {};
+  final Map<UuidValue, String> _usernamesById = {};
+
+  @override
+  Future<User> getById(UuidValue id) => _repository.getById(id);
+
+  @override
+  Future<void> save(User aggregate) async {
+    final previousUsername = _usernamesById[aggregate.id];
+    if (previousUsername != null && previousUsername != aggregate.username) {
+      _idsByUsername.remove(previousUsername);
+    }
+    await _repository.save(aggregate);
+    _idsByUsername[aggregate.username] = aggregate.id;
+    _usernamesById[aggregate.id] = aggregate.username;
+  }
+
+  @override
+  Future<void> deleteById(UuidValue id) async {
+    await _repository.deleteById(id);
+    final username = _usernamesById.remove(id);
+    if (username != null) {
+      _idsByUsername.remove(username);
+    }
+  }
+
+  @override
+  Future<User?> findByUsername(String username) {
+    final id = _idsByUsername[username];
+    return id == null ? Future.value() : _repository.getById(id);
+  }
+}
+
 // Custom JWT claims
 class UserClaims {
   const UserClaims({
@@ -93,8 +135,8 @@ void main() async {
   print('Starting self-hosted auth example...\n');
 
   // Create repositories
-  final userRepo = InMemoryRepository<User>();
-  final refreshTokenRepo = InMemoryRepository<RefreshToken>();
+  final userRepo = InMemoryUserRepository();
+  final refreshTokenRepo = InMemoryRefreshTokenRepository<RefreshToken>();
   final deviceCodeRepo = InMemoryDeviceCodeRepository<DeviceCode>(
     lifecycle: const StandardDeviceCodeLifecycle(),
   );
@@ -110,11 +152,14 @@ void main() async {
     refreshTokenRepository: refreshTokenRepo,
     refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
     claimsLoader: (userId) async {
-      final users = await userRepo.getAll();
-      final user =
-          users.where((user) => user.id.toString() == userId).firstOrNull;
-      if (user == null) {
-        return null;
+      final User user;
+      try {
+        user = await userRepo.getById(UuidValue.fromString(userId));
+      } on RepositoryException catch (error) {
+        if (error.type == RepositoryExceptionType.notFound) {
+          return null;
+        }
+        rethrow;
       }
 
       return UserClaims(
@@ -138,9 +183,7 @@ void main() async {
     deviceCodeRepository: deviceCodeRepo,
     deviceCodeLifecycle: const StandardDeviceCodeLifecycle(),
     userValidator: (username, password) async {
-      // Find user by username
-      final users = await userRepo.getAll();
-      final user = users.where((u) => u.username == username).firstOrNull;
+      final user = await userRepo.findByUsername(username);
 
       if (user == null) {
         return null;

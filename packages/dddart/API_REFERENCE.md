@@ -1033,7 +1033,8 @@ class InMemoryRepository<T extends AggregateRoot> implements Repository<T> {
   Future<void> deleteById(UuidValue id);
   
   void clear();
-  List<T> getAll();
+  Future<List<T>> getAll();
+  List<T> getAllSync();
 }
 ```
 
@@ -1111,14 +1112,14 @@ await repository.save(user2);
 repository.clear();
 
 // Repository is now empty
-expect(repository.getAll(), isEmpty);
+expect(await repository.getAll(), isEmpty);
 ```
 
 #### `getAll()`
-Returns all aggregates in the repository.
+Asynchronously returns all aggregates in the repository.
 
 ```dart
-List<T> getAll()
+Future<List<T>> getAll()
 ```
 
 **Returns:** An unmodifiable list of all stored aggregates
@@ -1136,9 +1137,19 @@ final repository = InMemoryRepository<User>();
 await repository.save(user1);
 await repository.save(user2);
 
-final allUsers = repository.getAll();
+final allUsers = await repository.getAll();
 expect(allUsers.length, equals(2));
 ```
+
+#### `getAllSync()`
+Synchronously returns an unmodifiable snapshot of all aggregates.
+
+```dart
+List<T> getAllSync()
+```
+
+Like `getAll()`, this is a concrete testing and inspection convenience on
+`InMemoryRepository`; it is not part of the `Repository` contract.
 
 ### Usage Examples
 
@@ -1193,7 +1204,7 @@ void main() {
     
     test('creates user', () async {
       final user = await service.createUser('John', 'john@example.com');
-      expect(repository.getAll().length, equals(1));
+      expect(repository.getAllSync().length, equals(1));
     });
     
     test('updates user', () async {
@@ -1221,8 +1232,8 @@ void main() {
     await userRepo.save(user);
     await orderRepo.save(order);
     
-    expect(userRepo.getAll().length, equals(1));
-    expect(orderRepo.getAll().length, equals(1));
+    expect(userRepo.getAllSync().length, equals(1));
+    expect(orderRepo.getAllSync().length, equals(1));
     
     // Type safety enforced
     final retrievedUser = await userRepo.getById(user.id);
@@ -1236,7 +1247,7 @@ void main() {
 - **getById**: O(1) - HashMap lookup
 - **save**: O(1) - HashMap insert/update
 - **deleteById**: O(1) - HashMap removal
-- **getAll**: O(n) - Iterates all values
+- **getAll / getAllSync**: O(n) - Iterates all values
 - **clear**: O(n) - Clears HashMap
 - **Memory**: O(n) where n is number of stored aggregates
 

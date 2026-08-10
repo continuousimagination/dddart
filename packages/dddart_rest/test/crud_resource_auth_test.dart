@@ -4,6 +4,7 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/src/authentication_handler.dart';
 import 'package:dddart_rest/src/authentication_result.dart';
 import 'package:dddart_rest/src/crud_resource.dart';
+import 'package:dddart_rest/src/query_handler.dart';
 import 'package:shelf/shelf.dart';
 import 'package:test/test.dart';
 
@@ -94,18 +95,23 @@ class MockAuthHandler implements AuthenticationHandler<String> {
   });
   final bool shouldAuthenticate;
   final String? errorMessage;
+  AuthenticationResult<String>? lastResult;
 
   @override
   Future<AuthenticationResult<String>> authenticate(Request request) async {
     if (shouldAuthenticate) {
-      return AuthenticationResult.success(
+      final result = AuthenticationResult<String>.success(
         userId: 'test-user-123',
         claims: 'test-claim',
       );
+      lastResult = result;
+      return result;
     } else {
-      return AuthenticationResult.failure(
+      final result = AuthenticationResult<String>.failure(
         errorMessage ?? 'Authentication failed',
       );
+      lastResult = result;
+      return result;
     }
   }
 }
@@ -277,6 +283,26 @@ void main() {
 
       // Assert
       expect(response.statusCode, equals(401));
+    });
+
+    test('collection handler receives the authentication result', () async {
+      final authHandler = MockAuthHandler();
+      dynamic receivedAuthResult;
+      final resource = CrudResource<TestUser, String>(
+        path: '/users',
+        repository: repository,
+        serializer: serializer,
+        authenticationHandler: authHandler,
+        collectionHandler: (repo, params, skip, take, authResult) async {
+          receivedAuthResult = authResult;
+          return QueryResult<TestUser>(const [], totalCount: 0);
+        },
+      );
+
+      final response = await resource.handleQuery(createRequest());
+
+      expect(response.statusCode, equals(200));
+      expect(receivedAuthResult, same(authHandler.lastResult));
     });
 
     test('resource without auth handler allows unauthenticated access',
