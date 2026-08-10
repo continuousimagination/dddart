@@ -75,7 +75,79 @@ class Report extends AggregateRoot {
       ),
     );
   });
+
+  test('emits each custom read once and prefers the most-derived method',
+      () async {
+    final library = await resolveSource(
+      '''
+library read_fixture;
+
+import 'package:dddart/dddart.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
+import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';
+
+abstract interface class BroadReportReads {
+  Future<Iterable<Report>> getAll();
 }
+
+abstract interface class ReportRepository
+    implements Repository<Report>, BroadReportReads {
+  @override
+  Future<List<Report>> getAll();
+
+  Future<List<Report>> scanPage({required int limit});
+
+  Future<Report?> findBySlug(String slug);
+}
+
+@Serializable()
+@GenerateDynamoRepository(
+  tableName: 'reports',
+  implements: ReportRepository,
+)
+class Report extends AggregateRoot {
+  Report({super.id, super.createdAt, super.updatedAt});
+}
+''',
+      (resolver) async => (await resolver.findLibraryByName('read_fixture'))!,
+    );
+    final aggregate = library.topLevelElements
+        .whereType<ClassElement>()
+        .firstWhere((element) => element.name == 'Report');
+    final annotation = aggregate.metadata.firstWhere(
+      (metadata) =>
+          metadata.computeConstantValue()?.type?.element?.name ==
+          'GenerateDynamoRepository',
+    );
+
+    final output = DynamoRepositoryGenerator().generateForAnnotatedElement(
+      aggregate,
+      ConstantReader(annotation.computeConstantValue()),
+      _StubBuildStep(),
+    );
+
+    expect(
+      _occurrenceCount(output, 'Future<List<Report>> getAll();'),
+      1,
+    );
+    expect(output, isNot(contains('Future<Iterable<Report>> getAll();')));
+    expect(
+      _occurrenceCount(
+        output,
+        'Future<List<Report>> scanPage({required int limit});',
+      ),
+      1,
+    );
+    expect(
+      _occurrenceCount(output, 'Future<Report?> findBySlug(String slug);'),
+      1,
+    );
+    expect(output, isNot(contains('_connection.client.scan')));
+  });
+}
+
+int _occurrenceCount(String source, String value) =>
+    source.split(value).length - 1;
 
 // ignore: subtype_of_sealed_class
 class _StubBuildStep implements BuildStep {

@@ -9,7 +9,7 @@ import 'lib/domain/user_with_custom_repo.dart';
 /// This example shows:
 /// - Defining a custom repository interface with domain-specific methods
 /// - Using the generated abstract base class
-/// - Implementing custom query methods using DynamoDB Scan operations
+/// - Implementing bounded custom reads with indexed DynamoDB Query operations
 /// - Using both generated CRUD methods and custom query methods
 ///
 /// Prerequisites:
@@ -33,7 +33,11 @@ Future<void> main() async {
     await ensureDynamoTable(
       connection: connection,
       tableName: userRepo.tableName,
-      createTable: userRepo.createTable,
+      createTable: userRepo.createTableWithIndexes,
+      requiredGlobalSecondaryIndexes: const {
+        UserWithCustomRepoDynamoRepository.emailIndexName,
+        UserWithCustomRepoDynamoRepository.lastNameIndexName,
+      },
     );
     print('   ✓ Table ready: ${userRepo.tableName}\n');
 
@@ -76,7 +80,7 @@ Future<void> main() async {
 
     // Step 5: Use custom query method - findByLastName
     print('5. Finding users by last name (custom method)...');
-    final doeUsers = await userRepo.findByLastName('Doe');
+    final doeUsers = await userRepo.findByLastName('Doe', limit: 10);
     print('   ✓ Found ${doeUsers.length} users with last name "Doe":');
     for (final user in doeUsers) {
       print('     - ${user.fullName} (${user.email})');

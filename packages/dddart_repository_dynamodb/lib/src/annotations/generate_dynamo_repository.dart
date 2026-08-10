@@ -17,6 +17,8 @@
 /// that can be instantiated directly:
 ///
 /// ```dart
+/// part 'user.g.dart';
+///
 /// @Serializable()
 /// @GenerateDynamoRepository(tableName: 'users')
 /// class User extends AggregateRoot {
@@ -29,9 +31,6 @@
 ///   final String firstName;
 ///   final String lastName;
 /// }
-///
-/// part 'user.g.dart';
-///
 /// // Usage:
 /// final connection = DynamoConnection(
 ///   region: 'us-east-1',
@@ -69,10 +68,16 @@
 /// developer must extend this base class and implement the custom methods:
 ///
 /// ```dart
+/// part 'user.g.dart';
+/// part 'user_dynamo_repository.dart';
+///
 /// // Define custom repository interface
 /// abstract interface class UserRepository implements Repository<User> {
 ///   Future<User?> findByEmail(String email);
-///   Future<List<User>> findByLastName(String lastName);
+///   Future<List<User>> findByLastName(
+///     String lastName, {
+///     required int limit,
+///   });
 /// }
 ///
 /// @Serializable()
@@ -92,10 +97,14 @@
 ///   final String lastName;
 ///   final String email;
 /// }
+/// ```
 ///
-/// part 'user.g.dart';
+/// Then extend the generated base from `user_dynamo_repository.dart`, which is
+/// a handwritten part of the aggregate library:
 ///
-/// // Extend generated base class and implement custom methods
+/// ```dart
+/// part of 'user.dart';
+///
 /// class UserDynamoRepository extends UserDynamoRepositoryBase {
 ///   UserDynamoRepository(super.connection);
 ///
@@ -109,6 +118,7 @@
 ///         expressionAttributeValues: {
 ///           ':email': AttributeValue(s: email),
 ///         },
+///         limit: 1,
 ///       );
 ///
 ///       if (result.items == null || result.items!.isEmpty) {
@@ -119,20 +129,27 @@
 ///         result.items!.first,
 ///       );
 ///       return _serializer.fromJson(json);
-///     } catch (e) {
-///       throw _mapException(e);
+///     } catch (error) {
+///       throw _mapDynamoException(error, 'findByEmail');
 ///     }
 ///   }
 ///
 ///   @override
-///   Future<List<User>> findByLastName(String lastName) async {
+///   Future<List<User>> findByLastName(
+///     String lastName, {
+///     required int limit,
+///   }) async {
+///     RangeError.checkValueInInterval(limit, 1, 100, 'limit');
+///
 ///     try {
-///       final result = await _connection.client.scan(
+///       final result = await _connection.client.query(
 ///         tableName: tableName,
-///         filterExpression: 'lastName = :lastName',
+///         indexName: 'last-name-index', // Requires GSI on lastName
+///         keyConditionExpression: 'lastName = :lastName',
 ///         expressionAttributeValues: {
 ///           ':lastName': AttributeValue(s: lastName),
 ///         },
+///         limit: limit,
 ///       );
 ///
 ///       if (result.items == null || result.items!.isEmpty) {
@@ -143,8 +160,8 @@
 ///         final json = AttributeValueConverter.attributeMapToJsonMap(item);
 ///         return _serializer.fromJson(json);
 ///       }).toList();
-///     } catch (e) {
-///       throw _mapException(e);
+///     } catch (error) {
+///       throw _mapDynamoException(error, 'findByLastName');
 ///     }
 ///   }
 /// }
@@ -184,8 +201,8 @@
 /// // Production: DynamoDB implementation
 /// UserRepository repo = UserDynamoRepository(dynamoConnection);
 ///
-/// // Testing: In-memory implementation
-/// UserRepository repo = InMemoryRepository<User>();
+/// // Testing: focused fake implementing the same domain-specific reads
+/// UserRepository repo = FakeUserRepository();
 ///
 /// // Development: MongoDB implementation
 /// UserRepository repo = UserMongoRepository(mongoDatabase);
@@ -227,8 +244,10 @@ class GenerateDynamoRepository {
   ///   with concrete implementations of base methods and abstract
   ///   declarations of custom methods
   ///
-  /// The generated abstract base class exposes protected members
-  /// (_connection, tableName, _serializer) for use in custom method
-  /// implementations.
+  /// The generated base exposes `tableName` publicly. Its underscore-prefixed
+  /// members (`_connection`, `_serializer`, and `_mapDynamoException`) are Dart
+  /// library-private, so a handwritten implementation can use them only when it
+  /// is declared as a `part` of the aggregate library. Subclassing from another
+  /// library does not provide access.
   final Type? implements;
 }

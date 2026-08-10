@@ -81,7 +81,7 @@ dart run basic_crud_example.dart
 - Defining custom repository interfaces
 - Using `@GenerateDynamoRepository(implements: ...)` annotation
 - Extending generated abstract base classes
-- Implementing custom query methods using DynamoDB Scan
+- Implementing bounded custom reads with DynamoDB global secondary indexes
 - Using both generated and custom methods
 
 **Run:**
@@ -94,7 +94,8 @@ dart run custom_interface_example.dart
 - `UserWithCustomRepoDynamoRepositoryBase` generated abstract class
 - `UserWithCustomRepoDynamoRepository` concrete implementation
 - Custom queries: `findByEmail()`, `findByLastName()`
-- DynamoDB Scan operations with filter expressions
+- Indexed DynamoDB `Query` operations with explicit result limits
+- Example table creation with the required email and last-name GSIs
 
 ---
 
@@ -282,7 +283,8 @@ After exploring these examples:
 
 1. **Create your own aggregates** with `@Serializable()` and `@GenerateDynamoRepository()`
 2. **Define custom repository interfaces** for domain-specific queries
-3. **Implement custom query methods** using DynamoDB operations
+3. **Implement custom query methods** using bounded, indexed DynamoDB `Query`
+   operations
 4. **Write tests** using `InMemoryRepository` for fast unit tests
 5. **Configure production** using environment variables
 6. **Deploy tables** using CloudFormation or Terraform
@@ -293,7 +295,8 @@ After exploring these examples:
 - **Batch Operations**: For bulk operations, consider using BatchWriteItem (future enhancement)
 - **Consistent Reads**: Default to eventually consistent reads for better performance
 - **Projection Expressions**: For custom queries, retrieve only needed attributes
-- **Pagination**: For scan/query operations, implement pagination for large result sets
+- **Bounded Reads**: Require an explicit limit for multi-result queries and
+  model continuation only when the application access pattern needs it
 
 ## Additional Resources
 

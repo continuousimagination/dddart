@@ -10,7 +10,8 @@ DynamoDB repository implementation for DDDart aggregate roots with code generati
 - 🔌 **Extensibility**: Support for custom repository interfaces with domain-specific query methods
 - 🌍 **AWS Integration**: Built on official AWS SDK for Dart with proper credential management
 - 🧪 **Local Development**: Support for DynamoDB Local and LocalStack
-- 📦 **Consistent API**: Mirrors `dddart_repository_mongodb` patterns for easy implementation swapping
+- 📦 **Base Contract**: Implements dddart's shared CRUD repository contract while
+  keeping DynamoDB-specific reads explicit
 
 ## Installation
 
@@ -135,9 +136,15 @@ docker run -p 8000:8000 amazon/dynamodb-local
 Define domain-specific query methods:
 
 ```dart
-abstract class UserRepository extends Repository<User> {
+part 'user.g.dart';
+part 'user_dynamo_repository.dart';
+
+abstract interface class UserRepository implements Repository<User> {
   Future<User?> findByEmail(String email);
-  Future<List<User>> findByLastName(String lastName);
+  Future<List<User>> findByLastName(
+    String lastName, {
+    required int limit,
+  });
 }
 
 @Serializable()
@@ -153,6 +160,8 @@ class User extends AggregateRoot {
 The generator creates an abstract base class that you extend:
 
 ```dart
+part of 'user.dart';
+
 class UserDynamoRepositoryImpl extends UserDynamoRepositoryBase {
   UserDynamoRepositoryImpl(super.connection);
 
@@ -164,16 +173,33 @@ class UserDynamoRepositoryImpl extends UserDynamoRepositoryBase {
       indexName: 'email-index',
       keyConditionExpression: 'email = :email',
       expressionAttributeValues: {':email': AttributeValue(s: email)},
+      limit: 1,
     );
     // ... parse and return result
   }
 
   @override
-  Future<List<User>> findByLastName(String lastName) async {
-    // Implement custom query
+  Future<List<User>> findByLastName(
+    String lastName, {
+    required int limit,
+  }) async {
+    final result = await _connection.client.query(
+      tableName: tableName,
+      indexName: 'last-name-index',
+      keyConditionExpression: 'lastName = :lastName',
+      expressionAttributeValues: {
+        ':lastName': AttributeValue(s: lastName),
+      },
+      limit: limit,
+    );
+    // ... parse and return at most limit results
   }
 }
 ```
+
+The handwritten implementation must be a `part` of the aggregate library to
+use generated underscore-prefixed members such as `_connection` and
+`_serializer`. They are Dart library-private, not protected subclass members.
 
 ## Table Creation
 
@@ -182,6 +208,10 @@ class UserDynamoRepositoryImpl extends UserDynamoRepositoryBase {
 ```dart
 await userRepo.createTable();
 ```
+
+The generated helper creates the aggregate's primary-key table. If custom read
+methods require secondary indexes, application infrastructure must create those
+indexes as part of the table schema; see the custom example for an SDK setup.
 
 ### AWS CLI
 
@@ -315,6 +345,8 @@ Utilities for converting between JSON and DynamoDB AttributeValue format.
 #### Concrete Repository (No Custom Interface)
 
 Generated when no custom interface is specified or interface has only base methods.
+The class implements `Repository<T>` and provides CRUD operations only. It does
+not enumerate the table or issue an implicit DynamoDB `Scan`.
 
 **Constructor:**
 - `{ClassName}DynamoRepository(DynamoConnection connection)`
@@ -332,6 +364,15 @@ Generated when no custom interface is specified or interface has only base metho
 **Properties:**
 - `tableName`: The DynamoDB table name
 
+#### Migrating Collection Reads
+
+Generated repositories do not provide `getAll()`. If an application needs a
+collection or lookup operation, declare the exact read method on a custom
+repository interface and implement its DynamoDB selection, ordering, limits,
+and continuation behavior in the handwritten repository. Methods such as
+`getAll()`, `scanPage()`, or domain-specific lookups are treated like any other
+custom method and are emitted once as abstract declarations.
+
 #### Abstract Base Repository (Custom Interface)
 
 Generated when custom interface has additional methods beyond base Repository.
@@ -345,11 +386,15 @@ Generated when custom interface has additional methods beyond base Repository.
 **Abstract Methods:**
 - Custom methods from the interface (must be implemented by subclass)
 
-**Protected Members:**
+**Library-Private Members Available to Handwritten Parts:**
 - `_connection`: DynamoConnection instance
 - `tableName`: Table name string
 - `_serializer`: JsonSerializer instance
-- `_mapException(dynamic e)`: Exception mapping helper
+- `_mapDynamoException(Object error, String operation)`: Exception mapping helper
+
+Underscore-prefixed members are accessible only when the handwritten
+implementation is a `part` of the aggregate library; they are not protected
+subclass members across library boundaries.
 
 **Example:**
 ```dart
@@ -358,7 +403,8 @@ class UserDynamoRepository extends UserDynamoRepositoryBase {
 
   @override
   Future<User?> findByEmail(String email) async {
-    // Use protected members: _connection, tableName, _serializer
+    // This implementation is a part of the aggregate library, so it can use
+    // the generated library-private members.
     final result = await _connection.client.query(
       tableName: tableName,
       indexName: 'email-index',
@@ -570,10 +616,12 @@ final connection = DynamoConnection(region: 'us-east-1');
         "dynamodb:GetItem",
         "dynamodb:PutItem",
         "dynamodb:DeleteItem",
-        "dynamodb:Query",
-        "dynamodb:Scan"
+        "dynamodb:Query"
       ],
-      "Resource": "arn:aws:dynamodb:us-east-1:123456789012:table/users"
+      "Resource": [
+        "arn:aws:dynamodb:us-east-1:123456789012:table/users",
+        "arn:aws:dynamodb:us-east-1:123456789012:table/users/index/*"
+      ]
     }
   ]
 }
@@ -596,45 +644,24 @@ Enable encryption when creating tables in production:
 // Eventually consistent (faster, cheaper)
 final result = await connection.client.getItem(
   tableName: tableName,
-  key: {'id': AttributeValue(s: id.value)},
+  key: {'id': AttributeValue(s: id.toString())},
   consistentRead: false, // Default
 );
 
 // Strongly consistent (slower, more expensive)
 final result = await connection.client.getItem(
   tableName: tableName,
-  key: {'id': AttributeValue(s: id.value)},
+  key: {'id': AttributeValue(s: id.toString())},
   consistentRead: true, // Use only when needed
 );
 ```
 
-**Implement pagination for large result sets:**
+**Keep collection reads bounded and domain-specific:**
 
-```dart
-Future<List<User>> scanAllUsers() async {
-  final users = <User>[];
-  Map<String, AttributeValue>? lastEvaluatedKey;
-  
-  do {
-    final result = await connection.client.scan(
-      tableName: tableName,
-      exclusiveStartKey: lastEvaluatedKey,
-      limit: 100, // Page size
-    );
-    
-    if (result.items != null) {
-      for (final item in result.items!) {
-        final json = AttributeValueConverter.attributeMapToJsonMap(item);
-        users.add(serializer.fromJson(json));
-      }
-    }
-    
-    lastEvaluatedKey = result.lastEvaluatedKey;
-  } while (lastEvaluatedKey != null);
-  
-  return users;
-}
-```
+Define application repository methods around the actual access pattern, then
+implement them with DynamoDB `Query` and appropriate keys or indexes. The
+application owns ordering, page boundaries, and continuation semantics. Avoid
+loading an entire table into memory as a normal query strategy.
 
 **Use projection expressions to reduce data transfer:**
 
@@ -642,7 +669,7 @@ Future<List<User>> scanAllUsers() async {
 // Only retrieve specific attributes
 final result = await connection.client.getItem(
   tableName: tableName,
-  key: {'id': AttributeValue(s: id.value)},
+  key: {'id': AttributeValue(s: id.toString())},
   projectionExpression: 'id, email, firstName, lastName',
 );
 ```
@@ -688,7 +715,8 @@ void main() {
 **Use in-memory repositories for unit tests:**
 
 ```dart
-// Test business logic without DynamoDB
+// Test business logic without DynamoDB. getAll() is a concrete inspection
+// convenience on InMemoryRepository, not a framework repository capability.
 final userRepo = InMemoryRepository<User>();
 final service = UserService(userRepo);
 
@@ -707,10 +735,15 @@ test('should create user', () async {
 Extend the generated base repository to add domain-specific queries:
 
 ```dart
+part 'user.g.dart';
+part 'user_dynamo_repository.dart';
+
 abstract interface class UserRepository implements Repository<User> {
   Future<User?> findByEmail(String email);
-  Future<List<User>> findByLastName(String lastName);
-  Future<List<User>> findActiveUsers();
+  Future<List<User>> findByLastName(
+    String lastName, {
+    required int limit,
+  });
 }
 
 @Serializable()
@@ -724,16 +757,19 @@ class User extends AggregateRoot {
     required this.email,
     required this.firstName,
     required this.lastName,
-    required this.isActive,
   }) : super(id);
 
   final String email;
   final String firstName;
   final String lastName;
-  final bool isActive;
 }
+```
 
-part 'user.g.dart';
+Place the implementation in `user_dynamo_repository.dart` so it shares the
+aggregate library with the generated part:
+
+```dart
+part of 'user.dart';
 
 class UserDynamoRepository extends UserDynamoRepositoryBase {
   UserDynamoRepository(super.connection);
@@ -749,6 +785,7 @@ class UserDynamoRepository extends UserDynamoRepositoryBase {
         expressionAttributeValues: {
           ':email': AttributeValue(s: email),
         },
+        limit: 1,
       );
 
       if (result.items == null || result.items!.isEmpty) {
@@ -759,20 +796,28 @@ class UserDynamoRepository extends UserDynamoRepositoryBase {
         result.items!.first,
       );
       return _serializer.fromJson(json);
-    } catch (e) {
-      throw _mapException(e);
+    } catch (error) {
+      throw _mapDynamoException(error, 'findByEmail');
     }
   }
 
   @override
-  Future<List<User>> findByLastName(String lastName) async {
+  Future<List<User>> findByLastName(
+    String lastName, {
+    required int limit,
+  }) async {
+    RangeError.checkValueInInterval(limit, 1, 100, 'limit');
+
     try {
-      final result = await _connection.client.scan(
+      final result = await _connection.client.query(
         tableName: tableName,
-        filterExpression: 'lastName = :lastName',
+        indexName: 'last-name-index',
+        keyConditionExpression: 'lastName = :lastName',
         expressionAttributeValues: {
           ':lastName': AttributeValue(s: lastName),
         },
+        limit: limit,
+        scanIndexForward: true,
       );
 
       if (result.items == null || result.items!.isEmpty) {
@@ -783,32 +828,8 @@ class UserDynamoRepository extends UserDynamoRepositoryBase {
         final json = AttributeValueConverter.attributeMapToJsonMap(item);
         return _serializer.fromJson(json);
       }).toList();
-    } catch (e) {
-      throw _mapException(e);
-    }
-  }
-
-  @override
-  Future<List<User>> findActiveUsers() async {
-    try {
-      final result = await _connection.client.scan(
-        tableName: tableName,
-        filterExpression: 'isActive = :active',
-        expressionAttributeValues: {
-          ':active': AttributeValue(boolValue: true),
-        },
-      );
-
-      if (result.items == null || result.items!.isEmpty) {
-        return [];
-      }
-
-      return result.items!.map((item) {
-        final json = AttributeValueConverter.attributeMapToJsonMap(item);
-        return _serializer.fromJson(json);
-      }).toList();
-    } catch (e) {
-      throw _mapException(e);
+    } catch (error) {
+      throw _mapDynamoException(error, 'findByLastName');
     }
   }
 }
@@ -816,17 +837,10 @@ class UserDynamoRepository extends UserDynamoRepositoryBase {
 
 ### Global Secondary Indexes (GSI)
 
-For efficient queries on non-key attributes, create GSIs:
+For efficient queries on non-key attributes, create GSIs that match each
+application read method. This schema supports the bounded examples above:
 
-```dart
-// Create GSI via AWS CLI
-aws dynamodb update-table \
-  --table-name users \
-  --attribute-definitions AttributeName=email,AttributeType=S \
-  --global-secondary-index-updates \
-    "[{\"Create\":{\"IndexName\":\"email-index\",\"KeySchema\":[{\"AttributeName\":\"email\",\"KeyType\":\"HASH\"}],\"Projection\":{\"ProjectionType\":\"ALL\"},\"ProvisionedThroughput\":{\"ReadCapacityUnits\":5,\"WriteCapacityUnits\":5}}}]"
-
-// Or via CloudFormation
+```yaml
 Resources:
   UsersTable:
     Type: AWS::DynamoDB::Table
@@ -837,6 +851,8 @@ Resources:
           AttributeType: S
         - AttributeName: email
           AttributeType: S
+        - AttributeName: lastName
+          AttributeType: S
       KeySchema:
         - AttributeName: id
           KeyType: HASH
@@ -845,11 +861,18 @@ Resources:
           KeySchema:
             - AttributeName: email
               KeyType: HASH
+            - AttributeName: id
+              KeyType: RANGE
           Projection:
             ProjectionType: ALL
-          ProvisionedThroughput:
-            ReadCapacityUnits: 5
-            WriteCapacityUnits: 5
+        - IndexName: last-name-index
+          KeySchema:
+            - AttributeName: lastName
+              KeyType: HASH
+            - AttributeName: email
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
       BillingMode: PAY_PER_REQUEST
 ```
 
@@ -881,8 +904,8 @@ class UserDynamoRepository extends UserDynamoRepositoryBase {
         await _connection.client.batchWriteItem(
           requestItems: {tableName: requests},
         );
-      } catch (e) {
-        throw _mapException(e);
+      } catch (error) {
+        throw _mapDynamoException(error, 'saveAll');
       }
     }
   }
@@ -895,7 +918,7 @@ class UserDynamoRepository extends UserDynamoRepositoryBase {
       final batch = ids.skip(i).take(batchSize).toList();
       
       final keys = batch.map((id) => {
-        'id': AttributeValue(s: id.value),
+        'id': AttributeValue(s: id.toString()),
       }).toList();
       
       try {
@@ -910,8 +933,8 @@ class UserDynamoRepository extends UserDynamoRepositoryBase {
           final json = AttributeValueConverter.attributeMapToJsonMap(item);
           users.add(_serializer.fromJson(json));
         }
-      } catch (e) {
-        throw _mapException(e);
+      } catch (error) {
+        throw _mapDynamoException(error, 'getByIds');
       }
     }
     
@@ -943,8 +966,8 @@ class UserDynamoRepository extends UserDynamoRepositoryBase {
           ':expectedVersion': AttributeValue(n: expectedVersion.toString()),
         },
       );
-    } catch (e) {
-      throw _mapException(e);
+    } catch (error) {
+      throw _mapDynamoException(error, 'saveWithVersion');
     }
   }
 }
@@ -1165,7 +1188,7 @@ class User extends AggregateRoot {
 final result = await connection.client.query(
   tableName: tableName,
   keyConditionExpression: 'id = :id',
-  expressionAttributeValues: {':id': AttributeValue(s: id.value)},
+  expressionAttributeValues: {':id': AttributeValue(s: id.toString())},
 );
 
 // 2. Create Global Secondary Indexes for common queries
@@ -1236,7 +1259,9 @@ await db.open();
 final userRepo = UserMongoRepository(db);
 ```
 
-Both packages follow the same patterns, making it easy to switch between DynamoDB and MongoDB/DocumentDB implementations.
+Both packages implement the base CRUD contract. Generated shapes and custom
+read capabilities remain backend-specific, so application adapters must
+implement and test each domain-specific repository interface explicitly.
 
 ## Examples
 
