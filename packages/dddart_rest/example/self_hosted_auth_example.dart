@@ -95,15 +95,35 @@ void main() async {
   // Create repositories
   final userRepo = InMemoryRepository<User>();
   final refreshTokenRepo = InMemoryRepository<RefreshToken>();
-  final deviceCodeRepo = InMemoryRepository<DeviceCode>();
+  final deviceCodeRepo = InMemoryDeviceCodeRepository<DeviceCode>(
+    lifecycle: const StandardDeviceCodeLifecycle(),
+  );
 
   // Seed test users
   await _seedUsers(userRepo);
 
-  // Create auth handler with custom claims
+  // Create auth handler with custom claims. This loader is the authoritative
+  // source for both login and refresh, so role and profile changes are picked
+  // up whenever a new access token is issued.
   final authHandler = JwtAuthHandler<UserClaims, RefreshToken>(
     secret: 'your-256-bit-secret-key-change-in-production',
     refreshTokenRepository: refreshTokenRepo,
+    refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
+    claimsLoader: (userId) async {
+      final users = await userRepo.getAll();
+      final user =
+          users.where((user) => user.id.toString() == userId).firstOrNull;
+      if (user == null) {
+        return null;
+      }
+
+      return UserClaims(
+        userId: user.id.toString(),
+        username: user.username,
+        email: user.email,
+        roles: user.roles,
+      );
+    },
     issuer: 'https://api.example.com',
     audience: 'example-app',
     accessTokenDuration: const Duration(minutes: 15),
@@ -116,6 +136,7 @@ void main() async {
   final authEndpoints = AuthEndpoints(
     authHandler: authHandler,
     deviceCodeRepository: deviceCodeRepo,
+    deviceCodeLifecycle: const StandardDeviceCodeLifecycle(),
     userValidator: (username, password) async {
       // Find user by username
       final users = await userRepo.getAll();
@@ -132,15 +153,6 @@ void main() async {
       }
 
       return null;
-    },
-    claimsBuilder: (userId) async {
-      final user = await userRepo.getById(UuidValue.fromString(userId));
-      return UserClaims(
-        userId: user.id.toString(),
-        username: user.username,
-        email: user.email,
-        roles: user.roles,
-      );
     },
   );
 

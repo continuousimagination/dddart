@@ -1,5 +1,145 @@
 # Migration Guide
 
+## Client-bound, single-use device grants (Unreleased)
+
+`AuthEndpoints` now requires a `DeviceCodeRepository<TDeviceCode>` instead of a
+plain `Repository<TDeviceCode>`. Replace the general-purpose in-memory
+repository in examples and tests:
+
+```dart
+// Before
+final deviceCodeRepository = InMemoryRepository<DeviceCode>();
+
+// After
+final deviceCodeRepository = InMemoryDeviceCodeRepository<DeviceCode>(
+  lifecycle: const StandardDeviceCodeLifecycle(),
+);
+```
+
+The device-specific repository provides `findByUserCode`, `findByDeviceCode`,
+and `consumeApproved`. Redemption supplies both the device code and
+`client_id`; the client ID must exactly match the value stored at creation or
+the endpoint returns `invalid_grant`.
+
+`consumeApproved` must atomically match an approved, unexpired code for that
+client with a non-null user, persist its transition to consumed, and return the
+typed consumed value. A non-match returns `null` without mutation. Exactly one
+caller can win this transition, so an ordinary read followed by `save()` does
+not implement the contract. Production database adapters need a conditional
+update or equivalent compare-and-set operation in the database itself.
+
+Every redemption after the successful transition returns `invalid_grant`. If
+the successful response is lost after consumption, the client must restart
+login and request a new device code. `DeviceFlowAuthProvider` remains
+compatible: it reuses one stable client ID for the request and every poll, then
+stops after the first successful response.
+
+## Typed token lifecycles (Unreleased)
+
+`JwtAuthHandler` and `AuthEndpoints` no longer construct base token values and
+cast them to their generic types. Both constructors now require a lifecycle
+whose type exactly matches the corresponding repository:
+
+```dart
+final handler = JwtAuthHandler<UserClaims, RefreshToken>(
+  secret: secret,
+  refreshTokenRepository: refreshTokenRepository,
+  refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
+  claimsLoader: loadCurrentClaims,
+  parseClaimsFromJson: UserClaims.fromJson,
+  claimsToJson: (claims) => claims.toJson(),
+);
+
+final endpoints = AuthEndpoints<UserClaims, RefreshToken, DeviceCode>(
+  authHandler: handler,
+  deviceCodeRepository: deviceCodeRepository,
+  deviceCodeLifecycle: const StandardDeviceCodeLifecycle(),
+  userValidator: validateUser,
+);
+```
+
+The standard implementations are only for the base `RefreshToken` and
+`DeviceCode` types. For a custom subtype, implement the matching typed
+contract and use the same type consistently:
+
+```dart
+final handler = JwtAuthHandler<UserClaims, AppRefreshToken>(
+  secret: secret,
+  refreshTokenRepository: appRefreshTokenRepository,
+  refreshTokenLifecycle: const AppRefreshTokenLifecycle(),
+  claimsLoader: loadCurrentClaims,
+  parseClaimsFromJson: UserClaims.fromJson,
+  claimsToJson: (claims) => claims.toJson(),
+);
+
+final endpoints =
+    AuthEndpoints<UserClaims, AppRefreshToken, AppDeviceCode>(
+  authHandler: handler,
+  deviceCodeRepository: appDeviceCodeRepository,
+  deviceCodeLifecycle: const AppDeviceCodeLifecycle(),
+  userValidator: validateUser,
+);
+```
+
+`RefreshTokenLifecycle<T>` constructs `T` and revokes an existing `T`.
+`DeviceCodeLifecycle<T>` constructs `T`, approves an existing `T`, and consumes
+an approved `T`. Every creation must initialize the subtype-specific fields.
+Every transition must return the requested runtime subtype, preserve those
+fields, and apply the base-state transition before it is persisted.
+
+Production storage also needs an adapter that implements the authentication
+flows' required lookup and transition behavior. Device-code consumption must be
+a database-level conditional operation, not a read followed by `save()`. A
+plain generated MongoDB CRUD repository is not documented as sufficient, and
+dddart does not currently ship a verified MongoDB authentication adapter.
+
+## Authoritative application claims (Unreleased)
+
+`JwtAuthHandler` now owns the authoritative application-claims loader used for
+both initial token issuance and refresh. Move `claimsBuilder` from
+`AuthEndpoints` to the handler and remove the claims argument from
+`issueTokens`:
+
+```dart
+// Before
+final handler = JwtAuthHandler<UserClaims, RefreshToken>(
+  secret: secret,
+  refreshTokenRepository: refreshTokenRepository,
+  parseClaimsFromJson: UserClaims.fromJson,
+  claimsToJson: (claims) => claims.toJson(),
+);
+final endpoints = AuthEndpoints(
+  authHandler: handler,
+  deviceCodeRepository: deviceCodeRepository,
+  userValidator: validateUser,
+  claimsBuilder: loadClaims,
+);
+await handler.issueTokens(userId, claims);
+
+// After
+final handler = JwtAuthHandler<UserClaims, RefreshToken>(
+  secret: secret,
+  refreshTokenRepository: refreshTokenRepository,
+  refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
+  claimsLoader: loadCurrentClaims,
+  parseClaimsFromJson: UserClaims.fromJson,
+  claimsToJson: (claims) => claims.toJson(),
+);
+final endpoints = AuthEndpoints(
+  authHandler: handler,
+  deviceCodeRepository: deviceCodeRepository,
+  deviceCodeLifecycle: const StandardDeviceCodeLifecycle(),
+  userValidator: validateUser,
+);
+await handler.issueTokens(userId);
+```
+
+The loader is asynchronous and keyed by a validated user ID. It must read
+current application state and return `null` for missing, disabled, or otherwise
+ineligible users. Role, tenant, and profile changes therefore appear after
+refresh. Application claims remain access-token-only; refresh tokens stay
+opaque and contain no claim snapshot.
+
 ## JSON-only CRUD resources (Unreleased)
 
 `CrudResource<T>` now has one JSON representation. Replace the content-type

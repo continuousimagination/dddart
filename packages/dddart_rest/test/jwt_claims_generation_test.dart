@@ -8,7 +8,7 @@ void main() {
       // This test verifies that the code generation worked correctly
       // by checking that we can use the generated extension methods
 
-      // Create a mock JWT auth handler (we'll implement the real one later)
+      // Create a minimal JWT auth handler to exercise the generated helpers.
       final handler = _MockJwtAuthHandler();
 
       // Test parseClaimsFromJson
@@ -65,6 +65,8 @@ class _MockJwtAuthHandler extends JwtAuthHandler<StandardClaims, RefreshToken> {
       : super(
           secret: 'test-secret',
           refreshTokenRepository: InMemoryRepository<RefreshToken>(),
+          refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
+          claimsLoader: (userId) async => StandardClaims(sub: userId),
           parseClaimsFromJson: StandardClaims.fromJson,
           claimsToJson: (claims) => claims.toJson(),
         );

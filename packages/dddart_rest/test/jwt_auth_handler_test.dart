@@ -2,6 +2,7 @@ import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/src/jwt_auth_handler.dart';
 import 'package:dddart_rest/src/refresh_token.dart';
+import 'package:dddart_rest/src/refresh_token_lifecycle.dart';
 import 'package:dddart_rest/src/standard_claims.dart';
 import 'package:shelf/shelf.dart';
 import 'package:test/test.dart';
@@ -10,12 +11,33 @@ void main() {
   group('JwtAuthHandler', () {
     late Repository<RefreshToken> refreshTokenRepo;
     late JwtAuthHandler<StandardClaims, RefreshToken> authHandler;
+    late StandardClaims? currentClaims;
+    late List<String> claimsLoaderCalls;
 
     setUp(() {
       refreshTokenRepo = InMemoryRepository<RefreshToken>();
+      currentClaims = const StandardClaims(
+        sub: 'user123',
+        email: 'test@example.com',
+        name: 'Test User',
+      );
+      claimsLoaderCalls = [];
       authHandler = JwtAuthHandler<StandardClaims, RefreshToken>(
         secret: 'test-secret-key-for-testing',
         refreshTokenRepository: refreshTokenRepo,
+        refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
+        claimsLoader: (userId) async {
+          claimsLoaderCalls.add(userId);
+          final claims = currentClaims;
+          if (claims == null) {
+            return null;
+          }
+          return StandardClaims(
+            sub: userId,
+            email: claims.email,
+            name: claims.name,
+          );
+        },
         parseClaimsFromJson: StandardClaims.fromJson,
         claimsToJson: (claims) => claims.toJson(),
         issuer: 'https://test.example.com',
@@ -65,6 +87,11 @@ void main() {
         final expiredHandler = JwtAuthHandler<StandardClaims, RefreshToken>(
           secret: 'test-secret-key-for-testing',
           refreshTokenRepository: refreshTokenRepo,
+          refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
+          claimsLoader: (userId) async => StandardClaims(
+            sub: userId,
+            email: 'test@example.com',
+          ),
           parseClaimsFromJson: StandardClaims.fromJson,
           claimsToJson: (claims) => claims.toJson(),
           issuer: 'https://test.example.com',
@@ -72,10 +99,7 @@ void main() {
           accessTokenDuration: const Duration(seconds: -1), // Already expired
         );
 
-        final tokens = await expiredHandler.issueTokens(
-          'user123',
-          const StandardClaims(sub: 'user123', email: 'test@example.com'),
-        );
+        final tokens = await expiredHandler.issueTokens('user123');
 
         final request = Request(
           'GET',
@@ -91,14 +115,7 @@ void main() {
       });
 
       test('should return success with valid token', () async {
-        final tokens = await authHandler.issueTokens(
-          'user123',
-          const StandardClaims(
-            sub: 'user123',
-            email: 'test@example.com',
-            name: 'Test User',
-          ),
-        );
+        final tokens = await authHandler.issueTokens('user123');
 
         final request = Request(
           'GET',
@@ -122,15 +139,14 @@ void main() {
             JwtAuthHandler<StandardClaims, RefreshToken>(
           secret: 'test-secret-key-for-testing',
           refreshTokenRepository: refreshTokenRepo,
+          refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
+          claimsLoader: (userId) async => StandardClaims(sub: userId),
           parseClaimsFromJson: StandardClaims.fromJson,
           claimsToJson: (claims) => claims.toJson(),
           issuer: 'https://different.example.com',
         );
 
-        final tokens = await differentIssuerHandler.issueTokens(
-          'user123',
-          const StandardClaims(sub: 'user123'),
-        );
+        final tokens = await differentIssuerHandler.issueTokens('user123');
 
         // Try to authenticate with handler expecting different issuer
         final request = Request(
@@ -151,16 +167,15 @@ void main() {
             JwtAuthHandler<StandardClaims, RefreshToken>(
           secret: 'test-secret-key-for-testing',
           refreshTokenRepository: refreshTokenRepo,
+          refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
+          claimsLoader: (userId) async => StandardClaims(sub: userId),
           parseClaimsFromJson: StandardClaims.fromJson,
           claimsToJson: (claims) => claims.toJson(),
           issuer: 'https://test.example.com', // Same issuer
           audience: 'different-app',
         );
 
-        final tokens = await differentAudienceHandler.issueTokens(
-          'user123',
-          const StandardClaims(sub: 'user123'),
-        );
+        final tokens = await differentAudienceHandler.issueTokens('user123');
 
         // Try to authenticate with handler expecting different audience
         final request = Request(
@@ -178,10 +193,7 @@ void main() {
 
     group('issueTokens', () {
       test('should generate access and refresh tokens', () async {
-        final tokens = await authHandler.issueTokens(
-          'user123',
-          const StandardClaims(sub: 'user123', email: 'test@example.com'),
-        );
+        final tokens = await authHandler.issueTokens('user123');
 
         expect(tokens.accessToken, isNotEmpty);
         expect(tokens.refreshToken, isNotEmpty);
@@ -192,7 +204,6 @@ void main() {
       test('should store refresh token in repository', () async {
         final tokens = await authHandler.issueTokens(
           'user123',
-          const StandardClaims(sub: 'user123', email: 'test@example.com'),
           deviceInfo: 'Test Device',
         );
 
@@ -209,14 +220,7 @@ void main() {
       });
 
       test('should include custom claims in JWT', () async {
-        final tokens = await authHandler.issueTokens(
-          'user123',
-          const StandardClaims(
-            sub: 'user123',
-            email: 'test@example.com',
-            name: 'Test User',
-          ),
-        );
+        final tokens = await authHandler.issueTokens('user123');
 
         // Verify by authenticating with the token
         final request = Request(
@@ -244,13 +248,15 @@ void main() {
         final handler = JwtAuthHandler<Map<String, dynamic>, RefreshToken>(
           secret: 'test-secret-key-for-testing',
           refreshTokenRepository: InMemoryRepository<RefreshToken>(),
+          refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
+          claimsLoader: (userId) async => maliciousClaims,
           parseClaimsFromJson: (_) => maliciousClaims,
           claimsToJson: (claims) => claims,
           issuer: 'https://trusted.example.com',
           audience: 'trusted-app',
         );
 
-        final issued = await handler.issueTokens('real-user', maliciousClaims);
+        final issued = await handler.issueTokens('real-user');
         final issuedPayload = JWT
             .verify(
               issued.accessToken,
@@ -278,14 +284,106 @@ void main() {
         expect(refreshedPayload['exp'], isNot(2));
         expect(refreshedPayload['iss'], 'https://trusted.example.com');
         expect(refreshedPayload['aud'], 'trusted-app');
+        expect(refreshedPayload['role'], 'admin');
+      });
+
+      test('does not persist a refresh token when claims are unavailable',
+          () async {
+        currentClaims = null;
+
+        await expectLater(
+          authHandler.issueTokens('missing-user'),
+          throwsA(
+            isA<Exception>().having(
+              (error) => error.toString(),
+              'message',
+              contains('Authentication failed'),
+            ),
+          ),
+        );
+
+        expect(
+          (refreshTokenRepo as InMemoryRepository<RefreshToken>).getAllSync(),
+          isEmpty,
+        );
       });
     });
 
     group('refresh', () {
+      test('reloads current roles, tenants, and profile claims', () async {
+        final repository = InMemoryRepository<RefreshToken>();
+        var currentClaims = const _ApplicationClaims(
+          userId: 'user123',
+          roles: ['reader'],
+          tenantIds: ['tenant-a'],
+          profile: {'displayName': 'Original Name'},
+        );
+        final loaderCalls = <String>[];
+        var parserCalls = 0;
+        final handler = JwtAuthHandler<_ApplicationClaims, RefreshToken>(
+          secret: 'test-secret-key-for-testing',
+          refreshTokenRepository: repository,
+          refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
+          claimsLoader: (userId) async {
+            loaderCalls.add(userId);
+            return currentClaims;
+          },
+          parseClaimsFromJson: (json) {
+            parserCalls++;
+            return _ApplicationClaims.fromJson(json);
+          },
+          claimsToJson: (claims) => claims.toJson(),
+        );
+
+        final originalTokens = await handler.issueTokens('user123');
+        final originalPayload = JWT
+            .verify(
+              originalTokens.accessToken,
+              SecretKey('test-secret-key-for-testing'),
+            )
+            .payload as Map<String, dynamic>;
+
+        currentClaims = const _ApplicationClaims(
+          userId: 'user123',
+          roles: ['admin', 'auditor'],
+          tenantIds: ['tenant-b', 'tenant-c'],
+          profile: {'displayName': 'Current Name'},
+        );
+
+        final refreshedTokens = await handler.refresh(
+          originalTokens.refreshToken,
+        );
+        final refreshedPayload = JWT
+            .verify(
+              refreshedTokens.accessToken,
+              SecretKey('test-secret-key-for-testing'),
+            )
+            .payload as Map<String, dynamic>;
+
+        expect(originalPayload['roles'], ['reader']);
+        expect(originalPayload['tenantIds'], ['tenant-a']);
+        expect(originalPayload['profile'], {'displayName': 'Original Name'});
+        expect(refreshedPayload['roles'], ['admin', 'auditor']);
+        expect(refreshedPayload['tenantIds'], ['tenant-b', 'tenant-c']);
+        expect(refreshedPayload['profile'], {'displayName': 'Current Name'});
+        expect(loaderCalls, ['user123', 'user123']);
+        expect(parserCalls, 0);
+
+        expect(refreshedTokens.refreshToken, originalTokens.refreshToken);
+        expect(originalTokens.refreshToken.split('.'), hasLength(1));
+        expect(originalTokens.refreshToken, isNot(contains('tenant-a')));
+        final storedToken = repository.getAllSync().single;
+        expect(storedToken.userId, 'user123');
+        expect(storedToken.token, originalTokens.refreshToken);
+      });
+
       test('should issue new access token with valid refresh token', () async {
-        final originalTokens = await authHandler.issueTokens(
-          'user123',
-          const StandardClaims(sub: 'user123', email: 'test@example.com'),
+        final originalTokens = await authHandler.issueTokens('user123');
+
+        currentClaims = const StandardClaims(
+          sub: 'user123',
+          email: 'updated@example.com',
+          name: 'Updated User',
         );
 
         final newTokens =
@@ -300,30 +398,34 @@ void main() {
       });
 
       test('should throw exception for invalid refresh token', () async {
-        expect(
-          () => authHandler.refresh('invalid-token'),
+        await expectLater(
+          authHandler.refresh('invalid-token'),
           throwsA(isA<Exception>()),
         );
+        expect(claimsLoaderCalls, isEmpty);
       });
 
       test('should throw exception for expired refresh token', () async {
         // Create handler with very short refresh token duration
+        var shortDurationLoaderCalls = 0;
         final shortDurationHandler =
             JwtAuthHandler<StandardClaims, RefreshToken>(
           secret: 'test-secret-key-for-testing',
           refreshTokenRepository: refreshTokenRepo,
+          refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
+          claimsLoader: (userId) async {
+            shortDurationLoaderCalls++;
+            return StandardClaims(sub: userId);
+          },
           parseClaimsFromJson: StandardClaims.fromJson,
           claimsToJson: (claims) => claims.toJson(),
           refreshTokenDuration: const Duration(seconds: -1), // Already expired
         );
 
-        final tokens = await shortDurationHandler.issueTokens(
-          'user123',
-          const StandardClaims(sub: 'user123'),
-        );
+        final tokens = await shortDurationHandler.issueTokens('user123');
 
-        expect(
-          () => authHandler.refresh(tokens.refreshToken),
+        await expectLater(
+          shortDurationHandler.refresh(tokens.refreshToken),
           throwsA(
             isA<Exception>().having(
               (e) => e.toString(),
@@ -332,19 +434,17 @@ void main() {
             ),
           ),
         );
+        expect(shortDurationLoaderCalls, 1);
       });
 
       test('should throw exception for revoked refresh token', () async {
-        final tokens = await authHandler.issueTokens(
-          'user123',
-          const StandardClaims(sub: 'user123'),
-        );
+        final tokens = await authHandler.issueTokens('user123');
 
         // Revoke the token
         await authHandler.revoke(tokens.refreshToken);
 
-        expect(
-          () => authHandler.refresh(tokens.refreshToken),
+        await expectLater(
+          authHandler.refresh(tokens.refreshToken),
           throwsA(
             isA<Exception>().having(
               (e) => e.toString(),
@@ -353,15 +453,52 @@ void main() {
             ),
           ),
         );
+        expect(claimsLoaderCalls, ['user123']);
       });
+
+      for (final unavailableState in ['missing', 'disabled']) {
+        test('$unavailableState users cannot refresh', () async {
+          var userExists = true;
+          var userEnabled = true;
+          final repository = InMemoryRepository<RefreshToken>();
+          final handler = JwtAuthHandler<StandardClaims, RefreshToken>(
+            secret: 'test-secret-key-for-testing',
+            refreshTokenRepository: repository,
+            refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
+            claimsLoader: (userId) async {
+              if (!userExists || !userEnabled) {
+                return null;
+              }
+              return StandardClaims(sub: userId);
+            },
+            parseClaimsFromJson: StandardClaims.fromJson,
+            claimsToJson: (claims) => claims.toJson(),
+          );
+          final tokens = await handler.issueTokens('user123');
+
+          if (unavailableState == 'missing') {
+            userExists = false;
+          } else {
+            userEnabled = false;
+          }
+
+          await expectLater(
+            handler.refresh(tokens.refreshToken),
+            throwsA(
+              isA<Exception>().having(
+                (error) => error.toString(),
+                'message',
+                contains('Authentication failed'),
+              ),
+            ),
+          );
+        });
+      }
     });
 
     group('revoke', () {
       test('should mark refresh token as revoked', () async {
-        final tokens = await authHandler.issueTokens(
-          'user123',
-          const StandardClaims(sub: 'user123'),
-        );
+        final tokens = await authHandler.issueTokens('user123');
 
         await authHandler.revoke(tokens.refreshToken);
 
@@ -387,6 +524,8 @@ void main() {
         final failingHandler = JwtAuthHandler<StandardClaims, RefreshToken>(
           secret: 'test-secret-key-for-testing',
           refreshTokenRepository: const _FailingRefreshTokenRepository(failure),
+          refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
+          claimsLoader: (userId) async => StandardClaims(sub: userId),
           parseClaimsFromJson: StandardClaims.fromJson,
           claimsToJson: (claims) => claims.toJson(),
         );
@@ -398,10 +537,7 @@ void main() {
       });
 
       test('should prevent refresh after revocation', () async {
-        final tokens = await authHandler.issueTokens(
-          'user123',
-          const StandardClaims(sub: 'user123'),
-        );
+        final tokens = await authHandler.issueTokens('user123');
 
         await authHandler.revoke(tokens.refreshToken);
 
@@ -417,11 +553,6 @@ void main() {
         // 1. Issue tokens
         final tokens = await authHandler.issueTokens(
           'user123',
-          const StandardClaims(
-            sub: 'user123',
-            email: 'test@example.com',
-            name: 'Test User',
-          ),
           deviceInfo: 'Test Device',
         );
 
@@ -461,6 +592,36 @@ void main() {
       });
     });
   });
+}
+
+class _ApplicationClaims {
+  const _ApplicationClaims({
+    required this.userId,
+    required this.roles,
+    required this.tenantIds,
+    required this.profile,
+  });
+
+  factory _ApplicationClaims.fromJson(Map<String, dynamic> json) {
+    return _ApplicationClaims(
+      userId: json['sub'] as String,
+      roles: (json['roles'] as List).cast<String>(),
+      tenantIds: (json['tenantIds'] as List).cast<String>(),
+      profile: (json['profile'] as Map).cast<String, dynamic>(),
+    );
+  }
+
+  final String userId;
+  final List<String> roles;
+  final List<String> tenantIds;
+  final Map<String, dynamic> profile;
+
+  Map<String, dynamic> toJson() => {
+        'sub': userId,
+        'roles': roles,
+        'tenantIds': tenantIds,
+        'profile': profile,
+      };
 }
 
 class _FailingRefreshTokenRepository

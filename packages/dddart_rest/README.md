@@ -830,6 +830,7 @@ dddart_rest provides comprehensive JWT-based authentication with support for bot
 **OAuth/OIDC Authentication:**
 - External provider (AWS Cognito, Auth0, Okta) manages authentication
 - Your application validates JWTs using provider's public keys (JWKS)
+- Expiration and not-before claims are enforced with configurable clock skew
 - No authentication endpoints needed (provider handles them)
 - No refresh token storage needed
 
@@ -837,7 +838,8 @@ dddart_rest provides comprehensive JWT-based authentication with support for bot
 
 #### 1. Define Custom Claims
 
-Create a class for your JWT claims and annotate with `@JwtSerializable()`:
+Create a class that can parse and serialize your JWT claims. The optional
+`@JwtSerializable()` annotation also generates convenience extension methods:
 
 ```dart
 import 'package:dddart_rest/dddart_rest.dart';
@@ -855,6 +857,18 @@ class UserClaims {
   final String userId;
   final String email;
   final List<String> roles;
+
+  factory UserClaims.fromJson(Map<String, dynamic> json) => UserClaims(
+    userId: json['userId'] as String,
+    email: json['email'] as String,
+    roles: (json['roles'] as List<dynamic>).cast<String>(),
+  );
+
+  Map<String, dynamic> toJson() => {
+    'userId': userId,
+    'email': email,
+    'roles': roles,
+  };
 }
 ```
 
@@ -863,7 +877,9 @@ Run code generation:
 dart run build_runner build
 ```
 
-This generates extension methods for serializing/deserializing claims.
+This generates convenience extension methods for serializing and deserializing
+claims. The auth handler constructor still requires explicit parser and
+serializer callbacks.
 
 #### 2. Set Up Repositories
 
@@ -875,57 +891,57 @@ Choose your persistence strategy:
 import 'package:dddart_rest/dddart_rest.dart';
 
 final refreshTokenRepo = InMemoryRepository<RefreshToken>();
-final deviceCodeRepo = InMemoryRepository<DeviceCode>();
+final deviceCodeRepo = InMemoryDeviceCodeRepository<DeviceCode>(
+  lifecycle: const StandardDeviceCodeLifecycle(),
+);
 ```
 
-**Option B: MongoDB (Production)**
+**Production persistence**
 
-Extend the base classes and annotate for code generation:
+Use an authentication-specific persistence adapter that implements and tests
+the lookup and state-transition behavior required by the refresh-token and
+device-code flows. Do not assume that a generated CRUD repository is a
+production authentication adapter. In particular, the generated MongoDB
+repositories have not been verified as sufficient for these flows, and dddart
+does not currently ship a verified MongoDB authentication adapter.
+
+A production device-code adapter must implement `DeviceCodeRepository<T>`,
+including lookup by user code and device code. Its `consumeApproved` operation
+must be one database-level conditional operation that matches the device code,
+bound client ID, approved state, non-null user, and expiration, then persists
+and returns the typed consumed value. An ordinary read followed by `save()` is
+not atomic and does not satisfy this contract.
+
+If an application stores custom `RefreshToken` or `DeviceCode` subtypes, keep
+the same concrete type in the repository, handler or endpoints, and lifecycle:
 
 ```dart
-import 'package:dddart_rest/dddart_rest.dart';
-import 'package:dddart_repository_mongodb/dddart_repository_mongodb.dart';
+final authHandler = JwtAuthHandler<UserClaims, AppRefreshToken>(
+  secret: secret,
+  refreshTokenRepository: appRefreshTokenRepository,
+  refreshTokenLifecycle: const AppRefreshTokenLifecycle(),
+  claimsLoader: loadCurrentClaims,
+  parseClaimsFromJson: UserClaims.fromJson,
+  claimsToJson: (claims) => claims.toJson(),
+);
 
-@Serializable()
-@GenerateMongoRepository()
-class AppRefreshToken extends RefreshToken {
-  AppRefreshToken({
-    required super.id,
-    required super.userId,
-    required super.token,
-    required super.expiresAt,
-    super.revoked,
-    super.deviceInfo,
-  });
-}
-
-@Serializable()
-@GenerateMongoRepository()
-class AppDeviceCode extends DeviceCode {
-  AppDeviceCode({
-    required super.id,
-    required super.deviceCode,
-    required super.userCode,
-    required super.clientId,
-    required super.expiresAt,
-    super.userId,
-    super.status,
-  });
-}
-
-part 'auth_models.g.dart';
+final authEndpoints =
+    AuthEndpoints<UserClaims, AppRefreshToken, AppDeviceCode>(
+  authHandler: authHandler,
+  deviceCodeRepository: appDeviceCodeRepository,
+  deviceCodeLifecycle: const AppDeviceCodeLifecycle(),
+  userValidator: validateUser,
+);
 ```
 
-Run code generation:
-```bash
-dart run build_runner build
-```
-
-Then create repository instances:
-```dart
-final refreshTokenRepo = AppRefreshTokenMongoRepository(database);
-final deviceCodeRepo = AppDeviceCodeMongoRepository(database);
-```
+`AppRefreshTokenLifecycle` implements
+`RefreshTokenLifecycle<AppRefreshToken>` and returns `AppRefreshToken` from
+both `create` and `revoke`. `AppDeviceCodeLifecycle` implements
+`DeviceCodeLifecycle<AppDeviceCode>` and returns `AppDeviceCode` from `create`,
+`approve`, and `consume`. Each `create` method initializes the subtype-specific
+fields, and transition methods copy those fields from the current value while
+applying the required base-state change. This keeps the runtime subtype and
+custom state intact through lookup, transition, and typed persistence.
 
 #### 3. Create Auth Handler
 
@@ -933,12 +949,35 @@ final deviceCodeRepo = AppDeviceCodeMongoRepository(database);
 final authHandler = JwtAuthHandler<UserClaims, RefreshToken>(
   secret: 'your-256-bit-secret',  // Store in environment variable!
   refreshTokenRepository: refreshTokenRepo,
+  refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
+  claimsLoader: (userId) async {
+    // Read current application state every time a token is issued.
+    final user = await userDirectory.findActiveById(userId);
+    if (user == null) {
+      // Missing and disabled users must not receive tokens.
+      return null;
+    }
+    return UserClaims(
+      userId: user.id,
+      email: user.email,
+      roles: user.roles,
+    );
+  },
+  parseClaimsFromJson: UserClaims.fromJson,
+  claimsToJson: (claims) => claims.toJson(),
   issuer: 'https://api.example.com',
   audience: 'my-app',
-  accessTokenDuration: Duration(minutes: 15),
-  refreshTokenDuration: Duration(days: 7),
+  accessTokenDuration: const Duration(minutes: 15),
+  refreshTokenDuration: const Duration(days: 7),
 );
 ```
+
+`claimsLoader` is the authoritative, asynchronous source of application
+claims. It runs for initial issuance and again for every refresh, so role,
+tenant, and profile changes appear in the next access token. Return `null` when
+the user is missing, disabled, or otherwise ineligible. Refresh tokens remain
+opaque and contain no application claims; refresh never copies claims from an
+old access token.
 
 #### 4. Set Up Auth Endpoints
 
@@ -946,6 +985,7 @@ final authHandler = JwtAuthHandler<UserClaims, RefreshToken>(
 final authEndpoints = AuthEndpoints(
   authHandler: authHandler,
   deviceCodeRepository: deviceCodeRepo,
+  deviceCodeLifecycle: const StandardDeviceCodeLifecycle(),
   userValidator: (username, password) async {
     // Validate credentials against your user database
     final user = await userRepo.findByUsername(username);
@@ -953,15 +993,6 @@ final authEndpoints = AuthEndpoints(
       return user.id;
     }
     return null;
-  },
-  claimsBuilder: (userId) async {
-    // Build claims for the user
-    final user = await userRepo.getById(userId);
-    return UserClaims(
-      userId: user.id,
-      email: user.email,
-      roles: user.roles,
-    );
   },
 );
 
@@ -982,7 +1013,7 @@ server.registerResource(
     path: '/users',
     repository: userRepo,
     serializer: serializer,
-    authHandler: authHandler,  // Require authentication
+    authenticationHandler: authHandler,  // Require authentication
   ),
 );
 
@@ -992,7 +1023,7 @@ server.registerResource(
     path: '/products',
     repository: productRepo,
     serializer: serializer,
-    // No authHandler = public access
+    // No authenticationHandler = public access
   ),
 );
 ```
@@ -1023,11 +1054,17 @@ class CognitoClaims {
 ```dart
 final authHandler = OAuthJwtAuthHandler<CognitoClaims>(
   jwksUri: 'https://cognito-idp.us-east-1.amazonaws.com/us-east-1_ABC123/.well-known/jwks.json',
+  parseClaimsFromJson: CognitoClaims.fromJson,
   issuer: 'https://cognito-idp.us-east-1.amazonaws.com/us-east-1_ABC123',
   audience: 'your-cognito-client-id',
-  cacheDuration: Duration(hours: 24),
+  cacheDuration: const Duration(hours: 24),
+  clockSkewTolerance: const Duration(seconds: 30),
 );
 ```
+
+`OAuthJwtAuthHandler` rejects tokens at or after their `exp` time and tokens
+whose `nbf` time is still in the future. `clockSkewTolerance` applies the same
+allowance in both directions and defaults to zero.
 
 #### 3. Protect Resources
 
@@ -1037,7 +1074,7 @@ server.registerResource(
     path: '/users',
     repository: userRepo,
     serializer: serializer,
-    authHandler: authHandler,
+    authenticationHandler: authHandler,
   ),
 );
 ```
@@ -1183,9 +1220,19 @@ Poll for device flow tokens.
 }
 ```
 
+The `client_id` must exactly match the client ID stored when the device code was
+created. A mismatch returns `invalid_grant`. An approved device grant is
+single-use: redemption atomically changes it to consumed, only that caller
+receives tokens, and every later attempt returns `invalid_grant`.
+
+If the successful response is lost after the grant is consumed, the tokens
+cannot be recovered by polling again. Restart login and request a new device
+code.
+
 ### JWT Claims Code Generation
 
-The `@JwtSerializable()` annotation generates extension methods for serializing and deserializing claims:
+The `@JwtSerializable()` annotation generates convenience extension methods on
+an existing compatible handler for serializing and deserializing claims:
 
 ```dart
 // Your claims class
@@ -1197,7 +1244,8 @@ class UserClaims {
 }
 
 // Generated extension (in user_claims.g.dart)
-extension JwtAuthHandlerUserClaimsExtension on JwtAuthHandler<UserClaims> {
+extension JwtAuthHandlerUserClaimsExtension
+    on JwtAuthHandler<UserClaims, dynamic> {
   UserClaims parseClaimsFromJson(Map<String, dynamic> json) {
     return UserClaims(
       userId: json['userId'] as String,
@@ -1214,7 +1262,9 @@ extension JwtAuthHandlerUserClaimsExtension on JwtAuthHandler<UserClaims> {
 }
 ```
 
-The extension methods are automatically used by the auth handler - no manual wiring needed!
+The generated methods are helpers; they are not automatically wired into the
+handler constructor. `JwtAuthHandler` still requires `claimsLoader`,
+`parseClaimsFromJson`, and `claimsToJson` callbacks, as shown above.
 
 ### Built-in StandardClaims
 
@@ -1224,6 +1274,10 @@ For simple cases, use the pre-generated `StandardClaims` class:
 final authHandler = JwtAuthHandler<StandardClaims, RefreshToken>(
   secret: 'your-secret',
   refreshTokenRepository: refreshTokenRepo,
+  refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
+  claimsLoader: loadCurrentStandardClaims,
+  parseClaimsFromJson: StandardClaims.fromJson,
+  claimsToJson: (claims) => claims.toJson(),
 );
 
 // StandardClaims includes: sub, email, name

@@ -21,6 +21,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `PUT` now rejects a deserialized aggregate whose ID differs from the route ID
   with a problem+json 400 response before authorization, ETag lookup, or
   persistence.
+- `OAuthJwtAuthHandler` now rejects expired and not-yet-valid JWTs, with a
+  configurable `clockSkewTolerance` that defaults to zero.
+- **BREAKING:** `JwtAuthHandler` now requires an asynchronous `claimsLoader`
+  keyed by validated user ID. It reloads authoritative application claims for
+  initial issuance and refresh, and a `null` result refuses token issuance.
+- **BREAKING:** `AuthEndpoints` no longer accepts `claimsBuilder`; claim loading
+  belongs to `JwtAuthHandler`. Application claims are included only in access
+  tokens, never in opaque refresh tokens.
+- **BREAKING:** `JwtAuthHandler` now requires a typed
+  `RefreshTokenLifecycle<TRefreshToken>`, and `AuthEndpoints` requires a typed
+  `DeviceCodeLifecycle<TDeviceCode>`. Standard implementations support the base
+  token types; custom lifecycles preserve custom runtime types and state through
+  creation, transition, lookup, and typed persistence.
+- Authentication persistence guidance no longer presents generated MongoDB CRUD
+  repositories as production-ready authentication adapters. No verified MongoDB
+  authentication adapter is currently shipped.
+- **BREAKING:** `AuthEndpoints` now requires a `DeviceCodeRepository<T>`.
+  Approved device grants are bound to the exact requesting client ID and are
+  atomically consumed once; mismatched and subsequent redemptions return
+  `invalid_grant`.
+- `InMemoryDeviceCodeRepository<T>` provides the reference atomic repository for
+  examples and tests. Production adapters must use a database conditional
+  operation rather than an ordinary read followed by `save()`.
 
 ### Added
 

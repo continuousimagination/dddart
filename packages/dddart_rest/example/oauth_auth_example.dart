@@ -2,6 +2,7 @@
 //
 // This example demonstrates:
 // - Setting up OAuth JWT validation with Cognito
+// - Enforcing expiration and not-before claims with clock-skew tolerance
 // - Protecting resources with OAuth authentication
 // - Extracting claims from Cognito JWTs
 // - No auth endpoints needed (Cognito handles authentication)
@@ -127,6 +128,7 @@ void main() async {
     issuer: issuer,
     audience: clientId,
     cacheDuration: const Duration(hours: 24),
+    clockSkewTolerance: const Duration(seconds: 30),
     parseClaimsFromJson: CognitoClaims.fromJson,
   );
 

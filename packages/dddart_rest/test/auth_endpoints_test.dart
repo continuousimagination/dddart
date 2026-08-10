@@ -8,17 +8,37 @@ import 'package:test/test.dart';
 void main() {
   group('AuthEndpoints', () {
     late InMemoryRepository<RefreshToken> refreshTokenRepo;
-    late InMemoryRepository<DeviceCode> deviceCodeRepo;
+    late InMemoryDeviceCodeRepository<DeviceCode> deviceCodeRepo;
     late JwtAuthHandler<StandardClaims, RefreshToken> authHandler;
     late AuthEndpoints<StandardClaims, RefreshToken, DeviceCode> authEndpoints;
+    late StandardClaims? currentClaims;
 
     setUp(() {
       refreshTokenRepo = InMemoryRepository<RefreshToken>();
-      deviceCodeRepo = InMemoryRepository<DeviceCode>();
+      deviceCodeRepo = InMemoryDeviceCodeRepository<DeviceCode>(
+        lifecycle: const StandardDeviceCodeLifecycle(),
+      );
+      currentClaims = const StandardClaims(
+        sub: 'user123',
+        email: 'test@example.com',
+        name: 'Test User',
+      );
 
       authHandler = JwtAuthHandler<StandardClaims, RefreshToken>(
         secret: 'test-secret-key',
         refreshTokenRepository: refreshTokenRepo,
+        refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
+        claimsLoader: (userId) async {
+          final claims = currentClaims;
+          if (claims == null) {
+            return null;
+          }
+          return StandardClaims(
+            sub: userId,
+            email: claims.email,
+            name: claims.name,
+          );
+        },
         parseClaimsFromJson: (json) => StandardClaims(
           sub: json['sub'] as String,
           email: json['email'] as String?,
@@ -34,18 +54,12 @@ void main() {
       authEndpoints = AuthEndpoints<StandardClaims, RefreshToken, DeviceCode>(
         authHandler: authHandler,
         deviceCodeRepository: deviceCodeRepo,
+        deviceCodeLifecycle: const StandardDeviceCodeLifecycle(),
         userValidator: (username, password) async {
           if (username == 'testuser' && password == 'testpass') {
             return 'user123';
           }
           return null;
-        },
-        claimsBuilder: (userId) async {
-          return StandardClaims(
-            sub: userId,
-            email: 'test@example.com',
-            name: 'Test User',
-          );
         },
       );
     });
@@ -139,9 +153,9 @@ void main() {
             AuthEndpoints<StandardClaims, RefreshToken, DeviceCode>(
           authHandler: authHandler,
           deviceCodeRepository: deviceCodeRepo,
+          deviceCodeLifecycle: const StandardDeviceCodeLifecycle(),
           userValidator: (_, __) =>
               throw Exception('sentinel-secret <script>alert(1)</script>'),
-          claimsBuilder: (userId) async => StandardClaims(sub: userId),
         );
         final request = Request(
           'POST',
@@ -198,6 +212,88 @@ void main() {
         expect(json['access_token'], isNotNull);
         expect(json['refresh_token'], equals(refreshToken));
         expect(json['expires_in'], equals(900));
+      });
+
+      test('should return access token with current application claims',
+          () async {
+        final loginResponse = await authEndpoints.handleLogin(
+          Request(
+            'POST',
+            Uri.parse('http://localhost/auth/login'),
+            body: jsonEncode({
+              'username': 'testuser',
+              'password': 'testpass',
+            }),
+          ),
+        );
+        final loginJson = jsonDecode(await loginResponse.readAsString())
+            as Map<String, dynamic>;
+
+        currentClaims = const StandardClaims(
+          sub: 'user123',
+          email: 'current@example.com',
+          name: 'Current Name',
+        );
+
+        final refreshResponse = await authEndpoints.handleRefresh(
+          Request(
+            'POST',
+            Uri.parse('http://localhost/auth/refresh'),
+            body: jsonEncode({
+              'refresh_token': loginJson['refresh_token'],
+            }),
+          ),
+        );
+        final refreshJson = jsonDecode(await refreshResponse.readAsString())
+            as Map<String, dynamic>;
+        final authentication = await authHandler.authenticate(
+          Request(
+            'GET',
+            Uri.parse('http://localhost/protected'),
+            headers: {
+              'authorization': 'Bearer ${refreshJson['access_token']}',
+            },
+          ),
+        );
+
+        expect(refreshResponse.statusCode, 200);
+        expect(authentication.isAuthenticated, isTrue);
+        expect(authentication.claims?.email, 'current@example.com');
+        expect(authentication.claims?.name, 'Current Name');
+      });
+
+      test(
+          'should return sanitized 401 when application claims are unavailable',
+          () async {
+        final loginResponse = await authEndpoints.handleLogin(
+          Request(
+            'POST',
+            Uri.parse('http://localhost/auth/login'),
+            body: jsonEncode({
+              'username': 'testuser',
+              'password': 'testpass',
+            }),
+          ),
+        );
+        final loginJson = jsonDecode(await loginResponse.readAsString())
+            as Map<String, dynamic>;
+        currentClaims = null;
+
+        final response = await authEndpoints.handleRefresh(
+          Request(
+            'POST',
+            Uri.parse('http://localhost/auth/refresh'),
+            body: jsonEncode({
+              'refresh_token': loginJson['refresh_token'],
+            }),
+          ),
+        );
+        final body = await response.readAsString();
+
+        expect(response.statusCode, 401);
+        expect(body, contains('Authentication failed'));
+        expect(body, isNot(contains('missing')));
+        expect(body, isNot(contains('disabled')));
       });
 
       test('should return 401 for invalid refresh token', () async {
@@ -434,9 +530,9 @@ void main() {
             AuthEndpoints<StandardClaims, RefreshToken, DeviceCode>(
           authHandler: authHandler,
           deviceCodeRepository: deviceCodeRepo,
+          deviceCodeLifecycle: const StandardDeviceCodeLifecycle(),
           userValidator: (_, __) =>
               throw Exception('sentinel-secret <script>alert(1)</script>'),
-          claimsBuilder: (userId) async => StandardClaims(sub: userId),
         );
         final request = Request(
           'POST',

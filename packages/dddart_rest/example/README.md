@@ -35,6 +35,7 @@ authentication composition is not implemented by the current public contracts.
 
 Demonstrates OAuth authentication with AWS Cognito:
 - JWT validation using JWKS
+- Expiration and not-before validation with configurable clock skew
 - Cognito claims extraction
 - No auth endpoints needed (Cognito handles authentication)
 - Auto-creating users from OAuth claims
