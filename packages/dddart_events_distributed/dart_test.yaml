@@ -1,0 +1,25 @@
+# Test configuration for dddart_events_distributed
+
+# Live AWS smoke tests are intentionally outside the default `dart test` run.
+# Use `dart test -P aws_smoke` to opt in.
+exclude_tags: aws
+
+presets:
+  aws_smoke:
+    include_tags: aws
+    # Override the package-level AWS exclusion for this explicit preset. The
+    # selector must match no real tags; an empty selector is invalid.
+    exclude_tags: never
+
+tags:
+  # Opt-in smoke tests that require real AWS AppSync Events resources.
+  aws:
+    timeout: 3x
+
+  # Property-based tests
+  property-test:
+    timeout: 2x
+
+  # Generator tests that use build_test
+  generator:
+    timeout: 3x
