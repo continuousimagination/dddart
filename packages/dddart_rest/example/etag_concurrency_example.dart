@@ -1,242 +1,198 @@
 // ignore_for_file: avoid_print
 
 import 'dart:convert';
+import 'dart:io' as io;
 
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/dddart_rest.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
-import 'package:http/http.dart' as http;
+import 'package:shelf/shelf_io.dart' as shelf_io;
 
-// Simple User aggregate for demonstration
-class User extends AggregateRoot {
-  User({
-    required super.id,
-    required this.name,
-    required this.email,
-    required super.createdAt,
-    required super.updatedAt,
-  });
+import 'lib/versioned_user.dart';
 
-  final String name;
-  final String email;
-}
-
-// Simple JSON serializer
-class UserSerializer implements Serializer<User> {
-  @override
-  String serialize(User user, [dynamic config]) {
-    return jsonEncode({
-      'id': user.id.toString(),
-      'name': user.name,
-      'email': user.email,
-      'createdAt': user.createdAt.toIso8601String(),
-      'updatedAt': user.updatedAt.toIso8601String(),
-    });
-  }
-
-  @override
-  User deserialize(String data, [dynamic config]) {
-    final json = jsonDecode(data);
-    return User(
-      id: UuidValue.fromString(json['id']),
-      name: json['name'],
-      email: json['email'],
-      createdAt: DateTime.parse(json['createdAt']),
-      updatedAt: DateTime.parse(json['updatedAt']),
+/// Runs an executable atomic-concurrency demonstration on ephemeral loopback.
+///
+/// This synthetic example deliberately has no authentication. Production
+/// resources must configure their own authentication and authorization policy.
+/// Run from this directory with `dart run etag_concurrency_example.dart`.
+Future<void> main() async {
+  final codec = VersionedUserJsonSerializer();
+  final repository = InMemoryConditionalRepository<VersionedUser>(
+    copyWithRevision: (value, revision) =>
+        codec.fromJson({...codec.toJson(value), 'revision': revision.value}),
+  );
+  final resource = ConditionalCrudResource<VersionedUser, void>(
+    path: '/users',
+    repository: repository,
+    serializers: {'application/json': codec},
+  );
+  final router = HttpServer()..registerResource(resource);
+  final server = await shelf_io.serve(
+    router.buildHandler(),
+    io.InternetAddress.loopbackIPv4,
+    0,
+  );
+  final client = io.HttpClient();
+  final id = UuidValue.fromString('123e4567-e89b-42d3-a456-426614174000');
+  final time = DateTime.utc(2026);
+  final uri = Uri.parse('http://127.0.0.1:${server.port}/users/${id.uuid}');
+  Future<({int status, String? etag, String body})> send(
+    String method, {
+    VersionedUser? value,
+    Map<String, String> headers = const {},
+  }) async {
+    final request = await client.openUrl(method, uri);
+    request.followRedirects = false;
+    headers.forEach(request.headers.set);
+    if (value != null) {
+      request.headers.contentType = io.ContentType.json;
+      request.write(codec.serialize(value));
+    }
+    final response = await request.close();
+    return (
+      status: response.statusCode,
+      etag: response.headers.value('etag'),
+      body: await utf8.decoder.bind(response).join(),
     );
   }
-}
 
-/// Example demonstrating ETag-based optimistic concurrency control
-///
-/// This example shows how ETags prevent lost updates when multiple clients
-/// modify the same resource concurrently.
-///
-/// Run this example:
-/// ```bash
-/// dart run example/etag_concurrency_example.dart
-/// ```
-void main() async {
-  print('=== ETag Concurrency Control Example ===\n');
-
-  // Create repository and server
-  final repository = InMemoryRepository<User>();
-  final server = HttpServer(port: 8080);
-
-  server.registerResource(
-    CrudResource<User, void>(
-      path: '/users',
-      repository: repository,
-      serializers: {'application/json': UserSerializer()},
-      etagStrategy: ETagStrategy.timestamp, // Use timestamp-based ETags
-    ),
+  VersionedUser proposal(VersionedUser basis, String name) => VersionedUser(
+    id: basis.id,
+    createdAt: basis.createdAt,
+    updatedAt: basis.updatedAt,
+    revision: basis.revision,
+    name: name,
   );
-
-  await server.start();
-  print('Server started on http://localhost:8080\n');
-
-  try {
-    await _runConcurrencyDemo();
-  } finally {
-    await server.stop();
-    print('\nServer stopped');
+  void require(String message, {required bool condition}) {
+    if (!condition) throw StateError(message);
   }
-}
-
-Future<void> _runConcurrencyDemo() async {
-  final client = http.Client();
 
   try {
-    // Step 1: Create a user
-    print('Step 1: Creating a user...');
-    final createResponse = await client.post(
-      Uri.parse('http://localhost:8080/users'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'id': '123e4567-e89b-12d3-a456-426614174000',
-        'name': 'John Doe',
-        'email': 'john@example.com',
-        'createdAt': DateTime.now().toUtc().toIso8601String(),
-        'updatedAt': DateTime.now().toUtc().toIso8601String(),
+    final initial = VersionedUser(
+      id: id,
+      createdAt: time,
+      updatedAt: time,
+      name: 'Initial',
+    );
+    final missing = await send('PUT', value: initial);
+    require(
+      'Every write needs an explicit condition',
+      condition: missing.status == 428,
+    );
+    final created = await send(
+      'PUT',
+      value: initial,
+      headers: {'if-none-match': '*'},
+    );
+    require(
+      'Create must acknowledge revision1',
+      condition: created.status == 201,
+    );
+    require(
+      'Revision1',
+      condition: codec.deserialize(created.body).revision == Revision(1),
+    );
+    require(
+      'Transformed PUT must not emit a validator',
+      condition: created.etag == null,
+    );
+
+    final a = await send('GET');
+    final b = await send('GET');
+    require(
+      'Strong GET validator',
+      condition: a.status == 200 && a.etag == '"r1"',
+    );
+    require(
+      'Both drafts start at the same revision',
+      condition: b.etag == a.etag,
+    );
+    final draftA = proposal(codec.deserialize(a.body), 'Alice');
+    final draftB = proposal(codec.deserialize(b.body), 'Bob');
+    final acceptedA = await send(
+      'PUT',
+      value: draftA,
+      headers: {'if-match': a.etag!},
+    );
+    require(
+      'Accepted update',
+      condition: acceptedA.status == 200 && acceptedA.etag == null,
+    );
+    require(
+      'Revision2',
+      condition: codec.deserialize(acceptedA.body).revision == Revision(2),
+    );
+    final rejectedB = await send(
+      'PUT',
+      value: draftB,
+      headers: {'if-match': b.etag!},
+    );
+    require(
+      'The stale draft cannot overwrite Alice',
+      condition: rejectedB.status == 412,
+    );
+    require(
+      'Conflict is not a current-state receipt',
+      condition: rejectedB.etag == null,
+    );
+
+    final observation = await send('GET');
+    final latest = codec.deserialize(observation.body);
+    require(
+      'The winning state is preserved',
+      condition: latest.name == 'Alice',
+    );
+    // This is a new, explicit example business decision, not a retry loop or
+    // automatic rebasing of Bob's old draft. A real UI asks its owner to choose.
+    final merged = proposal(latest, 'Alice and Bob');
+    final acceptedMerge = await send(
+      'PUT',
+      value: merged,
+      headers: {'if-match': observation.etag!},
+    );
+    require(
+      'Explicit reconciled proposal accepted',
+      condition: acceptedMerge.status == 200,
+    );
+    require(
+      'Revision3',
+      condition: codec.deserialize(acceptedMerge.body).revision == Revision(3),
+    );
+    require(
+      'Accepted body carries the next revision',
+      condition: acceptedMerge.etag == null,
+    );
+
+    final deleted = await send('DELETE', headers: {'if-match': '"r3"'});
+    require(
+      'Conditional retirement succeeds',
+      condition: deleted.status == 204,
+    );
+    final recreated = await send(
+      'PUT',
+      value: initial,
+      headers: {'if-none-match': '*'},
+    );
+    require(
+      'Retired identity cannot be recreated',
+      condition: recreated.status == 412,
+    );
+    require(
+      'Retired record is not readable',
+      condition: (await send('GET')).status == 404,
+    );
+    print(
+      jsonEncode({
+        'pass': true,
+        'create': 201,
+        'acceptedRevisions': [1, 2, 3],
+        'missingPrecondition': 428,
+        'staleWrite': 412,
+        'retiredRecreate': 412,
+        'putValidators': false,
       }),
     );
-
-    if (createResponse.statusCode != 201) {
-      print('Failed to create user: ${createResponse.statusCode}');
-      return;
-    }
-
-    final userId = jsonDecode(createResponse.body)['id'];
-    print('✓ User created with ID: $userId');
-    print('  ETag: ${createResponse.headers['etag']}\n');
-
-    // Step 2: Client A fetches the user
-    print('Step 2: Client A fetches the user...');
-    final clientAGet = await client.get(
-      Uri.parse('http://localhost:8080/users/$userId'),
-    );
-    final clientAETag = clientAGet.headers['etag']!;
-    final clientAData = jsonDecode(clientAGet.body);
-    print('✓ Client A received user');
-    print('  Name: ${clientAData['name']}');
-    print('  ETag: $clientAETag\n');
-
-    // Step 3: Client B fetches the user (gets same ETag)
-    print('Step 3: Client B fetches the user...');
-    final clientBGet = await client.get(
-      Uri.parse('http://localhost:8080/users/$userId'),
-    );
-    final clientBETag = clientBGet.headers['etag']!;
-    final clientBData = jsonDecode(clientBGet.body);
-    print('✓ Client B received user');
-    print('  Name: ${clientBData['name']}');
-    print('  ETag: $clientBETag\n');
-
-    // Step 4: Client A updates the user (with If-Match header)
-    print('Step 4: Client A updates the user with If-Match header...');
-    clientAData['name'] = 'Jane Doe';
-    clientAData['updatedAt'] = DateTime.now().toUtc().toIso8601String();
-
-    final clientAUpdate = await client.put(
-      Uri.parse('http://localhost:8080/users/$userId'),
-      headers: {
-        'Content-Type': 'application/json',
-        'If-Match': clientAETag,
-      },
-      body: jsonEncode(clientAData),
-    );
-
-    if (clientAUpdate.statusCode == 200) {
-      final newETag = clientAUpdate.headers['etag']!;
-      print('✓ Client A update succeeded');
-      print('  New name: Jane Doe');
-      print('  New ETag: $newETag\n');
-    } else {
-      print('✗ Client A update failed: ${clientAUpdate.statusCode}\n');
-    }
-
-    // Step 5: Client B tries to update with stale ETag
-    print('Step 5: Client B tries to update with stale ETag...');
-    clientBData['name'] = 'John Smith';
-    clientBData['updatedAt'] = DateTime.now().toUtc().toIso8601String();
-
-    final clientBUpdate = await client.put(
-      Uri.parse('http://localhost:8080/users/$userId'),
-      headers: {
-        'Content-Type': 'application/json',
-        'If-Match': clientBETag, // Stale ETag!
-      },
-      body: jsonEncode(clientBData),
-    );
-
-    if (clientBUpdate.statusCode == 412) {
-      print('✓ Client B update rejected with 412 Precondition Failed');
-      print('  Current ETag: ${clientBUpdate.headers['etag']}');
-      final errorBody = jsonDecode(clientBUpdate.body);
-      print('  Error: ${errorBody['detail']}\n');
-    } else {
-      print('✗ Expected 412 but got: ${clientBUpdate.statusCode}\n');
-    }
-
-    // Step 6: Client B fetches latest version and retries
-    print('Step 6: Client B fetches latest version and retries...');
-    final clientBRefresh = await client.get(
-      Uri.parse('http://localhost:8080/users/$userId'),
-    );
-    final latestETag = clientBRefresh.headers['etag']!;
-    final latestData = jsonDecode(clientBRefresh.body);
-    print('✓ Client B fetched latest version');
-    print('  Current name: ${latestData['name']}');
-    print('  Latest ETag: $latestETag');
-
-    // Apply Client B's change to the latest version
-    latestData['name'] = 'Jane Smith';
-    latestData['updatedAt'] = DateTime.now().toUtc().toIso8601String();
-
-    final clientBRetry = await client.put(
-      Uri.parse('http://localhost:8080/users/$userId'),
-      headers: {
-        'Content-Type': 'application/json',
-        'If-Match': latestETag,
-      },
-      body: jsonEncode(latestData),
-    );
-
-    if (clientBRetry.statusCode == 200) {
-      print('✓ Client B retry succeeded');
-      final finalData = jsonDecode(clientBRetry.body);
-      print('  Final name: ${finalData['name']}\n');
-    } else {
-      print('✗ Client B retry failed: ${clientBRetry.statusCode}\n');
-    }
-
-    // Step 7: Demonstrate update without If-Match (backward compatible)
-    print('Step 7: Update without If-Match (backward compatible)...');
-    final noETagData = jsonDecode(clientBRetry.body);
-    noETagData['email'] = 'jane.smith@example.com';
-    noETagData['updatedAt'] = DateTime.now().toUtc().toIso8601String();
-
-    final noETagUpdate = await client.put(
-      Uri.parse('http://localhost:8080/users/$userId'),
-      headers: {'Content-Type': 'application/json'},
-      // No If-Match header
-      body: jsonEncode(noETagData),
-    );
-
-    if (noETagUpdate.statusCode == 200) {
-      print('✓ Update without If-Match succeeded (backward compatible)');
-      print(
-          '  ETag still included in response: ${noETagUpdate.headers['etag']}\n');
-    } else {
-      print('✗ Update failed: ${noETagUpdate.statusCode}\n');
-    }
-
-    print('=== Summary ===');
-    print('✓ ETags prevent lost updates from concurrent modifications');
-    print('✓ 412 Precondition Failed returned when ETag mismatches');
-    print('✓ Current ETag included in 412 response for client retry');
-    print('✓ Backward compatible - If-Match header is optional');
   } finally {
-    client.close();
+    client.close(force: true);
+    await server.close(force: true);
   }
 }

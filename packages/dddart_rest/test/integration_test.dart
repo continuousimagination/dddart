@@ -111,8 +111,10 @@ Future<HttpResponse> makeRequest({
 }) async {
   final client = io.HttpClient();
   try {
-    final request =
-        await client.openUrl(method, Uri.parse('http://localhost:$port$path'));
+    final request = await client.openUrl(
+      method,
+      Uri.parse('http://localhost:$port$path'),
+    );
 
     // Add headers
     if (headers != null) {
@@ -171,9 +173,7 @@ void main() {
         CrudResource<TestUser, dynamic>(
           path: '/users',
           repository: repository,
-          serializers: {
-            'application/json': serializer,
-          },
+          serializers: {'application/json': serializer},
         ),
       );
 
@@ -320,14 +320,12 @@ void main() {
         CrudResource<TestUser, dynamic>(
           path: '/users',
           repository: repository,
-          serializers: {
-            'application/json': serializer,
-          },
+          serializers: {'application/json': serializer},
           queryHandlers: {
             'name': (repo, params, skip, take, authResult) async {
               final name = params['name']!;
-              final allUsers =
-                  (repo as InMemoryRepository<TestUser>).getAllSync();
+              final allUsers = (repo as InMemoryRepository<TestUser>)
+                  .getAllSync();
               final filtered = allUsers.where((u) => u.name == name).toList();
               return QueryResult(
                 filtered.skip(skip).take(take).toList(),
@@ -568,7 +566,11 @@ void main() {
 
       final acceptError = jsonDecode(unsupportedAcceptResponse.body);
       expect(acceptError['title'], equals('Not Acceptable'));
-      expect(acceptError['detail'], contains('application/xml'));
+      expect(acceptError['detail'], equals('Invalid request data'));
+      expect(
+        unsupportedAcceptResponse.body,
+        isNot(contains('application/xml')),
+      );
     });
   });
 
@@ -587,14 +589,12 @@ void main() {
         CrudResource<TestUser, dynamic>(
           path: '/users',
           repository: repository,
-          serializers: {
-            'application/json': serializer,
-          },
+          serializers: {'application/json': serializer},
           queryHandlers: {
             'name': (repo, params, skip, take, authResult) async {
               final name = params['name']!;
-              final allUsers =
-                  (repo as InMemoryRepository<TestUser>).getAllSync();
+              final allUsers = (repo as InMemoryRepository<TestUser>)
+                  .getAllSync();
               final filtered = allUsers.where((u) => u.name == name).toList();
               return QueryResult(
                 filtered.skip(skip).take(take).toList(),
@@ -736,9 +736,7 @@ void main() {
         CrudResource<TestUser, dynamic>(
           path: '/users',
           repository: repository,
-          serializers: {
-            'application/json': serializer,
-          },
+          serializers: {'application/json': serializer},
           customExceptionHandlers: {
             CustomDomainException: (e) {
               return Response(
@@ -832,14 +830,12 @@ void main() {
         CrudResource<TestUser, dynamic>(
           path: '/users',
           repository: repository,
-          serializers: {
-            'application/json': serializer,
-          },
+          serializers: {'application/json': serializer},
           queryHandlers: {
             'name': (repo, params, skip, take, authResult) async {
               final name = params['name']!;
-              final allUsers =
-                  (repo as InMemoryRepository<TestUser>).getAllSync();
+              final allUsers = (repo as InMemoryRepository<TestUser>)
+                  .getAllSync();
               final filtered = allUsers.where((u) => u.name == name).toList();
               return QueryResult(
                 filtered.skip(skip).take(take).toList(),

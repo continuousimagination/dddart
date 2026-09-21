@@ -1,6 +1,6 @@
 import 'dart:io' as io;
 
-import 'package:dddart_rest/src/crud_resource.dart';
+import 'package:dddart_rest/src/http_resource.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_router/shelf_router.dart';
@@ -34,7 +34,7 @@ class HttpServer {
   final Set<String> _allowedOrigins = {};
 
   /// List of registered CrudResource instances
-  final List<CrudResource> _resources = [];
+  final List<HttpResource> _resources = [];
 
   /// List of custom route handlers
   final List<_CustomRoute> _customRoutes = [];
@@ -74,7 +74,7 @@ class HttpServer {
   ///   serializers: {'application/json': jsonSerializer},
   /// ));
   /// ```
-  void registerResource(CrudResource resource) {
+  void registerResource(HttpResource resource) {
     _resources.add(resource);
   }
 

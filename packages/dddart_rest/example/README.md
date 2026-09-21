@@ -56,16 +56,25 @@ Shows how to add custom routes alongside CRUD resources:
 
 **Run:** `dart run custom_routes_example.dart`
 
-### 6. ETag Concurrency Control (`etag_concurrency_example.dart`)
+### 6. Atomic conditional writes (`etag_concurrency_example.dart`)
 
-Demonstrates optimistic concurrency control using ETags:
-- Preventing lost updates from concurrent modifications
-- If-Match header validation
-- 412 Precondition Failed responses
-- Client retry logic after conflicts
-- Backward compatibility (If-Match is optional)
+A self-checking ephemeral loopback example with an example-owned generated
+VersionedUser codec, ConditionalCrudResource and InMemoryConditionalRepository:
+- Required create/update/delete preconditions and complete inherited metadata.
+- Strong revision ETags on GET, accepted next revisions in PUT bodies.
+- Missing428 and stale412, without a misleading current-conflict ETag.
+- Explicit domain reconciliation after a separate observation, never auto-retry.
+- Conditional retirement prevents recreating the same identity.
 
-**Run:** `dart run etag_concurrency_example.dart`
+The example deliberately omits authentication and uses only synthetic data.
+Ordinary CrudResource validators do not provide atomic write protection.
+
+**Generate and run from this directory:**
+```bash
+dart pub get
+dart run build_runner build --build-filter=lib/versioned_user.g.dart
+dart run etag_concurrency_example.dart
+```
 
 ### 7. Authorization (`authorization_example.dart`)
 

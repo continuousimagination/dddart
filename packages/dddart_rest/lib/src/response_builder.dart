@@ -11,6 +11,9 @@ import 'package:shelf/shelf.dart';
 /// and error responses in RFC 7807 Problem Details format.
 ///
 /// All methods handle serialization and set appropriate Content-Type headers.
+/// Optional validators describe representations; they do not enforce atomic
+/// persistence. Omit validators on transformed PUT responses. Conditional CRUD
+/// returns accepted revision metadata in the body and strong ETags only on GET.
 class ResponseBuilder<T extends AggregateRoot> {
   /// Builds a 200 OK response with serialized body
   ///
@@ -21,7 +24,7 @@ class ResponseBuilder<T extends AggregateRoot> {
   /// - [aggregate]: The aggregate root to serialize and return
   /// - [serializer]: The serializer to use for converting the aggregate
   /// - [contentType]: The MIME type to set in the Content-Type header
-  /// - [etag]: Optional ETag for optimistic concurrency control
+  /// - [etag]: Optional representation validator, not a write precondition
   ///
   /// Returns: A [Response] with status 200 and serialized body
   ///
@@ -44,10 +47,7 @@ class ResponseBuilder<T extends AggregateRoot> {
     if (etag != null) {
       headers['ETag'] = etag;
     }
-    return Response.ok(
-      serializer.serialize(aggregate),
-      headers: headers,
-    );
+    return Response.ok(serializer.serialize(aggregate), headers: headers);
   }
 
   /// Builds a 201 Created response with serialized body
@@ -59,7 +59,7 @@ class ResponseBuilder<T extends AggregateRoot> {
   /// - [aggregate]: The newly created aggregate root to serialize and return
   /// - [serializer]: The serializer to use for converting the aggregate
   /// - [contentType]: The MIME type to set in the Content-Type header
-  /// - [etag]: Optional ETag for optimistic concurrency control
+  /// - [etag]: Optional representation validator, not a write precondition
   ///
   /// Returns: A [Response] with status 201 and serialized body
   ///
@@ -124,16 +124,14 @@ class ResponseBuilder<T extends AggregateRoot> {
     }
 
     // Serialize each aggregate and collect as a list
-    final serializedList =
-        aggregates.map((a) => serializer.serialize(a)).toList();
+    final serializedList = aggregates
+        .map((a) => serializer.serialize(a))
+        .toList();
 
     // Parse each serialized string as JSON and encode the array
     final jsonList = serializedList.map(jsonDecode).toList();
 
-    return Response.ok(
-      jsonEncode(jsonList),
-      headers: headers,
-    );
+    return Response.ok(jsonEncode(jsonList), headers: headers);
   }
 
   /// Builds a 204 No Content response
