@@ -72,6 +72,9 @@ class TestUserDynamoRepository implements QueryableRepository<TestUser> {
 
   @override
   Future<void> save(TestUser aggregate) async {
+    if (aggregate is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
     try {
       final json = _serializer.toJson(aggregate);
 
@@ -287,6 +290,9 @@ class TestProductDynamoRepository implements QueryableRepository<TestProduct> {
 
   @override
   Future<void> save(TestProduct aggregate) async {
+    if (aggregate is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
     try {
       final json = _serializer.toJson(aggregate);
 
@@ -504,6 +510,9 @@ abstract class TestOrderDynamoRepositoryBase implements TestOrderRepository {
 
   @override
   Future<void> save(TestOrder aggregate) async {
+    if (aggregate is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
     try {
       final json = _serializer.toJson(aggregate);
 
@@ -727,6 +736,9 @@ class TestAccountDynamoRepository implements QueryableRepository<TestAccount> {
 
   @override
   Future<void> save(TestAccount aggregate) async {
+    if (aggregate is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
     try {
       final json = _serializer.toJson(aggregate);
 

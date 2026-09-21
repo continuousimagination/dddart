@@ -1346,3 +1346,15 @@ Default errors/logs preserve status and operation signals without reflecting raw
 provider errors, submitted identifiers/query values, request bodies or exception
 stack objects. Configure any custom error handler and diagnostic sink with the
 same confidentiality boundary.
+
+### Portable conditional wire grammar
+
+`package:dddart_rest/dddart_rest_protocol.dart` exports `ConditionalHeaders`
+without server/IO dependencies. It encodes positive revisions as strong `"rN"`
+validators and parses only one explicit `If-Match` or create-only
+`If-None-Match: *`. Weak/list/duplicate/conflicting/noncanonical/out-of-range
+validators and unrelated conditional/range fields are rejected. Missing mutation
+preconditions have their own typed error. This parser supplies syntax only;
+authentication, authorization, body agreement and atomic repository mutation
+remain responsibilities of the resource pipeline. Its portable entry does not
+claim that the conditional HTTP resource is already implemented.

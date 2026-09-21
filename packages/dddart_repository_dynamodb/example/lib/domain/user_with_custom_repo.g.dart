@@ -75,6 +75,9 @@ abstract class UserWithCustomRepoDynamoRepositoryBase
 
   @override
   Future<void> save(UserWithCustomRepo aggregate) async {
+    if (aggregate is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
     try {
       final json = _serializer.toJson(aggregate);
 

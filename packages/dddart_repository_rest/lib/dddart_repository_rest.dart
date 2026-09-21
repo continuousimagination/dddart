@@ -151,3 +151,4 @@ export 'src/annotations/generate_rest_repository.dart';
 
 // Connection management
 export 'src/connection/rest_connection.dart';
+export 'src/rest_conditional_repository.dart';

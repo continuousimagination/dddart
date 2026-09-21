@@ -214,6 +214,7 @@ class GenerateDynamoRepository {
     this.aggregateType,
     this.serializerType,
     this.generatedBaseName,
+    this.conditionalWrites = false,
   });
 
   /// The DynamoDB table name for this aggregate type.
@@ -249,4 +250,8 @@ class GenerateDynamoRepository {
 
   /// Public class-name stem used before DynamoRepository (or its Base suffix).
   final String? generatedBaseName;
+
+  /// Generates explicit atomic conditional CRUD for a VersionedAggregateRoot.
+  /// False rejects versioned roots; no unconditional adapter is synthesized.
+  final bool conditionalWrites;
 }

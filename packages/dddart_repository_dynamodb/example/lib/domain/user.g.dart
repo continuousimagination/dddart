@@ -72,6 +72,9 @@ class UserDynamoRepository implements QueryableRepository<User> {
 
   @override
   Future<void> save(User aggregate) async {
+    if (aggregate is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
     try {
       final json = _serializer.toJson(aggregate);
 

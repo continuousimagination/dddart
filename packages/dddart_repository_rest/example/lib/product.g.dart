@@ -240,6 +240,9 @@ abstract class ProductRestRepositoryBase implements ProductRepository {
 
   @override
   Future<void> save(Product aggregate) async {
+    if (aggregate is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
     try {
       final json = _serializer.toJson(aggregate);
       final body = jsonEncode(json);

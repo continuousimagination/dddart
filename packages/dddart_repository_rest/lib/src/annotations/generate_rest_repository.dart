@@ -65,6 +65,7 @@ class GenerateRestRepository {
     this.aggregateType,
     this.serializerType,
     this.generatedBaseName,
+    this.conditionalWrites = false,
   });
 
   /// The REST API resource path (e.g., '/users', '/orders').
@@ -92,4 +93,8 @@ class GenerateRestRepository {
 
   /// Public class-name stem used before RestRepository (or its Base suffix).
   final String? generatedBaseName;
+
+  /// Generates explicit atomic conditional CRUD for a VersionedAggregateRoot.
+  /// False rejects versioned roots; no unconditional adapter is synthesized.
+  final bool conditionalWrites;
 }

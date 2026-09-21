@@ -73,6 +73,9 @@ class ProbeDynamoRepository
 
   @override
   Future<void> save(shared.RemoteRecord aggregate) async {
+    if (aggregate is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
     try {
       final json = _serializer.toJson(aggregate);
 
@@ -290,6 +293,9 @@ abstract class CallbackDynamoRepositoryBase implements shared.RemotePort {
 
   @override
   Future<void> save(shared.RemoteRecord aggregate) async {
+    if (aggregate is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
     try {
       final json = _serializer.toJson(aggregate);
 

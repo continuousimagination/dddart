@@ -47,6 +47,22 @@ class DynamoRepositoryGenerator
     final external = _annotationType(annotation, 'aggregateType', element);
     final classElement = external?.element as ClassElement? ?? element;
     final className = classElement.name!;
+    final conditional =
+        annotation.peek('conditionalWrites')?.boolValue ?? false;
+    final versioned = classElement.allSupertypes.any(
+      (type) => _isDeclaration(
+        type,
+        'package:dddart/src/versioned_aggregate_root.dart',
+        'VersionedAggregateRoot',
+      ),
+    );
+    if (conditional != versioned) {
+      throw InvalidGenerationSourceError(
+        'conditionalWrites must be true exactly for versioned aggregate roots.',
+        element: element,
+      );
+    }
+    if (conditional) _validateRevisionAuthority(classElement);
 
     // Validate class extends AggregateRoot
     if (!_extendsAggregateRoot(classElement)) {
@@ -118,16 +134,21 @@ class DynamoRepositoryGenerator
               (type) =>
                   _isDeclaration(
                     type,
-                    'package:dddart/src/repository.dart',
-                    'Repository',
+                    conditional
+                        ? 'package:dddart/src/conditional_repository.dart'
+                        : 'package:dddart/src/repository.dart',
+                    conditional ? 'ConditionalRepository' : 'Repository',
                   ) &&
                   type.typeArguments.length == 1 &&
                   type.typeArguments.single == modelType,
             ))) {
       throw InvalidGenerationSourceError(
-        'implements must be a Repository<$className> interface',
+        'implements must match the selected conditional or ordinary Repository<$className> contract',
         element: element,
       );
+    }
+    if (conditional && customInterface != null) {
+      _validateConditionalPort(customInterface, modelType, element);
     }
     final aggregateName = _visibleType(modelType, element.library);
     final serializerName = serializer == null
@@ -160,6 +181,17 @@ class DynamoRepositoryGenerator
         custom.putIfAbsent(method.name!, () => method);
       }
     }
+    if (conditional) {
+      return _generateConditionalRepository(
+        aggregateName,
+        serializerName,
+        '${baseName}DynamoRepository',
+        tableName,
+        interfaceName,
+        custom.values.toList(),
+        element.library,
+      );
+    }
     if (custom.isEmpty) {
       return _generateConcreteRepository(
         aggregateName,
@@ -180,6 +212,135 @@ class DynamoRepositoryGenerator
       serializerName: serializerName,
       interfaceName: interfaceName!,
     );
+  }
+
+  void _validateConditionalPort(
+    InterfaceType port,
+    InterfaceType model,
+    Element owner,
+  ) {
+    final canonical = [port, ...port.allSupertypes].firstWhere(
+      (type) =>
+          _isDeclaration(
+            type,
+            'package:dddart/src/conditional_repository.dart',
+            'ConditionalRepository',
+          ) &&
+          type.typeArguments.single == model,
+    );
+    for (final name in ['getById', 'save', 'deleteById']) {
+      final expected = canonical.getMethod(name)!;
+      // InterfaceType lookup retains generic substitution and selects the
+      // effective declaration, including inherited/custom-interface members.
+      final actual = port.lookUpMethod(name, owner.library!);
+      if (actual == null || !_sameCrudSignature(actual, expected)) {
+        throw InvalidGenerationSourceError(
+          'Custom conditional member $name must match ConditionalRepository<${model.getDisplayString()}> exactly.',
+          element: actual ?? owner,
+        );
+      }
+    }
+  }
+
+  bool _sameCrudSignature(MethodElement actual, MethodElement expected) {
+    if (actual.typeParameters.length != expected.typeParameters.length ||
+        actual.returnType != expected.returnType ||
+        actual.formalParameters.length != expected.formalParameters.length) {
+      return false;
+    }
+    final actualPositional = actual.formalParameters
+        .where((p) => p.isPositional)
+        .toList();
+    final expectedPositional = expected.formalParameters
+        .where((p) => p.isPositional)
+        .toList();
+    if (actualPositional.length != expectedPositional.length) return false;
+    for (var index = 0; index < expectedPositional.length; index++) {
+      final a = actualPositional[index];
+      final e = expectedPositional[index];
+      if (a.type != e.type ||
+          a.isRequiredPositional != e.isRequiredPositional) {
+        return false;
+      }
+    }
+    final named = {
+      for (final p in actual.formalParameters.where((p) => p.isNamed))
+        p.name: p,
+    };
+    for (final e in expected.formalParameters.where((p) => p.isNamed)) {
+      final a = named[e.name];
+      if (a == null ||
+          a.type != e.type ||
+          a.isRequiredNamed != e.isRequiredNamed) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  void _validateRevisionAuthority(ClassElement element) {
+    InterfaceType? current = element.thisType;
+    while (current != null &&
+        !_isDeclaration(
+          current,
+          'package:dddart/src/versioned_aggregate_root.dart',
+          'VersionedAggregateRoot',
+        )) {
+      if (current.element.fields.any(
+        (field) => field.name == 'revision' || field.name == '__dddart_retired',
+      )) {
+        throw InvalidGenerationSourceError(
+          'Reserved revision or retirement metadata is overridden.',
+          element: element,
+        );
+      }
+      current = current.superclass;
+    }
+    final canonical = current?.element.getGetter('revision');
+    if (canonical == null ||
+        element
+                .lookUpGetter(name: 'revision', library: element.library)
+                ?.baseElement !=
+            canonical.baseElement) {
+      throw InvalidGenerationSourceError(
+        'The canonical inherited revision authority is required.',
+        element: element,
+      );
+    }
+  }
+
+  String _generateConditionalRepository(
+    String model,
+    String codec,
+    String name,
+    String location,
+    String? port,
+    List<MethodElement> methods,
+    LibraryElement scope,
+  ) {
+    final abstract = methods.isNotEmpty;
+    final generatedName = abstract ? '${name}Base' : name;
+    final literal = jsonEncode(location);
+    final buffer = StringBuffer();
+    buffer.writeln('/// Generated conditional repository for [$model].');
+    buffer.writeln(
+      '${abstract ? "abstract " : ""}class $generatedName extends DynamoConditionalRepository<$model>${port == null ? "" : " implements $port"} {',
+    );
+    buffer.writeln(
+      '  /// Creates the typed conditional adapter using trusted configuration.',
+    );
+    buffer.writeln(
+      '  $generatedName(DynamoConnection connection, {String? tableName})',
+    );
+    buffer.writeln(
+      '      : super(connection, serializer: $codec(), tableName: tableName ?? $literal);',
+    );
+    for (final method in methods) {
+      buffer.writeln('  @override');
+      buffer.writeln('  ${_generateMethodSignature(method, scope)};');
+    }
+    buffer.writeln('}');
+    return buffer.toString();
   }
 
   bool _isDeclaration(InterfaceType type, String uri, String name) =>
@@ -371,6 +532,9 @@ class DynamoRepositoryGenerator
     return '''
   @override
   Future<void> save($className aggregate) async {
+    if (aggregate is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
     try {
       final json = _serializer.toJson(aggregate);
       

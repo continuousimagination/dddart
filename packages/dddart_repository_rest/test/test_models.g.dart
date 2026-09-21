@@ -733,6 +733,9 @@ class TestUserRestRepository implements Repository<TestUser> {
 
   @override
   Future<void> save(TestUser aggregate) async {
+    if (aggregate is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
     try {
       final json = _serializer.toJson(aggregate);
       final body = jsonEncode(json);
@@ -874,6 +877,9 @@ class TestProductRestRepository implements Repository<TestProduct> {
 
   @override
   Future<void> save(TestProduct aggregate) async {
+    if (aggregate is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
     try {
       final json = _serializer.toJson(aggregate);
       final body = jsonEncode(json);
@@ -1018,6 +1024,9 @@ abstract class TestOrderRestRepositoryBase implements TestOrderRepository {
 
   @override
   Future<void> save(TestOrder aggregate) async {
+    if (aggregate is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
     try {
       final json = _serializer.toJson(aggregate);
       final body = jsonEncode(json);
@@ -1167,6 +1176,9 @@ class TestAccountRestRepository implements Repository<TestAccount> {
 
   @override
   Future<void> save(TestAccount aggregate) async {
+    if (aggregate is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
     try {
       final json = _serializer.toJson(aggregate);
       final body = jsonEncode(json);

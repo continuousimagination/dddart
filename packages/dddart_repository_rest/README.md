@@ -699,3 +699,45 @@ Public generated failures carry safe static messages without provider response
 bodies or raw causes. Validation responses400/412/422 map to `constraint`;
 unknown transport failures remain `unknown`, so callers must not infer that an
 uncertain write failed to commit or automatically repeat it.
+
+## Explicit conditional repositories
+
+`GenerateRestRepository(conditionalWrites: true, ...)` generates a
+`ConditionalRepository<T>` adapter for a `VersionedAggregateRoot` and its public,
+separately built canonical JSON codec. A custom port must implement that same
+conditional interface. Legacy mode rejects versioned bindings and widened
+versioned saves rather than silently offering unconditional persistence.
+
+The generated class extends `RestConditionalRepository<T>`. Callers supply
+`WritePrecondition.absent()` for a zero-revision creation, or
+`WritePrecondition.atRevision(...)` matching the proposal's positive revision.
+There is no hidden validator cache, preflight fetch, automatic rebase, auth-refresh
+retry or write retry. Configure a trusted non-retrying connection/auth provider.
+All requests disable redirects, including browser Fetch redirects.
+
+GET requires a complete positive-revision body and matching strong `"rN"` ETag.
+Successful PUT returns the exact accepted copy: 201 for creation, 200 for update,
+with the expected next revision. Its transformed representation must not carry
+ETag or Last-Modified. Empty 204, mismatched identity/content/revision or malformed
+success cannot acknowledge a save. Codecs use one stable canonical JSON contract;
+change the representation/API namespace if its bytes change for the same revision.
+
+A browser can internally repeat a buffered request despite one application
+send. Atomic expected revisions prevent a repeated copy from applying twice or
+overwriting newer state. They do not create an operation receipt. Every failure
+after entry into HTTP PUT/DELETE becomes `WriteOutcomeUnknownException`, including
+a final 412, 401 or 403 which may follow an earlier committed copy. Only a safe
+observed failure classification is retained. `accessUnavailable` is true for
+401/403; callers must stop automatic recovery until access is usable. A later
+matching read is observation, not proof of which request committed.
+
+The shared wire grammar is exported by
+`package:dddart_rest/dddart_rest_protocol.dart`. That entry is browser-safe and
+does not import the Shelf/server/native IO barrel. The REST connection remains
+owned/disposed by its caller, not by generated repositories.
+
+Custom conditional ports may add query methods or redeclare CRUD with its exact
+canonical signature, including through generic parent interfaces. Optional
+preconditions, extra CRUD parameters, changed parameter/return types and generic
+CRUD methods are rejected at generation with the affected member named; they
+never produce an adapter with an incompatible inherited implementation.

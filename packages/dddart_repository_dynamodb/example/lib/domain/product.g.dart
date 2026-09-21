@@ -72,6 +72,9 @@ class ProductDynamoRepository implements QueryableRepository<Product> {
 
   @override
   Future<void> save(Product aggregate) async {
+    if (aggregate is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
     try {
       final json = _serializer.toJson(aggregate);
 

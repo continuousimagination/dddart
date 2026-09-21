@@ -218,6 +218,9 @@ class UserRestRepository implements Repository<User> {
 
   @override
   Future<void> save(User aggregate) async {
+    if (aggregate is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
     try {
       final json = _serializer.toJson(aggregate);
       final body = jsonEncode(json);
