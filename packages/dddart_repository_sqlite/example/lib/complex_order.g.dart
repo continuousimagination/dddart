@@ -583,6 +583,9 @@ CREATE TABLE IF NOT EXISTS "orders_items" (
 
   @override
   Future<void> save(Order aggregate) async {
+    if (aggregate is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
     await _connection.transaction(() async {
       try {
         // Serialize aggregate to JSON

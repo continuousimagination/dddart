@@ -152,6 +152,44 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
     // Check inheritance hierarchy
     final classType = _determineClassType(classElement);
 
+    final versioned = classElement.allSupertypes.any(
+      (type) => _isFrameworkType(
+        type,
+        'VersionedAggregateRoot',
+        'versioned_aggregate_root',
+      ),
+    );
+    if (versioned) {
+      InterfaceType? current = classElement.thisType;
+      while (current != null &&
+          !_isFrameworkType(
+            current,
+            'VersionedAggregateRoot',
+            'versioned_aggregate_root',
+          )) {
+        if (current.element.fields.any((field) => field.name == 'revision')) {
+          throw InvalidGenerationSourceError(
+            'Versioned aggregates must inherit the sole revision field; overriding revision is unsupported.',
+            element: classElement,
+          );
+        }
+        current = current.superclass;
+      }
+      final effectiveGetter = classElement.lookUpGetter(
+        name: 'revision',
+        library: classElement.library,
+      );
+      final canonicalGetter = current?.element.getGetter('revision');
+      if (current == null ||
+          canonicalGetter == null ||
+          effectiveGetter?.baseElement != canonicalGetter.baseElement) {
+        throw InvalidGenerationSourceError(
+          'Versioned aggregates must inherit the canonical revision getter through their superclass; mixin overrides and interface-only implementations are unsupported.',
+          element: classElement,
+        );
+      }
+    }
+
     // Extract field information
     final fields = _extractFields(classElement, classType);
 
@@ -166,6 +204,26 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
           if (parameter.isRequiredNamed || parameter.isRequiredPositional)
             parameter.name!,
       },
+    );
+  }
+
+  bool _isFrameworkType(DartType type, String name, String file) =>
+      type is InterfaceType &&
+      type.element.name == name &&
+      type.element.library.uri.toString() == 'package:dddart/src/$file.dart';
+
+  String _visibleRevision(InterfaceType type, LibraryElement scope) {
+    for (final imported in scope.firstFragment.libraryImports) {
+      for (final entry in imported.namespace.definedNames2.entries) {
+        if (entry.value != type.element) continue;
+        final prefix = imported.prefix?.name;
+        return prefix == null || entry.key.startsWith('$prefix.')
+            ? entry.key
+            : '$prefix.${entry.key}';
+      }
+    }
+    throw InvalidGenerationSourceError(
+      'The framework Revision type must be publicly imported into the model library.',
     );
   }
 
@@ -226,6 +284,9 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
             name: fieldName,
             type: type,
             isNullable: type.nullabilitySuffix == NullabilitySuffix.question,
+            revisionConstructor: _isFrameworkType(type, 'Revision', 'revision')
+                ? _visibleRevision(type as InterfaceType, classElement.library)
+                : null,
           ),
         );
       }
@@ -418,6 +479,11 @@ $fromJsonWithConfigBody
     final fieldName = field.name;
     final jsonAccess =
         "json[SerializationUtils.applyFieldRename('$fieldName', effectiveConfig.fieldRename)]";
+
+    if (field.revisionConstructor != null) {
+      final parsed = '${field.revisionConstructor}($jsonAccess as int)';
+      return field.isNullable ? '$jsonAccess == null ? null : $parsed' : parsed;
+    }
 
     // Handle nullable types first
     if (field.isNullable) {
@@ -730,6 +796,9 @@ $fromJsonWithConfigBody
   String _generateFieldSerialization(FieldInfo field, [String prefix = '']) {
     final typeName = field.type.getDisplayString(withNullability: false);
     final fieldRef = '$prefix${field.name}';
+    if (field.revisionConstructor != null) {
+      return field.isNullable ? '$fieldRef?.value' : '$fieldRef.value';
+    }
 
     // Handle nullable types first
     if (field.isNullable) {
@@ -1240,10 +1309,12 @@ class FieldInfo {
     required this.name,
     required this.type,
     required this.isNullable,
+    this.revisionConstructor,
   });
   final String name;
   final DartType type;
   final bool isNullable;
+  final String? revisionConstructor;
 }
 
 /// Enumeration of class types for serialization.

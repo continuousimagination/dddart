@@ -226,6 +226,9 @@ class UserMongoRepository implements Repository<User> {
 
   @override
   Future<void> save(User aggregate) async {
+    if (aggregate is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
     try {
       final doc = _serializer.toJson(aggregate);
 

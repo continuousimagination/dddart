@@ -811,3 +811,24 @@ Contributions are welcome! Please read our contributing guidelines and submit pu
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+### Atomic conditional persistence
+
+`VersionedAggregateRoot` adds one inherited immutable `Revision`. Use
+`ConditionalRepository<T>` for these roots: creation requires
+`WritePrecondition.absent()` and revision zero; updates require the same positive
+revision in the proposal and `WritePrecondition.atRevision(...)`. Save returns
+an independent accepted copy with the next revision. An older expectation cannot
+overwrite newer content, including when a transport repeats a request.
+
+Deletion retains a revision tombstone. Retired identifiers must never be reused.
+This contract does not promise a durable operation receipt: an unacknowledged
+remote write may have committed, even if a later physical attempt reports a
+conflict or loss of access. `WriteOutcomeUnknownException` preserves that
+uncertainty and only a safe classification of the last observed failure.
+
+`InMemoryConditionalRepository` is isolate-local test storage. Supply a trusted,
+pure, synchronous deep-copy function; it must preserve identity, timestamps and
+content while replacing only revision. Both stored and returned copies are
+prepared and validated before the atomic mutation. Nested isolation depends on
+that copier, not generic object-graph inspection. Ordinary `Repository` and
+`InMemoryRepository` deliberately reject versioned roots.

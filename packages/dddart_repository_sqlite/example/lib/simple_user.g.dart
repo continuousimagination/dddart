@@ -260,6 +260,9 @@ CREATE TABLE IF NOT EXISTS "users" (
 
   @override
   Future<void> save(SimpleUser aggregate) async {
+    if (aggregate is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
     await _connection.transaction(() async {
       try {
         // Serialize aggregate to JSON

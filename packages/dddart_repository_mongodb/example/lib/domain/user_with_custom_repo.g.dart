@@ -236,6 +236,9 @@ abstract class UserWithCustomRepoMongoRepositoryBase implements UserRepository {
 
   @override
   Future<void> save(UserWithCustomRepo aggregate) async {
+    if (aggregate is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
     try {
       final doc = _serializer.toJson(aggregate);
 

@@ -234,6 +234,9 @@ class ProductMongoRepository implements Repository<Product> {
 
   @override
   Future<void> save(Product aggregate) async {
+    if (aggregate is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
     try {
       final doc = _serializer.toJson(aggregate);
 

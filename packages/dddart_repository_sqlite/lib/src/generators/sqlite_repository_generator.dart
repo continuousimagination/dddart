@@ -45,6 +45,17 @@ class SqliteRepositoryGenerator
 
     final classElement = element;
     final className = classElement.name!;
+    if (classElement.allSupertypes.any(
+      (type) =>
+          type.element.name == 'VersionedAggregateRoot' &&
+          type.element.library.uri.toString() ==
+              'package:dddart/src/versioned_aggregate_root.dart',
+    )) {
+      throw InvalidGenerationSourceError(
+        'This backend does not support conditional persistence for versioned roots.',
+        element: element,
+      );
+    }
 
     // Validate class extends AggregateRoot
     if (!_extendsAggregateRoot(classElement)) {
@@ -65,6 +76,21 @@ class SqliteRepositoryGenerator
     // Extract configuration from annotation
     final tableName = _extractTableName(annotation, className);
     final customInterface = _extractImplementsInterface(annotation);
+    if (customInterface != null &&
+        [
+          customInterface.element,
+          ...customInterface.allSupertypes.map((type) => type.element),
+        ].any(
+          (type) =>
+              type.name == 'ConditionalRepository' &&
+              type.library.uri.toString() ==
+                  'package:dddart/src/conditional_repository.dart',
+        )) {
+      throw InvalidGenerationSourceError(
+        'This backend does not support conditional repository interfaces.',
+        element: element,
+      );
+    }
 
     // Analyze object graph to generate table definitions
     final tables = _analyzeObjectGraph(classElement, tableName);
@@ -1182,6 +1208,9 @@ class SqliteRepositoryGenerator
     final buffer = StringBuffer();
     buffer.writeln('  @override');
     buffer.writeln('  Future<void> save($className aggregate) async {');
+    buffer.writeln('    if (aggregate is VersionedAggregateRoot) {');
+    buffer.writeln('      throw const RepositoryCapabilityException();');
+    buffer.writeln('    }');
     buffer.writeln('    await _connection.transaction(() async {');
     buffer.writeln('      try {');
     buffer.writeln('        // Serialize aggregate to JSON');

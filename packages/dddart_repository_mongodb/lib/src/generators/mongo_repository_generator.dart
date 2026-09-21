@@ -43,6 +43,17 @@ class MongoRepositoryGenerator
 
     final classElement = element;
     final className = classElement.name!;
+    if (classElement.allSupertypes.any(
+      (type) =>
+          type.element.name == 'VersionedAggregateRoot' &&
+          type.element.library.uri.toString() ==
+              'package:dddart/src/versioned_aggregate_root.dart',
+    )) {
+      throw InvalidGenerationSourceError(
+        'This backend does not support conditional persistence for versioned roots.',
+        element: element,
+      );
+    }
 
     // Task 4.2: Validate class extends AggregateRoot
     if (!_extendsAggregateRoot(classElement)) {
@@ -63,6 +74,21 @@ class MongoRepositoryGenerator
     // Task 4.3: Extract configuration from annotation
     final collectionName = _extractCollectionName(annotation, className);
     final customInterface = _extractImplementsInterface(annotation);
+    if (customInterface != null &&
+        [
+          customInterface.element,
+          ...customInterface.allSupertypes.map((type) => type.element),
+        ].any(
+          (type) =>
+              type.name == 'ConditionalRepository' &&
+              type.library.uri.toString() ==
+                  'package:dddart/src/conditional_repository.dart',
+        )) {
+      throw InvalidGenerationSourceError(
+        'This backend does not support conditional repository interfaces.',
+        element: element,
+      );
+    }
 
     // Task 4.4: Determine what to generate based on interface analysis
     if (customInterface == null) {
@@ -307,6 +333,9 @@ class MongoRepositoryGenerator
     return '''
   @override
   Future<void> save($className aggregate) async {
+    if (aggregate is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
     try {
       final doc = _serializer.toJson(aggregate);
       

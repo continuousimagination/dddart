@@ -741,6 +741,9 @@ class TestUserMongoRepository implements Repository<TestUser> {
 
   @override
   Future<void> save(TestUser aggregate) async {
+    if (aggregate is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
     try {
       final doc = _serializer.toJson(aggregate);
 
@@ -881,6 +884,9 @@ class TestProductMongoRepository implements Repository<TestProduct> {
 
   @override
   Future<void> save(TestProduct aggregate) async {
+    if (aggregate is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
     try {
       final doc = _serializer.toJson(aggregate);
 
@@ -1024,6 +1030,9 @@ abstract class TestOrderMongoRepositoryBase implements TestOrderRepository {
 
   @override
   Future<void> save(TestOrder aggregate) async {
+    if (aggregate is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
     try {
       final doc = _serializer.toJson(aggregate);
 
@@ -1172,6 +1181,9 @@ class TestAccountMongoRepository implements Repository<TestAccount> {
 
   @override
   Future<void> save(TestAccount aggregate) async {
+    if (aggregate is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
     try {
       final doc = _serializer.toJson(aggregate);
 

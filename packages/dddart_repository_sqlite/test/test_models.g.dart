@@ -2178,6 +2178,9 @@ CREATE TABLE IF NOT EXISTS "orders_items" (
 
   @override
   Future<void> save(Order aggregate) async {
+    if (aggregate is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
     await _connection.transaction(() async {
       try {
         // Serialize aggregate to JSON
@@ -2559,6 +2562,9 @@ CREATE TABLE IF NOT EXISTS "test_users" (
 
   @override
   Future<void> save(TestUser aggregate) async {
+    if (aggregate is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
     await _connection.transaction(() async {
       try {
         // Serialize aggregate to JSON
@@ -2869,6 +2875,9 @@ CREATE TABLE IF NOT EXISTS "test_products" (
 
   @override
   Future<void> save(TestProduct aggregate) async {
+    if (aggregate is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
     await _connection.transaction(() async {
       try {
         // Serialize aggregate to JSON
@@ -3216,6 +3225,9 @@ CREATE TABLE IF NOT EXISTS "test_primitive_collections_scoresByGame" (
 
   @override
   Future<void> save(TestPrimitiveCollections aggregate) async {
+    if (aggregate is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
     await _connection.transaction(() async {
       try {
         // Serialize aggregate to JSON
@@ -3717,6 +3729,9 @@ CREATE TABLE IF NOT EXISTS "test_value_collections_pricesByProduct" (
 
   @override
   Future<void> save(TestValueCollections aggregate) async {
+    if (aggregate is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
     await _connection.transaction(() async {
       try {
         // Serialize aggregate to JSON
@@ -4274,6 +4289,9 @@ CREATE TABLE IF NOT EXISTS "test_entity_collections_itemsByCategory" (
 
   @override
   Future<void> save(TestEntityCollections aggregate) async {
+    if (aggregate is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
     await _connection.transaction(() async {
       try {
         // Serialize aggregate to JSON
@@ -4761,6 +4779,9 @@ CREATE TABLE IF NOT EXISTS "test_nullable_collections_optionalScores" (
 
   @override
   Future<void> save(TestNullableCollections aggregate) async {
+    if (aggregate is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
     await _connection.transaction(() async {
       try {
         // Serialize aggregate to JSON
@@ -5239,6 +5260,9 @@ CREATE TABLE IF NOT EXISTS "test_nullable_elements_nullableNumbers" (
 
   @override
   Future<void> save(TestNullableElements aggregate) async {
+    if (aggregate is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
     await _connection.transaction(() async {
       try {
         // Serialize aggregate to JSON
