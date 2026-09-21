@@ -229,7 +229,8 @@ void main() {
 
 ### File Logging
 
-Write logs to a file using the built-in `FileLogHandler`:
+Write logs to a file using `FileLogHandler` from the explicit native entry
+`import 'package:dddart/dddart_io.dart';`. The core barrel contains portable domain APIs:
 
 ```dart
 import 'package:logging/logging.dart';

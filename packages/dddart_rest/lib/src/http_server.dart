@@ -99,32 +99,12 @@ class HttpServer {
   ///   return Response.ok('OK');
   /// });
   /// ```
-  void addRoute(
-    String method,
-    String path,
-    Function handler,
-  ) {
+  void addRoute(String method, String path, Function handler) {
     _customRoutes.add(_CustomRoute(method, path, handler));
   }
 
-  /// Starts the HTTP server
-  ///
-  /// Creates a shelf_router Router instance and registers routes for all
-  /// registered CrudResource instances. Then starts the shelf server on
-  /// the configured port.
-  ///
-  /// Throws [StateError] if the server is already running.
-  ///
-  /// Example:
-  /// ```dart
-  /// await server.start();
-  /// print('Server running on http://localhost:${server.port}');
-  /// ```
-  Future<void> start() async {
-    if (_shelfServer != null) {
-      throw StateError('Server is already running');
-    }
-
+  /// Composes routing and CORS without opening a listening socket.
+  Handler buildHandler() {
     final router = Router();
 
     // Register routes for each resource
@@ -173,6 +153,29 @@ class HttpServer {
       handler = _corsMiddleware().addHandler(handler);
     }
 
+    return handler;
+  }
+
+  /// Starts the HTTP server
+  ///
+  /// Creates a shelf_router Router instance and registers routes for all
+  /// registered CrudResource instances. Then starts the shelf server on
+  /// the configured port.
+  ///
+  /// Throws [StateError] if the server is already running.
+  ///
+  /// Example:
+  /// ```dart
+  /// await server.start();
+  /// print('Server running on http://localhost:${server.port}');
+  /// ```
+  Future<void> start() async {
+    if (_shelfServer != null) {
+      throw StateError('Server is already running');
+    }
+
+    final handler = buildHandler();
+
     // Start shelf server with router on configured port
     _shelfServer = await shelf_io.serve(
       handler,
@@ -210,7 +213,8 @@ class HttpServer {
         final origin = request.headers['origin'];
 
         // Determine if the origin is allowed
-        final isAllowed = _allowedOrigins.contains('*') ||
+        final isAllowed =
+            _allowedOrigins.contains('*') ||
             (origin != null && _allowedOrigins.contains(origin));
 
         final corsHeaders = <String, String>{

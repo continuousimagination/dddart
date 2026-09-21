@@ -8,6 +8,7 @@ workspace:
   - packages/dddart
   - packages/dddart_serialization
   - packages/dddart_json
+  - packages/dddart_json/test/fixtures/shared_model
   - packages/dddart_json/example
   - packages/dddart_rest
   - packages/dddart_rest_client

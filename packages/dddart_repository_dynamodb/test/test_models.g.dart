@@ -15,13 +15,28 @@ class TestUserDynamoRepository implements QueryableRepository<TestUser> {
   /// Creates a repository instance.
   ///
   /// [connection] - A DynamoDB connection instance.
-  TestUserDynamoRepository(this._connection);
+  TestUserDynamoRepository(
+    this._connection, {
+    this.readConsistency = DynamoReadConsistency.eventual,
+    String? tableName,
+  }) : tableName = tableName ?? 'test_users' {
+    if (tableName != null &&
+        (tableName.length < 3 ||
+            tableName.length > 255 ||
+            tableName.startsWith('aws.') ||
+            !RegExp(r'^[A-Za-z0-9_.-]+$').hasMatch(tableName))) {
+      throw ArgumentError('Invalid DynamoDB table name');
+    }
+  }
+
+  /// Point-read consistency policy.
+  final DynamoReadConsistency readConsistency;
 
   /// The DynamoDB connection instance.
   final DynamoConnection _connection;
 
   /// The table name for TestUser aggregates.
-  String get tableName => 'test_users';
+  final String tableName;
 
   /// The JSON serializer for TestUser aggregates.
   final _serializer = TestUserJsonSerializer();
@@ -32,6 +47,7 @@ class TestUserDynamoRepository implements QueryableRepository<TestUser> {
       final response = await _connection.client.getItem(
         tableName: tableName,
         key: {'id': AttributeValue(s: id.toString())},
+        consistentRead: readConsistency == DynamoReadConsistency.strong,
       );
 
       if (response.item == null || response.item!.isEmpty) {
@@ -76,6 +92,7 @@ class TestUserDynamoRepository implements QueryableRepository<TestUser> {
       final getResponse = await _connection.client.getItem(
         tableName: tableName,
         key: {'id': AttributeValue(s: id.toString())},
+        consistentRead: readConsistency == DynamoReadConsistency.strong,
       );
 
       if (getResponse.item == null || getResponse.item!.isEmpty) {
@@ -115,55 +132,9 @@ class TestUserDynamoRepository implements QueryableRepository<TestUser> {
     }
   }
 
-  /// Maps DynamoDB exceptions to RepositoryException types.
+  /// Maps typed SDK failures without exposing provider data or raw causes.
   RepositoryException _mapDynamoException(Object error, String operation) {
-    final errorString = error.toString();
-
-    // Map ResourceNotFoundException to notFound
-    if (errorString.contains('ResourceNotFoundException')) {
-      return RepositoryException(
-        'Resource not found during $operation: $errorString',
-        type: RepositoryExceptionType.notFound,
-        cause: error,
-      );
-    }
-
-    // Map ConditionalCheckFailedException to duplicate
-    if (errorString.contains('ConditionalCheckFailedException')) {
-      return RepositoryException(
-        'Conditional check failed during $operation: $errorString',
-        type: RepositoryExceptionType.duplicate,
-        cause: error,
-      );
-    }
-
-    // Map network/connectivity errors to connection
-    if (errorString.contains('connection') ||
-        errorString.contains('network') ||
-        errorString.contains('SocketException')) {
-      return RepositoryException(
-        'Connection error during $operation: $errorString',
-        type: RepositoryExceptionType.connection,
-        cause: error,
-      );
-    }
-
-    // Map timeout errors to timeout
-    if (errorString.contains('timeout') ||
-        errorString.contains('TimeoutException')) {
-      return RepositoryException(
-        'Timeout during $operation: $errorString',
-        type: RepositoryExceptionType.timeout,
-        cause: error,
-      );
-    }
-
-    // All other errors map to unknown
-    return RepositoryException(
-      'DynamoDB error during $operation: $errorString',
-      type: RepositoryExceptionType.unknown,
-      cause: error,
-    );
+    return DynamoRepositoryException.map(error, operation);
   }
 
   /// Creates the DynamoDB table for this repository.
@@ -259,13 +230,28 @@ class TestProductDynamoRepository implements QueryableRepository<TestProduct> {
   /// Creates a repository instance.
   ///
   /// [connection] - A DynamoDB connection instance.
-  TestProductDynamoRepository(this._connection);
+  TestProductDynamoRepository(
+    this._connection, {
+    this.readConsistency = DynamoReadConsistency.eventual,
+    String? tableName,
+  }) : tableName = tableName ?? 'custom_products' {
+    if (tableName != null &&
+        (tableName.length < 3 ||
+            tableName.length > 255 ||
+            tableName.startsWith('aws.') ||
+            !RegExp(r'^[A-Za-z0-9_.-]+$').hasMatch(tableName))) {
+      throw ArgumentError('Invalid DynamoDB table name');
+    }
+  }
+
+  /// Point-read consistency policy.
+  final DynamoReadConsistency readConsistency;
 
   /// The DynamoDB connection instance.
   final DynamoConnection _connection;
 
   /// The table name for TestProduct aggregates.
-  String get tableName => 'custom_products';
+  final String tableName;
 
   /// The JSON serializer for TestProduct aggregates.
   final _serializer = TestProductJsonSerializer();
@@ -276,6 +262,7 @@ class TestProductDynamoRepository implements QueryableRepository<TestProduct> {
       final response = await _connection.client.getItem(
         tableName: tableName,
         key: {'id': AttributeValue(s: id.toString())},
+        consistentRead: readConsistency == DynamoReadConsistency.strong,
       );
 
       if (response.item == null || response.item!.isEmpty) {
@@ -320,6 +307,7 @@ class TestProductDynamoRepository implements QueryableRepository<TestProduct> {
       final getResponse = await _connection.client.getItem(
         tableName: tableName,
         key: {'id': AttributeValue(s: id.toString())},
+        consistentRead: readConsistency == DynamoReadConsistency.strong,
       );
 
       if (getResponse.item == null || getResponse.item!.isEmpty) {
@@ -359,55 +347,9 @@ class TestProductDynamoRepository implements QueryableRepository<TestProduct> {
     }
   }
 
-  /// Maps DynamoDB exceptions to RepositoryException types.
+  /// Maps typed SDK failures without exposing provider data or raw causes.
   RepositoryException _mapDynamoException(Object error, String operation) {
-    final errorString = error.toString();
-
-    // Map ResourceNotFoundException to notFound
-    if (errorString.contains('ResourceNotFoundException')) {
-      return RepositoryException(
-        'Resource not found during $operation: $errorString',
-        type: RepositoryExceptionType.notFound,
-        cause: error,
-      );
-    }
-
-    // Map ConditionalCheckFailedException to duplicate
-    if (errorString.contains('ConditionalCheckFailedException')) {
-      return RepositoryException(
-        'Conditional check failed during $operation: $errorString',
-        type: RepositoryExceptionType.duplicate,
-        cause: error,
-      );
-    }
-
-    // Map network/connectivity errors to connection
-    if (errorString.contains('connection') ||
-        errorString.contains('network') ||
-        errorString.contains('SocketException')) {
-      return RepositoryException(
-        'Connection error during $operation: $errorString',
-        type: RepositoryExceptionType.connection,
-        cause: error,
-      );
-    }
-
-    // Map timeout errors to timeout
-    if (errorString.contains('timeout') ||
-        errorString.contains('TimeoutException')) {
-      return RepositoryException(
-        'Timeout during $operation: $errorString',
-        type: RepositoryExceptionType.timeout,
-        cause: error,
-      );
-    }
-
-    // All other errors map to unknown
-    return RepositoryException(
-      'DynamoDB error during $operation: $errorString',
-      type: RepositoryExceptionType.unknown,
-      cause: error,
-    );
+    return DynamoRepositoryException.map(error, operation);
   }
 
   /// Creates the DynamoDB table for this repository.
@@ -505,13 +447,28 @@ abstract class TestOrderDynamoRepositoryBase implements TestOrderRepository {
   /// Creates a repository instance.
   ///
   /// [connection] - A DynamoDB connection instance.
-  TestOrderDynamoRepositoryBase(this._connection);
+  TestOrderDynamoRepositoryBase(
+    this._connection, {
+    this.readConsistency = DynamoReadConsistency.eventual,
+    String? tableName,
+  }) : tableName = tableName ?? 'test_orders' {
+    if (tableName != null &&
+        (tableName.length < 3 ||
+            tableName.length > 255 ||
+            tableName.startsWith('aws.') ||
+            !RegExp(r'^[A-Za-z0-9_.-]+$').hasMatch(tableName))) {
+      throw ArgumentError('Invalid DynamoDB table name');
+    }
+  }
+
+  /// Point-read consistency policy.
+  final DynamoReadConsistency readConsistency;
 
   /// The DynamoDB connection instance.
   final DynamoConnection _connection;
 
   /// The table name for TestOrder aggregates.
-  String get tableName => 'test_orders';
+  final String tableName;
 
   /// The JSON serializer for TestOrder aggregates.
   final _serializer = TestOrderJsonSerializer();
@@ -522,6 +479,7 @@ abstract class TestOrderDynamoRepositoryBase implements TestOrderRepository {
       final response = await _connection.client.getItem(
         tableName: tableName,
         key: {'id': AttributeValue(s: id.toString())},
+        consistentRead: readConsistency == DynamoReadConsistency.strong,
       );
 
       if (response.item == null || response.item!.isEmpty) {
@@ -566,6 +524,7 @@ abstract class TestOrderDynamoRepositoryBase implements TestOrderRepository {
       final getResponse = await _connection.client.getItem(
         tableName: tableName,
         key: {'id': AttributeValue(s: id.toString())},
+        consistentRead: readConsistency == DynamoReadConsistency.strong,
       );
 
       if (getResponse.item == null || getResponse.item!.isEmpty) {
@@ -605,55 +564,9 @@ abstract class TestOrderDynamoRepositoryBase implements TestOrderRepository {
     }
   }
 
-  /// Maps DynamoDB exceptions to RepositoryException types.
+  /// Maps typed SDK failures without exposing provider data or raw causes.
   RepositoryException _mapDynamoException(Object error, String operation) {
-    final errorString = error.toString();
-
-    // Map ResourceNotFoundException to notFound
-    if (errorString.contains('ResourceNotFoundException')) {
-      return RepositoryException(
-        'Resource not found during $operation: $errorString',
-        type: RepositoryExceptionType.notFound,
-        cause: error,
-      );
-    }
-
-    // Map ConditionalCheckFailedException to duplicate
-    if (errorString.contains('ConditionalCheckFailedException')) {
-      return RepositoryException(
-        'Conditional check failed during $operation: $errorString',
-        type: RepositoryExceptionType.duplicate,
-        cause: error,
-      );
-    }
-
-    // Map network/connectivity errors to connection
-    if (errorString.contains('connection') ||
-        errorString.contains('network') ||
-        errorString.contains('SocketException')) {
-      return RepositoryException(
-        'Connection error during $operation: $errorString',
-        type: RepositoryExceptionType.connection,
-        cause: error,
-      );
-    }
-
-    // Map timeout errors to timeout
-    if (errorString.contains('timeout') ||
-        errorString.contains('TimeoutException')) {
-      return RepositoryException(
-        'Timeout during $operation: $errorString',
-        type: RepositoryExceptionType.timeout,
-        cause: error,
-      );
-    }
-
-    // All other errors map to unknown
-    return RepositoryException(
-      'DynamoDB error during $operation: $errorString',
-      type: RepositoryExceptionType.unknown,
-      cause: error,
-    );
+    return DynamoRepositoryException.map(error, operation);
   }
 
   /// Creates the DynamoDB table for this repository.
@@ -665,7 +578,7 @@ abstract class TestOrderDynamoRepositoryBase implements TestOrderRepository {
   ///
   /// Example:
   /// ```dart
-  /// final repo = TestOrderDynamoRepository(connection);
+  /// final repo = TestOrderDynamoRepositoryBase(connection);
   /// await repo.createTable();
   /// ```
   Future<void> createTable() async {
@@ -695,7 +608,7 @@ abstract class TestOrderDynamoRepositoryBase implements TestOrderRepository {
   ///
   /// Example:
   /// ```dart
-  /// final command = TestOrderDynamoRepository.getCreateTableCommand('test_orders');
+  /// final command = TestOrderDynamoRepositoryBase.getCreateTableCommand('test_orders');
   /// print(command);
   /// // Copy and paste into terminal
   /// ```
@@ -717,7 +630,7 @@ aws dynamodb create-table \\
   ///
   /// Example:
   /// ```dart
-  /// final template = TestOrderDynamoRepository.getCloudFormationTemplate('test_orders');
+  /// final template = TestOrderDynamoRepositoryBase.getCloudFormationTemplate('test_orders');
   /// print(template);
   /// // Add to CloudFormation template
   /// ```
@@ -757,13 +670,28 @@ class TestAccountDynamoRepository implements QueryableRepository<TestAccount> {
   /// Creates a repository instance.
   ///
   /// [connection] - A DynamoDB connection instance.
-  TestAccountDynamoRepository(this._connection);
+  TestAccountDynamoRepository(
+    this._connection, {
+    this.readConsistency = DynamoReadConsistency.eventual,
+    String? tableName,
+  }) : tableName = tableName ?? 'test_accounts' {
+    if (tableName != null &&
+        (tableName.length < 3 ||
+            tableName.length > 255 ||
+            tableName.startsWith('aws.') ||
+            !RegExp(r'^[A-Za-z0-9_.-]+$').hasMatch(tableName))) {
+      throw ArgumentError('Invalid DynamoDB table name');
+    }
+  }
+
+  /// Point-read consistency policy.
+  final DynamoReadConsistency readConsistency;
 
   /// The DynamoDB connection instance.
   final DynamoConnection _connection;
 
   /// The table name for TestAccount aggregates.
-  String get tableName => 'test_accounts';
+  final String tableName;
 
   /// The JSON serializer for TestAccount aggregates.
   final _serializer = TestAccountJsonSerializer();
@@ -774,6 +702,7 @@ class TestAccountDynamoRepository implements QueryableRepository<TestAccount> {
       final response = await _connection.client.getItem(
         tableName: tableName,
         key: {'id': AttributeValue(s: id.toString())},
+        consistentRead: readConsistency == DynamoReadConsistency.strong,
       );
 
       if (response.item == null || response.item!.isEmpty) {
@@ -818,6 +747,7 @@ class TestAccountDynamoRepository implements QueryableRepository<TestAccount> {
       final getResponse = await _connection.client.getItem(
         tableName: tableName,
         key: {'id': AttributeValue(s: id.toString())},
+        consistentRead: readConsistency == DynamoReadConsistency.strong,
       );
 
       if (getResponse.item == null || getResponse.item!.isEmpty) {
@@ -857,55 +787,9 @@ class TestAccountDynamoRepository implements QueryableRepository<TestAccount> {
     }
   }
 
-  /// Maps DynamoDB exceptions to RepositoryException types.
+  /// Maps typed SDK failures without exposing provider data or raw causes.
   RepositoryException _mapDynamoException(Object error, String operation) {
-    final errorString = error.toString();
-
-    // Map ResourceNotFoundException to notFound
-    if (errorString.contains('ResourceNotFoundException')) {
-      return RepositoryException(
-        'Resource not found during $operation: $errorString',
-        type: RepositoryExceptionType.notFound,
-        cause: error,
-      );
-    }
-
-    // Map ConditionalCheckFailedException to duplicate
-    if (errorString.contains('ConditionalCheckFailedException')) {
-      return RepositoryException(
-        'Conditional check failed during $operation: $errorString',
-        type: RepositoryExceptionType.duplicate,
-        cause: error,
-      );
-    }
-
-    // Map network/connectivity errors to connection
-    if (errorString.contains('connection') ||
-        errorString.contains('network') ||
-        errorString.contains('SocketException')) {
-      return RepositoryException(
-        'Connection error during $operation: $errorString',
-        type: RepositoryExceptionType.connection,
-        cause: error,
-      );
-    }
-
-    // Map timeout errors to timeout
-    if (errorString.contains('timeout') ||
-        errorString.contains('TimeoutException')) {
-      return RepositoryException(
-        'Timeout during $operation: $errorString',
-        type: RepositoryExceptionType.timeout,
-        cause: error,
-      );
-    }
-
-    // All other errors map to unknown
-    return RepositoryException(
-      'DynamoDB error during $operation: $errorString',
-      type: RepositoryExceptionType.unknown,
-      cause: error,
-    );
+    return DynamoRepositoryException.map(error, operation);
   }
 
   /// Creates the DynamoDB table for this repository.
@@ -1098,7 +982,7 @@ class TestUserJsonSerializer implements JsonSerializer<TestUser> {
       );
     } catch (e, stackTrace) {
       throw DeserializationException(
-        'Failed to deserialize TestUser: $e',
+        'Failed to deserialize TestUser',
         expectedType: 'TestUser',
       );
     }
@@ -1106,19 +990,35 @@ class TestUserJsonSerializer implements JsonSerializer<TestUser> {
 
   @override
   String serialize(TestUser object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
+    try {
+      return jsonEncode(toJson(object, config as SerializationConfig?));
+    } catch (_) {
+      throw SerializationException(
+        'Failed to serialize TestUser',
+        expectedType: 'TestUser',
+      );
+    }
   }
 
   @override
   TestUser deserialize(String data, [dynamic config]) {
-    final json = jsonDecode(data);
-    if (json is! Map<String, dynamic>) {
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map<String, dynamic>) {
+        throw DeserializationException(
+          'Expected JSON object',
+          expectedType: 'TestUser',
+        );
+      }
+      return fromJson(json, config as SerializationConfig?);
+    } on DeserializationException {
+      rethrow;
+    } catch (_) {
       throw DeserializationException(
-        'Expected JSON object but got ${json.runtimeType}',
+        'Invalid JSON input',
         expectedType: 'TestUser',
       );
     }
-    return fromJson(json, config as SerializationConfig?);
   }
 
   /// Convenience method for static access with default configuration
@@ -1248,7 +1148,7 @@ class TestProductJsonSerializer implements JsonSerializer<TestProduct> {
       );
     } catch (e, stackTrace) {
       throw DeserializationException(
-        'Failed to deserialize TestProduct: $e',
+        'Failed to deserialize TestProduct',
         expectedType: 'TestProduct',
       );
     }
@@ -1256,19 +1156,35 @@ class TestProductJsonSerializer implements JsonSerializer<TestProduct> {
 
   @override
   String serialize(TestProduct object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
+    try {
+      return jsonEncode(toJson(object, config as SerializationConfig?));
+    } catch (_) {
+      throw SerializationException(
+        'Failed to serialize TestProduct',
+        expectedType: 'TestProduct',
+      );
+    }
   }
 
   @override
   TestProduct deserialize(String data, [dynamic config]) {
-    final json = jsonDecode(data);
-    if (json is! Map<String, dynamic>) {
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map<String, dynamic>) {
+        throw DeserializationException(
+          'Expected JSON object',
+          expectedType: 'TestProduct',
+        );
+      }
+      return fromJson(json, config as SerializationConfig?);
+    } on DeserializationException {
+      rethrow;
+    } catch (_) {
       throw DeserializationException(
-        'Expected JSON object but got ${json.runtimeType}',
+        'Invalid JSON input',
         expectedType: 'TestProduct',
       );
     }
-    return fromJson(json, config as SerializationConfig?);
   }
 
   /// Convenience method for static access with default configuration
@@ -1410,7 +1326,7 @@ class TestOrderJsonSerializer implements JsonSerializer<TestOrder> {
       );
     } catch (e, stackTrace) {
       throw DeserializationException(
-        'Failed to deserialize TestOrder: $e',
+        'Failed to deserialize TestOrder',
         expectedType: 'TestOrder',
       );
     }
@@ -1418,19 +1334,35 @@ class TestOrderJsonSerializer implements JsonSerializer<TestOrder> {
 
   @override
   String serialize(TestOrder object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
+    try {
+      return jsonEncode(toJson(object, config as SerializationConfig?));
+    } catch (_) {
+      throw SerializationException(
+        'Failed to serialize TestOrder',
+        expectedType: 'TestOrder',
+      );
+    }
   }
 
   @override
   TestOrder deserialize(String data, [dynamic config]) {
-    final json = jsonDecode(data);
-    if (json is! Map<String, dynamic>) {
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map<String, dynamic>) {
+        throw DeserializationException(
+          'Expected JSON object',
+          expectedType: 'TestOrder',
+        );
+      }
+      return fromJson(json, config as SerializationConfig?);
+    } on DeserializationException {
+      rethrow;
+    } catch (_) {
       throw DeserializationException(
-        'Expected JSON object but got ${json.runtimeType}',
+        'Invalid JSON input',
         expectedType: 'TestOrder',
       );
     }
-    return fromJson(json, config as SerializationConfig?);
   }
 
   /// Convenience method for static access with default configuration
@@ -1574,7 +1506,7 @@ class TestAccountJsonSerializer implements JsonSerializer<TestAccount> {
       );
     } catch (e, stackTrace) {
       throw DeserializationException(
-        'Failed to deserialize TestAccount: $e',
+        'Failed to deserialize TestAccount',
         expectedType: 'TestAccount',
       );
     }
@@ -1582,19 +1514,35 @@ class TestAccountJsonSerializer implements JsonSerializer<TestAccount> {
 
   @override
   String serialize(TestAccount object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
+    try {
+      return jsonEncode(toJson(object, config as SerializationConfig?));
+    } catch (_) {
+      throw SerializationException(
+        'Failed to serialize TestAccount',
+        expectedType: 'TestAccount',
+      );
+    }
   }
 
   @override
   TestAccount deserialize(String data, [dynamic config]) {
-    final json = jsonDecode(data);
-    if (json is! Map<String, dynamic>) {
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map<String, dynamic>) {
+        throw DeserializationException(
+          'Expected JSON object',
+          expectedType: 'TestAccount',
+        );
+      }
+      return fromJson(json, config as SerializationConfig?);
+    } on DeserializationException {
+      rethrow;
+    } catch (_) {
       throw DeserializationException(
-        'Expected JSON object but got ${json.runtimeType}',
+        'Invalid JSON input',
         expectedType: 'TestAccount',
       );
     }
-    return fromJson(json, config as SerializationConfig?);
   }
 
   /// Convenience method for static access with default configuration

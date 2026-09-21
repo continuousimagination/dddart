@@ -15,13 +15,28 @@ class UserDynamoRepository implements QueryableRepository<User> {
   /// Creates a repository instance.
   ///
   /// [connection] - A DynamoDB connection instance.
-  UserDynamoRepository(this._connection);
+  UserDynamoRepository(
+    this._connection, {
+    this.readConsistency = DynamoReadConsistency.eventual,
+    String? tableName,
+  }) : tableName = tableName ?? 'users' {
+    if (tableName != null &&
+        (tableName.length < 3 ||
+            tableName.length > 255 ||
+            tableName.startsWith('aws.') ||
+            !RegExp(r'^[A-Za-z0-9_.-]+$').hasMatch(tableName))) {
+      throw ArgumentError('Invalid DynamoDB table name');
+    }
+  }
+
+  /// Point-read consistency policy.
+  final DynamoReadConsistency readConsistency;
 
   /// The DynamoDB connection instance.
   final DynamoConnection _connection;
 
   /// The table name for User aggregates.
-  String get tableName => 'users';
+  final String tableName;
 
   /// The JSON serializer for User aggregates.
   final _serializer = UserJsonSerializer();
@@ -32,6 +47,7 @@ class UserDynamoRepository implements QueryableRepository<User> {
       final response = await _connection.client.getItem(
         tableName: tableName,
         key: {'id': AttributeValue(s: id.toString())},
+        consistentRead: readConsistency == DynamoReadConsistency.strong,
       );
 
       if (response.item == null || response.item!.isEmpty) {
@@ -42,8 +58,9 @@ class UserDynamoRepository implements QueryableRepository<User> {
       }
 
       // Convert DynamoDB AttributeValue map to JSON
-      final json =
-          AttributeValueConverter.attributeMapToJsonMap(response.item!);
+      final json = AttributeValueConverter.attributeMapToJsonMap(
+        response.item!,
+      );
 
       return _serializer.fromJson(json);
     } on RepositoryException {
@@ -62,10 +79,7 @@ class UserDynamoRepository implements QueryableRepository<User> {
       final item = AttributeValueConverter.jsonMapToAttributeMap(json);
 
       // Upsert operation using PutItem
-      await _connection.client.putItem(
-        tableName: tableName,
-        item: item,
-      );
+      await _connection.client.putItem(tableName: tableName, item: item);
     } catch (e) {
       throw _mapDynamoException(e, 'save');
     }
@@ -78,6 +92,7 @@ class UserDynamoRepository implements QueryableRepository<User> {
       final getResponse = await _connection.client.getItem(
         tableName: tableName,
         key: {'id': AttributeValue(s: id.toString())},
+        consistentRead: readConsistency == DynamoReadConsistency.strong,
       );
 
       if (getResponse.item == null || getResponse.item!.isEmpty) {
@@ -102,9 +117,7 @@ class UserDynamoRepository implements QueryableRepository<User> {
   @override
   Future<List<User>> getAll() async {
     try {
-      final response = await _connection.client.scan(
-        tableName: tableName,
-      );
+      final response = await _connection.client.scan(tableName: tableName);
 
       if (response.items == null || response.items!.isEmpty) {
         return [];
@@ -119,58 +132,9 @@ class UserDynamoRepository implements QueryableRepository<User> {
     }
   }
 
-  /// Maps DynamoDB exceptions to RepositoryException types.
-  RepositoryException _mapDynamoException(
-    Object error,
-    String operation,
-  ) {
-    final errorString = error.toString();
-
-    // Map ResourceNotFoundException to notFound
-    if (errorString.contains('ResourceNotFoundException')) {
-      return RepositoryException(
-        'Resource not found during $operation: $errorString',
-        type: RepositoryExceptionType.notFound,
-        cause: error,
-      );
-    }
-
-    // Map ConditionalCheckFailedException to duplicate
-    if (errorString.contains('ConditionalCheckFailedException')) {
-      return RepositoryException(
-        'Conditional check failed during $operation: $errorString',
-        type: RepositoryExceptionType.duplicate,
-        cause: error,
-      );
-    }
-
-    // Map network/connectivity errors to connection
-    if (errorString.contains('connection') ||
-        errorString.contains('network') ||
-        errorString.contains('SocketException')) {
-      return RepositoryException(
-        'Connection error during $operation: $errorString',
-        type: RepositoryExceptionType.connection,
-        cause: error,
-      );
-    }
-
-    // Map timeout errors to timeout
-    if (errorString.contains('timeout') ||
-        errorString.contains('TimeoutException')) {
-      return RepositoryException(
-        'Timeout during $operation: $errorString',
-        type: RepositoryExceptionType.timeout,
-        cause: error,
-      );
-    }
-
-    // All other errors map to unknown
-    return RepositoryException(
-      'DynamoDB error during $operation: $errorString',
-      type: RepositoryExceptionType.unknown,
-      cause: error,
-    );
+  /// Maps typed SDK failures without exposing provider data or raw causes.
+  RepositoryException _mapDynamoException(Object error, String operation) {
+    return DynamoRepositoryException.map(error, operation);
   }
 
   /// Creates the DynamoDB table for this repository.
@@ -190,10 +154,7 @@ class UserDynamoRepository implements QueryableRepository<User> {
       await _connection.client.createTable(
         tableName: tableName,
         keySchema: [
-          KeySchemaElement(
-            attributeName: 'id',
-            keyType: KeyType.hash,
-          ),
+          KeySchemaElement(attributeName: 'id', keyType: KeyType.hash),
         ],
         attributeDefinitions: [
           AttributeDefinition(
@@ -270,7 +231,7 @@ class UserJsonSerializer implements JsonSerializer<User> {
 
   /// Creates a serializer with the specified default configuration.
   UserJsonSerializer([SerializationConfig? defaultConfig])
-      : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig = defaultConfig ?? const SerializationConfig();
 
   @override
   Map<String, dynamic> toJson(User instance, [SerializationConfig? config]) {
@@ -279,17 +240,25 @@ class UserJsonSerializer implements JsonSerializer<User> {
       SerializationUtils.applyFieldRename('id', effectiveConfig.fieldRename):
           instance.id.toString(),
       SerializationUtils.applyFieldRename(
-              'createdAt', effectiveConfig.fieldRename):
-          instance.createdAt.toIso8601String(),
+        'createdAt',
+        effectiveConfig.fieldRename,
+      ): instance.createdAt
+          .toIso8601String(),
       SerializationUtils.applyFieldRename(
-              'updatedAt', effectiveConfig.fieldRename):
-          instance.updatedAt.toIso8601String(),
+        'updatedAt',
+        effectiveConfig.fieldRename,
+      ): instance.updatedAt
+          .toIso8601String(),
       SerializationUtils.applyFieldRename('email', effectiveConfig.fieldRename):
           instance.email,
       SerializationUtils.applyFieldRename(
-          'firstName', effectiveConfig.fieldRename): instance.firstName,
+        'firstName',
+        effectiveConfig.fieldRename,
+      ): instance.firstName,
       SerializationUtils.applyFieldRename(
-          'lastName', effectiveConfig.fieldRename): instance.lastName,
+        'lastName',
+        effectiveConfig.fieldRename,
+      ): instance.lastName,
     };
     return json;
   }
@@ -311,30 +280,63 @@ class UserJsonSerializer implements JsonSerializer<User> {
     }
     try {
       return User(
-        email: json[SerializationUtils.applyFieldRename(
-            'email', effectiveConfig.fieldRename)] as String,
-        firstName: json[SerializationUtils.applyFieldRename(
-            'firstName', effectiveConfig.fieldRename)] as String,
-        lastName: json[SerializationUtils.applyFieldRename(
-            'lastName', effectiveConfig.fieldRename)] as String,
-        id: UuidValue.fromString(json[SerializationUtils.applyFieldRename(
-            'id', effectiveConfig.fieldRename)] as String),
-        createdAt: json[SerializationUtils.applyFieldRename(
-                    'createdAt', effectiveConfig.fieldRename)] !=
+        email:
+            json[SerializationUtils.applyFieldRename(
+                  'email',
+                  effectiveConfig.fieldRename,
+                )]
+                as String,
+        firstName:
+            json[SerializationUtils.applyFieldRename(
+                  'firstName',
+                  effectiveConfig.fieldRename,
+                )]
+                as String,
+        lastName:
+            json[SerializationUtils.applyFieldRename(
+                  'lastName',
+                  effectiveConfig.fieldRename,
+                )]
+                as String,
+        id: UuidValue.fromString(
+          json[SerializationUtils.applyFieldRename(
+                'id',
+                effectiveConfig.fieldRename,
+              )]
+              as String,
+        ),
+        createdAt:
+            json[SerializationUtils.applyFieldRename(
+                  'createdAt',
+                  effectiveConfig.fieldRename,
+                )] !=
                 null
-            ? DateTime.parse(json[SerializationUtils.applyFieldRename(
-                'createdAt', effectiveConfig.fieldRename)] as String)
+            ? DateTime.parse(
+                json[SerializationUtils.applyFieldRename(
+                      'createdAt',
+                      effectiveConfig.fieldRename,
+                    )]
+                    as String,
+              )
             : DateTime.now(),
-        updatedAt: json[SerializationUtils.applyFieldRename(
-                    'updatedAt', effectiveConfig.fieldRename)] !=
+        updatedAt:
+            json[SerializationUtils.applyFieldRename(
+                  'updatedAt',
+                  effectiveConfig.fieldRename,
+                )] !=
                 null
-            ? DateTime.parse(json[SerializationUtils.applyFieldRename(
-                'updatedAt', effectiveConfig.fieldRename)] as String)
+            ? DateTime.parse(
+                json[SerializationUtils.applyFieldRename(
+                      'updatedAt',
+                      effectiveConfig.fieldRename,
+                    )]
+                    as String,
+              )
             : DateTime.now(),
       );
     } catch (e, stackTrace) {
       throw DeserializationException(
-        'Failed to deserialize User: $e',
+        'Failed to deserialize User',
         expectedType: 'User',
       );
     }
@@ -342,24 +344,42 @@ class UserJsonSerializer implements JsonSerializer<User> {
 
   @override
   String serialize(User object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
+    try {
+      return jsonEncode(toJson(object, config as SerializationConfig?));
+    } catch (_) {
+      throw SerializationException(
+        'Failed to serialize User',
+        expectedType: 'User',
+      );
+    }
   }
 
   @override
   User deserialize(String data, [dynamic config]) {
-    final json = jsonDecode(data);
-    if (json is! Map<String, dynamic>) {
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map<String, dynamic>) {
+        throw DeserializationException(
+          'Expected JSON object',
+          expectedType: 'User',
+        );
+      }
+      return fromJson(json, config as SerializationConfig?);
+    } on DeserializationException {
+      rethrow;
+    } catch (_) {
       throw DeserializationException(
-        'Expected JSON object but got ${json.runtimeType}',
+        'Invalid JSON input',
         expectedType: 'User',
       );
     }
-    return fromJson(json, config as SerializationConfig?);
   }
 
   /// Convenience method for static access with default configuration
-  static Map<String, dynamic> encode(User instance,
-      [SerializationConfig? config]) {
+  static Map<String, dynamic> encode(
+    User instance, [
+    SerializationConfig? config,
+  ]) {
     return UserJsonSerializer().toJson(instance, config);
   }
 

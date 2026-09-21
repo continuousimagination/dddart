@@ -108,7 +108,7 @@ class TestUserJsonSerializer implements JsonSerializer<TestUser> {
       );
     } catch (e, stackTrace) {
       throw DeserializationException(
-        'Failed to deserialize TestUser: $e',
+        'Failed to deserialize TestUser',
         expectedType: 'TestUser',
       );
     }
@@ -116,19 +116,35 @@ class TestUserJsonSerializer implements JsonSerializer<TestUser> {
 
   @override
   String serialize(TestUser object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
+    try {
+      return jsonEncode(toJson(object, config as SerializationConfig?));
+    } catch (_) {
+      throw SerializationException(
+        'Failed to serialize TestUser',
+        expectedType: 'TestUser',
+      );
+    }
   }
 
   @override
   TestUser deserialize(String data, [dynamic config]) {
-    final json = jsonDecode(data);
-    if (json is! Map<String, dynamic>) {
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map<String, dynamic>) {
+        throw DeserializationException(
+          'Expected JSON object',
+          expectedType: 'TestUser',
+        );
+      }
+      return fromJson(json, config as SerializationConfig?);
+    } on DeserializationException {
+      rethrow;
+    } catch (_) {
       throw DeserializationException(
-        'Expected JSON object but got ${json.runtimeType}',
+        'Invalid JSON input',
         expectedType: 'TestUser',
       );
     }
-    return fromJson(json, config as SerializationConfig?);
   }
 
   /// Convenience method for static access with default configuration
@@ -212,7 +228,7 @@ class TestAddressJsonSerializer implements JsonSerializer<TestAddress> {
       );
     } catch (e, stackTrace) {
       throw DeserializationException(
-        'Failed to deserialize TestAddress: $e',
+        'Failed to deserialize TestAddress',
         expectedType: 'TestAddress',
       );
     }
@@ -220,19 +236,35 @@ class TestAddressJsonSerializer implements JsonSerializer<TestAddress> {
 
   @override
   String serialize(TestAddress object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
+    try {
+      return jsonEncode(toJson(object, config as SerializationConfig?));
+    } catch (_) {
+      throw SerializationException(
+        'Failed to serialize TestAddress',
+        expectedType: 'TestAddress',
+      );
+    }
   }
 
   @override
   TestAddress deserialize(String data, [dynamic config]) {
-    final json = jsonDecode(data);
-    if (json is! Map<String, dynamic>) {
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map<String, dynamic>) {
+        throw DeserializationException(
+          'Expected JSON object',
+          expectedType: 'TestAddress',
+        );
+      }
+      return fromJson(json, config as SerializationConfig?);
+    } on DeserializationException {
+      rethrow;
+    } catch (_) {
       throw DeserializationException(
-        'Expected JSON object but got ${json.runtimeType}',
+        'Invalid JSON input',
         expectedType: 'TestAddress',
       );
     }
-    return fromJson(json, config as SerializationConfig?);
   }
 
   /// Convenience method for static access with default configuration
@@ -367,7 +399,7 @@ class TestUserWithAddressJsonSerializer
       );
     } catch (e, stackTrace) {
       throw DeserializationException(
-        'Failed to deserialize TestUserWithAddress: $e',
+        'Failed to deserialize TestUserWithAddress',
         expectedType: 'TestUserWithAddress',
       );
     }
@@ -375,19 +407,35 @@ class TestUserWithAddressJsonSerializer
 
   @override
   String serialize(TestUserWithAddress object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
+    try {
+      return jsonEncode(toJson(object, config as SerializationConfig?));
+    } catch (_) {
+      throw SerializationException(
+        'Failed to serialize TestUserWithAddress',
+        expectedType: 'TestUserWithAddress',
+      );
+    }
   }
 
   @override
   TestUserWithAddress deserialize(String data, [dynamic config]) {
-    final json = jsonDecode(data);
-    if (json is! Map<String, dynamic>) {
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map<String, dynamic>) {
+        throw DeserializationException(
+          'Expected JSON object',
+          expectedType: 'TestUserWithAddress',
+        );
+      }
+      return fromJson(json, config as SerializationConfig?);
+    } on DeserializationException {
+      rethrow;
+    } catch (_) {
       throw DeserializationException(
-        'Expected JSON object but got ${json.runtimeType}',
+        'Invalid JSON input',
         expectedType: 'TestUserWithAddress',
       );
     }
-    return fromJson(json, config as SerializationConfig?);
   }
 
   /// Convenience method for static access with default configuration
@@ -524,7 +572,7 @@ class TestUserSnakeCaseJsonSerializer
       );
     } catch (e, stackTrace) {
       throw DeserializationException(
-        'Failed to deserialize TestUserSnakeCase: $e',
+        'Failed to deserialize TestUserSnakeCase',
         expectedType: 'TestUserSnakeCase',
       );
     }
@@ -532,19 +580,35 @@ class TestUserSnakeCaseJsonSerializer
 
   @override
   String serialize(TestUserSnakeCase object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
+    try {
+      return jsonEncode(toJson(object, config as SerializationConfig?));
+    } catch (_) {
+      throw SerializationException(
+        'Failed to serialize TestUserSnakeCase',
+        expectedType: 'TestUserSnakeCase',
+      );
+    }
   }
 
   @override
   TestUserSnakeCase deserialize(String data, [dynamic config]) {
-    final json = jsonDecode(data);
-    if (json is! Map<String, dynamic>) {
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map<String, dynamic>) {
+        throw DeserializationException(
+          'Expected JSON object',
+          expectedType: 'TestUserSnakeCase',
+        );
+      }
+      return fromJson(json, config as SerializationConfig?);
+    } on DeserializationException {
+      rethrow;
+    } catch (_) {
       throw DeserializationException(
-        'Expected JSON object but got ${json.runtimeType}',
+        'Invalid JSON input',
         expectedType: 'TestUserSnakeCase',
       );
     }
-    return fromJson(json, config as SerializationConfig?);
   }
 
   /// Convenience method for static access with default configuration
@@ -678,7 +742,7 @@ class TestUserKebabCaseJsonSerializer
       );
     } catch (e, stackTrace) {
       throw DeserializationException(
-        'Failed to deserialize TestUserKebabCase: $e',
+        'Failed to deserialize TestUserKebabCase',
         expectedType: 'TestUserKebabCase',
       );
     }
@@ -686,19 +750,35 @@ class TestUserKebabCaseJsonSerializer
 
   @override
   String serialize(TestUserKebabCase object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
+    try {
+      return jsonEncode(toJson(object, config as SerializationConfig?));
+    } catch (_) {
+      throw SerializationException(
+        'Failed to serialize TestUserKebabCase',
+        expectedType: 'TestUserKebabCase',
+      );
+    }
   }
 
   @override
   TestUserKebabCase deserialize(String data, [dynamic config]) {
-    final json = jsonDecode(data);
-    if (json is! Map<String, dynamic>) {
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map<String, dynamic>) {
+        throw DeserializationException(
+          'Expected JSON object',
+          expectedType: 'TestUserKebabCase',
+        );
+      }
+      return fromJson(json, config as SerializationConfig?);
+    } on DeserializationException {
+      rethrow;
+    } catch (_) {
       throw DeserializationException(
-        'Expected JSON object but got ${json.runtimeType}',
+        'Invalid JSON input',
         expectedType: 'TestUserKebabCase',
       );
     }
-    return fromJson(json, config as SerializationConfig?);
   }
 
   /// Convenience method for static access with default configuration
@@ -787,7 +867,7 @@ class TestValueWithSpecialTypesJsonSerializer
       );
     } catch (e, stackTrace) {
       throw DeserializationException(
-        'Failed to deserialize TestValueWithSpecialTypes: $e',
+        'Failed to deserialize TestValueWithSpecialTypes',
         expectedType: 'TestValueWithSpecialTypes',
       );
     }
@@ -795,19 +875,35 @@ class TestValueWithSpecialTypesJsonSerializer
 
   @override
   String serialize(TestValueWithSpecialTypes object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
+    try {
+      return jsonEncode(toJson(object, config as SerializationConfig?));
+    } catch (_) {
+      throw SerializationException(
+        'Failed to serialize TestValueWithSpecialTypes',
+        expectedType: 'TestValueWithSpecialTypes',
+      );
+    }
   }
 
   @override
   TestValueWithSpecialTypes deserialize(String data, [dynamic config]) {
-    final json = jsonDecode(data);
-    if (json is! Map<String, dynamic>) {
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map<String, dynamic>) {
+        throw DeserializationException(
+          'Expected JSON object',
+          expectedType: 'TestValueWithSpecialTypes',
+        );
+      }
+      return fromJson(json, config as SerializationConfig?);
+    } on DeserializationException {
+      rethrow;
+    } catch (_) {
       throw DeserializationException(
-        'Expected JSON object but got ${json.runtimeType}',
+        'Invalid JSON input',
         expectedType: 'TestValueWithSpecialTypes',
       );
     }
-    return fromJson(json, config as SerializationConfig?);
   }
 
   /// Convenience method for static access with default configuration
@@ -897,7 +993,7 @@ class TestContactInfoJsonSerializer implements JsonSerializer<TestContactInfo> {
       );
     } catch (e, stackTrace) {
       throw DeserializationException(
-        'Failed to deserialize TestContactInfo: $e',
+        'Failed to deserialize TestContactInfo',
         expectedType: 'TestContactInfo',
       );
     }
@@ -905,19 +1001,35 @@ class TestContactInfoJsonSerializer implements JsonSerializer<TestContactInfo> {
 
   @override
   String serialize(TestContactInfo object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
+    try {
+      return jsonEncode(toJson(object, config as SerializationConfig?));
+    } catch (_) {
+      throw SerializationException(
+        'Failed to serialize TestContactInfo',
+        expectedType: 'TestContactInfo',
+      );
+    }
   }
 
   @override
   TestContactInfo deserialize(String data, [dynamic config]) {
-    final json = jsonDecode(data);
-    if (json is! Map<String, dynamic>) {
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map<String, dynamic>) {
+        throw DeserializationException(
+          'Expected JSON object',
+          expectedType: 'TestContactInfo',
+        );
+      }
+      return fromJson(json, config as SerializationConfig?);
+    } on DeserializationException {
+      rethrow;
+    } catch (_) {
       throw DeserializationException(
-        'Expected JSON object but got ${json.runtimeType}',
+        'Invalid JSON input',
         expectedType: 'TestContactInfo',
       );
     }
-    return fromJson(json, config as SerializationConfig?);
   }
 
   /// Convenience method for static access with default configuration
@@ -1085,7 +1197,7 @@ class TestComplexUserJsonSerializer implements JsonSerializer<TestComplexUser> {
       );
     } catch (e, stackTrace) {
       throw DeserializationException(
-        'Failed to deserialize TestComplexUser: $e',
+        'Failed to deserialize TestComplexUser',
         expectedType: 'TestComplexUser',
       );
     }
@@ -1093,19 +1205,35 @@ class TestComplexUserJsonSerializer implements JsonSerializer<TestComplexUser> {
 
   @override
   String serialize(TestComplexUser object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
+    try {
+      return jsonEncode(toJson(object, config as SerializationConfig?));
+    } catch (_) {
+      throw SerializationException(
+        'Failed to serialize TestComplexUser',
+        expectedType: 'TestComplexUser',
+      );
+    }
   }
 
   @override
   TestComplexUser deserialize(String data, [dynamic config]) {
-    final json = jsonDecode(data);
-    if (json is! Map<String, dynamic>) {
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map<String, dynamic>) {
+        throw DeserializationException(
+          'Expected JSON object',
+          expectedType: 'TestComplexUser',
+        );
+      }
+      return fromJson(json, config as SerializationConfig?);
+    } on DeserializationException {
+      rethrow;
+    } catch (_) {
       throw DeserializationException(
-        'Expected JSON object but got ${json.runtimeType}',
+        'Invalid JSON input',
         expectedType: 'TestComplexUser',
       );
     }
-    return fromJson(json, config as SerializationConfig?);
   }
 
   /// Convenience method for static access with default configuration
@@ -1294,7 +1422,7 @@ class TestProjectJsonSerializer implements JsonSerializer<TestProject> {
       );
     } catch (e, stackTrace) {
       throw DeserializationException(
-        'Failed to deserialize TestProject: $e',
+        'Failed to deserialize TestProject',
         expectedType: 'TestProject',
       );
     }
@@ -1302,19 +1430,35 @@ class TestProjectJsonSerializer implements JsonSerializer<TestProject> {
 
   @override
   String serialize(TestProject object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
+    try {
+      return jsonEncode(toJson(object, config as SerializationConfig?));
+    } catch (_) {
+      throw SerializationException(
+        'Failed to serialize TestProject',
+        expectedType: 'TestProject',
+      );
+    }
   }
 
   @override
   TestProject deserialize(String data, [dynamic config]) {
-    final json = jsonDecode(data);
-    if (json is! Map<String, dynamic>) {
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map<String, dynamic>) {
+        throw DeserializationException(
+          'Expected JSON object',
+          expectedType: 'TestProject',
+        );
+      }
+      return fromJson(json, config as SerializationConfig?);
+    } on DeserializationException {
+      rethrow;
+    } catch (_) {
       throw DeserializationException(
-        'Expected JSON object but got ${json.runtimeType}',
+        'Invalid JSON input',
         expectedType: 'TestProject',
       );
     }
-    return fromJson(json, config as SerializationConfig?);
   }
 
   /// Convenience method for static access with default configuration
@@ -1411,7 +1555,7 @@ class TestNestedValueJsonSerializer implements JsonSerializer<TestNestedValue> {
       );
     } catch (e, stackTrace) {
       throw DeserializationException(
-        'Failed to deserialize TestNestedValue: $e',
+        'Failed to deserialize TestNestedValue',
         expectedType: 'TestNestedValue',
       );
     }
@@ -1419,19 +1563,35 @@ class TestNestedValueJsonSerializer implements JsonSerializer<TestNestedValue> {
 
   @override
   String serialize(TestNestedValue object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
+    try {
+      return jsonEncode(toJson(object, config as SerializationConfig?));
+    } catch (_) {
+      throw SerializationException(
+        'Failed to serialize TestNestedValue',
+        expectedType: 'TestNestedValue',
+      );
+    }
   }
 
   @override
   TestNestedValue deserialize(String data, [dynamic config]) {
-    final json = jsonDecode(data);
-    if (json is! Map<String, dynamic>) {
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map<String, dynamic>) {
+        throw DeserializationException(
+          'Expected JSON object',
+          expectedType: 'TestNestedValue',
+        );
+      }
+      return fromJson(json, config as SerializationConfig?);
+    } on DeserializationException {
+      rethrow;
+    } catch (_) {
       throw DeserializationException(
-        'Expected JSON object but got ${json.runtimeType}',
+        'Invalid JSON input',
         expectedType: 'TestNestedValue',
       );
     }
-    return fromJson(json, config as SerializationConfig?);
   }
 
   /// Convenience method for static access with default configuration
@@ -1543,7 +1703,7 @@ class TestGameJsonSerializer implements JsonSerializer<TestGame> {
       );
     } catch (e, stackTrace) {
       throw DeserializationException(
-        'Failed to deserialize TestGame: $e',
+        'Failed to deserialize TestGame',
         expectedType: 'TestGame',
       );
     }
@@ -1551,19 +1711,35 @@ class TestGameJsonSerializer implements JsonSerializer<TestGame> {
 
   @override
   String serialize(TestGame object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
+    try {
+      return jsonEncode(toJson(object, config as SerializationConfig?));
+    } catch (_) {
+      throw SerializationException(
+        'Failed to serialize TestGame',
+        expectedType: 'TestGame',
+      );
+    }
   }
 
   @override
   TestGame deserialize(String data, [dynamic config]) {
-    final json = jsonDecode(data);
-    if (json is! Map<String, dynamic>) {
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map<String, dynamic>) {
+        throw DeserializationException(
+          'Expected JSON object',
+          expectedType: 'TestGame',
+        );
+      }
+      return fromJson(json, config as SerializationConfig?);
+    } on DeserializationException {
+      rethrow;
+    } catch (_) {
       throw DeserializationException(
-        'Expected JSON object but got ${json.runtimeType}',
+        'Invalid JSON input',
         expectedType: 'TestGame',
       );
     }
-    return fromJson(json, config as SerializationConfig?);
   }
 
   /// Convenience method for static access with default configuration
@@ -1655,7 +1831,7 @@ class TestPlayerJsonSerializer implements JsonSerializer<TestPlayer> {
       );
     } catch (e, stackTrace) {
       throw DeserializationException(
-        'Failed to deserialize TestPlayer: $e',
+        'Failed to deserialize TestPlayer',
         expectedType: 'TestPlayer',
       );
     }
@@ -1663,19 +1839,35 @@ class TestPlayerJsonSerializer implements JsonSerializer<TestPlayer> {
 
   @override
   String serialize(TestPlayer object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
+    try {
+      return jsonEncode(toJson(object, config as SerializationConfig?));
+    } catch (_) {
+      throw SerializationException(
+        'Failed to serialize TestPlayer',
+        expectedType: 'TestPlayer',
+      );
+    }
   }
 
   @override
   TestPlayer deserialize(String data, [dynamic config]) {
-    final json = jsonDecode(data);
-    if (json is! Map<String, dynamic>) {
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map<String, dynamic>) {
+        throw DeserializationException(
+          'Expected JSON object',
+          expectedType: 'TestPlayer',
+        );
+      }
+      return fromJson(json, config as SerializationConfig?);
+    } on DeserializationException {
+      rethrow;
+    } catch (_) {
       throw DeserializationException(
-        'Expected JSON object but got ${json.runtimeType}',
+        'Invalid JSON input',
         expectedType: 'TestPlayer',
       );
     }
-    return fromJson(json, config as SerializationConfig?);
   }
 
   /// Convenience method for static access with default configuration

@@ -62,6 +62,9 @@ class GenerateRestRepository {
   const GenerateRestRepository({
     this.resourcePath,
     this.implements,
+    this.aggregateType,
+    this.serializerType,
+    this.generatedBaseName,
   });
 
   /// The REST API resource path (e.g., '/users', '/orders').
@@ -80,4 +83,13 @@ class GenerateRestRepository {
   /// If null or only has base methods, generates a concrete repository
   /// class ready for direct use.
   final Type? implements;
+
+  /// Optional external aggregate type, leaving the binding in its adapter.
+  final Type? aggregateType;
+
+  /// Public, concrete JsonSerializer for [aggregateType], constructible without arguments.
+  final Type? serializerType;
+
+  /// Public class-name stem used before RestRepository (or its Base suffix).
+  final String? generatedBaseName;
 }

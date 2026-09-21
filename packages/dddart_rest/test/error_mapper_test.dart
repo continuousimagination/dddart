@@ -30,7 +30,8 @@ void main() {
       expect(body['type'], equals('about:blank'));
       expect(body['title'], equals('Not Found'));
       expect(body['status'], equals(404));
-      expect(body['detail'], equals('User with ID 123 not found'));
+      expect(body['detail'], equals('Resource not found'));
+      expect(body['detail'], isNot(contains('User with ID 123 not found')));
     });
 
     test('duplicate exception maps to 409', () async {
@@ -55,7 +56,8 @@ void main() {
       expect(body['type'], equals('about:blank'));
       expect(body['title'], equals('Conflict'));
       expect(body['status'], equals(409));
-      expect(body['detail'], equals('User with email already exists'));
+      expect(body['detail'], equals('Resource conflict'));
+      expect(body['detail'], isNot(contains('User with email already exists')));
     });
 
     test('constraint exception maps to 422', () async {
@@ -80,7 +82,11 @@ void main() {
       expect(body['type'], equals('about:blank'));
       expect(body['title'], equals('Unprocessable Entity'));
       expect(body['status'], equals(422));
-      expect(body['detail'], equals('Foreign key constraint violation'));
+      expect(body['detail'], equals('Constraint violation'));
+      expect(
+        body['detail'],
+        isNot(contains('Foreign key constraint violation')),
+      );
     });
 
     test('other RepositoryException types map to 500', () async {
@@ -106,7 +112,7 @@ void main() {
       expect(body['title'], equals('Internal Server Error'));
       expect(body['status'], equals(500));
       expect(body['detail'], contains('Repository operation failed'));
-      expect(body['detail'], contains('Connection timeout'));
+      expect(body['detail'], isNot(contains('Connection timeout')));
     });
   });
 
@@ -134,7 +140,8 @@ void main() {
       expect(body['type'], equals('about:blank'));
       expect(body['title'], equals('Bad Request'));
       expect(body['status'], equals(400));
-      expect(body['detail'], equals('Invalid JSON format'));
+      expect(body['detail'], equals('Invalid request data'));
+      expect(body['detail'], isNot(contains('Invalid JSON format')));
     });
 
     test('SerializationException maps to 500', () async {
@@ -159,8 +166,8 @@ void main() {
       expect(body['type'], equals('about:blank'));
       expect(body['title'], equals('Internal Server Error'));
       expect(body['status'], equals(500));
-      expect(body['detail'], contains('Serialization failed'));
-      expect(body['detail'], contains('Failed to encode object'));
+      expect(body['detail'], equals('Response serialization failed'));
+      expect(body['detail'], isNot(contains('Failed to encode object')));
     });
   });
 
@@ -186,10 +193,7 @@ void main() {
       expect(body['type'], equals('about:blank'));
       expect(body['title'], equals('Not Acceptable'));
       expect(body['status'], equals(406));
-      expect(
-        body['detail'],
-        contains('Accept header specifies unsupported media type'),
-      );
+      expect(body['detail'], equals('Invalid request data'));
     });
   });
 
@@ -235,7 +239,8 @@ void main() {
       expect(body['type'], equals('about:blank'));
       expect(body['title'], equals('Bad Request'));
       expect(body['status'], equals(400));
-      expect(body['detail'], equals('Invalid argument'));
+      expect(body['detail'], equals('Invalid request argument'));
+      expect(body['detail'], isNot(contains('Invalid argument')));
     });
 
     test('custom exceptions map to 500 with default message', () async {

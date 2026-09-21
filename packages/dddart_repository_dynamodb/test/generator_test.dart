@@ -183,7 +183,7 @@ class Product extends AggregateRoot {
         _mockBuildStep(),
       );
 
-      expect(output, contains("tableName => 'custom_products'"));
+      expect(output, contains("tableName ?? 'custom_products'"));
     });
 
     test('should use snake_case table name when not specified', () async {
@@ -221,7 +221,7 @@ class OrderItem extends AggregateRoot {
         _mockBuildStep(),
       );
 
-      expect(output, contains("tableName => 'order_item'"));
+      expect(output, contains("tableName ?? 'order_item'"));
     });
 
     test(
@@ -264,7 +264,7 @@ class User extends AggregateRoot {
         expect(output, contains('class UserDynamoRepository'));
         expect(output, contains('implements QueryableRepository<User>'));
         expect(output, contains('final DynamoConnection _connection'));
-        expect(output, contains("tableName => 'users'"));
+        expect(output, contains("tableName ?? 'users'"));
         expect(output, contains('final _serializer = UserJsonSerializer()'));
 
         // Verify CRUD methods are generated

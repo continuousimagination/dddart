@@ -164,7 +164,7 @@ class OrderWithCustomRepoJsonSerializer
       );
     } catch (e, stackTrace) {
       throw DeserializationException(
-        'Failed to deserialize OrderWithCustomRepo: $e',
+        'Failed to deserialize OrderWithCustomRepo',
         expectedType: 'OrderWithCustomRepo',
       );
     }
@@ -172,19 +172,35 @@ class OrderWithCustomRepoJsonSerializer
 
   @override
   String serialize(OrderWithCustomRepo object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
+    try {
+      return jsonEncode(toJson(object, config as SerializationConfig?));
+    } catch (_) {
+      throw SerializationException(
+        'Failed to serialize OrderWithCustomRepo',
+        expectedType: 'OrderWithCustomRepo',
+      );
+    }
   }
 
   @override
   OrderWithCustomRepo deserialize(String data, [dynamic config]) {
-    final json = jsonDecode(data);
-    if (json is! Map<String, dynamic>) {
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map<String, dynamic>) {
+        throw DeserializationException(
+          'Expected JSON object',
+          expectedType: 'OrderWithCustomRepo',
+        );
+      }
+      return fromJson(json, config as SerializationConfig?);
+    } on DeserializationException {
+      rethrow;
+    } catch (_) {
       throw DeserializationException(
-        'Expected JSON object but got ${json.runtimeType}',
+        'Invalid JSON input',
         expectedType: 'OrderWithCustomRepo',
       );
     }
-    return fromJson(json, config as SerializationConfig?);
   }
 
   /// Convenience method for static access with default configuration

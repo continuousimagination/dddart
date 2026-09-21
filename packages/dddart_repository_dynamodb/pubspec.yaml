@@ -17,10 +17,13 @@ dependencies:
     resolution: workspace
   dddart_serialization:
     resolution: workspace
+  http: ^1.2.0
   source_gen: ^4.2.3
 
 dev_dependencies:
   build_runner: ^2.15.0
   build_test: ^3.3.2
+  dddart_shared_model_fixture:
+    path: ../dddart_json/test/fixtures/shared_model
   test: ^1.24.0
   very_good_analysis: ^6.0.0

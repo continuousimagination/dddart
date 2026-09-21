@@ -130,7 +130,7 @@ class CustomUserJsonSerializer implements JsonSerializer<CustomUser> {
       );
     } catch (e, stackTrace) {
       throw DeserializationException(
-        'Failed to deserialize CustomUser: $e',
+        'Failed to deserialize CustomUser',
         expectedType: 'CustomUser',
       );
     }
@@ -138,19 +138,35 @@ class CustomUserJsonSerializer implements JsonSerializer<CustomUser> {
 
   @override
   String serialize(CustomUser object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
+    try {
+      return jsonEncode(toJson(object, config as SerializationConfig?));
+    } catch (_) {
+      throw SerializationException(
+        'Failed to serialize CustomUser',
+        expectedType: 'CustomUser',
+      );
+    }
   }
 
   @override
   CustomUser deserialize(String data, [dynamic config]) {
-    final json = jsonDecode(data);
-    if (json is! Map<String, dynamic>) {
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map<String, dynamic>) {
+        throw DeserializationException(
+          'Expected JSON object',
+          expectedType: 'CustomUser',
+        );
+      }
+      return fromJson(json, config as SerializationConfig?);
+    } on DeserializationException {
+      rethrow;
+    } catch (_) {
       throw DeserializationException(
-        'Expected JSON object but got ${json.runtimeType}',
+        'Invalid JSON input',
         expectedType: 'CustomUser',
       );
     }
-    return fromJson(json, config as SerializationConfig?);
   }
 
   /// Convenience method for static access with default configuration

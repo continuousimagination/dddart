@@ -12,7 +12,7 @@ class ProductJsonSerializer implements JsonSerializer<Product> {
 
   /// Creates a serializer with the specified default configuration.
   ProductJsonSerializer([SerializationConfig? defaultConfig])
-      : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig = defaultConfig ?? const SerializationConfig();
 
   @override
   Map<String, dynamic> toJson(Product instance, [SerializationConfig? config]) {
@@ -21,15 +21,23 @@ class ProductJsonSerializer implements JsonSerializer<Product> {
       SerializationUtils.applyFieldRename('id', effectiveConfig.fieldRename):
           instance.id.toString(),
       SerializationUtils.applyFieldRename(
-              'createdAt', effectiveConfig.fieldRename):
-          instance.createdAt.toIso8601String(),
+        'createdAt',
+        effectiveConfig.fieldRename,
+      ): instance.createdAt
+          .toIso8601String(),
       SerializationUtils.applyFieldRename(
-              'updatedAt', effectiveConfig.fieldRename):
-          instance.updatedAt.toIso8601String(),
+        'updatedAt',
+        effectiveConfig.fieldRename,
+      ): instance.updatedAt
+          .toIso8601String(),
       SerializationUtils.applyFieldRename(
-          'description', effectiveConfig.fieldRename): instance.description,
+        'description',
+        effectiveConfig.fieldRename,
+      ): instance.description,
       SerializationUtils.applyFieldRename(
-          'inStock', effectiveConfig.fieldRename): instance.inStock,
+        'inStock',
+        effectiveConfig.fieldRename,
+      ): instance.inStock,
       SerializationUtils.applyFieldRename('name', effectiveConfig.fieldRename):
           instance.name,
       SerializationUtils.applyFieldRename('price', effectiveConfig.fieldRename):
@@ -55,32 +63,69 @@ class ProductJsonSerializer implements JsonSerializer<Product> {
     }
     try {
       return Product(
-        description: json[SerializationUtils.applyFieldRename(
-            'description', effectiveConfig.fieldRename)] as String,
-        inStock: json[SerializationUtils.applyFieldRename(
-            'inStock', effectiveConfig.fieldRename)] as bool,
-        name: json[SerializationUtils.applyFieldRename(
-            'name', effectiveConfig.fieldRename)] as String,
-        price: json[SerializationUtils.applyFieldRename(
-            'price', effectiveConfig.fieldRename)] as int,
-        id: UuidValue.fromString(json[SerializationUtils.applyFieldRename(
-            'id', effectiveConfig.fieldRename)] as String),
-        createdAt: json[SerializationUtils.applyFieldRename(
-                    'createdAt', effectiveConfig.fieldRename)] !=
+        description:
+            json[SerializationUtils.applyFieldRename(
+                  'description',
+                  effectiveConfig.fieldRename,
+                )]
+                as String,
+        inStock:
+            json[SerializationUtils.applyFieldRename(
+                  'inStock',
+                  effectiveConfig.fieldRename,
+                )]
+                as bool,
+        name:
+            json[SerializationUtils.applyFieldRename(
+                  'name',
+                  effectiveConfig.fieldRename,
+                )]
+                as String,
+        price:
+            json[SerializationUtils.applyFieldRename(
+                  'price',
+                  effectiveConfig.fieldRename,
+                )]
+                as int,
+        id: UuidValue.fromString(
+          json[SerializationUtils.applyFieldRename(
+                'id',
+                effectiveConfig.fieldRename,
+              )]
+              as String,
+        ),
+        createdAt:
+            json[SerializationUtils.applyFieldRename(
+                  'createdAt',
+                  effectiveConfig.fieldRename,
+                )] !=
                 null
-            ? DateTime.parse(json[SerializationUtils.applyFieldRename(
-                'createdAt', effectiveConfig.fieldRename)] as String)
+            ? DateTime.parse(
+                json[SerializationUtils.applyFieldRename(
+                      'createdAt',
+                      effectiveConfig.fieldRename,
+                    )]
+                    as String,
+              )
             : DateTime.now(),
-        updatedAt: json[SerializationUtils.applyFieldRename(
-                    'updatedAt', effectiveConfig.fieldRename)] !=
+        updatedAt:
+            json[SerializationUtils.applyFieldRename(
+                  'updatedAt',
+                  effectiveConfig.fieldRename,
+                )] !=
                 null
-            ? DateTime.parse(json[SerializationUtils.applyFieldRename(
-                'updatedAt', effectiveConfig.fieldRename)] as String)
+            ? DateTime.parse(
+                json[SerializationUtils.applyFieldRename(
+                      'updatedAt',
+                      effectiveConfig.fieldRename,
+                    )]
+                    as String,
+              )
             : DateTime.now(),
       );
     } catch (e, stackTrace) {
       throw DeserializationException(
-        'Failed to deserialize Product: $e',
+        'Failed to deserialize Product',
         expectedType: 'Product',
       );
     }
@@ -88,24 +133,42 @@ class ProductJsonSerializer implements JsonSerializer<Product> {
 
   @override
   String serialize(Product object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
+    try {
+      return jsonEncode(toJson(object, config as SerializationConfig?));
+    } catch (_) {
+      throw SerializationException(
+        'Failed to serialize Product',
+        expectedType: 'Product',
+      );
+    }
   }
 
   @override
   Product deserialize(String data, [dynamic config]) {
-    final json = jsonDecode(data);
-    if (json is! Map<String, dynamic>) {
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map<String, dynamic>) {
+        throw DeserializationException(
+          'Expected JSON object',
+          expectedType: 'Product',
+        );
+      }
+      return fromJson(json, config as SerializationConfig?);
+    } on DeserializationException {
+      rethrow;
+    } catch (_) {
       throw DeserializationException(
-        'Expected JSON object but got ${json.runtimeType}',
+        'Invalid JSON input',
         expectedType: 'Product',
       );
     }
-    return fromJson(json, config as SerializationConfig?);
   }
 
   /// Convenience method for static access with default configuration
-  static Map<String, dynamic> encode(Product instance,
-      [SerializationConfig? config]) {
+  static Map<String, dynamic> encode(
+    Product instance, [
+    SerializationConfig? config,
+  ]) {
     return ProductJsonSerializer().toJson(instance, config);
   }
 
@@ -198,8 +261,9 @@ class ProductMongoRepository implements Repository<Product> {
   @override
   Future<void> deleteById(UuidValue id) async {
     try {
-      final result =
-          await _collection.deleteOne(where.eq('_id', id.toString()));
+      final result = await _collection.deleteOne(
+        where.eq('_id', id.toString()),
+      );
 
       if (result.nRemoved == 0) {
         throw RepositoryException(

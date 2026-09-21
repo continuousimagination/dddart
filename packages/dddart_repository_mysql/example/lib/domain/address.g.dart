@@ -88,7 +88,7 @@ class AddressJsonSerializer implements JsonSerializer<Address> {
       );
     } catch (e, stackTrace) {
       throw DeserializationException(
-        'Failed to deserialize Address: $e',
+        'Failed to deserialize Address',
         expectedType: 'Address',
       );
     }
@@ -96,19 +96,35 @@ class AddressJsonSerializer implements JsonSerializer<Address> {
 
   @override
   String serialize(Address object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
+    try {
+      return jsonEncode(toJson(object, config as SerializationConfig?));
+    } catch (_) {
+      throw SerializationException(
+        'Failed to serialize Address',
+        expectedType: 'Address',
+      );
+    }
   }
 
   @override
   Address deserialize(String data, [dynamic config]) {
-    final json = jsonDecode(data);
-    if (json is! Map<String, dynamic>) {
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map<String, dynamic>) {
+        throw DeserializationException(
+          'Expected JSON object',
+          expectedType: 'Address',
+        );
+      }
+      return fromJson(json, config as SerializationConfig?);
+    } on DeserializationException {
+      rethrow;
+    } catch (_) {
       throw DeserializationException(
-        'Expected JSON object but got ${json.runtimeType}',
+        'Invalid JSON input',
         expectedType: 'Address',
       );
     }
-    return fromJson(json, config as SerializationConfig?);
   }
 
   /// Convenience method for static access with default configuration

@@ -36,7 +36,7 @@ abstract interface class JsonSerializer<T> implements Serializer<T> {
       return jsonEncode(toJson(object, config as SerializationConfig?));
     } catch (e) {
       throw SerializationException(
-        'Failed to serialize object to JSON: $e',
+        'Failed to serialize object to JSON',
         expectedType: T.toString(),
       );
     }
@@ -59,7 +59,7 @@ abstract interface class JsonSerializer<T> implements Serializer<T> {
     } catch (e) {
       if (e is DeserializationException) rethrow;
       throw DeserializationException(
-        'Failed to deserialize JSON: $e',
+        'Failed to deserialize JSON',
         expectedType: T.toString(),
       );
     }

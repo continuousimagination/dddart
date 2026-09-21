@@ -155,7 +155,18 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
     // Extract field information
     final fields = _extractFields(classElement, classType);
 
-    return ClassAnalysis(type: classType, className: className, fields: fields);
+    return ClassAnalysis(
+      type: classType,
+      className: className,
+      fields: fields,
+      requiredConstructorFields: {
+        for (final parameter
+            in classElement.unnamedConstructor?.formalParameters ??
+                <FormalParameterElement>[])
+          if (parameter.isRequiredNamed || parameter.isRequiredPositional)
+            parameter.name!,
+      },
+    );
   }
 
   /// Determines the type of a class based on its inheritance hierarchy.
@@ -262,19 +273,26 @@ $fromJsonWithConfigBody
   
   @override
   String serialize($className object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
+    try {
+      return jsonEncode(toJson(object, config as SerializationConfig?));
+    } catch (_) {
+      throw SerializationException('Failed to serialize $className', expectedType: '$className');
+    }
   }
   
   @override
   $className deserialize(String data, [dynamic config]) {
-    final json = jsonDecode(data);
-    if (json is! Map<String, dynamic>) {
-      throw DeserializationException(
-        'Expected JSON object but got \${json.runtimeType}',
-        expectedType: '$className',
-      );
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map<String, dynamic>) {
+        throw DeserializationException('Expected JSON object', expectedType: '$className');
+      }
+      return fromJson(json, config as SerializationConfig?);
+    } on DeserializationException {
+      rethrow;
+    } catch (_) {
+      throw DeserializationException('Invalid JSON input', expectedType: '$className');
     }
-    return fromJson(json, config as SerializationConfig?);
   }
   
   /// Convenience method for static access with default configuration
@@ -372,18 +390,21 @@ $fromJsonWithConfigBody
       buffer.writeln(
         "        id: UuidValue.fromString(json[SerializationUtils.applyFieldRename('id', effectiveConfig.fieldRename)] as String),",
       );
-      buffer.writeln(
-        "        createdAt: json[SerializationUtils.applyFieldRename('createdAt', effectiveConfig.fieldRename)] != null ? DateTime.parse(json[SerializationUtils.applyFieldRename('createdAt', effectiveConfig.fieldRename)] as String) : DateTime.now(),",
-      );
-      buffer.writeln(
-        "        updatedAt: json[SerializationUtils.applyFieldRename('updatedAt', effectiveConfig.fieldRename)] != null ? DateTime.parse(json[SerializationUtils.applyFieldRename('updatedAt', effectiveConfig.fieldRename)] as String) : DateTime.now(),",
-      );
+      for (final field in ['createdAt', 'updatedAt']) {
+        final access =
+            "json[SerializationUtils.applyFieldRename('$field', effectiveConfig.fieldRename)]";
+        final parsed = 'DateTime.parse($access as String)';
+        final value = analysis.requiredConstructorFields.contains(field)
+            ? parsed
+            : '$access != null ? $parsed : DateTime.now()';
+        buffer.writeln('        $field: $value,');
+      }
     }
 
     buffer.writeln('      );');
     buffer.writeln('    } catch (e, stackTrace) {');
     buffer.writeln('      throw DeserializationException(');
-    buffer.writeln("        'Failed to deserialize $className: \$e',");
+    buffer.writeln("        'Failed to deserialize $className',");
     buffer.writeln("        expectedType: '$className',");
     buffer.writeln('      );');
     buffer.writeln('    }');
@@ -559,7 +580,7 @@ $fromJsonWithConfigBody
     buffer.writeln('      );');
     buffer.writeln('    } catch (e, stackTrace) {');
     buffer.writeln('      throw DeserializationException(');
-    buffer.writeln("        'Failed to deserialize $className: \$e',");
+    buffer.writeln("        'Failed to deserialize $className',");
     buffer.writeln("        expectedType: '$className',");
     buffer.writeln('      );');
     buffer.writeln('    }');
@@ -627,7 +648,7 @@ $fromJsonWithConfigBody
     buffer.writeln('      );');
     buffer.writeln('    } catch (e, stackTrace) {');
     buffer.writeln('      throw DeserializationException(');
-    buffer.writeln("        'Failed to deserialize $className: \$e',");
+    buffer.writeln("        'Failed to deserialize $className',");
     buffer.writeln("        expectedType: '$className',");
     buffer.writeln('      );');
     buffer.writeln('    }');
@@ -1205,10 +1226,12 @@ class ClassAnalysis {
     required this.type,
     required this.className,
     required this.fields,
+    this.requiredConstructorFields = const {},
   });
   final ClassType type;
   final String className;
   final List<FieldInfo> fields;
+  final Set<String> requiredConstructorFields;
 }
 
 /// Represents information about a field.

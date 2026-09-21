@@ -18,13 +18,28 @@ abstract class UserWithCustomRepoDynamoRepositoryBase
   /// Creates a repository instance.
   ///
   /// [connection] - A DynamoDB connection instance.
-  UserWithCustomRepoDynamoRepositoryBase(this._connection);
+  UserWithCustomRepoDynamoRepositoryBase(
+    this._connection, {
+    this.readConsistency = DynamoReadConsistency.eventual,
+    String? tableName,
+  }) : tableName = tableName ?? 'users_with_custom_repo' {
+    if (tableName != null &&
+        (tableName.length < 3 ||
+            tableName.length > 255 ||
+            tableName.startsWith('aws.') ||
+            !RegExp(r'^[A-Za-z0-9_.-]+$').hasMatch(tableName))) {
+      throw ArgumentError('Invalid DynamoDB table name');
+    }
+  }
+
+  /// Point-read consistency policy.
+  final DynamoReadConsistency readConsistency;
 
   /// The DynamoDB connection instance.
   final DynamoConnection _connection;
 
   /// The table name for UserWithCustomRepo aggregates.
-  String get tableName => 'users_with_custom_repo';
+  final String tableName;
 
   /// The JSON serializer for UserWithCustomRepo aggregates.
   final _serializer = UserWithCustomRepoJsonSerializer();
@@ -35,6 +50,7 @@ abstract class UserWithCustomRepoDynamoRepositoryBase
       final response = await _connection.client.getItem(
         tableName: tableName,
         key: {'id': AttributeValue(s: id.toString())},
+        consistentRead: readConsistency == DynamoReadConsistency.strong,
       );
 
       if (response.item == null || response.item!.isEmpty) {
@@ -45,8 +61,9 @@ abstract class UserWithCustomRepoDynamoRepositoryBase
       }
 
       // Convert DynamoDB AttributeValue map to JSON
-      final json =
-          AttributeValueConverter.attributeMapToJsonMap(response.item!);
+      final json = AttributeValueConverter.attributeMapToJsonMap(
+        response.item!,
+      );
 
       return _serializer.fromJson(json);
     } on RepositoryException {
@@ -65,10 +82,7 @@ abstract class UserWithCustomRepoDynamoRepositoryBase
       final item = AttributeValueConverter.jsonMapToAttributeMap(json);
 
       // Upsert operation using PutItem
-      await _connection.client.putItem(
-        tableName: tableName,
-        item: item,
-      );
+      await _connection.client.putItem(tableName: tableName, item: item);
     } catch (e) {
       throw _mapDynamoException(e, 'save');
     }
@@ -81,6 +95,7 @@ abstract class UserWithCustomRepoDynamoRepositoryBase
       final getResponse = await _connection.client.getItem(
         tableName: tableName,
         key: {'id': AttributeValue(s: id.toString())},
+        consistentRead: readConsistency == DynamoReadConsistency.strong,
       );
 
       if (getResponse.item == null || getResponse.item!.isEmpty) {
@@ -105,9 +120,7 @@ abstract class UserWithCustomRepoDynamoRepositoryBase
   @override
   Future<List<UserWithCustomRepo>> getAll() async {
     try {
-      final response = await _connection.client.scan(
-        tableName: tableName,
-      );
+      final response = await _connection.client.scan(tableName: tableName);
 
       if (response.items == null || response.items!.isEmpty) {
         return [];
@@ -122,58 +135,9 @@ abstract class UserWithCustomRepoDynamoRepositoryBase
     }
   }
 
-  /// Maps DynamoDB exceptions to RepositoryException types.
-  RepositoryException _mapDynamoException(
-    Object error,
-    String operation,
-  ) {
-    final errorString = error.toString();
-
-    // Map ResourceNotFoundException to notFound
-    if (errorString.contains('ResourceNotFoundException')) {
-      return RepositoryException(
-        'Resource not found during $operation: $errorString',
-        type: RepositoryExceptionType.notFound,
-        cause: error,
-      );
-    }
-
-    // Map ConditionalCheckFailedException to duplicate
-    if (errorString.contains('ConditionalCheckFailedException')) {
-      return RepositoryException(
-        'Conditional check failed during $operation: $errorString',
-        type: RepositoryExceptionType.duplicate,
-        cause: error,
-      );
-    }
-
-    // Map network/connectivity errors to connection
-    if (errorString.contains('connection') ||
-        errorString.contains('network') ||
-        errorString.contains('SocketException')) {
-      return RepositoryException(
-        'Connection error during $operation: $errorString',
-        type: RepositoryExceptionType.connection,
-        cause: error,
-      );
-    }
-
-    // Map timeout errors to timeout
-    if (errorString.contains('timeout') ||
-        errorString.contains('TimeoutException')) {
-      return RepositoryException(
-        'Timeout during $operation: $errorString',
-        type: RepositoryExceptionType.timeout,
-        cause: error,
-      );
-    }
-
-    // All other errors map to unknown
-    return RepositoryException(
-      'DynamoDB error during $operation: $errorString',
-      type: RepositoryExceptionType.unknown,
-      cause: error,
-    );
+  /// Maps typed SDK failures without exposing provider data or raw causes.
+  RepositoryException _mapDynamoException(Object error, String operation) {
+    return DynamoRepositoryException.map(error, operation);
   }
 
   /// Creates the DynamoDB table for this repository.
@@ -185,7 +149,7 @@ abstract class UserWithCustomRepoDynamoRepositoryBase
   ///
   /// Example:
   /// ```dart
-  /// final repo = UserWithCustomRepoDynamoRepository(connection);
+  /// final repo = UserWithCustomRepoDynamoRepositoryBase(connection);
   /// await repo.createTable();
   /// ```
   Future<void> createTable() async {
@@ -193,10 +157,7 @@ abstract class UserWithCustomRepoDynamoRepositoryBase
       await _connection.client.createTable(
         tableName: tableName,
         keySchema: [
-          KeySchemaElement(
-            attributeName: 'id',
-            keyType: KeyType.hash,
-          ),
+          KeySchemaElement(attributeName: 'id', keyType: KeyType.hash),
         ],
         attributeDefinitions: [
           AttributeDefinition(
@@ -218,7 +179,7 @@ abstract class UserWithCustomRepoDynamoRepositoryBase
   ///
   /// Example:
   /// ```dart
-  /// final command = UserWithCustomRepoDynamoRepository.getCreateTableCommand('users_with_custom_repo');
+  /// final command = UserWithCustomRepoDynamoRepositoryBase.getCreateTableCommand('users_with_custom_repo');
   /// print(command);
   /// // Copy and paste into terminal
   /// ```
@@ -240,7 +201,7 @@ aws dynamodb create-table \\
   ///
   /// Example:
   /// ```dart
-  /// final template = UserWithCustomRepoDynamoRepository.getCloudFormationTemplate('users_with_custom_repo');
+  /// final template = UserWithCustomRepoDynamoRepositoryBase.getCloudFormationTemplate('users_with_custom_repo');
   /// print(template);
   /// // Add to CloudFormation template
   /// ```
@@ -282,27 +243,37 @@ class UserWithCustomRepoJsonSerializer
 
   /// Creates a serializer with the specified default configuration.
   UserWithCustomRepoJsonSerializer([SerializationConfig? defaultConfig])
-      : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig = defaultConfig ?? const SerializationConfig();
 
   @override
-  Map<String, dynamic> toJson(UserWithCustomRepo instance,
-      [SerializationConfig? config]) {
+  Map<String, dynamic> toJson(
+    UserWithCustomRepo instance, [
+    SerializationConfig? config,
+  ]) {
     final effectiveConfig = config ?? _defaultConfig;
     final json = <String, dynamic>{
       SerializationUtils.applyFieldRename('id', effectiveConfig.fieldRename):
           instance.id.toString(),
       SerializationUtils.applyFieldRename(
-              'createdAt', effectiveConfig.fieldRename):
-          instance.createdAt.toIso8601String(),
+        'createdAt',
+        effectiveConfig.fieldRename,
+      ): instance.createdAt
+          .toIso8601String(),
       SerializationUtils.applyFieldRename(
-              'updatedAt', effectiveConfig.fieldRename):
-          instance.updatedAt.toIso8601String(),
+        'updatedAt',
+        effectiveConfig.fieldRename,
+      ): instance.updatedAt
+          .toIso8601String(),
       SerializationUtils.applyFieldRename('email', effectiveConfig.fieldRename):
           instance.email,
       SerializationUtils.applyFieldRename(
-          'firstName', effectiveConfig.fieldRename): instance.firstName,
+        'firstName',
+        effectiveConfig.fieldRename,
+      ): instance.firstName,
       SerializationUtils.applyFieldRename(
-          'lastName', effectiveConfig.fieldRename): instance.lastName,
+        'lastName',
+        effectiveConfig.fieldRename,
+      ): instance.lastName,
     };
     return json;
   }
@@ -324,30 +295,63 @@ class UserWithCustomRepoJsonSerializer
     }
     try {
       return UserWithCustomRepo(
-        email: json[SerializationUtils.applyFieldRename(
-            'email', effectiveConfig.fieldRename)] as String,
-        firstName: json[SerializationUtils.applyFieldRename(
-            'firstName', effectiveConfig.fieldRename)] as String,
-        lastName: json[SerializationUtils.applyFieldRename(
-            'lastName', effectiveConfig.fieldRename)] as String,
-        id: UuidValue.fromString(json[SerializationUtils.applyFieldRename(
-            'id', effectiveConfig.fieldRename)] as String),
-        createdAt: json[SerializationUtils.applyFieldRename(
-                    'createdAt', effectiveConfig.fieldRename)] !=
+        email:
+            json[SerializationUtils.applyFieldRename(
+                  'email',
+                  effectiveConfig.fieldRename,
+                )]
+                as String,
+        firstName:
+            json[SerializationUtils.applyFieldRename(
+                  'firstName',
+                  effectiveConfig.fieldRename,
+                )]
+                as String,
+        lastName:
+            json[SerializationUtils.applyFieldRename(
+                  'lastName',
+                  effectiveConfig.fieldRename,
+                )]
+                as String,
+        id: UuidValue.fromString(
+          json[SerializationUtils.applyFieldRename(
+                'id',
+                effectiveConfig.fieldRename,
+              )]
+              as String,
+        ),
+        createdAt:
+            json[SerializationUtils.applyFieldRename(
+                  'createdAt',
+                  effectiveConfig.fieldRename,
+                )] !=
                 null
-            ? DateTime.parse(json[SerializationUtils.applyFieldRename(
-                'createdAt', effectiveConfig.fieldRename)] as String)
+            ? DateTime.parse(
+                json[SerializationUtils.applyFieldRename(
+                      'createdAt',
+                      effectiveConfig.fieldRename,
+                    )]
+                    as String,
+              )
             : DateTime.now(),
-        updatedAt: json[SerializationUtils.applyFieldRename(
-                    'updatedAt', effectiveConfig.fieldRename)] !=
+        updatedAt:
+            json[SerializationUtils.applyFieldRename(
+                  'updatedAt',
+                  effectiveConfig.fieldRename,
+                )] !=
                 null
-            ? DateTime.parse(json[SerializationUtils.applyFieldRename(
-                'updatedAt', effectiveConfig.fieldRename)] as String)
+            ? DateTime.parse(
+                json[SerializationUtils.applyFieldRename(
+                      'updatedAt',
+                      effectiveConfig.fieldRename,
+                    )]
+                    as String,
+              )
             : DateTime.now(),
       );
     } catch (e, stackTrace) {
       throw DeserializationException(
-        'Failed to deserialize UserWithCustomRepo: $e',
+        'Failed to deserialize UserWithCustomRepo',
         expectedType: 'UserWithCustomRepo',
       );
     }
@@ -355,30 +359,50 @@ class UserWithCustomRepoJsonSerializer
 
   @override
   String serialize(UserWithCustomRepo object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
+    try {
+      return jsonEncode(toJson(object, config as SerializationConfig?));
+    } catch (_) {
+      throw SerializationException(
+        'Failed to serialize UserWithCustomRepo',
+        expectedType: 'UserWithCustomRepo',
+      );
+    }
   }
 
   @override
   UserWithCustomRepo deserialize(String data, [dynamic config]) {
-    final json = jsonDecode(data);
-    if (json is! Map<String, dynamic>) {
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map<String, dynamic>) {
+        throw DeserializationException(
+          'Expected JSON object',
+          expectedType: 'UserWithCustomRepo',
+        );
+      }
+      return fromJson(json, config as SerializationConfig?);
+    } on DeserializationException {
+      rethrow;
+    } catch (_) {
       throw DeserializationException(
-        'Expected JSON object but got ${json.runtimeType}',
+        'Invalid JSON input',
         expectedType: 'UserWithCustomRepo',
       );
     }
-    return fromJson(json, config as SerializationConfig?);
   }
 
   /// Convenience method for static access with default configuration
-  static Map<String, dynamic> encode(UserWithCustomRepo instance,
-      [SerializationConfig? config]) {
+  static Map<String, dynamic> encode(
+    UserWithCustomRepo instance, [
+    SerializationConfig? config,
+  ]) {
     return UserWithCustomRepoJsonSerializer().toJson(instance, config);
   }
 
   /// Convenience method for static access with default configuration
-  static UserWithCustomRepo decode(dynamic json,
-      [SerializationConfig? config]) {
+  static UserWithCustomRepo decode(
+    dynamic json, [
+    SerializationConfig? config,
+  ]) {
     return UserWithCustomRepoJsonSerializer().fromJson(json, config);
   }
 }

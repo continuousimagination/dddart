@@ -660,3 +660,42 @@ class User extends AggregateRoot { ... }
 ## License
 
 MIT License - see [LICENSE](LICENSE) file for details.
+
+## Adapter-owned bindings to shared models
+
+A shared model package may own its aggregate and generated public JSON serializer,
+while this adapter package owns the REST repository:
+
+```dart
+import 'dart:convert';
+import 'package:dddart/dddart.dart';
+import 'package:dddart_repository_rest/dddart_repository_rest.dart';
+import 'package:my_shared/models.dart' as shared;
+part 'probe_repository.g.dart';
+
+@GenerateRestRepository(
+  aggregateType: shared.ProbeRecord,
+  serializerType: shared.ProbeRecordJsonSerializer,
+  generatedBaseName: 'Probe',
+  resourcePath: '/proof/v1/records',
+)
+class ProbeBinding {}
+```
+
+This emits `ProbeRestRepository`; an interface with additional methods produces
+`ProbeRestRepositoryBase`. Build the shared model/serializer package first.
+Referencing a serializer generated later in the same build target is unsupported
+and fails generation instead of guessing a serializer name. The serializer must
+be public, concrete, constructible without required arguments, and implement the
+actual `JsonSerializer<Aggregate>` contract. Custom interfaces must implement the
+actual `Repository<Aggregate>` contract. Prefixes and nullable generic arguments
+are preserved; path literals remain data, including quotes and dollar signs.
+Custom signatures retain imported types inside nested callbacks. Primitive,
+null, and publicly imported enum defaults are emitted from their resolved values,
+including defaults originally defined by private constants. Record-valued
+signatures and unsupported object defaults fail with a targeted generation error.
+
+Public generated failures carry safe static messages without provider response
+bodies or raw causes. Validation responses400/412/422 map to `constraint`;
+unknown transport failures remain `unknown`, so callers must not infer that an
+uncertain write failed to commit or automatically repeat it.

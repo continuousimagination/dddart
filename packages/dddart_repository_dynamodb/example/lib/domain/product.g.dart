@@ -15,13 +15,28 @@ class ProductDynamoRepository implements QueryableRepository<Product> {
   /// Creates a repository instance.
   ///
   /// [connection] - A DynamoDB connection instance.
-  ProductDynamoRepository(this._connection);
+  ProductDynamoRepository(
+    this._connection, {
+    this.readConsistency = DynamoReadConsistency.eventual,
+    String? tableName,
+  }) : tableName = tableName ?? 'products' {
+    if (tableName != null &&
+        (tableName.length < 3 ||
+            tableName.length > 255 ||
+            tableName.startsWith('aws.') ||
+            !RegExp(r'^[A-Za-z0-9_.-]+$').hasMatch(tableName))) {
+      throw ArgumentError('Invalid DynamoDB table name');
+    }
+  }
+
+  /// Point-read consistency policy.
+  final DynamoReadConsistency readConsistency;
 
   /// The DynamoDB connection instance.
   final DynamoConnection _connection;
 
   /// The table name for Product aggregates.
-  String get tableName => 'products';
+  final String tableName;
 
   /// The JSON serializer for Product aggregates.
   final _serializer = ProductJsonSerializer();
@@ -32,6 +47,7 @@ class ProductDynamoRepository implements QueryableRepository<Product> {
       final response = await _connection.client.getItem(
         tableName: tableName,
         key: {'id': AttributeValue(s: id.toString())},
+        consistentRead: readConsistency == DynamoReadConsistency.strong,
       );
 
       if (response.item == null || response.item!.isEmpty) {
@@ -42,8 +58,9 @@ class ProductDynamoRepository implements QueryableRepository<Product> {
       }
 
       // Convert DynamoDB AttributeValue map to JSON
-      final json =
-          AttributeValueConverter.attributeMapToJsonMap(response.item!);
+      final json = AttributeValueConverter.attributeMapToJsonMap(
+        response.item!,
+      );
 
       return _serializer.fromJson(json);
     } on RepositoryException {
@@ -62,10 +79,7 @@ class ProductDynamoRepository implements QueryableRepository<Product> {
       final item = AttributeValueConverter.jsonMapToAttributeMap(json);
 
       // Upsert operation using PutItem
-      await _connection.client.putItem(
-        tableName: tableName,
-        item: item,
-      );
+      await _connection.client.putItem(tableName: tableName, item: item);
     } catch (e) {
       throw _mapDynamoException(e, 'save');
     }
@@ -78,6 +92,7 @@ class ProductDynamoRepository implements QueryableRepository<Product> {
       final getResponse = await _connection.client.getItem(
         tableName: tableName,
         key: {'id': AttributeValue(s: id.toString())},
+        consistentRead: readConsistency == DynamoReadConsistency.strong,
       );
 
       if (getResponse.item == null || getResponse.item!.isEmpty) {
@@ -102,9 +117,7 @@ class ProductDynamoRepository implements QueryableRepository<Product> {
   @override
   Future<List<Product>> getAll() async {
     try {
-      final response = await _connection.client.scan(
-        tableName: tableName,
-      );
+      final response = await _connection.client.scan(tableName: tableName);
 
       if (response.items == null || response.items!.isEmpty) {
         return [];
@@ -119,58 +132,9 @@ class ProductDynamoRepository implements QueryableRepository<Product> {
     }
   }
 
-  /// Maps DynamoDB exceptions to RepositoryException types.
-  RepositoryException _mapDynamoException(
-    Object error,
-    String operation,
-  ) {
-    final errorString = error.toString();
-
-    // Map ResourceNotFoundException to notFound
-    if (errorString.contains('ResourceNotFoundException')) {
-      return RepositoryException(
-        'Resource not found during $operation: $errorString',
-        type: RepositoryExceptionType.notFound,
-        cause: error,
-      );
-    }
-
-    // Map ConditionalCheckFailedException to duplicate
-    if (errorString.contains('ConditionalCheckFailedException')) {
-      return RepositoryException(
-        'Conditional check failed during $operation: $errorString',
-        type: RepositoryExceptionType.duplicate,
-        cause: error,
-      );
-    }
-
-    // Map network/connectivity errors to connection
-    if (errorString.contains('connection') ||
-        errorString.contains('network') ||
-        errorString.contains('SocketException')) {
-      return RepositoryException(
-        'Connection error during $operation: $errorString',
-        type: RepositoryExceptionType.connection,
-        cause: error,
-      );
-    }
-
-    // Map timeout errors to timeout
-    if (errorString.contains('timeout') ||
-        errorString.contains('TimeoutException')) {
-      return RepositoryException(
-        'Timeout during $operation: $errorString',
-        type: RepositoryExceptionType.timeout,
-        cause: error,
-      );
-    }
-
-    // All other errors map to unknown
-    return RepositoryException(
-      'DynamoDB error during $operation: $errorString',
-      type: RepositoryExceptionType.unknown,
-      cause: error,
-    );
+  /// Maps typed SDK failures without exposing provider data or raw causes.
+  RepositoryException _mapDynamoException(Object error, String operation) {
+    return DynamoRepositoryException.map(error, operation);
   }
 
   /// Creates the DynamoDB table for this repository.
@@ -190,10 +154,7 @@ class ProductDynamoRepository implements QueryableRepository<Product> {
       await _connection.client.createTable(
         tableName: tableName,
         keySchema: [
-          KeySchemaElement(
-            attributeName: 'id',
-            keyType: KeyType.hash,
-          ),
+          KeySchemaElement(attributeName: 'id', keyType: KeyType.hash),
         ],
         attributeDefinitions: [
           AttributeDefinition(
@@ -270,7 +231,7 @@ class ProductJsonSerializer implements JsonSerializer<Product> {
 
   /// Creates a serializer with the specified default configuration.
   ProductJsonSerializer([SerializationConfig? defaultConfig])
-      : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig = defaultConfig ?? const SerializationConfig();
 
   @override
   Map<String, dynamic> toJson(Product instance, [SerializationConfig? config]) {
@@ -279,15 +240,23 @@ class ProductJsonSerializer implements JsonSerializer<Product> {
       SerializationUtils.applyFieldRename('id', effectiveConfig.fieldRename):
           instance.id.toString(),
       SerializationUtils.applyFieldRename(
-              'createdAt', effectiveConfig.fieldRename):
-          instance.createdAt.toIso8601String(),
+        'createdAt',
+        effectiveConfig.fieldRename,
+      ): instance.createdAt
+          .toIso8601String(),
       SerializationUtils.applyFieldRename(
-              'updatedAt', effectiveConfig.fieldRename):
-          instance.updatedAt.toIso8601String(),
+        'updatedAt',
+        effectiveConfig.fieldRename,
+      ): instance.updatedAt
+          .toIso8601String(),
       SerializationUtils.applyFieldRename(
-          'description', effectiveConfig.fieldRename): instance.description,
+        'description',
+        effectiveConfig.fieldRename,
+      ): instance.description,
       SerializationUtils.applyFieldRename(
-          'inStock', effectiveConfig.fieldRename): instance.inStock,
+        'inStock',
+        effectiveConfig.fieldRename,
+      ): instance.inStock,
       SerializationUtils.applyFieldRename('name', effectiveConfig.fieldRename):
           instance.name,
       SerializationUtils.applyFieldRename('price', effectiveConfig.fieldRename):
@@ -313,37 +282,80 @@ class ProductJsonSerializer implements JsonSerializer<Product> {
     }
     try {
       return Product(
-        description: json[SerializationUtils.applyFieldRename(
-            'description', effectiveConfig.fieldRename)] as String,
-        inStock: json[SerializationUtils.applyFieldRename(
-            'inStock', effectiveConfig.fieldRename)] as bool,
-        name: json[SerializationUtils.applyFieldRename(
-            'name', effectiveConfig.fieldRename)] as String,
-        price: (json[SerializationUtils.applyFieldRename(
-                'price', effectiveConfig.fieldRename)] is int
+        description:
+            json[SerializationUtils.applyFieldRename(
+                  'description',
+                  effectiveConfig.fieldRename,
+                )]
+                as String,
+        inStock:
+            json[SerializationUtils.applyFieldRename(
+                  'inStock',
+                  effectiveConfig.fieldRename,
+                )]
+                as bool,
+        name:
+            json[SerializationUtils.applyFieldRename(
+                  'name',
+                  effectiveConfig.fieldRename,
+                )]
+                as String,
+        price:
+            (json[SerializationUtils.applyFieldRename(
+                  'price',
+                  effectiveConfig.fieldRename,
+                )]
+                is int
             ? (json[SerializationUtils.applyFieldRename(
-                    'price', effectiveConfig.fieldRename)] as int)
-                .toDouble()
+                        'price',
+                        effectiveConfig.fieldRename,
+                      )]
+                      as int)
+                  .toDouble()
             : json[SerializationUtils.applyFieldRename(
-                'price', effectiveConfig.fieldRename)] as double),
-        id: UuidValue.fromString(json[SerializationUtils.applyFieldRename(
-            'id', effectiveConfig.fieldRename)] as String),
-        createdAt: json[SerializationUtils.applyFieldRename(
-                    'createdAt', effectiveConfig.fieldRename)] !=
+                    'price',
+                    effectiveConfig.fieldRename,
+                  )]
+                  as double),
+        id: UuidValue.fromString(
+          json[SerializationUtils.applyFieldRename(
+                'id',
+                effectiveConfig.fieldRename,
+              )]
+              as String,
+        ),
+        createdAt:
+            json[SerializationUtils.applyFieldRename(
+                  'createdAt',
+                  effectiveConfig.fieldRename,
+                )] !=
                 null
-            ? DateTime.parse(json[SerializationUtils.applyFieldRename(
-                'createdAt', effectiveConfig.fieldRename)] as String)
+            ? DateTime.parse(
+                json[SerializationUtils.applyFieldRename(
+                      'createdAt',
+                      effectiveConfig.fieldRename,
+                    )]
+                    as String,
+              )
             : DateTime.now(),
-        updatedAt: json[SerializationUtils.applyFieldRename(
-                    'updatedAt', effectiveConfig.fieldRename)] !=
+        updatedAt:
+            json[SerializationUtils.applyFieldRename(
+                  'updatedAt',
+                  effectiveConfig.fieldRename,
+                )] !=
                 null
-            ? DateTime.parse(json[SerializationUtils.applyFieldRename(
-                'updatedAt', effectiveConfig.fieldRename)] as String)
+            ? DateTime.parse(
+                json[SerializationUtils.applyFieldRename(
+                      'updatedAt',
+                      effectiveConfig.fieldRename,
+                    )]
+                    as String,
+              )
             : DateTime.now(),
       );
     } catch (e, stackTrace) {
       throw DeserializationException(
-        'Failed to deserialize Product: $e',
+        'Failed to deserialize Product',
         expectedType: 'Product',
       );
     }
@@ -351,24 +363,42 @@ class ProductJsonSerializer implements JsonSerializer<Product> {
 
   @override
   String serialize(Product object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
+    try {
+      return jsonEncode(toJson(object, config as SerializationConfig?));
+    } catch (_) {
+      throw SerializationException(
+        'Failed to serialize Product',
+        expectedType: 'Product',
+      );
+    }
   }
 
   @override
   Product deserialize(String data, [dynamic config]) {
-    final json = jsonDecode(data);
-    if (json is! Map<String, dynamic>) {
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map<String, dynamic>) {
+        throw DeserializationException(
+          'Expected JSON object',
+          expectedType: 'Product',
+        );
+      }
+      return fromJson(json, config as SerializationConfig?);
+    } on DeserializationException {
+      rethrow;
+    } catch (_) {
       throw DeserializationException(
-        'Expected JSON object but got ${json.runtimeType}',
+        'Invalid JSON input',
         expectedType: 'Product',
       );
     }
-    return fromJson(json, config as SerializationConfig?);
   }
 
   /// Convenience method for static access with default configuration
-  static Map<String, dynamic> encode(Product instance,
-      [SerializationConfig? config]) {
+  static Map<String, dynamic> encode(
+    Product instance, [
+    SerializationConfig? config,
+  ]) {
     return ProductJsonSerializer().toJson(instance, config);
   }
 

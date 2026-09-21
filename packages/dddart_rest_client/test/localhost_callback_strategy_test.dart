@@ -34,14 +34,18 @@ void main() {
       final strategy = LocalhostCallbackStrategy();
 
       expect(
-          strategy.getRedirectUri(), equals('http://localhost:8080/callback'));
+        strategy.getRedirectUri(),
+        equals('http://localhost:8080/callback'),
+      );
     });
 
     test('Property 16: Redirect URI Construction - custom port', () {
       final strategy = LocalhostCallbackStrategy(port: 3000);
 
       expect(
-          strategy.getRedirectUri(), equals('http://localhost:3000/callback'));
+        strategy.getRedirectUri(),
+        equals('http://localhost:3000/callback'),
+      );
     });
 
     test('Property 16: Redirect URI Construction - custom path', () {
@@ -54,8 +58,12 @@ void main() {
     });
 
     test('server starts on correct port and binds to localhost only', () async {
+      final reservation =
+          await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+      final port = reservation.port;
+      await reservation.close();
       final strategy = LocalhostCallbackStrategy(
-        port: 8765,
+        port: port,
         openBrowser: (_) async {}, // No-op for testing
       );
 
@@ -70,7 +78,7 @@ void main() {
 
       // Try to connect to the server
       final response = await http.get(
-        Uri.parse('http://localhost:8765/callback?code=test&state=test-state'),
+        Uri.parse('http://localhost:$port/callback?code=test&state=test-state'),
       );
 
       expect(response.statusCode, equals(200));

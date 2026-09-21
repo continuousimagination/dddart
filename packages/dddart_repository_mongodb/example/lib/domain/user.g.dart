@@ -12,7 +12,7 @@ class UserJsonSerializer implements JsonSerializer<User> {
 
   /// Creates a serializer with the specified default configuration.
   UserJsonSerializer([SerializationConfig? defaultConfig])
-      : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig = defaultConfig ?? const SerializationConfig();
 
   @override
   Map<String, dynamic> toJson(User instance, [SerializationConfig? config]) {
@@ -21,17 +21,25 @@ class UserJsonSerializer implements JsonSerializer<User> {
       SerializationUtils.applyFieldRename('id', effectiveConfig.fieldRename):
           instance.id.toString(),
       SerializationUtils.applyFieldRename(
-              'createdAt', effectiveConfig.fieldRename):
-          instance.createdAt.toIso8601String(),
+        'createdAt',
+        effectiveConfig.fieldRename,
+      ): instance.createdAt
+          .toIso8601String(),
       SerializationUtils.applyFieldRename(
-              'updatedAt', effectiveConfig.fieldRename):
-          instance.updatedAt.toIso8601String(),
+        'updatedAt',
+        effectiveConfig.fieldRename,
+      ): instance.updatedAt
+          .toIso8601String(),
       SerializationUtils.applyFieldRename('email', effectiveConfig.fieldRename):
           instance.email,
       SerializationUtils.applyFieldRename(
-          'firstName', effectiveConfig.fieldRename): instance.firstName,
+        'firstName',
+        effectiveConfig.fieldRename,
+      ): instance.firstName,
       SerializationUtils.applyFieldRename(
-          'lastName', effectiveConfig.fieldRename): instance.lastName,
+        'lastName',
+        effectiveConfig.fieldRename,
+      ): instance.lastName,
     };
     return json;
   }
@@ -53,30 +61,63 @@ class UserJsonSerializer implements JsonSerializer<User> {
     }
     try {
       return User(
-        email: json[SerializationUtils.applyFieldRename(
-            'email', effectiveConfig.fieldRename)] as String,
-        firstName: json[SerializationUtils.applyFieldRename(
-            'firstName', effectiveConfig.fieldRename)] as String,
-        lastName: json[SerializationUtils.applyFieldRename(
-            'lastName', effectiveConfig.fieldRename)] as String,
-        id: UuidValue.fromString(json[SerializationUtils.applyFieldRename(
-            'id', effectiveConfig.fieldRename)] as String),
-        createdAt: json[SerializationUtils.applyFieldRename(
-                    'createdAt', effectiveConfig.fieldRename)] !=
+        email:
+            json[SerializationUtils.applyFieldRename(
+                  'email',
+                  effectiveConfig.fieldRename,
+                )]
+                as String,
+        firstName:
+            json[SerializationUtils.applyFieldRename(
+                  'firstName',
+                  effectiveConfig.fieldRename,
+                )]
+                as String,
+        lastName:
+            json[SerializationUtils.applyFieldRename(
+                  'lastName',
+                  effectiveConfig.fieldRename,
+                )]
+                as String,
+        id: UuidValue.fromString(
+          json[SerializationUtils.applyFieldRename(
+                'id',
+                effectiveConfig.fieldRename,
+              )]
+              as String,
+        ),
+        createdAt:
+            json[SerializationUtils.applyFieldRename(
+                  'createdAt',
+                  effectiveConfig.fieldRename,
+                )] !=
                 null
-            ? DateTime.parse(json[SerializationUtils.applyFieldRename(
-                'createdAt', effectiveConfig.fieldRename)] as String)
+            ? DateTime.parse(
+                json[SerializationUtils.applyFieldRename(
+                      'createdAt',
+                      effectiveConfig.fieldRename,
+                    )]
+                    as String,
+              )
             : DateTime.now(),
-        updatedAt: json[SerializationUtils.applyFieldRename(
-                    'updatedAt', effectiveConfig.fieldRename)] !=
+        updatedAt:
+            json[SerializationUtils.applyFieldRename(
+                  'updatedAt',
+                  effectiveConfig.fieldRename,
+                )] !=
                 null
-            ? DateTime.parse(json[SerializationUtils.applyFieldRename(
-                'updatedAt', effectiveConfig.fieldRename)] as String)
+            ? DateTime.parse(
+                json[SerializationUtils.applyFieldRename(
+                      'updatedAt',
+                      effectiveConfig.fieldRename,
+                    )]
+                    as String,
+              )
             : DateTime.now(),
       );
     } catch (e, stackTrace) {
       throw DeserializationException(
-        'Failed to deserialize User: $e',
+        'Failed to deserialize User',
         expectedType: 'User',
       );
     }
@@ -84,24 +125,42 @@ class UserJsonSerializer implements JsonSerializer<User> {
 
   @override
   String serialize(User object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
+    try {
+      return jsonEncode(toJson(object, config as SerializationConfig?));
+    } catch (_) {
+      throw SerializationException(
+        'Failed to serialize User',
+        expectedType: 'User',
+      );
+    }
   }
 
   @override
   User deserialize(String data, [dynamic config]) {
-    final json = jsonDecode(data);
-    if (json is! Map<String, dynamic>) {
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map<String, dynamic>) {
+        throw DeserializationException(
+          'Expected JSON object',
+          expectedType: 'User',
+        );
+      }
+      return fromJson(json, config as SerializationConfig?);
+    } on DeserializationException {
+      rethrow;
+    } catch (_) {
       throw DeserializationException(
-        'Expected JSON object but got ${json.runtimeType}',
+        'Invalid JSON input',
         expectedType: 'User',
       );
     }
-    return fromJson(json, config as SerializationConfig?);
   }
 
   /// Convenience method for static access with default configuration
-  static Map<String, dynamic> encode(User instance,
-      [SerializationConfig? config]) {
+  static Map<String, dynamic> encode(
+    User instance, [
+    SerializationConfig? config,
+  ]) {
     return UserJsonSerializer().toJson(instance, config);
   }
 
@@ -194,8 +253,9 @@ class UserMongoRepository implements Repository<User> {
   @override
   Future<void> deleteById(UuidValue id) async {
     try {
-      final result =
-          await _collection.deleteOne(where.eq('_id', id.toString()));
+      final result = await _collection.deleteOne(
+        where.eq('_id', id.toString()),
+      );
 
       if (result.nRemoved == 0) {
         throw RepositoryException(

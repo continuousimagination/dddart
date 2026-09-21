@@ -82,7 +82,7 @@ class ProductInfoJsonSerializer implements JsonSerializer<ProductInfo> {
       );
     } catch (e, stackTrace) {
       throw DeserializationException(
-        'Failed to deserialize ProductInfo: $e',
+        'Failed to deserialize ProductInfo',
         expectedType: 'ProductInfo',
       );
     }
@@ -90,19 +90,35 @@ class ProductInfoJsonSerializer implements JsonSerializer<ProductInfo> {
 
   @override
   String serialize(ProductInfo object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
+    try {
+      return jsonEncode(toJson(object, config as SerializationConfig?));
+    } catch (_) {
+      throw SerializationException(
+        'Failed to serialize ProductInfo',
+        expectedType: 'ProductInfo',
+      );
+    }
   }
 
   @override
   ProductInfo deserialize(String data, [dynamic config]) {
-    final json = jsonDecode(data);
-    if (json is! Map<String, dynamic>) {
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map<String, dynamic>) {
+        throw DeserializationException(
+          'Expected JSON object',
+          expectedType: 'ProductInfo',
+        );
+      }
+      return fromJson(json, config as SerializationConfig?);
+    } on DeserializationException {
+      rethrow;
+    } catch (_) {
       throw DeserializationException(
-        'Expected JSON object but got ${json.runtimeType}',
+        'Invalid JSON input',
         expectedType: 'ProductInfo',
       );
     }
-    return fromJson(json, config as SerializationConfig?);
   }
 
   /// Convenience method for static access with default configuration

@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:dddart/src/file_log_handler.dart';
+import 'package:dddart/dddart_io.dart';
 import 'package:logging/logging.dart';
 import 'package:test/test.dart';
 

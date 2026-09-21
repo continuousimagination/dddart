@@ -1,3 +1,6 @@
+import 'package:analyzer/dart/element/nullability_suffix.dart';
+import 'dart:convert';
+
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:build/build.dart';
@@ -34,7 +37,8 @@ class RestRepositoryGenerator
       );
     }
 
-    final classElement = element;
+    final external = _annotationType(annotation, 'aggregateType', element);
+    final classElement = external?.element as ClassElement? ?? element;
     final className = classElement.name!;
 
     // Validate class extends AggregateRoot
@@ -46,7 +50,7 @@ class RestRepositoryGenerator
     }
 
     // Validate class has @Serializable annotation
-    if (!_hasSerializableAnnotation(classElement)) {
+    if (external == null && !_hasSerializableAnnotation(classElement)) {
       throw InvalidGenerationSourceError(
         'Class $className must be annotated with @Serializable() to use @GenerateRestRepository.',
         element: element,
@@ -57,16 +61,79 @@ class RestRepositoryGenerator
     final resourcePath = _extractResourcePath(annotation, className);
     final customInterface = _extractImplementsInterface(annotation);
 
-    // Determine what to generate based on interface analysis
-    if (customInterface == null) {
-      // No custom interface - generate concrete class
-      return _generateConcreteRepository(className, resourcePath);
+    final modelType = external ?? classElement.thisType;
+    final serializer = _annotationType(annotation, 'serializerType', element);
+    final baseName =
+        annotation.peek('generatedBaseName')?.literalValue as String? ??
+        className;
+    if (!RegExp(r'^[A-Z][A-Za-z0-9_]*$').hasMatch(baseName)) {
+      throw InvalidGenerationSourceError(
+        'generatedBaseName must be a public class-name stem',
+        element: element,
+      );
     }
-
-    // Analyze interface to determine if abstract base is needed
-    final interfaceMethods = _getInterfaceMethods(customInterface);
-    final baseRepositoryMethods = {'getById', 'save', 'deleteById'};
-    final objectMethods = {
+    if (external != null && serializer == null) {
+      throw InvalidGenerationSourceError(
+        'serializerType is required and must resolve; build the shared model/serializer package before the adapter (same-target generated types are unsupported)',
+        element: element,
+      );
+    }
+    if (serializer != null) {
+      final serializerClass = serializer.element;
+      if (serializerClass is! ClassElement ||
+          serializerClass.isPrivate ||
+          serializerClass.isAbstract ||
+          serializerClass.unnamedConstructor == null ||
+          serializerClass.unnamedConstructor!.formalParameters.any(
+            (p) => p.isRequiredNamed || p.isRequiredPositional,
+          ) ||
+          !serializer.allSupertypes.any(
+            (type) =>
+                _isDeclaration(
+                  type,
+                  'package:dddart_json/src/json_serializer.dart',
+                  'JsonSerializer',
+                ) &&
+                type.typeArguments.length == 1 &&
+                type.typeArguments.single == modelType,
+          )) {
+        throw InvalidGenerationSourceError(
+          'serializerType must be a public concrete JsonSerializer<$className> with an argument-free constructor',
+          element: element,
+        );
+      }
+    }
+    if (customInterface != null &&
+        (customInterface.nullabilitySuffix == NullabilitySuffix.question ||
+            ![customInterface, ...customInterface.allSupertypes].any(
+              (type) =>
+                  _isDeclaration(
+                    type,
+                    'package:dddart/src/repository.dart',
+                    'Repository',
+                  ) &&
+                  type.typeArguments.length == 1 &&
+                  type.typeArguments.single == modelType,
+            ))) {
+      throw InvalidGenerationSourceError(
+        'implements must be a Repository<$className> interface',
+        element: element,
+      );
+    }
+    final aggregateName = _visibleType(modelType, element.library);
+    final serializerName = serializer == null
+        ? '${className}JsonSerializer'
+        : _visibleType(serializer, element.library);
+    final interfaceName = customInterface == null
+        ? null
+        : _visibleType(customInterface, element.library);
+    final methods = customInterface == null
+        ? <MethodElement>[]
+        : _getInterfaceMethods(customInterface);
+    const baseMethods = {
+      'getById',
+      'save',
+      'deleteById',
       'toString',
       'hashCode',
       'noSuchMethod',
@@ -76,32 +143,97 @@ class RestRepositoryGenerator
       'hashAll',
       'hashAllUnordered',
     };
-    final customMethods = interfaceMethods
-        .where(
-          (m) =>
-              !baseRepositoryMethods.contains(m.name) &&
-              !objectMethods.contains(m.name) &&
-              !m.isOperator &&
-              !m.isStatic,
-        )
-        .toList();
-
-    if (customMethods.isEmpty) {
-      // Interface only has base Repository methods - generate concrete class
+    final custom = <String, MethodElement>{};
+    for (final method in methods) {
+      if (!baseMethods.contains(method.name) &&
+          !method.isOperator &&
+          !method.isStatic)
+        custom.putIfAbsent(method.name!, () => method);
+    }
+    if (custom.isEmpty) {
       return _generateConcreteRepository(
-        className,
+        aggregateName,
         resourcePath,
         implements: customInterface,
-      );
-    } else {
-      // Interface has custom methods - generate abstract base class
-      return _generateAbstractBaseRepository(
-        className,
-        resourcePath,
-        implements: customInterface,
-        abstractMethods: customMethods,
+        repositoryName: '${baseName}RestRepository',
+        serializerName: serializerName,
+        interfaceName: interfaceName,
       );
     }
+    return _generateAbstractBaseRepository(
+      aggregateName,
+      resourcePath,
+      implements: customInterface!,
+      abstractMethods: custom.values.toList(),
+      scope: element.library,
+      repositoryName: '${baseName}RestRepositoryBase',
+      serializerName: serializerName,
+      interfaceName: interfaceName!,
+    );
+  }
+
+  bool _isDeclaration(InterfaceType type, String uri, String name) =>
+      type.element.name == name && type.element.library.uri.toString() == uri;
+
+  String _stringLiteral(String value) {
+    final escaped = value
+        .replaceAll(r'\', r'\\')
+        .replaceAll("'", r"\'")
+        .replaceAll(r'$', r'\$')
+        .replaceAll('\r', r'\r')
+        .replaceAll('\n', r'\n');
+    return "'$escaped'";
+  }
+
+  InterfaceType? _annotationType(
+    ConstantReader annotation,
+    String field,
+    Element owner,
+  ) {
+    final value = annotation.peek(field);
+    if (value == null || value.isNull) return null;
+    final type = value.typeValue;
+    if (type is! InterfaceType ||
+        type.element is! ClassElement ||
+        type.element.isPrivate ||
+        type.nullabilitySuffix == NullabilitySuffix.question) {
+      throw InvalidGenerationSourceError(
+        '$field must name a public class',
+        element: owner,
+      );
+    }
+    return type;
+  }
+
+  String _visibleType(InterfaceType type, LibraryElement scope) {
+    final element = type.element;
+    var name = element.name!;
+    if (element.library != scope && element.library.uri.scheme != 'dart') {
+      String? visible;
+      for (final imported in scope.firstFragment.libraryImports) {
+        for (final entry in imported.namespace.definedNames2.entries) {
+          if (entry.value != element) continue;
+          final prefix = imported.prefix?.name;
+          visible = prefix == null || entry.key.startsWith('$prefix.')
+              ? entry.key
+              : '$prefix.${entry.key}';
+          break;
+        }
+        if (visible != null) break;
+      }
+      if (visible == null)
+        throw InvalidGenerationSourceError(
+          'Type $name must be publicly imported into the adapter binding library',
+        );
+      name = visible;
+    }
+    if (type.typeArguments.isNotEmpty) {
+      name +=
+          '<${type.typeArguments.map((argument) => _renderType(argument, scope)).join(', ')}>';
+    }
+    return type.nullabilitySuffix == NullabilitySuffix.question
+        ? '$name?'
+        : name;
   }
 
   /// Validates that a class extends AggregateRoot.
@@ -110,7 +242,10 @@ class RestRepositoryGenerator
   bool _extendsAggregateRoot(ClassElement element) {
     ClassElement? current = element;
     while (current != null) {
-      if (current.name == 'AggregateRoot') return true;
+      if (current.name == 'AggregateRoot' &&
+          current.library.uri.toString() ==
+              'package:dddart/src/aggregate_root.dart')
+        return true;
       final supertype = current.supertype;
       if (supertype == null) break;
       current = supertype.element as ClassElement?;
@@ -213,9 +348,12 @@ class RestRepositoryGenerator
     String className,
     String resourcePath, {
     InterfaceType? implements,
+    required String repositoryName,
+    required String serializerName,
+    String? interfaceName,
   }) {
     final interfaceClause = implements != null
-        ? 'implements ${implements.element.name}'
+        ? 'implements $interfaceName'
         : 'implements Repository<$className>';
 
     final buffer = StringBuffer();
@@ -227,13 +365,13 @@ class RestRepositoryGenerator
       '/// This class can be used directly for basic CRUD operations or extended',
     );
     buffer.writeln('/// to add custom query methods.');
-    buffer.writeln('class ${className}RestRepository $interfaceClause {');
+    buffer.writeln('class $repositoryName $interfaceClause {');
 
     // Constructor
     buffer.writeln('  /// Creates a repository instance.');
     buffer.writeln('  ///');
     buffer.writeln('  /// [connection] - A REST connection to the API server.');
-    buffer.writeln('  ${className}RestRepository(this._connection);');
+    buffer.writeln('  $repositoryName(this._connection);');
     buffer.writeln();
 
     // Generate fields and getters
@@ -241,10 +379,12 @@ class RestRepositoryGenerator
     buffer.writeln('  final RestConnection _connection;');
     buffer.writeln();
     buffer.writeln('  /// The resource path for $className aggregates.');
-    buffer.writeln("  String get _resourcePath => '$resourcePath';");
+    buffer.writeln(
+      '  String get _resourcePath => ${_stringLiteral(resourcePath)};',
+    );
     buffer.writeln();
     buffer.writeln('  /// The JSON serializer for $className aggregates.');
-    buffer.writeln('  final _serializer = ${className}JsonSerializer();');
+    buffer.writeln('  final _serializer = $serializerName();');
     buffer.writeln();
 
     // Generate CRUD methods
@@ -277,6 +417,10 @@ class RestRepositoryGenerator
     String resourcePath, {
     required InterfaceType implements,
     required List<MethodElement> abstractMethods,
+    required LibraryElement scope,
+    required String repositoryName,
+    required String serializerName,
+    required String interfaceName,
   }) {
     final buffer = StringBuffer();
 
@@ -297,14 +441,14 @@ class RestRepositoryGenerator
     );
     buffer.writeln('/// the repository implementation.');
     buffer.writeln(
-      'abstract class ${className}RestRepositoryBase implements ${implements.element.name} {',
+      'abstract class $repositoryName implements $interfaceName {',
     );
 
     // Constructor
     buffer.writeln('  /// Creates a repository instance.');
     buffer.writeln('  ///');
     buffer.writeln('  /// [connection] - A REST connection to the API server.');
-    buffer.writeln('  ${className}RestRepositoryBase(this._connection);');
+    buffer.writeln('  $repositoryName(this._connection);');
     buffer.writeln();
 
     // Generate fields and getters (same as concrete class)
@@ -312,10 +456,12 @@ class RestRepositoryGenerator
     buffer.writeln('  final RestConnection _connection;');
     buffer.writeln();
     buffer.writeln('  /// The resource path for $className aggregates.');
-    buffer.writeln("  String get _resourcePath => '$resourcePath';");
+    buffer.writeln(
+      '  String get _resourcePath => ${_stringLiteral(resourcePath)};',
+    );
     buffer.writeln();
     buffer.writeln('  /// The JSON serializer for $className aggregates.');
-    buffer.writeln('  final _serializer = ${className}JsonSerializer();');
+    buffer.writeln('  final _serializer = $serializerName();');
     buffer.writeln();
 
     // Generate concrete implementations of base Repository methods
@@ -337,7 +483,7 @@ class RestRepositoryGenerator
       buffer.writeln();
       for (final method in abstractMethods) {
         buffer.writeln('  @override');
-        buffer.writeln('  ${_generateMethodSignature(method)};');
+        buffer.writeln('  ${_generateMethodSignature(method, scope)};');
         buffer.writeln();
       }
     }
@@ -367,9 +513,8 @@ class RestRepositoryGenerator
       rethrow;
     } catch (e) {
       throw RepositoryException(
-        'Failed to retrieve $className: \$e',
+        'Failed to retrieve $className',
         type: RepositoryExceptionType.unknown,
-        cause: e,
       );
     }
   }''';
@@ -399,9 +544,8 @@ class RestRepositoryGenerator
       rethrow;
     } catch (e) {
       throw RepositoryException(
-        'Failed to save $className: \$e',
+        'Failed to save $className',
         type: RepositoryExceptionType.unknown,
-        cause: e,
       );
     }
   }''';
@@ -426,9 +570,8 @@ class RestRepositoryGenerator
       rethrow;
     } catch (e) {
       throw RepositoryException(
-        'Failed to delete $className: \$e',
+        'Failed to delete $className',
         type: RepositoryExceptionType.unknown,
-        cause: e,
       );
     }
   }''';
@@ -436,77 +579,129 @@ class RestRepositoryGenerator
 
   /// Generates the HTTP exception mapping helper method.
   String _generateMapHttpExceptionMethod() {
-    return r'''
-  /// Maps HTTP status codes to RepositoryException types.
-  ///
-  /// Attempts to parse RFC 7807 Problem Details format from the response body
-  /// to extract the 'detail' field for more specific error messages.
-  RepositoryException _mapHttpException(int statusCode, String body) {
-    // Try to parse RFC 7807 Problem Details format
-    String? detail;
-    try {
-      final json = jsonDecode(body) as Map<String, dynamic>;
-      detail = json['detail'] as String?;
-    } catch (_) {
-      // If parsing fails, use the raw body
-    }
-
+    return r"""
+  /// Maps status codes without exposing response bodies or provider text.
+  RepositoryException _mapHttpException(int statusCode, String _) {
     switch (statusCode) {
+      case 400:
+      case 412:
+      case 422:
+        return RepositoryException('Request validation failed', type: RepositoryExceptionType.constraint);
       case 401:
-        return RepositoryException(
-          detail ?? 'Unauthorized: Authentication required or token expired',
-          type: RepositoryExceptionType.unauthorized,
-        );
+        return RepositoryException('Authentication required', type: RepositoryExceptionType.unauthorized);
       case 403:
-        return RepositoryException(
-          detail ?? 'Forbidden: You do not have permission to perform this action',
-          type: RepositoryExceptionType.forbidden,
-        );
+        return RepositoryException('Access denied', type: RepositoryExceptionType.forbidden);
       case 404:
-        return RepositoryException(
-          detail ?? 'Resource not found',
-          type: RepositoryExceptionType.notFound,
-        );
+        return RepositoryException('Resource not found', type: RepositoryExceptionType.notFound);
       case 409:
-        return RepositoryException(
-          detail ?? 'Duplicate resource',
-          type: RepositoryExceptionType.duplicate,
-        );
+        return RepositoryException('Resource conflict', type: RepositoryExceptionType.duplicate);
       case 408:
       case 504:
-        return RepositoryException(
-          detail ?? 'Request timeout',
-          type: RepositoryExceptionType.timeout,
-        );
+        return RepositoryException('Request timed out', type: RepositoryExceptionType.timeout);
       case >= 500:
-        return RepositoryException(
-          detail ?? 'Server error: $statusCode',
-          type: RepositoryExceptionType.connection,
-        );
+        return RepositoryException('Remote service failed', type: RepositoryExceptionType.connection);
       default:
-        return RepositoryException(
-          detail ?? 'HTTP error $statusCode: $body',
-          type: RepositoryExceptionType.unknown,
-        );
+        return RepositoryException('Unexpected HTTP response', type: RepositoryExceptionType.unknown);
     }
-  }''';
+  }
+""";
   }
 
   /// Generates a method signature from a MethodElement.
   ///
   /// Includes return type, method name, and parameters with types.
-  String _generateMethodSignature(MethodElement method) {
-    final returnType = method.returnType.getDisplayString(
-      withNullability: true,
-    );
-    final params = method.formalParameters
-        .map((p) {
-          final type = p.type.getDisplayString(withNullability: true);
-          return '$type ${p.name}';
-        })
-        .join(', ');
+  String _generateMethodSignature(MethodElement method, LibraryElement scope) {
+    final generics = _typeParameters(method.typeParameters, scope);
+    return '${_renderType(method.returnType, scope)} ${method.name}$generics(${_parameters(method.formalParameters, scope)})';
+  }
 
-    return '$returnType ${method.name}($params)';
+  String _renderType(DartType type, LibraryElement scope) {
+    if (type is InterfaceType) return _visibleType(type, scope);
+    if (type is FunctionType) {
+      final nullable = type.nullabilitySuffix == NullabilitySuffix.question
+          ? '?'
+          : '';
+      return '${_renderType(type.returnType, scope)} Function${_typeParameters(type.typeParameters, scope)}(${_parameters(type.formalParameters, scope)})$nullable';
+    }
+    if (type is RecordType) {
+      throw InvalidGenerationSourceError(
+        'Record-valued custom signatures are not supported',
+      );
+    }
+    return type.getDisplayString();
+  }
+
+  String _typeParameters(
+    List<TypeParameterElement> parameters,
+    LibraryElement scope,
+  ) {
+    if (parameters.isEmpty) return '';
+    return '<${parameters.map((p) => '${p.name}${p.bound == null ? '' : ' extends ${_renderType(p.bound!, scope)}'}').join(', ')}>';
+  }
+
+  String _defaultLiteral(
+    FormalParameterElement parameter,
+    LibraryElement scope,
+  ) {
+    final value = parameter.computeConstantValue();
+    if (value == null) {
+      throw InvalidGenerationSourceError(
+        'Cannot resolve default for ${parameter.name}',
+      );
+    }
+    if (value.isNull) return 'null';
+    final string = value.toStringValue();
+    if (string != null) return jsonEncode(string).replaceAll(r'$', r'\$');
+    final boolean = value.toBoolValue();
+    if (boolean != null) return '$boolean';
+    final integer = value.toIntValue();
+    if (integer != null) return '$integer';
+    final decimal = value.toDoubleValue();
+    if (decimal != null && decimal.isFinite) return '$decimal';
+    final type = value.type;
+    if (type is InterfaceType && type.element is EnumElement) {
+      final index = value.getField('index')?.toIntValue();
+      for (final field in type.element.fields.where(
+        (field) => field.isEnumConstant,
+      )) {
+        if (field.computeConstantValue()?.getField('index')?.toIntValue() ==
+                index &&
+            index != null) {
+          return '${_visibleType(type, scope)}.${field.name}';
+        }
+      }
+    }
+    throw InvalidGenerationSourceError(
+      'Unsupported default for ${parameter.name}; use a primitive, null, or publicly imported enum constant',
+    );
+  }
+
+  String _parameters(
+    List<FormalParameterElement> parameters,
+    LibraryElement scope,
+  ) {
+    final positional = <String>[];
+    final optional = <String>[];
+    final named = <String>[];
+    for (final parameter in parameters) {
+      var code =
+          '${parameter.isRequiredNamed ? 'required ' : ''}${_renderType(parameter.type, scope)}${parameter.name == null || parameter.name!.isEmpty ? '' : ' ${parameter.name}'}';
+      if (parameter.defaultValueCode != null) {
+        code += ' = ${_defaultLiteral(parameter, scope)}';
+      }
+      if (parameter.isNamed) {
+        named.add(code);
+      } else if (parameter.isOptionalPositional) {
+        optional.add(code);
+      } else {
+        positional.add(code);
+      }
+    }
+    return [
+      ...positional,
+      if (optional.isNotEmpty) '[${optional.join(', ')}]',
+      if (named.isNotEmpty) '{${named.join(', ')}}',
+    ].join(', ');
   }
 }
 

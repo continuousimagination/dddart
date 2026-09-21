@@ -108,7 +108,7 @@ class SimpleUserJsonSerializer implements JsonSerializer<SimpleUser> {
       );
     } catch (e, stackTrace) {
       throw DeserializationException(
-        'Failed to deserialize SimpleUser: $e',
+        'Failed to deserialize SimpleUser',
         expectedType: 'SimpleUser',
       );
     }
@@ -116,19 +116,35 @@ class SimpleUserJsonSerializer implements JsonSerializer<SimpleUser> {
 
   @override
   String serialize(SimpleUser object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
+    try {
+      return jsonEncode(toJson(object, config as SerializationConfig?));
+    } catch (_) {
+      throw SerializationException(
+        'Failed to serialize SimpleUser',
+        expectedType: 'SimpleUser',
+      );
+    }
   }
 
   @override
   SimpleUser deserialize(String data, [dynamic config]) {
-    final json = jsonDecode(data);
-    if (json is! Map<String, dynamic>) {
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map<String, dynamic>) {
+        throw DeserializationException(
+          'Expected JSON object',
+          expectedType: 'SimpleUser',
+        );
+      }
+      return fromJson(json, config as SerializationConfig?);
+    } on DeserializationException {
+      rethrow;
+    } catch (_) {
       throw DeserializationException(
-        'Expected JSON object but got ${json.runtimeType}',
+        'Invalid JSON input',
         expectedType: 'SimpleUser',
       );
     }
-    return fromJson(json, config as SerializationConfig?);
   }
 
   /// Convenience method for static access with default configuration
@@ -202,7 +218,7 @@ class SimpleAddressJsonSerializer implements JsonSerializer<SimpleAddress> {
       );
     } catch (e, stackTrace) {
       throw DeserializationException(
-        'Failed to deserialize SimpleAddress: $e',
+        'Failed to deserialize SimpleAddress',
         expectedType: 'SimpleAddress',
       );
     }
@@ -210,19 +226,35 @@ class SimpleAddressJsonSerializer implements JsonSerializer<SimpleAddress> {
 
   @override
   String serialize(SimpleAddress object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
+    try {
+      return jsonEncode(toJson(object, config as SerializationConfig?));
+    } catch (_) {
+      throw SerializationException(
+        'Failed to serialize SimpleAddress',
+        expectedType: 'SimpleAddress',
+      );
+    }
   }
 
   @override
   SimpleAddress deserialize(String data, [dynamic config]) {
-    final json = jsonDecode(data);
-    if (json is! Map<String, dynamic>) {
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map<String, dynamic>) {
+        throw DeserializationException(
+          'Expected JSON object',
+          expectedType: 'SimpleAddress',
+        );
+      }
+      return fromJson(json, config as SerializationConfig?);
+    } on DeserializationException {
+      rethrow;
+    } catch (_) {
       throw DeserializationException(
-        'Expected JSON object but got ${json.runtimeType}',
+        'Invalid JSON input',
         expectedType: 'SimpleAddress',
       );
     }
-    return fromJson(json, config as SerializationConfig?);
   }
 
   /// Convenience method for static access with default configuration

@@ -1288,3 +1288,52 @@ See the [dddart_rest_client documentation](../dddart_rest_client/README.md) for 
 ## License
 
 MIT License - see LICENSE file for details
+
+## Socket-independent handlers and Lambda
+
+`HttpServer.buildHandler()` composes the same routing/CORS pipeline used by
+`start()` without binding a socket. The separate `dddart_lambda.dart` entry
+exports `LambdaRuntime`, `LambdaInvocationContext`, `HttpApiV2Adapter`, and
+`HttpApiV2Request` for HTTP API payload version2.0.
+
+`LambdaRuntime` accepts an initialized Shelf handler, a borrowed `http.Client`,
+and a Runtime API origin URI. Alternatively, its `initialize` factory accepts a
+handler initializer and reports a safe `init/error` on failure. `runOnce()` is a
+deterministic protocol seam; `run()` processes invocations until a terminal
+failure throws. The entry point must exit on terminal failure, not restart the
+same runtime. Injected clients stay caller-owned and must not add polling
+timeouts or delivery retries.
+
+The next request deliberately has no timeout. The Runtime API request ID binds
+the response/error URL; the optional invocation-attempt ID is echoed separately.
+An actual invocation deadline reports at most one safe error and terminates,
+because timing out a Dart Future cannot cancel a handler that may still be
+writing. An early application I/O TimeoutException is an ordinary invocation
+failure. Failed/uncertain response or error posting is terminal and never causes
+a second report. Errors do not include raw exception text, payloads or traces.
+Each response/error/init POST has a separate one-second delivery timeout,
+configurable through the positive `deliveryTimeout` constructor/factory
+parameter. A timeout is terminal even if the borrowed transport completes later;
+the runtime never retries delivery or begins another invocation.
+
+The v2 adapter preserves encoded raw paths, repeated raw queries, cookie arrays,
+binary bytes and typed invocation metadata in Shelf context. Duplicate request
+headers remain gateway-combined strings; application credential policy must
+reject ambiguity where appropriate. Unpaired UTF-16 surrogates are rejected
+before UTF-8 encoding can replace them. Provider domain name determines request
+authority when available. Application-specific API/stage/record/method policy
+belongs in application composition.
+
+## Explicit authorization and safe failures
+
+Authorization handlers must implement `authorizeRead`. Every item read and
+collection query, including unfiltered queries, is authorized when configured.
+An authorization handler without authentication now fails construction; both
+absent remains the public unauthenticated mode. PUT checks body/path identity and
+authorization before an If-Match storage read or save. The existing ETag check is
+not an atomic compare-and-swap guarantee.
+
+Default errors/logs preserve status and operation signals without reflecting raw
+provider errors, submitted identifiers/query values, request bodies or exception
+stack objects. Configure any custom error handler and diagnostic sink with the
+same confidentiality boundary.

@@ -85,7 +85,7 @@ class OrderItemJsonSerializer implements JsonSerializer<OrderItem> {
       );
     } catch (e, stackTrace) {
       throw DeserializationException(
-        'Failed to deserialize OrderItem: $e',
+        'Failed to deserialize OrderItem',
         expectedType: 'OrderItem',
       );
     }
@@ -93,19 +93,35 @@ class OrderItemJsonSerializer implements JsonSerializer<OrderItem> {
 
   @override
   String serialize(OrderItem object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
+    try {
+      return jsonEncode(toJson(object, config as SerializationConfig?));
+    } catch (_) {
+      throw SerializationException(
+        'Failed to serialize OrderItem',
+        expectedType: 'OrderItem',
+      );
+    }
   }
 
   @override
   OrderItem deserialize(String data, [dynamic config]) {
-    final json = jsonDecode(data);
-    if (json is! Map<String, dynamic>) {
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map<String, dynamic>) {
+        throw DeserializationException(
+          'Expected JSON object',
+          expectedType: 'OrderItem',
+        );
+      }
+      return fromJson(json, config as SerializationConfig?);
+    } on DeserializationException {
+      rethrow;
+    } catch (_) {
       throw DeserializationException(
-        'Expected JSON object but got ${json.runtimeType}',
+        'Invalid JSON input',
         expectedType: 'OrderItem',
       );
     }
-    return fromJson(json, config as SerializationConfig?);
   }
 
   /// Convenience method for static access with default configuration

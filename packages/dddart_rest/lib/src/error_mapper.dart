@@ -38,35 +38,19 @@ class ErrorMapper {
     if (error is RepositoryException) {
       return _mapRepositoryException(error);
     } else if (error is DeserializationException) {
-      return _problemResponse(
-        400,
-        'Bad Request',
-        error.message,
-      );
+      return _problemResponse(400, 'Bad Request', 'Invalid request data');
     } else if (error is SerializationException) {
       return _problemResponse(
         500,
         'Internal Server Error',
-        'Serialization failed: ${error.message}',
+        'Response serialization failed',
       );
     } else if (error is UnsupportedMediaTypeException) {
-      return _problemResponse(
-        406,
-        'Not Acceptable',
-        error.message,
-      );
+      return _problemResponse(406, 'Not Acceptable', 'Invalid request data');
     } else if (error is FormatException) {
-      return _problemResponse(
-        400,
-        'Bad Request',
-        'Invalid format: ${error.message}',
-      );
+      return _problemResponse(400, 'Bad Request', 'Invalid request format');
     } else if (error is ArgumentError) {
-      return _problemResponse(
-        400,
-        'Bad Request',
-        error.message?.toString() ?? 'Invalid argument',
-      );
+      return _problemResponse(400, 'Bad Request', 'Invalid request argument');
     } else {
       // Unknown exception - return generic 500 error
       return _problemResponse(
@@ -87,16 +71,20 @@ class ErrorMapper {
   static Response _mapRepositoryException(RepositoryException e) {
     switch (e.type) {
       case RepositoryExceptionType.notFound:
-        return _problemResponse(404, 'Not Found', e.message);
+        return _problemResponse(404, 'Not Found', 'Resource not found');
       case RepositoryExceptionType.duplicate:
-        return _problemResponse(409, 'Conflict', e.message);
+        return _problemResponse(409, 'Conflict', 'Resource conflict');
       case RepositoryExceptionType.constraint:
-        return _problemResponse(422, 'Unprocessable Entity', e.message);
+        return _problemResponse(
+          422,
+          'Unprocessable Entity',
+          'Constraint violation',
+        );
       default:
         return _problemResponse(
           500,
           'Internal Server Error',
-          'Repository operation failed: ${e.message}',
+          'Repository operation failed',
         );
     }
   }

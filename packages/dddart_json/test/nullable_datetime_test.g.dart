@@ -140,7 +140,7 @@ class TaskAggregateJsonSerializer implements JsonSerializer<TaskAggregate> {
       );
     } catch (e, stackTrace) {
       throw DeserializationException(
-        'Failed to deserialize TaskAggregate: $e',
+        'Failed to deserialize TaskAggregate',
         expectedType: 'TaskAggregate',
       );
     }
@@ -148,19 +148,35 @@ class TaskAggregateJsonSerializer implements JsonSerializer<TaskAggregate> {
 
   @override
   String serialize(TaskAggregate object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
+    try {
+      return jsonEncode(toJson(object, config as SerializationConfig?));
+    } catch (_) {
+      throw SerializationException(
+        'Failed to serialize TaskAggregate',
+        expectedType: 'TaskAggregate',
+      );
+    }
   }
 
   @override
   TaskAggregate deserialize(String data, [dynamic config]) {
-    final json = jsonDecode(data);
-    if (json is! Map<String, dynamic>) {
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map<String, dynamic>) {
+        throw DeserializationException(
+          'Expected JSON object',
+          expectedType: 'TaskAggregate',
+        );
+      }
+      return fromJson(json, config as SerializationConfig?);
+    } on DeserializationException {
+      rethrow;
+    } catch (_) {
       throw DeserializationException(
-        'Expected JSON object but got ${json.runtimeType}',
+        'Invalid JSON input',
         expectedType: 'TaskAggregate',
       );
     }
-    return fromJson(json, config as SerializationConfig?);
   }
 
   /// Convenience method for static access with default configuration

@@ -161,7 +161,7 @@ class CustomerJsonSerializer implements JsonSerializer<Customer> {
       );
     } catch (e, stackTrace) {
       throw DeserializationException(
-        'Failed to deserialize Customer: $e',
+        'Failed to deserialize Customer',
         expectedType: 'Customer',
       );
     }
@@ -169,19 +169,35 @@ class CustomerJsonSerializer implements JsonSerializer<Customer> {
 
   @override
   String serialize(Customer object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
+    try {
+      return jsonEncode(toJson(object, config as SerializationConfig?));
+    } catch (_) {
+      throw SerializationException(
+        'Failed to serialize Customer',
+        expectedType: 'Customer',
+      );
+    }
   }
 
   @override
   Customer deserialize(String data, [dynamic config]) {
-    final json = jsonDecode(data);
-    if (json is! Map<String, dynamic>) {
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map<String, dynamic>) {
+        throw DeserializationException(
+          'Expected JSON object',
+          expectedType: 'Customer',
+        );
+      }
+      return fromJson(json, config as SerializationConfig?);
+    } on DeserializationException {
+      rethrow;
+    } catch (_) {
       throw DeserializationException(
-        'Expected JSON object but got ${json.runtimeType}',
+        'Invalid JSON input',
         expectedType: 'Customer',
       );
     }
-    return fromJson(json, config as SerializationConfig?);
   }
 
   /// Convenience method for static access with default configuration

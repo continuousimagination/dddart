@@ -1,6 +1,5 @@
 import 'dart:math';
 
-import 'package:dddart_rest_client/src/auth_provider.dart';
 import 'package:dddart_rest_client/src/oauth_callback_strategy.dart';
 import 'package:test/test.dart';
 

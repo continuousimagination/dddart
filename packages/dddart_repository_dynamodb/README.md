@@ -1259,3 +1259,35 @@ MIT License - see LICENSE file for details.
 ## Contributing
 
 Contributions are welcome! Please read the contributing guidelines before submitting PRs.
+
+## Shared model bindings and point-read configuration
+
+Use `aggregateType`, `serializerType`, and `generatedBaseName` on an adapter-owned
+marker to consume an aggregate and its public generated JSON serializer from a
+separately built shared package. The same compatibility and construction rules
+as the REST binding apply; generated serializer types in the same build target
+must not be guessed or privately imported. Existing aggregate annotations remain
+supported.
+
+Generated constructors retain the positional `DynamoConnection` and add named
+`tableName` and `readConsistency` options. The default is the annotation's table
+and `DynamoReadConsistency.eventual`; select `DynamoReadConsistency.strong` for
+strongly consistent point reads. Table overrides are trusted application
+configuration and validated before use; an aggregate never chooses its table.
+
+`DynamoConnection(httpClient: client, ...)` borrows the injected HTTP transport.
+Disposal does not close that borrowed client; callers own its lifecycle. The SDK
+owns/closes a transport it creates internally. Generated operations make one SDK
+call per write and never replay it. Keep injected transports free of automatic
+write retries. Pinned-SDK fixtures cover lost responses, timeouts and provider
+failures by counting actual transport sends.
+
+Supply scoped temporary credentials explicitly in managed runtimes. The current
+SDK's fallback resolves environment/shared-file credentials, not a complete
+role/SSO credential chain. Typed repository failures expose safe static messages
+and preserve uncertainty without reflecting provider data or raw causes.
+
+Custom interface signatures preserve imported types inside nested callbacks.
+Primitive, null, and publicly imported enum defaults are emitted from resolved
+values; library-private constant names never leak into the adapter. Record-valued
+signatures and unsupported object defaults fail with a targeted generation error.

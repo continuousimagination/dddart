@@ -2,11 +2,13 @@
 library;
 
 import 'dart:async';
+import 'dart:io' as io;
 import 'dart:math';
 
 import 'package:dddart/dddart.dart';
 import 'package:dddart_json/dddart_json.dart';
 import 'package:dddart_rest/dddart_rest.dart';
+import 'package:shelf/shelf_io.dart' as shelf_io;
 
 import 'test_models.dart';
 
@@ -51,10 +53,7 @@ String generateRandomCustomerId() {
 
 /// Generates a random test user.
 TestUser generateRandomTestUser() {
-  return TestUser(
-    name: generateRandomString(10),
-    email: generateRandomEmail(),
-  );
+  return TestUser(name: generateRandomString(10), email: generateRandomEmail());
 }
 
 /// Generates a random test product.
@@ -89,14 +88,14 @@ class TestServer {
   TestServer(this.server, this.baseUrl);
 
   /// The HTTP server instance.
-  final HttpServer server;
+  final io.HttpServer server;
 
   /// The base URL for the server.
   final String baseUrl;
 
   /// Stops the server.
   Future<void> stop() async {
-    await server.stop();
+    await server.close(force: true);
   }
 }
 
@@ -116,7 +115,7 @@ Future<TestServer> createTestServer<T extends AggregateRoot>({
   required String path,
   required JsonSerializer<T> serializer,
   bool withAuth = false,
-  int port = 8765, // Use a fixed test port
+  int port = 0,
 }) async {
   final repository = InMemoryRepository<T>();
   final server = HttpServer(port: port);
@@ -130,10 +129,14 @@ Future<TestServer> createTestServer<T extends AggregateRoot>({
     ),
   );
 
-  await server.start();
-  final baseUrl = 'http://localhost:$port';
+  final listener = await shelf_io.serve(
+    server.buildHandler(),
+    io.InternetAddress.loopbackIPv4,
+    port,
+  );
+  final baseUrl = 'http://127.0.0.1:${listener.port}';
 
-  return TestServer(server, baseUrl);
+  return TestServer(listener, baseUrl);
 }
 
 /// Creates a test REST API server with multiple resources.
@@ -142,7 +145,7 @@ Future<TestServer> createTestServer<T extends AggregateRoot>({
 Future<TestServer> createMultiResourceTestServer({
   required Map<String, CrudResource<AggregateRoot, dynamic>> resources,
   bool withAuth = false,
-  int port = 8765, // Use a fixed test port
+  int port = 0,
 }) async {
   final server = HttpServer(port: port);
 
@@ -151,10 +154,14 @@ Future<TestServer> createMultiResourceTestServer({
     server.registerResource(resource);
   }
 
-  await server.start();
-  final baseUrl = 'http://localhost:$port';
+  final listener = await shelf_io.serve(
+    server.buildHandler(),
+    io.InternetAddress.loopbackIPv4,
+    port,
+  );
+  final baseUrl = 'http://127.0.0.1:${listener.port}';
 
-  return TestServer(server, baseUrl);
+  return TestServer(listener, baseUrl);
 }
 
 /// Helper for running a test with a REST API server.

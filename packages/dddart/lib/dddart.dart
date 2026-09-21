@@ -24,6 +24,7 @@ library dddart;
 /// ```dart
 /// import 'package:logging/logging.dart';
 /// import 'package:dddart/dddart.dart';
+/// import 'package:dddart/dddart_io.dart';
 ///
 /// void main() {
 ///   // Enable console logging for all DDDart components
@@ -59,7 +60,6 @@ export 'src/aggregate_root.dart';
 export 'src/domain_event.dart';
 export 'src/entity.dart';
 export 'src/event_bus.dart';
-export 'src/file_log_handler.dart';
 export 'src/in_memory_repository.dart';
 export 'src/queryable_repository.dart';
 export 'src/repository.dart';

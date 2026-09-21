@@ -161,7 +161,9 @@ class MyAuthorizationHandler extends AuthorizationHandler<User, MyClaims> {
     return AuthorizationResult.allow();
   }
 
-  // ... implement authorizeDelete and authorizeQuery
+  // Also implement authorizeRead(id, authResult), authorizeDelete and
+  // authorizeQuery. Reads and unfiltered collection queries now require
+  // an explicit policy decision whenever authorization is configured.
 }
 
 // Wire into CrudResource

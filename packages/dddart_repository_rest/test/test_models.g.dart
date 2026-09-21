@@ -108,7 +108,7 @@ class TestUserJsonSerializer implements JsonSerializer<TestUser> {
       );
     } catch (e, stackTrace) {
       throw DeserializationException(
-        'Failed to deserialize TestUser: $e',
+        'Failed to deserialize TestUser',
         expectedType: 'TestUser',
       );
     }
@@ -116,19 +116,35 @@ class TestUserJsonSerializer implements JsonSerializer<TestUser> {
 
   @override
   String serialize(TestUser object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
+    try {
+      return jsonEncode(toJson(object, config as SerializationConfig?));
+    } catch (_) {
+      throw SerializationException(
+        'Failed to serialize TestUser',
+        expectedType: 'TestUser',
+      );
+    }
   }
 
   @override
   TestUser deserialize(String data, [dynamic config]) {
-    final json = jsonDecode(data);
-    if (json is! Map<String, dynamic>) {
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map<String, dynamic>) {
+        throw DeserializationException(
+          'Expected JSON object',
+          expectedType: 'TestUser',
+        );
+      }
+      return fromJson(json, config as SerializationConfig?);
+    } on DeserializationException {
+      rethrow;
+    } catch (_) {
       throw DeserializationException(
-        'Expected JSON object but got ${json.runtimeType}',
+        'Invalid JSON input',
         expectedType: 'TestUser',
       );
     }
-    return fromJson(json, config as SerializationConfig?);
   }
 
   /// Convenience method for static access with default configuration
@@ -258,7 +274,7 @@ class TestProductJsonSerializer implements JsonSerializer<TestProduct> {
       );
     } catch (e, stackTrace) {
       throw DeserializationException(
-        'Failed to deserialize TestProduct: $e',
+        'Failed to deserialize TestProduct',
         expectedType: 'TestProduct',
       );
     }
@@ -266,19 +282,35 @@ class TestProductJsonSerializer implements JsonSerializer<TestProduct> {
 
   @override
   String serialize(TestProduct object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
+    try {
+      return jsonEncode(toJson(object, config as SerializationConfig?));
+    } catch (_) {
+      throw SerializationException(
+        'Failed to serialize TestProduct',
+        expectedType: 'TestProduct',
+      );
+    }
   }
 
   @override
   TestProduct deserialize(String data, [dynamic config]) {
-    final json = jsonDecode(data);
-    if (json is! Map<String, dynamic>) {
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map<String, dynamic>) {
+        throw DeserializationException(
+          'Expected JSON object',
+          expectedType: 'TestProduct',
+        );
+      }
+      return fromJson(json, config as SerializationConfig?);
+    } on DeserializationException {
+      rethrow;
+    } catch (_) {
       throw DeserializationException(
-        'Expected JSON object but got ${json.runtimeType}',
+        'Invalid JSON input',
         expectedType: 'TestProduct',
       );
     }
-    return fromJson(json, config as SerializationConfig?);
   }
 
   /// Convenience method for static access with default configuration
@@ -420,7 +452,7 @@ class TestOrderJsonSerializer implements JsonSerializer<TestOrder> {
       );
     } catch (e, stackTrace) {
       throw DeserializationException(
-        'Failed to deserialize TestOrder: $e',
+        'Failed to deserialize TestOrder',
         expectedType: 'TestOrder',
       );
     }
@@ -428,19 +460,35 @@ class TestOrderJsonSerializer implements JsonSerializer<TestOrder> {
 
   @override
   String serialize(TestOrder object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
+    try {
+      return jsonEncode(toJson(object, config as SerializationConfig?));
+    } catch (_) {
+      throw SerializationException(
+        'Failed to serialize TestOrder',
+        expectedType: 'TestOrder',
+      );
+    }
   }
 
   @override
   TestOrder deserialize(String data, [dynamic config]) {
-    final json = jsonDecode(data);
-    if (json is! Map<String, dynamic>) {
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map<String, dynamic>) {
+        throw DeserializationException(
+          'Expected JSON object',
+          expectedType: 'TestOrder',
+        );
+      }
+      return fromJson(json, config as SerializationConfig?);
+    } on DeserializationException {
+      rethrow;
+    } catch (_) {
       throw DeserializationException(
-        'Expected JSON object but got ${json.runtimeType}',
+        'Invalid JSON input',
         expectedType: 'TestOrder',
       );
     }
-    return fromJson(json, config as SerializationConfig?);
   }
 
   /// Convenience method for static access with default configuration
@@ -584,7 +632,7 @@ class TestAccountJsonSerializer implements JsonSerializer<TestAccount> {
       );
     } catch (e, stackTrace) {
       throw DeserializationException(
-        'Failed to deserialize TestAccount: $e',
+        'Failed to deserialize TestAccount',
         expectedType: 'TestAccount',
       );
     }
@@ -592,19 +640,35 @@ class TestAccountJsonSerializer implements JsonSerializer<TestAccount> {
 
   @override
   String serialize(TestAccount object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
+    try {
+      return jsonEncode(toJson(object, config as SerializationConfig?));
+    } catch (_) {
+      throw SerializationException(
+        'Failed to serialize TestAccount',
+        expectedType: 'TestAccount',
+      );
+    }
   }
 
   @override
   TestAccount deserialize(String data, [dynamic config]) {
-    final json = jsonDecode(data);
-    if (json is! Map<String, dynamic>) {
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map<String, dynamic>) {
+        throw DeserializationException(
+          'Expected JSON object',
+          expectedType: 'TestAccount',
+        );
+      }
+      return fromJson(json, config as SerializationConfig?);
+    } on DeserializationException {
+      rethrow;
+    } catch (_) {
       throw DeserializationException(
-        'Expected JSON object but got ${json.runtimeType}',
+        'Invalid JSON input',
         expectedType: 'TestAccount',
       );
     }
-    return fromJson(json, config as SerializationConfig?);
   }
 
   /// Convenience method for static access with default configuration
@@ -661,9 +725,8 @@ class TestUserRestRepository implements Repository<TestUser> {
       rethrow;
     } catch (e) {
       throw RepositoryException(
-        'Failed to retrieve TestUser: $e',
+        'Failed to retrieve TestUser',
         type: RepositoryExceptionType.unknown,
-        cause: e,
       );
     }
   }
@@ -689,9 +752,8 @@ class TestUserRestRepository implements Repository<TestUser> {
       rethrow;
     } catch (e) {
       throw RepositoryException(
-        'Failed to save TestUser: $e',
+        'Failed to save TestUser',
         type: RepositoryExceptionType.unknown,
-        cause: e,
       );
     }
   }
@@ -712,63 +774,56 @@ class TestUserRestRepository implements Repository<TestUser> {
       rethrow;
     } catch (e) {
       throw RepositoryException(
-        'Failed to delete TestUser: $e',
+        'Failed to delete TestUser',
         type: RepositoryExceptionType.unknown,
-        cause: e,
       );
     }
   }
 
-  /// Maps HTTP status codes to RepositoryException types.
-  ///
-  /// Attempts to parse RFC 7807 Problem Details format from the response body
-  /// to extract the 'detail' field for more specific error messages.
-  RepositoryException _mapHttpException(int statusCode, String body) {
-    // Try to parse RFC 7807 Problem Details format
-    String? detail;
-    try {
-      final json = jsonDecode(body) as Map<String, dynamic>;
-      detail = json['detail'] as String?;
-    } catch (_) {
-      // If parsing fails, use the raw body
-    }
-
+  /// Maps status codes without exposing response bodies or provider text.
+  RepositoryException _mapHttpException(int statusCode, String _) {
     switch (statusCode) {
+      case 400:
+      case 412:
+      case 422:
+        return RepositoryException(
+          'Request validation failed',
+          type: RepositoryExceptionType.constraint,
+        );
       case 401:
         return RepositoryException(
-          detail ?? 'Unauthorized: Authentication required or token expired',
+          'Authentication required',
           type: RepositoryExceptionType.unauthorized,
         );
       case 403:
         return RepositoryException(
-          detail ??
-              'Forbidden: You do not have permission to perform this action',
+          'Access denied',
           type: RepositoryExceptionType.forbidden,
         );
       case 404:
         return RepositoryException(
-          detail ?? 'Resource not found',
+          'Resource not found',
           type: RepositoryExceptionType.notFound,
         );
       case 409:
         return RepositoryException(
-          detail ?? 'Duplicate resource',
+          'Resource conflict',
           type: RepositoryExceptionType.duplicate,
         );
       case 408:
       case 504:
         return RepositoryException(
-          detail ?? 'Request timeout',
+          'Request timed out',
           type: RepositoryExceptionType.timeout,
         );
       case >= 500:
         return RepositoryException(
-          detail ?? 'Server error: $statusCode',
+          'Remote service failed',
           type: RepositoryExceptionType.connection,
         );
       default:
         return RepositoryException(
-          detail ?? 'HTTP error $statusCode: $body',
+          'Unexpected HTTP response',
           type: RepositoryExceptionType.unknown,
         );
     }
@@ -811,9 +866,8 @@ class TestProductRestRepository implements Repository<TestProduct> {
       rethrow;
     } catch (e) {
       throw RepositoryException(
-        'Failed to retrieve TestProduct: $e',
+        'Failed to retrieve TestProduct',
         type: RepositoryExceptionType.unknown,
-        cause: e,
       );
     }
   }
@@ -839,9 +893,8 @@ class TestProductRestRepository implements Repository<TestProduct> {
       rethrow;
     } catch (e) {
       throw RepositoryException(
-        'Failed to save TestProduct: $e',
+        'Failed to save TestProduct',
         type: RepositoryExceptionType.unknown,
-        cause: e,
       );
     }
   }
@@ -862,63 +915,56 @@ class TestProductRestRepository implements Repository<TestProduct> {
       rethrow;
     } catch (e) {
       throw RepositoryException(
-        'Failed to delete TestProduct: $e',
+        'Failed to delete TestProduct',
         type: RepositoryExceptionType.unknown,
-        cause: e,
       );
     }
   }
 
-  /// Maps HTTP status codes to RepositoryException types.
-  ///
-  /// Attempts to parse RFC 7807 Problem Details format from the response body
-  /// to extract the 'detail' field for more specific error messages.
-  RepositoryException _mapHttpException(int statusCode, String body) {
-    // Try to parse RFC 7807 Problem Details format
-    String? detail;
-    try {
-      final json = jsonDecode(body) as Map<String, dynamic>;
-      detail = json['detail'] as String?;
-    } catch (_) {
-      // If parsing fails, use the raw body
-    }
-
+  /// Maps status codes without exposing response bodies or provider text.
+  RepositoryException _mapHttpException(int statusCode, String _) {
     switch (statusCode) {
+      case 400:
+      case 412:
+      case 422:
+        return RepositoryException(
+          'Request validation failed',
+          type: RepositoryExceptionType.constraint,
+        );
       case 401:
         return RepositoryException(
-          detail ?? 'Unauthorized: Authentication required or token expired',
+          'Authentication required',
           type: RepositoryExceptionType.unauthorized,
         );
       case 403:
         return RepositoryException(
-          detail ??
-              'Forbidden: You do not have permission to perform this action',
+          'Access denied',
           type: RepositoryExceptionType.forbidden,
         );
       case 404:
         return RepositoryException(
-          detail ?? 'Resource not found',
+          'Resource not found',
           type: RepositoryExceptionType.notFound,
         );
       case 409:
         return RepositoryException(
-          detail ?? 'Duplicate resource',
+          'Resource conflict',
           type: RepositoryExceptionType.duplicate,
         );
       case 408:
       case 504:
         return RepositoryException(
-          detail ?? 'Request timeout',
+          'Request timed out',
           type: RepositoryExceptionType.timeout,
         );
       case >= 500:
         return RepositoryException(
-          detail ?? 'Server error: $statusCode',
+          'Remote service failed',
           type: RepositoryExceptionType.connection,
         );
       default:
         return RepositoryException(
-          detail ?? 'HTTP error $statusCode: $body',
+          'Unexpected HTTP response',
           type: RepositoryExceptionType.unknown,
         );
     }
@@ -964,9 +1010,8 @@ abstract class TestOrderRestRepositoryBase implements TestOrderRepository {
       rethrow;
     } catch (e) {
       throw RepositoryException(
-        'Failed to retrieve TestOrder: $e',
+        'Failed to retrieve TestOrder',
         type: RepositoryExceptionType.unknown,
-        cause: e,
       );
     }
   }
@@ -992,9 +1037,8 @@ abstract class TestOrderRestRepositoryBase implements TestOrderRepository {
       rethrow;
     } catch (e) {
       throw RepositoryException(
-        'Failed to save TestOrder: $e',
+        'Failed to save TestOrder',
         type: RepositoryExceptionType.unknown,
-        cause: e,
       );
     }
   }
@@ -1015,63 +1059,56 @@ abstract class TestOrderRestRepositoryBase implements TestOrderRepository {
       rethrow;
     } catch (e) {
       throw RepositoryException(
-        'Failed to delete TestOrder: $e',
+        'Failed to delete TestOrder',
         type: RepositoryExceptionType.unknown,
-        cause: e,
       );
     }
   }
 
-  /// Maps HTTP status codes to RepositoryException types.
-  ///
-  /// Attempts to parse RFC 7807 Problem Details format from the response body
-  /// to extract the 'detail' field for more specific error messages.
-  RepositoryException _mapHttpException(int statusCode, String body) {
-    // Try to parse RFC 7807 Problem Details format
-    String? detail;
-    try {
-      final json = jsonDecode(body) as Map<String, dynamic>;
-      detail = json['detail'] as String?;
-    } catch (_) {
-      // If parsing fails, use the raw body
-    }
-
+  /// Maps status codes without exposing response bodies or provider text.
+  RepositoryException _mapHttpException(int statusCode, String _) {
     switch (statusCode) {
+      case 400:
+      case 412:
+      case 422:
+        return RepositoryException(
+          'Request validation failed',
+          type: RepositoryExceptionType.constraint,
+        );
       case 401:
         return RepositoryException(
-          detail ?? 'Unauthorized: Authentication required or token expired',
+          'Authentication required',
           type: RepositoryExceptionType.unauthorized,
         );
       case 403:
         return RepositoryException(
-          detail ??
-              'Forbidden: You do not have permission to perform this action',
+          'Access denied',
           type: RepositoryExceptionType.forbidden,
         );
       case 404:
         return RepositoryException(
-          detail ?? 'Resource not found',
+          'Resource not found',
           type: RepositoryExceptionType.notFound,
         );
       case 409:
         return RepositoryException(
-          detail ?? 'Duplicate resource',
+          'Resource conflict',
           type: RepositoryExceptionType.duplicate,
         );
       case 408:
       case 504:
         return RepositoryException(
-          detail ?? 'Request timeout',
+          'Request timed out',
           type: RepositoryExceptionType.timeout,
         );
       case >= 500:
         return RepositoryException(
-          detail ?? 'Server error: $statusCode',
+          'Remote service failed',
           type: RepositoryExceptionType.connection,
         );
       default:
         return RepositoryException(
-          detail ?? 'HTTP error $statusCode: $body',
+          'Unexpected HTTP response',
           type: RepositoryExceptionType.unknown,
         );
     }
@@ -1122,9 +1159,8 @@ class TestAccountRestRepository implements Repository<TestAccount> {
       rethrow;
     } catch (e) {
       throw RepositoryException(
-        'Failed to retrieve TestAccount: $e',
+        'Failed to retrieve TestAccount',
         type: RepositoryExceptionType.unknown,
-        cause: e,
       );
     }
   }
@@ -1150,9 +1186,8 @@ class TestAccountRestRepository implements Repository<TestAccount> {
       rethrow;
     } catch (e) {
       throw RepositoryException(
-        'Failed to save TestAccount: $e',
+        'Failed to save TestAccount',
         type: RepositoryExceptionType.unknown,
-        cause: e,
       );
     }
   }
@@ -1173,63 +1208,56 @@ class TestAccountRestRepository implements Repository<TestAccount> {
       rethrow;
     } catch (e) {
       throw RepositoryException(
-        'Failed to delete TestAccount: $e',
+        'Failed to delete TestAccount',
         type: RepositoryExceptionType.unknown,
-        cause: e,
       );
     }
   }
 
-  /// Maps HTTP status codes to RepositoryException types.
-  ///
-  /// Attempts to parse RFC 7807 Problem Details format from the response body
-  /// to extract the 'detail' field for more specific error messages.
-  RepositoryException _mapHttpException(int statusCode, String body) {
-    // Try to parse RFC 7807 Problem Details format
-    String? detail;
-    try {
-      final json = jsonDecode(body) as Map<String, dynamic>;
-      detail = json['detail'] as String?;
-    } catch (_) {
-      // If parsing fails, use the raw body
-    }
-
+  /// Maps status codes without exposing response bodies or provider text.
+  RepositoryException _mapHttpException(int statusCode, String _) {
     switch (statusCode) {
+      case 400:
+      case 412:
+      case 422:
+        return RepositoryException(
+          'Request validation failed',
+          type: RepositoryExceptionType.constraint,
+        );
       case 401:
         return RepositoryException(
-          detail ?? 'Unauthorized: Authentication required or token expired',
+          'Authentication required',
           type: RepositoryExceptionType.unauthorized,
         );
       case 403:
         return RepositoryException(
-          detail ??
-              'Forbidden: You do not have permission to perform this action',
+          'Access denied',
           type: RepositoryExceptionType.forbidden,
         );
       case 404:
         return RepositoryException(
-          detail ?? 'Resource not found',
+          'Resource not found',
           type: RepositoryExceptionType.notFound,
         );
       case 409:
         return RepositoryException(
-          detail ?? 'Duplicate resource',
+          'Resource conflict',
           type: RepositoryExceptionType.duplicate,
         );
       case 408:
       case 504:
         return RepositoryException(
-          detail ?? 'Request timeout',
+          'Request timed out',
           type: RepositoryExceptionType.timeout,
         );
       case >= 500:
         return RepositoryException(
-          detail ?? 'Server error: $statusCode',
+          'Remote service failed',
           type: RepositoryExceptionType.connection,
         );
       default:
         return RepositoryException(
-          detail ?? 'HTTP error $statusCode: $body',
+          'Unexpected HTTP response',
           type: RepositoryExceptionType.unknown,
         );
     }

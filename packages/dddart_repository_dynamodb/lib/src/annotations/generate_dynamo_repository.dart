@@ -211,6 +211,9 @@ class GenerateDynamoRepository {
   const GenerateDynamoRepository({
     this.tableName,
     this.implements,
+    this.aggregateType,
+    this.serializerType,
+    this.generatedBaseName,
   });
 
   /// The DynamoDB table name for this aggregate type.
@@ -237,4 +240,13 @@ class GenerateDynamoRepository {
   /// (_connection, tableName, _serializer) for use in custom method
   /// implementations.
   final Type? implements;
+
+  /// Optional external aggregate type, leaving the binding in its adapter.
+  final Type? aggregateType;
+
+  /// Public, concrete JsonSerializer for [aggregateType], constructible without arguments.
+  final Type? serializerType;
+
+  /// Public class-name stem used before DynamoRepository (or its Base suffix).
+  final String? generatedBaseName;
 }

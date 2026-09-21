@@ -78,6 +78,10 @@ class CrudResource<T extends AggregateRoot, TClaims> {
     ETagStrategy etagStrategy = ETagStrategy.timestamp,
     this.preCreate,
   }) {
+    if (authorizationHandler != null && authenticationHandler == null) {
+      throw ArgumentError('Authorization requires an authentication handler');
+    }
+
     // Validate path is not null or empty
     if (path.isEmpty) {
       throw ArgumentError('path cannot be empty');
@@ -174,7 +178,7 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   /// }
   /// ```
   final T Function(T aggregate, AuthenticationResult<TClaims>? authResult)?
-      preCreate;
+  preCreate;
 
   /// ResponseBuilder instance for creating HTTP responses
   late final ResponseBuilder<T> _responseBuilder = ResponseBuilder<T>();
@@ -195,9 +199,7 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   ///
   /// Returns: null if authenticated or no auth required, 401 Response if auth fails
   Future<({Response? response, AuthenticationResult<TClaims>? authResult})>
-      _authenticate(
-    Request request,
-  ) async {
+  _authenticate(Request request) async {
     if (authenticationHandler == null) {
       return (response: null, authResult: null);
     }
@@ -228,16 +230,34 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   ///
   /// Returns: A Response with status 200 and serialized aggregate, or error response
   Future<Response> handleGetById(Request request, String id) async {
-    _logger.info('GET /$path/$id - Retrieving $T');
+    _logger.info('GET /$path - Retrieving $T');
     try {
       // Authenticate if handler is configured
       final authCheck = await _authenticate(request);
       if (authCheck.response != null) {
-        _logger.fine('GET /$path/$id - ${authCheck.response!.statusCode}');
+        _logger.fine('GET /$path - ${authCheck.response!.statusCode}');
         return authCheck.response!;
       }
 
       final uuid = UuidValue.fromString(id);
+      if (authorizationHandler != null && authCheck.authResult != null) {
+        final decision = await authorizationHandler!.authorizeRead(
+          uuid,
+          authCheck.authResult!,
+        );
+        if (!decision.isAuthorized) {
+          return Response(
+            403,
+            headers: {'Content-Type': 'application/problem+json'},
+            body: jsonEncode({
+              'type': 'about:blank',
+              'title': 'Forbidden',
+              'status': 403,
+              'detail': 'Access denied',
+            }),
+          );
+        }
+      }
       final aggregate = await repository.getById(uuid);
       final serializerEntry = _selectSerializer(request.headers['accept']);
 
@@ -250,7 +270,7 @@ class CrudResource<T extends AggregateRoot, TClaims> {
         serializerEntry.contentType,
         etag: etag,
       );
-      _logger.fine('GET /$path/$id - ${response.statusCode}');
+      _logger.fine('GET /$path - ${response.statusCode}');
       return response;
     } catch (e, stackTrace) {
       return _handleException(e, stackTrace);
@@ -272,15 +292,15 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   ///
   /// Returns: A Response with status 200 and serialized array, or error response
   Future<Response> handleQuery(Request request) async {
-    final queryString =
-        request.url.query.isEmpty ? '' : '?${request.url.query}';
+    final queryString = request.url.query.isEmpty ? '' : '?[query]';
     _logger.info('GET /$path$queryString - Querying $T');
     try {
       // Authenticate if handler is configured
       final authCheck = await _authenticate(request);
       if (authCheck.response != null) {
-        _logger
-            .fine('GET /$path$queryString - ${authCheck.response!.statusCode}');
+        _logger.fine(
+          'GET /$path$queryString - ${authCheck.response!.statusCode}',
+        );
         return authCheck.response!;
       }
 
@@ -293,9 +313,7 @@ class CrudResource<T extends AggregateRoot, TClaims> {
         ..remove('take');
 
       // Authorize filtered queries if handler is configured
-      if (filterParams.isNotEmpty &&
-          authorizationHandler != null &&
-          authCheck.authResult != null) {
+      if (authorizationHandler != null && authCheck.authResult != null) {
         final authzResult = await authorizationHandler!.authorizeQuery(
           filterParams,
           authCheck.authResult!,
@@ -410,7 +428,8 @@ class CrudResource<T extends AggregateRoot, TClaims> {
             'type': 'about:blank',
             'title': 'Unsupported Media Type',
             'status': 415,
-            'detail': 'Content-Type $contentType is not supported. '
+            'detail':
+                'Content-Type $contentType is not supported. '
                 'Supported types: ${serializers.keys.join(", ")}',
           }),
         );
@@ -423,7 +442,7 @@ class CrudResource<T extends AggregateRoot, TClaims> {
       try {
         aggregate = requestSerializer.deserialize(body);
       } catch (e) {
-        _logger.warning('POST /$path - Deserialization failed: $e');
+        _logger.warning('POST /$path - Deserialization failed');
         rethrow;
       }
 
@@ -456,8 +475,9 @@ class CrudResource<T extends AggregateRoot, TClaims> {
 
       await repository.save(aggregate);
 
-      final responseSerializerEntry =
-          _selectSerializer(request.headers['accept']);
+      final responseSerializerEntry = _selectSerializer(
+        request.headers['accept'],
+      );
 
       // Generate ETag for the created aggregate
       final etag = _etagGenerator.generate(aggregate);
@@ -496,45 +516,16 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   ///
   /// Returns: A Response with status 200 and serialized aggregate, or error response
   Future<Response> handleUpdate(Request request, String id) async {
-    _logger.info('PUT /$path/$id - Updating $T');
+    _logger.info('PUT /$path - Updating $T');
     try {
       // Authenticate if handler is configured
       final authCheck = await _authenticate(request);
       if (authCheck.response != null) {
-        _logger.fine('PUT /$path/$id - ${authCheck.response!.statusCode}');
+        _logger.fine('PUT /$path - ${authCheck.response!.statusCode}');
         return authCheck.response!;
       }
 
       final uuid = UuidValue.fromString(id);
-
-      // Check If-Match header for optimistic concurrency control
-      final ifMatch = request.headers['if-match'];
-      if (ifMatch != null) {
-        // Fetch current aggregate to validate ETag
-        final currentAggregate = await repository.getById(uuid);
-        final currentETag = _etagGenerator.generate(currentAggregate);
-
-        if (ifMatch != currentETag) {
-          // ETag mismatch - return 412 Precondition Failed
-          final response = Response(
-            412,
-            headers: {
-              'Content-Type': 'application/problem+json',
-              'ETag': currentETag,
-            },
-            body: jsonEncode({
-              'type': 'about:blank',
-              'title': 'Precondition Failed',
-              'status': 412,
-              'detail': 'Resource was modified by another client. '
-                  'The provided ETag does not match the current resource state.',
-            }),
-          );
-          _logger
-              .fine('PUT /$path/$id - ${response.statusCode} (ETag mismatch)');
-          return response;
-        }
-      }
 
       final contentTypeHeader =
           request.headers['content-type'] ?? serializers.keys.first;
@@ -558,11 +549,12 @@ class CrudResource<T extends AggregateRoot, TClaims> {
             'type': 'about:blank',
             'title': 'Unsupported Media Type',
             'status': 415,
-            'detail': 'Content-Type $contentType is not supported. '
+            'detail':
+                'Content-Type $contentType is not supported. '
                 'Supported types: ${serializers.keys.join(", ")}',
           }),
         );
-        _logger.fine('PUT /$path/$id - ${response.statusCode}');
+        _logger.fine('PUT /$path - ${response.statusCode}');
         return response;
       }
 
@@ -571,8 +563,12 @@ class CrudResource<T extends AggregateRoot, TClaims> {
       try {
         aggregate = requestSerializer.deserialize(body);
       } catch (e) {
-        _logger.warning('PUT /$path/$id - Deserialization failed: $e');
+        _logger.warning('PUT /$path - Deserialization failed');
         rethrow;
+      }
+
+      if (aggregate.id != uuid) {
+        throw ArgumentError('Path and body aggregate identities must agree');
       }
 
       // Authorize if handler is configured
@@ -592,15 +588,45 @@ class CrudResource<T extends AggregateRoot, TClaims> {
               'detail': authzResult.errorMessage ?? 'Access denied',
             }),
           );
-          _logger.fine('PUT /$path/$id - ${response.statusCode}');
+          _logger.fine('PUT /$path - ${response.statusCode}');
+          return response;
+        }
+      }
+
+      // Check If-Match header for optimistic concurrency control
+      final ifMatch = request.headers['if-match'];
+      if (ifMatch != null) {
+        // Fetch current aggregate to validate ETag
+        final currentAggregate = await repository.getById(uuid);
+        final currentETag = _etagGenerator.generate(currentAggregate);
+
+        if (ifMatch != currentETag) {
+          // ETag mismatch - return 412 Precondition Failed
+          final response = Response(
+            412,
+            headers: {
+              'Content-Type': 'application/problem+json',
+              'ETag': currentETag,
+            },
+            body: jsonEncode({
+              'type': 'about:blank',
+              'title': 'Precondition Failed',
+              'status': 412,
+              'detail':
+                  'Resource was modified by another client. '
+                  'The provided ETag does not match the current resource state.',
+            }),
+          );
+          _logger.fine('PUT /$path - ${response.statusCode} (ETag mismatch)');
           return response;
         }
       }
 
       await repository.save(aggregate);
 
-      final responseSerializerEntry =
-          _selectSerializer(request.headers['accept']);
+      final responseSerializerEntry = _selectSerializer(
+        request.headers['accept'],
+      );
 
       // Generate ETag for the updated aggregate
       final etag = _etagGenerator.generate(aggregate);
@@ -611,7 +637,7 @@ class CrudResource<T extends AggregateRoot, TClaims> {
         responseSerializerEntry.contentType,
         etag: etag,
       );
-      _logger.fine('PUT /$path/$id - ${response.statusCode}');
+      _logger.fine('PUT /$path - ${response.statusCode}');
       return response;
     } catch (e, stackTrace) {
       return _handleException(e, stackTrace);
@@ -631,12 +657,12 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   ///
   /// Returns: A Response with status 204, or error response
   Future<Response> handleDelete(Request request, String id) async {
-    _logger.info('DELETE /$path/$id - Deleting $T');
+    _logger.info('DELETE /$path - Deleting $T');
     try {
       // Authenticate if handler is configured
       final authCheck = await _authenticate(request);
       if (authCheck.response != null) {
-        _logger.fine('DELETE /$path/$id - ${authCheck.response!.statusCode}');
+        _logger.fine('DELETE /$path - ${authCheck.response!.statusCode}');
         return authCheck.response!;
       }
 
@@ -659,14 +685,14 @@ class CrudResource<T extends AggregateRoot, TClaims> {
               'detail': authzResult.errorMessage ?? 'Access denied',
             }),
           );
-          _logger.fine('DELETE /$path/$id - ${response.statusCode}');
+          _logger.fine('DELETE /$path - ${response.statusCode}');
           return response;
         }
       }
 
       await repository.deleteById(uuid);
       final response = _responseBuilder.noContent();
-      _logger.fine('DELETE /$path/$id - ${response.statusCode}');
+      _logger.fine('DELETE /$path - ${response.statusCode}');
       return response;
     } catch (e, stackTrace) {
       return _handleException(e, stackTrace);
@@ -744,7 +770,7 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   ///
   /// Returns: A Response with appropriate status code and error body
   Response _handleException(Object error, StackTrace stackTrace) {
-    _logger.severe('Exception during request handling', error, stackTrace);
+    _logger.severe('Exception during request handling');
 
     // Check custom handlers first
     final customHandler = customExceptionHandlers[error.runtimeType];

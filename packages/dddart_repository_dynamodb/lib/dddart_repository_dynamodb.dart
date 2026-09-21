@@ -58,5 +58,6 @@ export 'package:aws_dynamodb_api/dynamodb-2012-08-10.dart';
 
 export 'src/annotations/generate_dynamo_repository.dart';
 export 'src/connection/dynamo_connection.dart';
+export 'src/dynamo_read_consistency.dart';
 export 'src/exceptions/dynamo_repository_exception.dart';
 export 'src/utils/attribute_value_converter.dart';

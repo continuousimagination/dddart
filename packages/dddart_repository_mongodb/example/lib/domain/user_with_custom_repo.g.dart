@@ -13,27 +13,37 @@ class UserWithCustomRepoJsonSerializer
 
   /// Creates a serializer with the specified default configuration.
   UserWithCustomRepoJsonSerializer([SerializationConfig? defaultConfig])
-      : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig = defaultConfig ?? const SerializationConfig();
 
   @override
-  Map<String, dynamic> toJson(UserWithCustomRepo instance,
-      [SerializationConfig? config]) {
+  Map<String, dynamic> toJson(
+    UserWithCustomRepo instance, [
+    SerializationConfig? config,
+  ]) {
     final effectiveConfig = config ?? _defaultConfig;
     final json = <String, dynamic>{
       SerializationUtils.applyFieldRename('id', effectiveConfig.fieldRename):
           instance.id.toString(),
       SerializationUtils.applyFieldRename(
-              'createdAt', effectiveConfig.fieldRename):
-          instance.createdAt.toIso8601String(),
+        'createdAt',
+        effectiveConfig.fieldRename,
+      ): instance.createdAt
+          .toIso8601String(),
       SerializationUtils.applyFieldRename(
-              'updatedAt', effectiveConfig.fieldRename):
-          instance.updatedAt.toIso8601String(),
+        'updatedAt',
+        effectiveConfig.fieldRename,
+      ): instance.updatedAt
+          .toIso8601String(),
       SerializationUtils.applyFieldRename('email', effectiveConfig.fieldRename):
           instance.email,
       SerializationUtils.applyFieldRename(
-          'firstName', effectiveConfig.fieldRename): instance.firstName,
+        'firstName',
+        effectiveConfig.fieldRename,
+      ): instance.firstName,
       SerializationUtils.applyFieldRename(
-          'lastName', effectiveConfig.fieldRename): instance.lastName,
+        'lastName',
+        effectiveConfig.fieldRename,
+      ): instance.lastName,
     };
     return json;
   }
@@ -55,30 +65,63 @@ class UserWithCustomRepoJsonSerializer
     }
     try {
       return UserWithCustomRepo(
-        email: json[SerializationUtils.applyFieldRename(
-            'email', effectiveConfig.fieldRename)] as String,
-        firstName: json[SerializationUtils.applyFieldRename(
-            'firstName', effectiveConfig.fieldRename)] as String,
-        lastName: json[SerializationUtils.applyFieldRename(
-            'lastName', effectiveConfig.fieldRename)] as String,
-        id: UuidValue.fromString(json[SerializationUtils.applyFieldRename(
-            'id', effectiveConfig.fieldRename)] as String),
-        createdAt: json[SerializationUtils.applyFieldRename(
-                    'createdAt', effectiveConfig.fieldRename)] !=
+        email:
+            json[SerializationUtils.applyFieldRename(
+                  'email',
+                  effectiveConfig.fieldRename,
+                )]
+                as String,
+        firstName:
+            json[SerializationUtils.applyFieldRename(
+                  'firstName',
+                  effectiveConfig.fieldRename,
+                )]
+                as String,
+        lastName:
+            json[SerializationUtils.applyFieldRename(
+                  'lastName',
+                  effectiveConfig.fieldRename,
+                )]
+                as String,
+        id: UuidValue.fromString(
+          json[SerializationUtils.applyFieldRename(
+                'id',
+                effectiveConfig.fieldRename,
+              )]
+              as String,
+        ),
+        createdAt:
+            json[SerializationUtils.applyFieldRename(
+                  'createdAt',
+                  effectiveConfig.fieldRename,
+                )] !=
                 null
-            ? DateTime.parse(json[SerializationUtils.applyFieldRename(
-                'createdAt', effectiveConfig.fieldRename)] as String)
+            ? DateTime.parse(
+                json[SerializationUtils.applyFieldRename(
+                      'createdAt',
+                      effectiveConfig.fieldRename,
+                    )]
+                    as String,
+              )
             : DateTime.now(),
-        updatedAt: json[SerializationUtils.applyFieldRename(
-                    'updatedAt', effectiveConfig.fieldRename)] !=
+        updatedAt:
+            json[SerializationUtils.applyFieldRename(
+                  'updatedAt',
+                  effectiveConfig.fieldRename,
+                )] !=
                 null
-            ? DateTime.parse(json[SerializationUtils.applyFieldRename(
-                'updatedAt', effectiveConfig.fieldRename)] as String)
+            ? DateTime.parse(
+                json[SerializationUtils.applyFieldRename(
+                      'updatedAt',
+                      effectiveConfig.fieldRename,
+                    )]
+                    as String,
+              )
             : DateTime.now(),
       );
     } catch (e, stackTrace) {
       throw DeserializationException(
-        'Failed to deserialize UserWithCustomRepo: $e',
+        'Failed to deserialize UserWithCustomRepo',
         expectedType: 'UserWithCustomRepo',
       );
     }
@@ -86,30 +129,50 @@ class UserWithCustomRepoJsonSerializer
 
   @override
   String serialize(UserWithCustomRepo object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
+    try {
+      return jsonEncode(toJson(object, config as SerializationConfig?));
+    } catch (_) {
+      throw SerializationException(
+        'Failed to serialize UserWithCustomRepo',
+        expectedType: 'UserWithCustomRepo',
+      );
+    }
   }
 
   @override
   UserWithCustomRepo deserialize(String data, [dynamic config]) {
-    final json = jsonDecode(data);
-    if (json is! Map<String, dynamic>) {
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map<String, dynamic>) {
+        throw DeserializationException(
+          'Expected JSON object',
+          expectedType: 'UserWithCustomRepo',
+        );
+      }
+      return fromJson(json, config as SerializationConfig?);
+    } on DeserializationException {
+      rethrow;
+    } catch (_) {
       throw DeserializationException(
-        'Expected JSON object but got ${json.runtimeType}',
+        'Invalid JSON input',
         expectedType: 'UserWithCustomRepo',
       );
     }
-    return fromJson(json, config as SerializationConfig?);
   }
 
   /// Convenience method for static access with default configuration
-  static Map<String, dynamic> encode(UserWithCustomRepo instance,
-      [SerializationConfig? config]) {
+  static Map<String, dynamic> encode(
+    UserWithCustomRepo instance, [
+    SerializationConfig? config,
+  ]) {
     return UserWithCustomRepoJsonSerializer().toJson(instance, config);
   }
 
   /// Convenience method for static access with default configuration
-  static UserWithCustomRepo decode(dynamic json,
-      [SerializationConfig? config]) {
+  static UserWithCustomRepo decode(
+    dynamic json, [
+    SerializationConfig? config,
+  ]) {
     return UserWithCustomRepoJsonSerializer().fromJson(json, config);
   }
 }
@@ -200,8 +263,9 @@ abstract class UserWithCustomRepoMongoRepositoryBase implements UserRepository {
   @override
   Future<void> deleteById(UuidValue id) async {
     try {
-      final result =
-          await _collection.deleteOne(where.eq('_id', id.toString()));
+      final result = await _collection.deleteOne(
+        where.eq('_id', id.toString()),
+      );
 
       if (result.nRemoved == 0) {
         throw RepositoryException(
