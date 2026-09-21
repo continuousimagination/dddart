@@ -19,10 +19,7 @@ import 'package:source_gen/source_gen.dart';
 /// The builder uses [SharedPartBuilder] to generate `.mysql_repository.g.part`
 /// files for classes annotated with [@GenerateMysqlRepository].
 Builder mysqlRepositoryBuilder(BuilderOptions options) {
-  return SharedPartBuilder(
-    [MysqlRepositoryGenerator()],
-    'mysql_repository',
-  );
+  return SharedPartBuilder([MysqlRepositoryGenerator()], 'mysql_repository');
 }
 
 /// Generator for MySQL repository implementations.
@@ -47,7 +44,7 @@ class MysqlRepositoryGenerator
     }
 
     final classElement = element;
-    final className = classElement.name;
+    final className = classElement.name!;
 
     // Validate class extends AggregateRoot
     if (!_extendsAggregateRoot(classElement)) {
@@ -144,7 +141,7 @@ class MysqlRepositoryGenerator
 
   /// Validates that a class has the @Serializable annotation.
   bool _hasSerializableAnnotation(ClassElement element) {
-    return element.metadata.any((annotation) {
+    return element.metadata.annotations.any((annotation) {
       final value = annotation.computeConstantValue();
       if (value == null) return false;
       final typeName = value.type?.element?.name;
@@ -180,11 +177,11 @@ class MysqlRepositoryGenerator
 
     // Get methods from all superinterfaces (including Repository<T>)
     for (final supertype in interfaceType.allSupertypes) {
-      final supertypeName = supertype.element.name;
+      final supertypeName = supertype.element.name!;
       // Skip Object and system classes
       if (supertypeName == 'Object' ||
           supertypeName.startsWith('_') ||
-          supertype.element.library.name.startsWith('dart.')) {
+          supertype.element.library.isInSdk) {
         continue;
       }
       methods.addAll(supertype.methods);
@@ -234,7 +231,7 @@ class MysqlRepositoryGenerator
       } catch (e) {
         if (e is UnsupportedError) {
           throw InvalidGenerationSourceError(
-            'Unsupported collection type in field "${field.name}":\n${e.message}',
+            'Unsupported collection type in field "${field.name!}":\n${e.message}',
             element: field,
           );
         }
@@ -245,7 +242,7 @@ class MysqlRepositoryGenerator
       if (collectionInfo != null) {
         // Skip entity collections - they're handled by the relationship analyzer
         if (collectionInfo.elementKind != ElementKind.entity) {
-          _collectionFields[field.name] = collectionInfo;
+          _collectionFields[field.name!] = collectionInfo;
         }
       }
     }
@@ -262,7 +259,7 @@ class MysqlRepositoryGenerator
       // Use the provided table name for the aggregate root, snake_case for others
       final tableName = classElement == aggregateRoot
           ? aggregateTableName
-          : _toSnakeCase(classElement.name);
+          : _toSnakeCase(classElement.name!);
 
       final tableDef = _generateTableDefinition(
         classElement,
@@ -271,7 +268,7 @@ class MysqlRepositoryGenerator
         dialect,
         tableName,
       );
-      tables[classElement.name] = tableDef;
+      tables[classElement.name!] = tableDef;
     }
 
     // Add parent foreign keys to entity tables
@@ -309,10 +306,10 @@ class MysqlRepositoryGenerator
           if (entityClass is ClassElement &&
               !_analyzer.isValueObject(entityClass)) {
             // Store the mapping from entity class to field name
-            _entityToFieldName[entityClass.name] = field.name;
+            _entityToFieldName[entityClass.name!] = field.name!;
 
             // This is an entity in a list - add parent FK and position column
-            final entityTable = tables[entityClass.name];
+            final entityTable = tables[entityClass.name!];
             if (entityTable != null) {
               // Add foreign key column
               final fkColumnName =
@@ -353,7 +350,7 @@ class MysqlRepositoryGenerator
                 isAggregateRoot: false,
               );
 
-              tables[entityClass.name] = updatedTable;
+              tables[entityClass.name!] = updatedTable;
             }
           }
         }
@@ -373,7 +370,7 @@ class MysqlRepositoryGenerator
 
       if (!seenFields.contains(field.name)) {
         fields.add(field);
-        seenFields.add(field.name);
+        seenFields.add(field.name!);
       }
     }
 
@@ -389,7 +386,7 @@ class MysqlRepositoryGenerator
 
         if (!seenFields.contains(field.name)) {
           fields.add(field);
-          seenFields.add(field.name);
+          seenFields.add(field.name!);
         }
       }
 
@@ -419,7 +416,7 @@ class MysqlRepositoryGenerator
       if (field.isStatic) continue;
 
       final fieldType = field.type;
-      final fieldName = field.name;
+      final fieldName = field.name!;
 
       // Handle List<T> - these become separate tables with FKs
       if (fieldType.isDartCoreList) {
@@ -431,13 +428,14 @@ class MysqlRepositoryGenerator
       final referencedClass = _getReferencedClass(fieldType);
       if (referencedClass != null && _analyzer.isValueObject(referencedClass)) {
         // Special case: UuidValue should be stored as BINARY(16), not embedded
-        if (referencedClass.name == 'UuidValue') {
+        if (referencedClass.name! == 'UuidValue') {
           final column = ColumnDefinition(
             name: fieldName,
             sqlType: 'BINARY(16)',
             dartType: 'UuidValue',
-            isNullable:
-                fieldType.nullabilitySuffix.toString().contains('question'),
+            isNullable: fieldType.nullabilitySuffix.toString().contains(
+              'question',
+            ),
             isPrimaryKey: fieldName == 'id',
             isForeignKey: false,
           );
@@ -466,8 +464,9 @@ class MysqlRepositoryGenerator
           name: '${fieldName}_id',
           sqlType: 'BINARY(16)',
           dartType: 'UuidValue',
-          isNullable:
-              fieldType.nullabilitySuffix.toString().contains('question'),
+          isNullable: fieldType.nullabilitySuffix.toString().contains(
+            'question',
+          ),
           isPrimaryKey: false,
           isForeignKey: true,
         );
@@ -475,13 +474,14 @@ class MysqlRepositoryGenerator
 
         // Add foreign key constraint
         final cascadeAction = _analyzer.isAggregateRoot(referencedClass)
-            ? CascadeAction.restrict // Don't cascade across aggregates
+            ? CascadeAction
+                  .restrict // Don't cascade across aggregates
             : CascadeAction.cascade; // Cascade within aggregate
 
         foreignKeys.add(
           ForeignKeyDefinition(
             columnName: '${fieldName}_id',
-            referencedTable: _toSnakeCase(referencedClass.name),
+            referencedTable: _toSnakeCase(referencedClass.name!),
             referencedColumn: 'id',
             onDelete: cascadeAction,
           ),
@@ -499,8 +499,9 @@ class MysqlRepositoryGenerator
             name: fieldName,
             sqlType: sqlType,
             dartType: dartTypeName,
-            isNullable:
-                fieldType.nullabilitySuffix.toString().contains('question'),
+            isNullable: fieldType.nullabilitySuffix.toString().contains(
+              'question',
+            ),
             isPrimaryKey: fieldName == 'id',
             isForeignKey: false,
           ),
@@ -525,7 +526,7 @@ class MysqlRepositoryGenerator
 
     return TableDefinition(
       tableName: tableName,
-      className: classElement.name,
+      className: classElement.name!,
       columns: columns,
       foreignKeys: foreignKeys,
       isAggregateRoot: _analyzer.isAggregateRoot(classElement),
@@ -554,10 +555,11 @@ class MysqlRepositoryGenerator
       if (sqlType != null) {
         columns.add(
           ColumnDefinition(
-            name: '${prefix}_${field.name}',
+            name: '${prefix}_${field.name!}',
             sqlType: sqlType,
             dartType: dartTypeName,
-            isNullable: isNullable ||
+            isNullable:
+                isNullable ||
                 fieldType.nullabilitySuffix.toString().contains('question'),
             isPrimaryKey: false,
             isForeignKey: false,
@@ -764,8 +766,9 @@ class MysqlRepositoryGenerator
 
     buffer.writeln('  /// Creates all tables for this aggregate.');
     buffer.writeln('  ///');
-    buffer
-        .writeln('  /// This method should be called once during application');
+    buffer.writeln(
+      '  /// This method should be called once during application',
+    );
     buffer.writeln('  /// initialization to ensure all required tables exist.');
     buffer.writeln('  ///');
     buffer.writeln(
@@ -807,8 +810,9 @@ class MysqlRepositoryGenerator
       final junctionTableName =
           '${aggregateTable.tableName}_${fieldName}_items';
 
-      buffer
-          .writeln('      // Create junction table for collection: $fieldName');
+      buffer.writeln(
+        '      // Create junction table for collection: $fieldName',
+      );
       buffer.writeln('      await _connection.execute(');
       buffer.writeln("        '''");
       buffer.writeln(
@@ -870,8 +874,9 @@ class MysqlRepositoryGenerator
     switch (collectionInfo.elementKind) {
       case ElementKind.primitive:
         // Single value column for primitives
-        final elementTypeName =
-            collectionInfo.elementType.getDisplayString(withNullability: false);
+        final elementTypeName = collectionInfo.elementType.getDisplayString(
+          withNullability: false,
+        );
         final sqlType =
             typeMapper.getSqlType(elementTypeName, dialect) ?? 'VARCHAR(255)';
         // Check if element type is nullable
@@ -892,17 +897,20 @@ class MysqlRepositoryGenerator
               // Skip static fields, synthetic fields, and the props getter
               if (field.isStatic ||
                   field.isSynthetic ||
-                  field.name == 'props') {
+                  field.name! == 'props') {
                 continue;
               }
-              final fieldTypeName =
-                  field.type.getDisplayString(withNullability: false);
-              final sqlType = typeMapper.getSqlType(fieldTypeName, dialect) ??
+              final fieldTypeName = field.type.getDisplayString(
+                withNullability: false,
+              );
+              final sqlType =
+                  typeMapper.getSqlType(fieldTypeName, dialect) ??
                   'VARCHAR(255)';
-              final isNullable =
-                  field.type.nullabilitySuffix.toString().contains('question');
+              final isNullable = field.type.nullabilitySuffix
+                  .toString()
+                  .contains('question');
               columnDefs.add(
-                '  ${field.name} $sqlType${isNullable ? '' : ' NOT NULL'}',
+                '  ${field.name!} $sqlType${isNullable ? '' : ' NOT NULL'}',
               );
             }
           }
@@ -924,8 +932,8 @@ class MysqlRepositoryGenerator
             for (final field in allFields) {
               // Skip static fields, id, and props getter
               if (field.isStatic ||
-                  field.name == 'id' ||
-                  field.name == 'props') {
+                  field.name! == 'id' ||
+                  field.name! == 'props') {
                 continue;
               }
 
@@ -941,7 +949,7 @@ class MysqlRepositoryGenerator
                         .toString()
                         .contains('question');
                     columnDefs.add(
-                      '  ${field.name} BINARY(16)${isNullable ? '' : ' NOT NULL'}',
+                      '  ${field.name!} BINARY(16)${isNullable ? '' : ' NOT NULL'}',
                     );
                     continue;
                   }
@@ -953,16 +961,17 @@ class MysqlRepositoryGenerator
                         valueField.name == 'props') {
                       continue;
                     }
-                    final valueFieldTypeName = valueField.type
-                        .getDisplayString(withNullability: false);
+                    final valueFieldTypeName = valueField.type.getDisplayString(
+                      withNullability: false,
+                    );
                     final sqlType =
                         typeMapper.getSqlType(valueFieldTypeName, dialect) ??
-                            'VARCHAR(255)';
+                        'VARCHAR(255)';
                     final isNullable = valueField.type.nullabilitySuffix
                         .toString()
                         .contains('question');
                     columnDefs.add(
-                      '  ${field.name}_${valueField.name} $sqlType${isNullable ? '' : ' NOT NULL'}',
+                      '  ${field.name!}_${valueField.name} $sqlType${isNullable ? '' : ' NOT NULL'}',
                     );
                   }
                   continue;
@@ -970,14 +979,17 @@ class MysqlRepositoryGenerator
               }
 
               // Regular field (not a value object)
-              final fieldTypeName =
-                  field.type.getDisplayString(withNullability: false);
-              final sqlType = typeMapper.getSqlType(fieldTypeName, dialect) ??
+              final fieldTypeName = field.type.getDisplayString(
+                withNullability: false,
+              );
+              final sqlType =
+                  typeMapper.getSqlType(fieldTypeName, dialect) ??
                   'VARCHAR(255)';
-              final isNullable =
-                  field.type.nullabilitySuffix.toString().contains('question');
+              final isNullable = field.type.nullabilitySuffix
+                  .toString()
+                  .contains('question');
               columnDefs.add(
-                '  ${field.name} $sqlType${isNullable ? '' : ' NOT NULL'}',
+                '  ${field.name!} $sqlType${isNullable ? '' : ' NOT NULL'}',
               );
             }
           }
@@ -1023,10 +1035,7 @@ class MysqlRepositoryGenerator
     // Add columns
     final columnDefs = <String>[];
     for (final column in table.columns) {
-      final parts = <String>[
-        column.name,
-        column.sqlType,
-      ];
+      final parts = <String>[column.name, column.sqlType];
 
       if (column.isPrimaryKey) {
         parts.add('PRIMARY KEY');
@@ -1117,8 +1126,9 @@ class MysqlRepositoryGenerator
     buffer.writeln();
 
     // Generate load logic for nested entities (if any)
-    final entityTables =
-        tables.values.where((t) => t.tableName != tableName).toList();
+    final entityTables = tables.values
+        .where((t) => t.tableName != tableName)
+        .toList();
 
     if (entityTables.isNotEmpty) {
       buffer.writeln('        // Load nested entities');
@@ -1169,8 +1179,9 @@ class MysqlRepositoryGenerator
     buffer.writeln();
 
     // Generate save logic for aggregate root FIRST
-    final entityTables =
-        tables.values.where((t) => t.tableName != tableName).toList();
+    final entityTables = tables.values
+        .where((t) => t.tableName != tableName)
+        .toList();
 
     // Build exclude keys list (entity fields + collection fields)
     final excludeKeys = <String>[];
@@ -1341,8 +1352,9 @@ class MysqlRepositoryGenerator
     }
 
     // Generate helper methods for each entity table
-    final entityTables =
-        tables.values.where((t) => t.tableName != rootTableName).toList();
+    final entityTables = tables.values
+        .where((t) => t.tableName != rootTableName)
+        .toList();
 
     for (final entityTable in entityTables) {
       buffer.writeln(_generateSaveEntityMethod(entityTable));
@@ -1666,12 +1678,15 @@ class MysqlRepositoryGenerator
 
   /// Generates a method signature from a MethodElement.
   String _generateMethodSignature(MethodElement method) {
-    final returnType =
-        method.returnType.getDisplayString(withNullability: true);
-    final params = method.parameters.map((p) {
-      final type = p.type.getDisplayString(withNullability: true);
-      return '$type ${p.name}';
-    }).join(', ');
+    final returnType = method.returnType.getDisplayString(
+      withNullability: true,
+    );
+    final params = method.formalParameters
+        .map((p) {
+          final type = p.type.getDisplayString(withNullability: true);
+          return '$type ${p.name}';
+        })
+        .join(', ');
 
     return '$returnType ${method.name}($params)';
   }
@@ -1759,27 +1774,15 @@ class MysqlRepositoryGenerator
     switch (collectionInfo.kind) {
       case CollectionKind.list:
         buffer.writeln(
-          _generateListSaveLogic(
-            tableName,
-            parentFkColumn,
-            collectionInfo,
-          ),
+          _generateListSaveLogic(tableName, parentFkColumn, collectionInfo),
         );
       case CollectionKind.set:
         buffer.writeln(
-          _generateSetSaveLogic(
-            tableName,
-            parentFkColumn,
-            collectionInfo,
-          ),
+          _generateSetSaveLogic(tableName, parentFkColumn, collectionInfo),
         );
       case CollectionKind.map:
         buffer.writeln(
-          _generateMapSaveLogic(
-            tableName,
-            parentFkColumn,
-            collectionInfo,
-          ),
+          _generateMapSaveLogic(tableName, parentFkColumn, collectionInfo),
         );
     }
 
@@ -2009,8 +2012,9 @@ class MysqlRepositoryGenerator
         buffer.writeln('      // Add entity fields');
         buffer.writeln('      if (value is Map<String, dynamic>) {');
         buffer.writeln('        // Flatten nested value objects in the entity');
-        buffer
-            .writeln('        final flattened = _flattenForTable(value, []);');
+        buffer.writeln(
+          '        final flattened = _flattenForTable(value, []);',
+        );
         buffer.writeln('        final columns = [');
         buffer.writeln("          '$parentFkColumn',");
         buffer.writeln("          'map_key',");
@@ -2064,10 +2068,10 @@ class MysqlRepositoryGenerator
         final valueClass = interfaceType.element;
         if (valueClass is ClassElement) {
           for (final field in valueClass.fields) {
-            if (field.isStatic || field.isSynthetic || field.name == 'props') {
+            if (field.isStatic || field.isSynthetic || field.name! == 'props') {
               continue;
             }
-            columns.add(field.name);
+            columns.add(field.name!);
           }
         }
       }
@@ -2097,12 +2101,15 @@ class MysqlRepositoryGenerator
     );
 
     // Build ORDER BY clause for lists
-    final orderBy =
-        collectionInfo.kind == CollectionKind.list ? ' ORDER BY position' : '';
+    final orderBy = collectionInfo.kind == CollectionKind.list
+        ? ' ORDER BY position'
+        : '';
 
     // Build SELECT clause - convert UUID columns to strings
-    final selectClause =
-        _buildCollectionSelectClause(collectionInfo, parentFkColumn);
+    final selectClause = _buildCollectionSelectClause(
+      collectionInfo,
+      parentFkColumn,
+    );
 
     buffer.writeln('    final rows = await _connection.query(');
     buffer.writeln(
@@ -2210,9 +2217,7 @@ class MysqlRepositoryGenerator
         );
         buffer.writeln('      final valueObject = <String, dynamic>{};');
         buffer.writeln('      for (final entry in row.entries) {');
-        buffer.writeln(
-          '        // Skip binary UUID columns (parent FK)',
-        );
+        buffer.writeln('        // Skip binary UUID columns (parent FK)');
         buffer.writeln("        if (!entry.key.endsWith('_id') && ");
         buffer.writeln(
           "            entry.value.runtimeType.toString() != 'Uint8List') {",
@@ -2249,8 +2254,9 @@ class MysqlRepositoryGenerator
     final buffer = StringBuffer();
     buffer.writeln('    final map = <dynamic, dynamic>{};');
     buffer.writeln('    for (final row in rows) {');
-    buffer
-        .writeln("      final key = _decodeValue(row['map_key'], 'map_key');");
+    buffer.writeln(
+      "      final key = _decodeValue(row['map_key'], 'map_key');",
+    );
 
     switch (collectionInfo.elementKind) {
       case ElementKind.primitive:

@@ -28,38 +28,35 @@ void main() {
     test(
       'generated code compiles for any valid aggregate root',
       () async {
-        // Run 100 iterations with different aggregate root configurations
+        final classNames = <String>[];
+        final sources = <String>[];
         for (var i = 0; i < 100; i++) {
-          // Generate random class name
           final className = _generateRandomClassName(random);
-
-          // Generate random field configurations
           final fields = _generateRandomFields(random);
-
-          // Create source with random aggregate
-          final library = await resolveSource(
-            '''
+          classNames.add(className);
+          sources.add("""
 library test;
-
 import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:dddart_repository_rest/dddart_repository_rest.dart';
-
 @Serializable()
 @GenerateRestRepository()
 class $className extends AggregateRoot {
 $fields
   $className();
 }
-''',
-            (resolver) async => (await resolver.findLibraryByName('test'))!,
-          );
-
-          final classElement = library.topLevelElements
+""");
+        }
+        final libraries = await _resolveBatch(sources);
+        expect(libraries, hasLength(100));
+        for (var i = 0; i < 100; i++) {
+          final className = classNames[i];
+          final library = libraries[i];
+          final classElement = library.children
               .whereType<ClassElement>()
               .firstWhere((e) => e.name == className);
 
-          final annotation = classElement.metadata.firstWhere(
+          final annotation = classElement.metadata.annotations.firstWhere(
             (a) =>
                 a.computeConstantValue()?.type?.element?.name ==
                 'GenerateRestRepository',
@@ -100,35 +97,34 @@ $fields
     test(
       'resource path configuration is respected for any valid path',
       () async {
-        // Run 100 iterations with different resource paths
+        final paths = <String>[];
+        final sources = <String>[];
         for (var i = 0; i < 100; i++) {
-          // Generate random resource path
           final resourcePath = _generateRandomResourcePath(random);
-
-          // Create source with custom resource path
-          final library = await resolveSource(
-            '''
+          paths.add(resourcePath);
+          sources.add("""
 library test;
-
 import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:dddart_repository_rest/dddart_repository_rest.dart';
-
 @Serializable()
 @GenerateRestRepository(resourcePath: '$resourcePath')
 class TestAggregate extends AggregateRoot {
   final String name;
   TestAggregate({required this.name});
 }
-''',
-            (resolver) async => (await resolver.findLibraryByName('test'))!,
-          );
-
-          final classElement = library.topLevelElements
+""");
+        }
+        final libraries = await _resolveBatch(sources);
+        expect(libraries, hasLength(100));
+        for (var i = 0; i < 100; i++) {
+          final resourcePath = paths[i];
+          final library = libraries[i];
+          final classElement = library.children
               .whereType<ClassElement>()
               .firstWhere((e) => e.name == 'TestAggregate');
 
-          final annotation = classElement.metadata.firstWhere(
+          final annotation = classElement.metadata.annotations.firstWhere(
             (a) =>
                 a.computeConstantValue()?.type?.element?.name ==
                 'GenerateRestRepository',
@@ -198,13 +194,14 @@ class $className extends AggregateRoot {
 }
 ''',
             (resolver) async => (await resolver.findLibraryByName('test'))!,
+            readAllSourcesFromFilesystem: true,
           );
 
-          final classElement = library.topLevelElements
+          final classElement = library.children
               .whereType<ClassElement>()
               .firstWhere((e) => e.name == className);
 
-          final annotation = classElement.metadata.firstWhere(
+          final annotation = classElement.metadata.annotations.firstWhere(
             (a) =>
                 a.computeConstantValue()?.type?.element?.name ==
                 'GenerateRestRepository',
@@ -250,13 +247,14 @@ class User extends AggregateRoot {
 }
 ''',
           (resolver) async => (await resolver.findLibraryByName('test'))!,
+          readAllSourcesFromFilesystem: true,
         );
 
-        final classElement1 = library1.topLevelElements
+        final classElement1 = library1.children
             .whereType<ClassElement>()
             .firstWhere((e) => e.name == 'User');
 
-        final annotation1 = classElement1.metadata.firstWhere(
+        final annotation1 = classElement1.metadata.annotations.firstWhere(
           (a) =>
               a.computeConstantValue()?.type?.element?.name ==
               'GenerateRestRepository',
@@ -292,13 +290,14 @@ class Product extends AggregateRoot {
 }
 ''',
           (resolver) async => (await resolver.findLibraryByName('test'))!,
+          readAllSourcesFromFilesystem: true,
         );
 
-        final classElement2 = library2.topLevelElements
+        final classElement2 = library2.children
             .whereType<ClassElement>()
             .firstWhere((e) => e.name == 'Product');
 
-        final annotation2 = classElement2.metadata.firstWhere(
+        final annotation2 = classElement2.metadata.annotations.firstWhere(
           (a) =>
               a.computeConstantValue()?.type?.element?.name ==
               'GenerateRestRepository',
@@ -337,13 +336,14 @@ class Order extends AggregateRoot {
 }
 ''',
           (resolver) async => (await resolver.findLibraryByName('test'))!,
+          readAllSourcesFromFilesystem: true,
         );
 
-        final classElement3 = library3.topLevelElements
+        final classElement3 = library3.children
             .whereType<ClassElement>()
             .firstWhere((e) => e.name == 'Order');
 
-        final annotation3 = classElement3.metadata.firstWhere(
+        final annotation3 = classElement3.metadata.annotations.firstWhere(
           (a) =>
               a.computeConstantValue()?.type?.element?.name ==
               'GenerateRestRepository',
@@ -364,9 +364,7 @@ class Order extends AggregateRoot {
         );
         expect(
           output3,
-          contains(
-            'Future<List<Order>> findByCustomerId(String customerId)',
-          ),
+          contains('Future<List<Order>> findByCustomerId(String customerId)'),
         );
       },
       timeout: const Timeout(Duration(minutes: 2)),
@@ -448,13 +446,14 @@ class $className extends AggregateRoot {
 }
 ''',
             (resolver) async => (await resolver.findLibraryByName('test'))!,
+            readAllSourcesFromFilesystem: true,
           );
 
-          final classElement = library.topLevelElements
+          final classElement = library.children
               .whereType<ClassElement>()
               .firstWhere((e) => e.name == className);
 
-          final annotation = classElement.metadata.firstWhere(
+          final annotation = classElement.metadata.annotations.firstWhere(
             (a) =>
                 a.computeConstantValue()?.type?.element?.name ==
                 'GenerateRestRepository',
@@ -577,13 +576,14 @@ class $className extends AggregateRoot {
 }
 ''',
             (resolver) async => (await resolver.findLibraryByName('test'))!,
+            readAllSourcesFromFilesystem: true,
           );
 
-          final classElement = library.topLevelElements
+          final classElement = library.children
               .whereType<ClassElement>()
               .firstWhere((e) => e.name == className);
 
-          final annotation = classElement.metadata.firstWhere(
+          final annotation = classElement.metadata.annotations.firstWhere(
             (a) =>
                 a.computeConstantValue()?.type?.element?.name ==
                 'GenerateRestRepository',
@@ -735,4 +735,19 @@ BuildStep _mockBuildStep() => _StubBuildStep();
 class _StubBuildStep implements BuildStep {
   @override
   dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
+}
+
+// Every case remains a separate Dart library; only dependency resolution is
+// shared. Identical TestAggregate names cannot contaminate another case.
+Future<List<LibraryElement>> _resolveBatch(List<String> sources) {
+  final ids = [
+    for (var i = 0; i < sources.length; i++)
+      AssetId('fixtures', 'lib/case_$i.dart'),
+  ];
+  return resolveSources(
+    {for (var i = 0; i < ids.length; i++) '${ids[i]}': sources[i]},
+    (resolver) => Future.wait(ids.map(resolver.libraryFor)),
+    rootPackage: 'fixtures',
+    readAllSourcesFromFilesystem: true,
+  );
 }

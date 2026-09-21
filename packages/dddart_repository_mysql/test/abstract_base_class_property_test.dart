@@ -25,10 +25,10 @@ void main() {
     // **Validates: Requirements 8.1, 8.2**
     group('Property 23: Abstract base class generation', () {
       test(
-          'should generate abstract base class when custom interface is specified',
-          () async {
-        final library = await resolveSource(
-          '''
+        'should generate abstract base class when custom interface is specified',
+        () async {
+          final library = await resolveSource(
+            '''
 library test;
 
 import 'package:dddart/dddart.dart';
@@ -46,41 +46,46 @@ class Order extends AggregateRoot {
   final String status;
 }
 ''',
-          (resolver) async => (await resolver.findLibraryByName('test'))!,
-        );
+            (resolver) async => (await resolver.findLibraryByName('test'))!,
+            readAllSourcesFromFilesystem: true,
+          );
 
-        final classElement = library.topLevelElements
-            .whereType<ClassElement>()
-            .firstWhere((e) => e.name == 'Order');
+          final classElement = library.children
+              .whereType<ClassElement>()
+              .firstWhere((e) => e.name == 'Order');
 
-        final annotation = classElement.metadata.firstWhere(
-          (a) =>
-              a.computeConstantValue()?.type?.element?.name ==
-              'GenerateMysqlRepository',
-        );
+          final annotation = classElement.metadata.annotations.firstWhere(
+            (a) =>
+                a.computeConstantValue()?.type?.element?.name ==
+                'GenerateMysqlRepository',
+          );
 
-        final generated = generator.generateForAnnotatedElement(
-          classElement,
-          ConstantReader(annotation.computeConstantValue()),
-          _mockBuildStep(),
-        );
+          final generated = generator.generateForAnnotatedElement(
+            classElement,
+            ConstantReader(annotation.computeConstantValue()),
+            _mockBuildStep(),
+          );
 
-        // Verify abstract base class is generated
-        expect(generated, contains('abstract class OrderMysqlRepositoryBase'));
-        expect(generated, contains('implements CustomOrderRepository'));
+          // Verify abstract base class is generated
+          expect(
+            generated,
+            contains('abstract class OrderMysqlRepositoryBase'),
+          );
+          expect(generated, contains('implements CustomOrderRepository'));
 
-        // Verify it does NOT generate a concrete class
-        expect(
-          generated,
-          isNot(contains('class OrderMysqlRepository implements')),
-        );
+          // Verify it does NOT generate a concrete class
+          expect(
+            generated,
+            isNot(contains('class OrderMysqlRepository implements')),
+          );
 
-        // Verify abstract method declaration
-        expect(
-          generated,
-          contains('Future<List<Order>> findByStatus(String status)'),
-        );
-      });
+          // Verify abstract method declaration
+          expect(
+            generated,
+            contains('Future<List<Order>> findByStatus(String status)'),
+          );
+        },
+      );
 
       test('should expose protected members in abstract base class', () async {
         final library = await resolveSource(
@@ -103,13 +108,14 @@ class Product extends AggregateRoot {
 }
 ''',
           (resolver) async => (await resolver.findLibraryByName('test'))!,
+          readAllSourcesFromFilesystem: true,
         );
 
-        final classElement = library.topLevelElements
+        final classElement = library.children
             .whereType<ClassElement>()
             .firstWhere((e) => e.name == 'Product');
 
-        final annotation = classElement.metadata.firstWhere(
+        final annotation = classElement.metadata.annotations.firstWhere(
           (a) =>
               a.computeConstantValue()?.type?.element?.name ==
               'GenerateMysqlRepository',
@@ -136,10 +142,10 @@ class Product extends AggregateRoot {
       });
 
       test(
-          'should implement standard Repository methods in abstract base class',
-          () async {
-        final library = await resolveSource(
-          '''
+        'should implement standard Repository methods in abstract base class',
+        () async {
+          final library = await resolveSource(
+            '''
 library test;
 
 import 'package:dddart/dddart.dart';
@@ -157,46 +163,46 @@ class Customer extends AggregateRoot {
   final String email;
 }
 ''',
-          (resolver) async => (await resolver.findLibraryByName('test'))!,
-        );
+            (resolver) async => (await resolver.findLibraryByName('test'))!,
+            readAllSourcesFromFilesystem: true,
+          );
 
-        final classElement = library.topLevelElements
-            .whereType<ClassElement>()
-            .firstWhere((e) => e.name == 'Customer');
+          final classElement = library.children
+              .whereType<ClassElement>()
+              .firstWhere((e) => e.name == 'Customer');
 
-        final annotation = classElement.metadata.firstWhere(
-          (a) =>
-              a.computeConstantValue()?.type?.element?.name ==
-              'GenerateMysqlRepository',
-        );
+          final annotation = classElement.metadata.annotations.firstWhere(
+            (a) =>
+                a.computeConstantValue()?.type?.element?.name ==
+                'GenerateMysqlRepository',
+          );
 
-        final generated = generator.generateForAnnotatedElement(
-          classElement,
-          ConstantReader(annotation.computeConstantValue()),
-          _mockBuildStep(),
-        );
+          final generated = generator.generateForAnnotatedElement(
+            classElement,
+            ConstantReader(annotation.computeConstantValue()),
+            _mockBuildStep(),
+          );
 
-        // Verify standard Repository methods are implemented (not abstract)
-        expect(generated, contains('Future<void> createTables()'));
-        expect(generated, contains('Future<Customer> getById(UuidValue id)'));
-        expect(generated, contains('Future<void> save(Customer aggregate)'));
-        expect(
-          generated,
-          contains('Future<void> deleteById(UuidValue id)'),
-        );
+          // Verify standard Repository methods are implemented (not abstract)
+          expect(generated, contains('Future<void> createTables()'));
+          expect(generated, contains('Future<Customer> getById(UuidValue id)'));
+          expect(generated, contains('Future<void> save(Customer aggregate)'));
+          expect(generated, contains('Future<void> deleteById(UuidValue id)'));
 
-        // Verify these are NOT abstract (they have implementations)
-        expect(generated, isNot(contains('Future<void> createTables();')));
-        expect(
-          generated,
-          isNot(contains('Future<Customer> getById(UuidValue id);')),
-        );
-      });
+          // Verify these are NOT abstract (they have implementations)
+          expect(generated, isNot(contains('Future<void> createTables();')));
+          expect(
+            generated,
+            isNot(contains('Future<Customer> getById(UuidValue id);')),
+          );
+        },
+      );
 
-      test('should generate concrete class when no custom interface specified',
-          () async {
-        final library = await resolveSource(
-          '''
+      test(
+        'should generate concrete class when no custom interface specified',
+        () async {
+          final library = await resolveSource(
+            '''
 library test;
 
 import 'package:dddart/dddart.dart';
@@ -210,46 +216,43 @@ class SimpleAggregate extends AggregateRoot {
   final String name;
 }
 ''',
-          (resolver) async => (await resolver.findLibraryByName('test'))!,
-        );
+            (resolver) async => (await resolver.findLibraryByName('test'))!,
+            readAllSourcesFromFilesystem: true,
+          );
 
-        final classElement = library.topLevelElements
-            .whereType<ClassElement>()
-            .firstWhere((e) => e.name == 'SimpleAggregate');
+          final classElement = library.children
+              .whereType<ClassElement>()
+              .firstWhere((e) => e.name == 'SimpleAggregate');
 
-        final annotation = classElement.metadata.firstWhere(
-          (a) =>
-              a.computeConstantValue()?.type?.element?.name ==
-              'GenerateMysqlRepository',
-        );
+          final annotation = classElement.metadata.annotations.firstWhere(
+            (a) =>
+                a.computeConstantValue()?.type?.element?.name ==
+                'GenerateMysqlRepository',
+          );
 
-        final generated = generator.generateForAnnotatedElement(
-          classElement,
-          ConstantReader(annotation.computeConstantValue()),
-          _mockBuildStep(),
-        );
+          final generated = generator.generateForAnnotatedElement(
+            classElement,
+            ConstantReader(annotation.computeConstantValue()),
+            _mockBuildStep(),
+          );
 
-        // Verify concrete class is generated (not abstract)
-        expect(
-          generated,
-          contains('class SimpleAggregateMysqlRepository'),
-        );
-        expect(
-          generated,
-          isNot(contains('abstract class SimpleAggregateMysqlRepository')),
-        );
+          // Verify concrete class is generated (not abstract)
+          expect(generated, contains('class SimpleAggregateMysqlRepository'));
+          expect(
+            generated,
+            isNot(contains('abstract class SimpleAggregateMysqlRepository')),
+          );
 
-        // Verify it implements Repository directly
-        expect(
-          generated,
-          contains('implements Repository<SimpleAggregate>'),
-        );
-      });
+          // Verify it implements Repository directly
+          expect(generated, contains('implements Repository<SimpleAggregate>'));
+        },
+      );
 
-      test('should handle custom interface with multiple custom methods',
-          () async {
-        final library = await resolveSource(
-          '''
+      test(
+        'should handle custom interface with multiple custom methods',
+        () async {
+          final library = await resolveSource(
+            '''
 library test;
 
 import 'package:dddart/dddart.dart';
@@ -270,49 +273,55 @@ class ComplexAggregate extends AggregateRoot {
   final DateTime date;
 }
 ''',
-          (resolver) async => (await resolver.findLibraryByName('test'))!,
-        );
+            (resolver) async => (await resolver.findLibraryByName('test'))!,
+            readAllSourcesFromFilesystem: true,
+          );
 
-        final classElement = library.topLevelElements
-            .whereType<ClassElement>()
-            .firstWhere((e) => e.name == 'ComplexAggregate');
+          final classElement = library.children
+              .whereType<ClassElement>()
+              .firstWhere((e) => e.name == 'ComplexAggregate');
 
-        final annotation = classElement.metadata.firstWhere(
-          (a) =>
-              a.computeConstantValue()?.type?.element?.name ==
-              'GenerateMysqlRepository',
-        );
+          final annotation = classElement.metadata.annotations.firstWhere(
+            (a) =>
+                a.computeConstantValue()?.type?.element?.name ==
+                'GenerateMysqlRepository',
+          );
 
-        final generated = generator.generateForAnnotatedElement(
-          classElement,
-          ConstantReader(annotation.computeConstantValue()),
-          _mockBuildStep(),
-        );
+          final generated = generator.generateForAnnotatedElement(
+            classElement,
+            ConstantReader(annotation.computeConstantValue()),
+            _mockBuildStep(),
+          );
 
-        // Verify all custom methods are declared as abstract
-        expect(
-          generated,
-          contains(
-            'Future<List<ComplexAggregate>> findByStatus(String status)',
-          ),
-        );
-        expect(
-          generated,
-          contains(
-            'Future<List<ComplexAggregate>> findByDateRange(DateTime start, DateTime end)',
-          ),
-        );
-        expect(generated, contains('Future<int> countByStatus(String status)'));
-      });
+          // Verify all custom methods are declared as abstract
+          expect(
+            generated,
+            contains(
+              'Future<List<ComplexAggregate>> findByStatus(String status)',
+            ),
+          );
+          expect(
+            generated,
+            contains(
+              'Future<List<ComplexAggregate>> findByDateRange(DateTime start, DateTime end)',
+            ),
+          );
+          expect(
+            generated,
+            contains('Future<int> countByStatus(String status)'),
+          );
+        },
+      );
     });
 
     // **Feature: mysql-repository, Property 24: Deserialization helper availability**
     // **Validates: Requirements 8.5**
     group('Property 24: Deserialization helper availability', () {
-      test('should provide helper methods for reconstructing aggregates',
-          () async {
-        final library = await resolveSource(
-          '''
+      test(
+        'should provide helper methods for reconstructing aggregates',
+        () async {
+          final library = await resolveSource(
+            '''
 library test;
 
 import 'package:dddart/dddart.dart';
@@ -337,43 +346,45 @@ class Order extends AggregateRoot {
   final List<OrderItem> items;
 }
 ''',
-          (resolver) async => (await resolver.findLibraryByName('test'))!,
-        );
+            (resolver) async => (await resolver.findLibraryByName('test'))!,
+            readAllSourcesFromFilesystem: true,
+          );
 
-        final classElement = library.topLevelElements
-            .whereType<ClassElement>()
-            .firstWhere((e) => e.name == 'Order');
+          final classElement = library.children
+              .whereType<ClassElement>()
+              .firstWhere((e) => e.name == 'Order');
 
-        final annotation = classElement.metadata.firstWhere(
-          (a) =>
-              a.computeConstantValue()?.type?.element?.name ==
-              'GenerateMysqlRepository',
-        );
+          final annotation = classElement.metadata.annotations.firstWhere(
+            (a) =>
+                a.computeConstantValue()?.type?.element?.name ==
+                'GenerateMysqlRepository',
+          );
 
-        final generated = generator.generateForAnnotatedElement(
-          classElement,
-          ConstantReader(annotation.computeConstantValue()),
-          _mockBuildStep(),
-        );
+          final generated = generator.generateForAnnotatedElement(
+            classElement,
+            ConstantReader(annotation.computeConstantValue()),
+            _mockBuildStep(),
+          );
 
-        // Verify _rowToJson helper is available
-        expect(generated, contains('Map<String, dynamic> _rowToJson'));
+          // Verify _rowToJson helper is available
+          expect(generated, contains('Map<String, dynamic> _rowToJson'));
 
-        // Verify _loadOrderItem helper is available for loading entities
-        expect(
-          generated,
-          contains('Future<List<Map<String, dynamic>>> _loadOrderItem'),
-        );
+          // Verify _loadOrderItem helper is available for loading entities
+          expect(
+            generated,
+            contains('Future<List<Map<String, dynamic>>> _loadOrderItem'),
+          );
 
-        // Verify _flattenForTable helper is available
-        expect(generated, contains('Map<String, dynamic> _flattenForTable'));
+          // Verify _flattenForTable helper is available
+          expect(generated, contains('Map<String, dynamic> _flattenForTable'));
 
-        // Verify _decodeValue helper is available
-        expect(generated, contains('dynamic _decodeValue'));
+          // Verify _decodeValue helper is available
+          expect(generated, contains('dynamic _decodeValue'));
 
-        // Verify _encodeValue helper is available
-        expect(generated, contains('Object? _encodeValue'));
-      });
+          // Verify _encodeValue helper is available
+          expect(generated, contains('Object? _encodeValue'));
+        },
+      );
 
       test('should provide serializer access for custom queries', () async {
         final library = await resolveSource(
@@ -396,13 +407,14 @@ class Product extends AggregateRoot {
 }
 ''',
           (resolver) async => (await resolver.findLibraryByName('test'))!,
+          readAllSourcesFromFilesystem: true,
         );
 
-        final classElement = library.topLevelElements
+        final classElement = library.children
             .whereType<ClassElement>()
             .firstWhere((e) => e.name == 'Product');
 
-        final annotation = classElement.metadata.firstWhere(
+        final annotation = classElement.metadata.annotations.firstWhere(
           (a) =>
               a.computeConstantValue()?.type?.element?.name ==
               'GenerateMysqlRepository',
@@ -443,13 +455,14 @@ class Customer extends AggregateRoot {
 }
 ''',
           (resolver) async => (await resolver.findLibraryByName('test'))!,
+          readAllSourcesFromFilesystem: true,
         );
 
-        final classElement = library.topLevelElements
+        final classElement = library.children
             .whereType<ClassElement>()
             .firstWhere((e) => e.name == 'Customer');
 
-        final annotation = classElement.metadata.firstWhere(
+        final annotation = classElement.metadata.annotations.firstWhere(
           (a) =>
               a.computeConstantValue()?.type?.element?.name ==
               'GenerateMysqlRepository',
@@ -491,13 +504,14 @@ class Event extends AggregateRoot {
 }
 ''',
           (resolver) async => (await resolver.findLibraryByName('test'))!,
+          readAllSourcesFromFilesystem: true,
         );
 
-        final classElement = library.topLevelElements
+        final classElement = library.children
             .whereType<ClassElement>()
             .firstWhere((e) => e.name == 'Event');
 
-        final annotation = classElement.metadata.firstWhere(
+        final annotation = classElement.metadata.annotations.firstWhere(
           (a) =>
               a.computeConstantValue()?.type?.element?.name ==
               'GenerateMysqlRepository',
@@ -517,10 +531,11 @@ class Event extends AggregateRoot {
         expect(generated, contains('_dialect.encodeDateTime'));
       });
 
-      test('should provide entity loading helpers for aggregates with entities',
-          () async {
-        final library = await resolveSource(
-          '''
+      test(
+        'should provide entity loading helpers for aggregates with entities',
+        () async {
+          final library = await resolveSource(
+            '''
 library test;
 
 import 'package:dddart/dddart.dart';
@@ -546,34 +561,36 @@ class Cart extends AggregateRoot {
   final List<CartItem> items;
 }
 ''',
-          (resolver) async => (await resolver.findLibraryByName('test'))!,
-        );
+            (resolver) async => (await resolver.findLibraryByName('test'))!,
+            readAllSourcesFromFilesystem: true,
+          );
 
-        final classElement = library.topLevelElements
-            .whereType<ClassElement>()
-            .firstWhere((e) => e.name == 'Cart');
+          final classElement = library.children
+              .whereType<ClassElement>()
+              .firstWhere((e) => e.name == 'Cart');
 
-        final annotation = classElement.metadata.firstWhere(
-          (a) =>
-              a.computeConstantValue()?.type?.element?.name ==
-              'GenerateMysqlRepository',
-        );
+          final annotation = classElement.metadata.annotations.firstWhere(
+            (a) =>
+                a.computeConstantValue()?.type?.element?.name ==
+                'GenerateMysqlRepository',
+          );
 
-        final generated = generator.generateForAnnotatedElement(
-          classElement,
-          ConstantReader(annotation.computeConstantValue()),
-          _mockBuildStep(),
-        );
+          final generated = generator.generateForAnnotatedElement(
+            classElement,
+            ConstantReader(annotation.computeConstantValue()),
+            _mockBuildStep(),
+          );
 
-        // Verify entity loading helper is generated
-        expect(
-          generated,
-          contains('Future<List<Map<String, dynamic>>> _loadCartItem'),
-        );
+          // Verify entity loading helper is generated
+          expect(
+            generated,
+            contains('Future<List<Map<String, dynamic>>> _loadCartItem'),
+          );
 
-        // Verify the helper can be used in custom queries
-        expect(generated, contains('await _loadCartItem('));
-      });
+          // Verify the helper can be used in custom queries
+          expect(generated, contains('await _loadCartItem('));
+        },
+      );
 
       test('should provide error mapping helper for custom queries', () async {
         final library = await resolveSource(
@@ -596,13 +613,14 @@ class Account extends AggregateRoot {
 }
 ''',
           (resolver) async => (await resolver.findLibraryByName('test'))!,
+          readAllSourcesFromFilesystem: true,
         );
 
-        final classElement = library.topLevelElements
+        final classElement = library.children
             .whereType<ClassElement>()
             .firstWhere((e) => e.name == 'Account');
 
-        final annotation = classElement.metadata.firstWhere(
+        final annotation = classElement.metadata.annotations.firstWhere(
           (a) =>
               a.computeConstantValue()?.type?.element?.name ==
               'GenerateMysqlRepository',
@@ -623,10 +641,11 @@ class Account extends AggregateRoot {
     });
 
     group('Integration with Standard Methods', () {
-      test('should allow custom methods to use same transaction context',
-          () async {
-        final library = await resolveSource(
-          '''
+      test(
+        'should allow custom methods to use same transaction context',
+        () async {
+          final library = await resolveSource(
+            '''
 library test;
 
 import 'package:dddart/dddart.dart';
@@ -644,31 +663,33 @@ class Order extends AggregateRoot {
   final String status;
 }
 ''',
-          (resolver) async => (await resolver.findLibraryByName('test'))!,
-        );
+            (resolver) async => (await resolver.findLibraryByName('test'))!,
+            readAllSourcesFromFilesystem: true,
+          );
 
-        final classElement = library.topLevelElements
-            .whereType<ClassElement>()
-            .firstWhere((e) => e.name == 'Order');
+          final classElement = library.children
+              .whereType<ClassElement>()
+              .firstWhere((e) => e.name == 'Order');
 
-        final annotation = classElement.metadata.firstWhere(
-          (a) =>
-              a.computeConstantValue()?.type?.element?.name ==
-              'GenerateMysqlRepository',
-        );
+          final annotation = classElement.metadata.annotations.firstWhere(
+            (a) =>
+                a.computeConstantValue()?.type?.element?.name ==
+                'GenerateMysqlRepository',
+          );
 
-        final generated = generator.generateForAnnotatedElement(
-          classElement,
-          ConstantReader(annotation.computeConstantValue()),
-          _mockBuildStep(),
-        );
+          final generated = generator.generateForAnnotatedElement(
+            classElement,
+            ConstantReader(annotation.computeConstantValue()),
+            _mockBuildStep(),
+          );
 
-        // Verify connection is available for transaction support
-        expect(generated, contains('_connection.transaction'));
+          // Verify connection is available for transaction support
+          expect(generated, contains('_connection.transaction'));
 
-        // Verify standard methods use transactions
-        expect(generated, contains('await _connection.transaction(() async'));
-      });
+          // Verify standard methods use transactions
+          expect(generated, contains('await _connection.transaction(() async'));
+        },
+      );
     });
   });
 }
@@ -687,6 +708,6 @@ BuildStep _mockBuildStep() {
 class _StubBuildStep implements BuildStep {
   @override
   dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
-        'BuildStep method called in test - this should not happen',
-      );
+    'BuildStep method called in test - this should not happen',
+  );
 }

@@ -17,10 +17,7 @@ import 'package:source_gen/source_gen.dart';
 /// The builder uses [SharedPartBuilder] to generate `.mongo_repository.g.dart`
 /// files for classes annotated with [@GenerateMongoRepository].
 Builder mongoRepositoryBuilder(BuilderOptions options) {
-  return SharedPartBuilder(
-    [MongoRepositoryGenerator()],
-    'mongo_repository',
-  );
+  return SharedPartBuilder([MongoRepositoryGenerator()], 'mongo_repository');
 }
 
 /// Generator for MongoDB repository implementations.
@@ -45,7 +42,7 @@ class MongoRepositoryGenerator
     }
 
     final classElement = element;
-    final className = classElement.name;
+    final className = classElement.name!;
 
     // Task 4.2: Validate class extends AggregateRoot
     if (!_extendsAggregateRoot(classElement)) {
@@ -130,7 +127,7 @@ class MongoRepositoryGenerator
 
   /// Validates that a class has the @Serializable annotation.
   bool _hasSerializableAnnotation(ClassElement element) {
-    return element.metadata.any((annotation) {
+    return element.metadata.annotations.any((annotation) {
       final value = annotation.computeConstantValue();
       if (value == null) return false;
       final typeName = value.type?.element?.name;
@@ -171,11 +168,11 @@ class MongoRepositoryGenerator
     // Get methods from all superinterfaces (including Repository<T>)
     // but exclude Object and system classes
     for (final supertype in interfaceType.allSupertypes) {
-      final supertypeName = supertype.element.name;
+      final supertypeName = supertype.element.name!;
       // Skip Object and system classes
       if (supertypeName == 'Object' ||
           supertypeName.startsWith('_') ||
-          supertype.element.library.name.startsWith('dart.')) {
+          supertype.element.library.isInSdk) {
         continue;
       }
       methods.addAll(supertype.methods);
@@ -242,8 +239,9 @@ class MongoRepositoryGenerator
     buffer.writeln('  /// The collection name for $className aggregates.');
     buffer.writeln("  String get collectionName => '$collectionName';");
     buffer.writeln();
-    buffer
-        .writeln('  /// Gets the MongoDB collection for this aggregate type.');
+    buffer.writeln(
+      '  /// Gets the MongoDB collection for this aggregate type.',
+    );
     buffer.writeln(
       '  DbCollection get _collection => _database.collection(collectionName);',
     );
@@ -452,8 +450,9 @@ class MongoRepositoryGenerator
     buffer.writeln('  /// The collection name for $className aggregates.');
     buffer.writeln("  String get collectionName => '$collectionName';");
     buffer.writeln();
-    buffer
-        .writeln('  /// Gets the MongoDB collection for this aggregate type.');
+    buffer.writeln(
+      '  /// Gets the MongoDB collection for this aggregate type.',
+    );
     buffer.writeln(
       '  DbCollection get _collection => _database.collection(collectionName);',
     );
@@ -495,12 +494,15 @@ class MongoRepositoryGenerator
   ///
   /// Includes return type, method name, and parameters with types.
   String _generateMethodSignature(MethodElement method) {
-    final returnType =
-        method.returnType.getDisplayString(withNullability: true);
-    final params = method.parameters.map((p) {
-      final type = p.type.getDisplayString(withNullability: true);
-      return '$type ${p.name}';
-    }).join(', ');
+    final returnType = method.returnType.getDisplayString(
+      withNullability: true,
+    );
+    final params = method.formalParameters
+        .map((p) {
+          final type = p.type.getDisplayString(withNullability: true);
+          return '$type ${p.name}';
+        })
+        .join(', ');
 
     return '$returnType ${method.name}($params)';
   }

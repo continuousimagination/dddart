@@ -30,7 +30,7 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
     }
 
     final classElement = element;
-    final className = classElement.name;
+    final className = classElement.name!;
 
     // Validate that the class extends AggregateRoot or Value
     final classAnalysis = _analyzeClass(classElement);
@@ -138,7 +138,7 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
 
   /// Analyzes a class to determine its type and extract field information.
   ClassAnalysis _analyzeClass(ClassElement classElement) {
-    final className = classElement.name;
+    final className = classElement.name!;
     final supertype = classElement.supertype;
 
     if (supertype == null) {
@@ -155,11 +155,7 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
     // Extract field information
     final fields = _extractFields(classElement, classType);
 
-    return ClassAnalysis(
-      type: classType,
-      className: className,
-      fields: fields,
-    );
+    return ClassAnalysis(type: classType, className: className, fields: fields);
   }
 
   /// Determines the type of a class based on its inheritance hierarchy.
@@ -171,7 +167,7 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
       final supertype = current.supertype;
       if (supertype == null) break;
 
-      final supertypeName = supertype.element.name;
+      final supertypeName = supertype.element.name!;
 
       // Check for direct inheritance from DDDart base classes
       switch (supertypeName) {
@@ -195,58 +191,35 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
     ClassType classType,
   ) {
     final fields = <FieldInfo>[];
-
-    // For Entity classes, we need to explicitly include the inherited fields
-    // from the Entity base class (id, createdAt, updatedAt) since they're needed
-    // for persistence
-    if (classType == ClassType.entity) {
-      // Add Entity base class fields
-      final supertype = classElement.supertype;
-      if (supertype != null) {
-        for (final field in supertype.element.fields) {
-          if (['id', 'createdAt', 'updatedAt'].contains(field.name) &&
-              !field.isStatic &&
-              !field.isSynthetic) {
-            final fieldType = field.type;
-            final isNullable =
-                fieldType.nullabilitySuffix == NullabilitySuffix.question;
-            fields.add(
-              FieldInfo(
-                name: field.name,
-                type: fieldType,
-                isNullable: isNullable,
-              ),
-            );
-          }
+    final seen = <String>{};
+    InterfaceType? current = classElement.thisType;
+    while (current != null) {
+      final name = current.element.name;
+      // Domain bookkeeping is not part of the public persisted state. Aggregate
+      // identity/timestamps already have dedicated codec handling below.
+      if (name == 'AggregateRoot' || name == 'Value' || name == 'Object') break;
+      for (final field in current.element.fields) {
+        if (field.isStatic || field.isSynthetic) continue;
+        if (field.isPrivate && current.element != classElement) continue;
+        final fieldName = field.name!;
+        if (!seen.add(fieldName)) continue; // Most-derived declaration wins.
+        if (classType == ClassType.aggregateRoot &&
+            const {'id', 'createdAt', 'updatedAt'}.contains(fieldName)) {
+          continue;
         }
+        // InterfaceType keeps substitutions (Base<String>.payload is String).
+        // Reading the raw ClassElement field type would incorrectly retain T.
+        final type = current.getGetter(fieldName)!.returnType;
+        fields.add(
+          FieldInfo(
+            name: fieldName,
+            type: type,
+            isNullable: type.nullabilitySuffix == NullabilitySuffix.question,
+          ),
+        );
       }
-    }
-
-    // Get all fields from the class (excluding inherited ones from DDDart base classes)
-    for (final field in classElement.fields) {
-      // Skip static fields and synthetic fields
-      if (field.isStatic || field.isSynthetic) continue;
-
-      // Skip fields that are part of the DDDart base classes
-      // For AggregateRoot, skip id, createdAt, updatedAt (handled specially)
-      // For Entity, we already added these above
-      if (['id', 'createdAt', 'updatedAt'].contains(field.name) &&
-          (classType == ClassType.aggregateRoot ||
-              classType == ClassType.entity)) {
-        continue;
-      }
-
-      final fieldType = field.type;
-      final isNullable =
-          fieldType.nullabilitySuffix == NullabilitySuffix.question;
-
-      fields.add(
-        FieldInfo(
-          name: field.name,
-          type: fieldType,
-          isNullable: isNullable,
-        ),
-      );
+      if (name == 'Entity') break;
+      current = current.superclass;
     }
 
     return fields;
@@ -261,8 +234,10 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
   ) {
     // Generate configurable versions of the methods
     final toJsonWithConfigBody = _generateToJsonWithConfig(className, analysis);
-    final fromJsonWithConfigBody =
-        _generateFromJsonWithConfig(className, analysis);
+    final fromJsonWithConfigBody = _generateFromJsonWithConfig(
+      className,
+      analysis,
+    );
 
     return '''
 class ${className}JsonSerializer implements JsonSerializer<$className> {
@@ -571,8 +546,9 @@ $fromJsonWithConfigBody
     final createdAtKey = _applyFieldRename('createdAt', config.fieldRename);
     final updatedAtKey = _applyFieldRename('updatedAt', config.fieldRename);
 
-    buffer
-        .writeln("        id: UuidValue.fromString(json['$idKey'] as String),");
+    buffer.writeln(
+      "        id: UuidValue.fromString(json['$idKey'] as String),",
+    );
     buffer.writeln(
       "        createdAt: DateTime.parse(json['$createdAtKey'] as String),",
     );
@@ -967,8 +943,9 @@ $fromJsonWithConfigBody
 
     final itemType = typeArgs.first;
     final itemTypeName = itemType.getDisplayString(withNullability: false);
-    final itemTypeNameWithNull =
-        itemType.getDisplayString(withNullability: true);
+    final itemTypeNameWithNull = itemType.getDisplayString(
+      withNullability: true,
+    );
     final isSet = typeName.startsWith('Set<');
     final collectionMethod = isSet ? 'toSet()' : 'toList()';
 
@@ -1066,8 +1043,9 @@ $fromJsonWithConfigBody
 
     final itemType = typeArgs.first;
     final itemTypeName = itemType.getDisplayString(withNullability: false);
-    final itemTypeNameWithNull =
-        itemType.getDisplayString(withNullability: true);
+    final itemTypeNameWithNull = itemType.getDisplayString(
+      withNullability: true,
+    );
     final isSet = typeName.startsWith('Set<');
     final collectionMethod = isSet ? 'toSet()' : 'toList()';
 
@@ -1153,8 +1131,14 @@ $fromJsonWithConfigBody
 
   /// Checks if a type name represents a primitive type.
   bool _isPrimitiveType(String typeName) {
-    return ['String', 'int', 'double', 'bool', 'num', 'dynamic']
-        .contains(typeName);
+    return [
+      'String',
+      'int',
+      'double',
+      'bool',
+      'num',
+      'dynamic',
+    ].contains(typeName);
   }
 
   /// Checks if a type is an enum type.
@@ -1177,7 +1161,7 @@ $fromJsonWithConfigBody
         if (supertype == null) break;
 
         // Check if the supertype is named 'Enum' (from dart:core)
-        final supertypeName = supertype.element.name;
+        final supertypeName = supertype.element.name!;
         if (supertypeName == 'Enum') {
           return true;
         }
@@ -1203,7 +1187,7 @@ $fromJsonWithConfigBody
       final supertype = current.supertype;
       if (supertype == null) break;
 
-      final supertypeName = supertype.element.name;
+      final supertypeName = supertype.element.name!;
       if (['AggregateRoot', 'Entity', 'Value'].contains(supertypeName)) {
         return true;
       }
@@ -1240,9 +1224,4 @@ class FieldInfo {
 }
 
 /// Enumeration of class types for serialization.
-enum ClassType {
-  aggregateRoot,
-  entity,
-  value,
-  invalid,
-}
+enum ClassType { aggregateRoot, entity, value, invalid }

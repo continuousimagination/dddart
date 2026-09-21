@@ -32,10 +32,11 @@ import 'package:dddart_repository_mongodb/dddart_repository_mongodb.dart';
 void notAClass() {}
 ''',
         (resolver) async => (await resolver.findLibraryByName('test'))!,
+        readAllSourcesFromFilesystem: true,
       );
 
-      final function = library.topLevelElements
-          .whereType<FunctionElement>()
+      final function = library.children
+          .whereType<TopLevelFunctionElement>()
           .firstWhere((e) => e.name == 'notAClass');
 
       expect(
@@ -70,13 +71,14 @@ class Product extends AggregateRoot {
 }
 ''',
         (resolver) async => (await resolver.findLibraryByName('test'))!,
+        readAllSourcesFromFilesystem: true,
       );
 
-      final classElement = library.topLevelElements
+      final classElement = library.children
           .whereType<ClassElement>()
           .firstWhere((e) => e.name == 'Product');
 
-      final annotation = classElement.metadata.firstWhere(
+      final annotation = classElement.metadata.annotations.firstWhere(
         (a) =>
             a.computeConstantValue()?.type?.element?.name ==
             'GenerateMongoRepository',
@@ -91,9 +93,7 @@ class Product extends AggregateRoot {
       // Verify all critical features in one comprehensive test
       expect(
         output,
-        contains(
-          "collectionName => 'test_products'",
-        ),
+        contains("collectionName => 'test_products'"),
       ); // Custom collection name
       expect(
         output,
@@ -113,9 +113,7 @@ class Product extends AggregateRoot {
       ); // save method
       expect(
         output,
-        contains(
-          'Future<void> deleteById(UuidValue id)',
-        ),
+        contains('Future<void> deleteById(UuidValue id)'),
       ); // deleteById method
       expect(
         output,
@@ -126,9 +124,7 @@ class Product extends AggregateRoot {
       expect(output, contains("doc.remove('id')")); // ID cleanup in save
       expect(
         output,
-        contains(
-          'RepositoryException _mapMongoException',
-        ),
+        contains('RepositoryException _mapMongoException'),
       ); // Exception mapping
       expect(
         output,
@@ -136,9 +132,7 @@ class Product extends AggregateRoot {
       ); // Duplicate exception
       expect(
         output,
-        contains(
-          'RepositoryExceptionType.connection',
-        ),
+        contains('RepositoryExceptionType.connection'),
       ); // Connection exception
       expect(
         output,

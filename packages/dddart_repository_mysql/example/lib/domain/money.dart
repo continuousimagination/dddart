@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:dddart/dddart.dart';
+import 'package:dddart_json/dddart_json.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 part 'money.g.dart';
@@ -7,10 +10,7 @@ part 'money.g.dart';
 @Serializable()
 class Money extends Value {
   /// Creates a new Money value object.
-  const Money({
-    required this.amount,
-    required this.currency,
-  });
+  const Money({required this.amount, required this.currency});
 
   /// The monetary amount.
   final double amount;

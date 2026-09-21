@@ -33,10 +33,11 @@ import 'package:dddart_repository_rest/dddart_repository_rest.dart';
 void myFunction() {}
 ''',
         (resolver) async => (await resolver.findLibraryByName('test'))!,
+        readAllSourcesFromFilesystem: true,
       );
 
-      final function = library.topLevelElements
-          .whereType<FunctionElement>()
+      final function = library.children
+          .whereType<TopLevelFunctionElement>()
           .firstWhere((e) => e.name == 'myFunction');
 
       // Act & Assert: Expect InvalidGenerationSourceError
@@ -73,13 +74,14 @@ class NotAnAggregate {
 }
 ''',
         (resolver) async => (await resolver.findLibraryByName('test'))!,
+        readAllSourcesFromFilesystem: true,
       );
 
-      final classElement = library.topLevelElements
+      final classElement = library.children
           .whereType<ClassElement>()
           .firstWhere((e) => e.name == 'NotAnAggregate');
 
-      final annotation = classElement.metadata.firstWhere(
+      final annotation = classElement.metadata.annotations.firstWhere(
         (a) =>
             a.computeConstantValue()?.type?.element?.name ==
             'GenerateRestRepository',
@@ -118,13 +120,14 @@ class User extends AggregateRoot {
 }
 ''',
         (resolver) async => (await resolver.findLibraryByName('test'))!,
+        readAllSourcesFromFilesystem: true,
       );
 
-      final classElement = library.topLevelElements
+      final classElement = library.children
           .whereType<ClassElement>()
           .firstWhere((e) => e.name == 'User');
 
-      final annotation = classElement.metadata.firstWhere(
+      final annotation = classElement.metadata.annotations.firstWhere(
         (a) =>
             a.computeConstantValue()?.type?.element?.name ==
             'GenerateRestRepository',
@@ -165,13 +168,14 @@ class User extends AggregateRoot {
 }
 ''',
         (resolver) async => (await resolver.findLibraryByName('test'))!,
+        readAllSourcesFromFilesystem: true,
       );
 
-      final classElement = library.topLevelElements
+      final classElement = library.children
           .whereType<ClassElement>()
           .firstWhere((e) => e.name == 'User');
 
-      final annotation = classElement.metadata.firstWhere(
+      final annotation = classElement.metadata.annotations.firstWhere(
         (a) =>
             a.computeConstantValue()?.type?.element?.name ==
             'GenerateRestRepository',

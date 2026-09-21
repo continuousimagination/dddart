@@ -65,7 +65,7 @@ class ProductRestRepository extends ProductRestRepositoryBase {
   Future<List<Product>> findByCategory(String category) async {
     try {
       // Use the protected _connection member to make custom HTTP requests
-      final response = await _connection.httpClient.get(
+      final response = await _connection.client.get(
         Uri.parse('${_connection.baseUrl}$_resourcePath?category=$category'),
       );
 
@@ -97,7 +97,7 @@ class ProductRestRepository extends ProductRestRepositoryBase {
   ) async {
     try {
       // Build query string with multiple parameters
-      final response = await _connection.httpClient.get(
+      final response = await _connection.client.get(
         Uri.parse(
           '${_connection.baseUrl}$_resourcePath?minPrice=$minPrice&maxPrice=$maxPrice',
         ),

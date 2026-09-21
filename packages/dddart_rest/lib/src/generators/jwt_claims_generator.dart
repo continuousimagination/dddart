@@ -33,7 +33,7 @@ class JwtClaimsGenerator extends GeneratorForAnnotation<JwtSerializable> {
     }
 
     final classElement = element;
-    final className = classElement.name;
+    final className = classElement.name!;
 
     // Extract field information
     final fields = _extractFields(classElement);
@@ -56,11 +56,7 @@ class JwtClaimsGenerator extends GeneratorForAnnotation<JwtSerializable> {
           fieldType.nullabilitySuffix == NullabilitySuffix.question;
 
       fields.add(
-        FieldInfo(
-          name: field.name,
-          type: fieldType,
-          isNullable: isNullable,
-        ),
+        FieldInfo(name: field.name!, type: fieldType, isNullable: isNullable),
       );
     }
 
@@ -103,9 +99,7 @@ class JwtClaimsGenerator extends GeneratorForAnnotation<JwtSerializable> {
 
     // Generate claimsToJson method
     buffer.writeln('  /// Converts $className to JWT payload JSON');
-    buffer.writeln(
-      '  Map<String, dynamic> claimsToJson($className claims) {',
-    );
+    buffer.writeln('  Map<String, dynamic> claimsToJson($className claims) {');
     buffer.writeln('    return {');
 
     for (final field in sortedFields) {
@@ -281,8 +275,14 @@ class JwtClaimsGenerator extends GeneratorForAnnotation<JwtSerializable> {
 
   /// Checks if a type name represents a primitive type.
   bool _isPrimitiveType(String typeName) {
-    return ['String', 'int', 'double', 'bool', 'num', 'dynamic']
-        .contains(typeName);
+    return [
+      'String',
+      'int',
+      'double',
+      'bool',
+      'num',
+      'dynamic',
+    ].contains(typeName);
   }
 }
 

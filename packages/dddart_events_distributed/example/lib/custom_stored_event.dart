@@ -1,8 +1,11 @@
 /// Example of extending StoredEvent with custom authorization fields.
 library;
 
+import 'dart:convert';
+
 import 'package:dddart/dddart.dart';
 import 'package:dddart_events_distributed/dddart_events_distributed.dart';
+import 'package:dddart_json/dddart_json.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 part 'custom_stored_event.g.dart';
@@ -19,6 +22,7 @@ class CustomStoredEvent extends StoredEvent {
     required super.aggregateId,
     required super.eventType,
     required super.eventJson,
+    super.updatedAt,
     super.userId,
     super.tenantId,
     super.sessionId,

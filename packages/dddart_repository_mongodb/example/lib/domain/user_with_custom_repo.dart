@@ -1,7 +1,11 @@
+import 'dart:convert';
+
 import 'package:dddart/dddart.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
+import 'package:dddart_json/dddart_json.dart';
 import 'package:dddart_repository_mongodb/dddart_repository_mongodb.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:mongo_dart/mongo_dart.dart';
+
 import 'user.dart';
 import 'user_repository.dart';
 
@@ -23,8 +27,10 @@ class UserWithCustomRepo extends AggregateRoot {
     required this.firstName,
     required this.lastName,
     required this.email,
-    UuidValue? id,
-  }) : super(id: id);
+    super.id,
+    super.createdAt,
+    super.updatedAt,
+  });
 
   /// User's first name.
   final String firstName;

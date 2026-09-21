@@ -380,7 +380,7 @@ class SchemaGenerator {
       if (sqlType != null) {
         columns.add(
           ColumnDefinition(
-            name: field.name,
+            name: field.name!,
             sqlType: sqlType,
             dartType: dartTypeName,
             isNullable: fieldType.nullabilitySuffix.toString().contains('?'),
@@ -502,7 +502,7 @@ class SchemaGenerator {
 
     return TableDefinition(
       tableName: tableName,
-      className: entityClass.name,
+      className: entityClass.name!,
       columns: columns,
       foreignKeys: foreignKeys,
       isAggregateRoot: false,

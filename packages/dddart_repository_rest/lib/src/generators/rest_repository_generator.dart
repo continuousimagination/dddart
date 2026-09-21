@@ -35,7 +35,7 @@ class RestRepositoryGenerator
     }
 
     final classElement = element;
-    final className = classElement.name;
+    final className = classElement.name!;
 
     // Validate class extends AggregateRoot
     if (!_extendsAggregateRoot(classElement)) {
@@ -120,7 +120,7 @@ class RestRepositoryGenerator
 
   /// Validates that a class has the @Serializable annotation.
   bool _hasSerializableAnnotation(ClassElement element) {
-    return element.metadata.any((annotation) {
+    return element.metadata.annotations.any((annotation) {
       final value = annotation.computeConstantValue();
       if (value == null) return false;
       final typeName = value.type?.element?.name;
@@ -189,11 +189,11 @@ class RestRepositoryGenerator
     // Get methods from all superinterfaces (including Repository<T>)
     // but exclude Object and system classes
     for (final supertype in interfaceType.allSupertypes) {
-      final supertypeName = supertype.element.name;
+      final supertypeName = supertype.element.name!;
       // Skip Object and system classes
       if (supertypeName == 'Object' ||
           supertypeName.startsWith('_') ||
-          supertype.element.library.name.startsWith('dart.')) {
+          supertype.element.library.isInSdk) {
         continue;
       }
       methods.addAll(supertype.methods);
@@ -221,9 +221,7 @@ class RestRepositoryGenerator
     final buffer = StringBuffer();
 
     // Class documentation
-    buffer.writeln(
-      '/// Generated REST repository for [$className] aggregate.',
-    );
+    buffer.writeln('/// Generated REST repository for [$className] aggregate.');
     buffer.writeln('///');
     buffer.writeln(
       '/// This class can be used directly for basic CRUD operations or extended',
@@ -498,12 +496,15 @@ class RestRepositoryGenerator
   ///
   /// Includes return type, method name, and parameters with types.
   String _generateMethodSignature(MethodElement method) {
-    final returnType =
-        method.returnType.getDisplayString(withNullability: true);
-    final params = method.parameters.map((p) {
-      final type = p.type.getDisplayString(withNullability: true);
-      return '$type ${p.name}';
-    }).join(', ');
+    final returnType = method.returnType.getDisplayString(
+      withNullability: true,
+    );
+    final params = method.formalParameters
+        .map((p) {
+          final type = p.type.getDisplayString(withNullability: true);
+          return '$type ${p.name}';
+        })
+        .join(', ');
 
     return '$returnType ${method.name}($params)';
   }
@@ -514,8 +515,5 @@ class RestRepositoryGenerator
 /// This function is referenced in build.yaml and called by build_runner
 /// to create the generator.
 Builder restRepositoryBuilder(BuilderOptions options) {
-  return SharedPartBuilder(
-    [RestRepositoryGenerator()],
-    'rest_repository',
-  );
+  return SharedPartBuilder([RestRepositoryGenerator()], 'rest_repository');
 }
