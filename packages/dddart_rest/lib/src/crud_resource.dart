@@ -473,11 +473,11 @@ class CrudResource<T extends AggregateRoot, TClaims> {
         }
       }
 
-      await repository.save(aggregate);
-
       final responseSerializerEntry = _selectSerializer(
         request.headers['accept'],
       );
+
+      await repository.save(aggregate);
 
       // Generate ETag for the created aggregate
       final etag = _etagGenerator.generate(aggregate);
@@ -593,6 +593,10 @@ class CrudResource<T extends AggregateRoot, TClaims> {
         }
       }
 
+      final responseSerializerEntry = _selectSerializer(
+        request.headers['accept'],
+      );
+
       // Check If-Match header for optimistic concurrency control
       final ifMatch = request.headers['if-match'];
       if (ifMatch != null) {
@@ -623,10 +627,6 @@ class CrudResource<T extends AggregateRoot, TClaims> {
       }
 
       await repository.save(aggregate);
-
-      final responseSerializerEntry = _selectSerializer(
-        request.headers['accept'],
-      );
 
       // Generate ETag for the updated aggregate
       final etag = _etagGenerator.generate(aggregate);

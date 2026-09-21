@@ -1316,6 +1316,15 @@ configurable through the positive `deliveryTimeout` constructor/factory
 parameter. A timeout is terminal even if the borrowed transport completes later;
 the runtime never retries delivery or begins another invocation.
 
+An optional synchronous `HttpApiV2Preflight` runs before request decoding in the
+adapter and both runtime construction paths. Return null to continue all normal
+validation and authentication, or a400–599 Shelf Response to reject. Success and
+redirect responses or callback exceptions fail closed with static errors.
+Keep validators pure. Their boundary may emit bounded local rejection telemetry,
+but must perform no network, repository, authentication or protected I/O. Nested
+event data is borrowed read-only; only the top-level map view is unmodifiable.
+Rejections use the ordinary response encoder.
+
 The v2 adapter preserves encoded raw paths, repeated raw queries, cookie arrays,
 binary bytes and typed invocation metadata in Shelf context. Duplicate request
 headers remain gateway-combined strings; application credential policy must

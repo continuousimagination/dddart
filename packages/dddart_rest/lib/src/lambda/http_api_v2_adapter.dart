@@ -163,18 +163,47 @@ class HttpApiV2Request {
 }
 
 /// Adapts a validated v2 invocation to a socket-independent Shelf handler.
+///
+/// Returning null continues all normal validation and authentication. Returning
+/// a response rejects; only400–599 are permitted. The callback is synchronous,
+/// borrows nested event values read-only. Pure validators may be wrapped with
+/// bounded local rejection telemetry, but no network, repository,
+/// authentication or other protected I/O may run in the callback.
+typedef HttpApiV2Preflight =
+    Response? Function(
+      Map<String, Object?> event,
+      LambdaInvocationContext context,
+    );
+
+/// Adapts a validated v2 invocation to a socket-independent Shelf handler.
 class HttpApiV2Adapter {
   /// Uses the same handler that can be hosted by a normal Shelf server.
-  const HttpApiV2Adapter(this.handler);
+  const HttpApiV2Adapter(this.handler, {this.preflight});
 
   /// Application routing and middleware.
   final Handler handler;
+
+  /// Optional rejection-only policy before any request body decoding.
+  final HttpApiV2Preflight? preflight;
 
   /// Returns a v2 response; handler failures propagate to the Runtime API loop.
   Future<Map<String, Object?>> handle(
     Map<String, Object?> event, {
     required LambdaInvocationContext context,
   }) async {
+    Response? rejection;
+    try {
+      // Only the top-level view is immutable; nested data remains borrowed.
+      rejection = preflight?.call(Map.unmodifiable(event), context);
+    } catch (_) {
+      throw StateError('HTTP ingress preflight failed');
+    }
+    if (rejection != null) {
+      if (rejection.statusCode < 400 || rejection.statusCode > 599) {
+        throw StateError('HTTP ingress preflight must reject');
+      }
+      return _encodeResponse(rejection);
+    }
     late HttpApiV2Request input;
     late Uri uri;
     try {
@@ -212,7 +241,10 @@ class HttpApiV2Adapter {
         HttpApiV2Request.contextKey: input,
       },
     );
-    final response = await handler(request);
+    return _encodeResponse(await handler(request));
+  }
+
+  static Future<Map<String, Object?>> _encodeResponse(Response response) async {
     final bytes = await response.read().expand((chunk) => chunk).toList();
     var encoded = false;
     late String body;

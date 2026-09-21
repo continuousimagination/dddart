@@ -20,8 +20,9 @@ class LambdaRuntime {
     required this.client,
     required this.endpoint,
     this.deliveryTimeout = const Duration(seconds: 1),
+    HttpApiV2Preflight? preflight,
     DateTime Function()? clock,
-  }) : _adapter = HttpApiV2Adapter(handler),
+  }) : _adapter = HttpApiV2Adapter(handler, preflight: preflight),
        _clock = clock ?? DateTime.now {
     _validateEndpoint(endpoint);
     _validateDeliveryTimeout(deliveryTimeout);
@@ -46,6 +47,7 @@ class LambdaRuntime {
     required http.Client client,
     required Uri endpoint,
     Duration deliveryTimeout = const Duration(seconds: 1),
+    HttpApiV2Preflight? preflight,
     DateTime Function()? clock,
   }) async {
     _validateEndpoint(endpoint);
@@ -68,6 +70,7 @@ class LambdaRuntime {
       client: client,
       endpoint: endpoint,
       deliveryTimeout: deliveryTimeout,
+      preflight: preflight,
       clock: clock,
     );
   }

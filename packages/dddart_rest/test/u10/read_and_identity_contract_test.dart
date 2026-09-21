@@ -56,6 +56,12 @@ class _Authentication implements AuthenticationHandler<String> {
       AuthenticationResult.success(userId: 'test', claims: 'claims');
 }
 
+class _DeniedAuthentication implements AuthenticationHandler<String> {
+  @override
+  Future<AuthenticationResult<String>> authenticate(Request request) async =>
+      AuthenticationResult.failure('Access denied');
+}
+
 class _Authorization extends AuthorizationHandler<_Record, String> {
   bool allowed = false;
   int reads = 0;
@@ -113,6 +119,73 @@ void main() {
       authenticationHandler: _Authentication(),
       authorizationHandler: auth,
     );
+  });
+  for (final method in ['POST', 'PUT']) {
+    test('$method rejects bad Accept before any mutation', () async {
+      auth.allowed = true;
+      final request = Request(
+        method,
+        Uri.parse('https://example.invalid/records/${id.uuid}'),
+        headers: {
+          'content-type': 'application/json',
+          'accept': 'application/xml',
+        },
+        body: jsonEncode({'id': id.uuid}),
+      );
+      final response = method == 'POST'
+          ? await resource.handleCreate(request)
+          : await resource.handleUpdate(request, id.uuid);
+      expect(response.statusCode, 406);
+      expect(repo.writes, 0);
+      expect(repo.reads, 0);
+    });
+    test('$method keeps auth denial ahead of bad Accept', () async {
+      Request request() => Request(
+        method,
+        Uri.parse('https://example.invalid/records/${id.uuid}'),
+        headers: {
+          'content-type': 'application/json',
+          'accept': 'application/xml',
+        },
+        body: jsonEncode({'id': id.uuid}),
+      );
+      final denied = CrudResource<_Record, String>(
+        path: '/records',
+        repository: repo,
+        serializers: {'application/json': _Codec()},
+        authenticationHandler: _DeniedAuthentication(),
+        authorizationHandler: auth,
+      );
+      final unauthenticated = method == 'POST'
+          ? await denied.handleCreate(request())
+          : await denied.handleUpdate(request(), id.uuid);
+      expect(unauthenticated.statusCode, 401);
+      final forbidden = method == 'POST'
+          ? await resource.handleCreate(request())
+          : await resource.handleUpdate(request(), id.uuid);
+      expect(forbidden.statusCode, 403);
+      expect(repo.writes, 0);
+      expect(repo.reads, 0);
+    });
+  }
+  test('PUT negotiates before optional If-Match repository read', () async {
+    auth.allowed = true;
+    final response = await resource.handleUpdate(
+      Request(
+        'PUT',
+        Uri.parse('https://example.invalid/records/${id.uuid}'),
+        headers: {
+          'content-type': 'application/json',
+          'accept': 'application/xml',
+          'if-match': 'different',
+        },
+        body: jsonEncode({'id': id.uuid}),
+      ),
+      id.uuid,
+    );
+    expect(response.statusCode, 406);
+    expect(repo.reads, 0);
+    expect(repo.writes, 0);
   });
   test('denied item read touches no repository', () async {
     final response = await resource.handleGetById(
