@@ -138,7 +138,7 @@ mixin Benign on VersionedAggregateRoot {
 }
 ''');
       expect(output, contains('instance.revision.value'));
-      expect(output, contains('revision: Revision('));
+      expect(output, contains('revision: Revision.fromJson('));
     },
   );
 }

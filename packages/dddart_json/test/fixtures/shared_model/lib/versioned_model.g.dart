@@ -62,12 +62,11 @@ class VersionedRecordJsonSerializer implements JsonSerializer<VersionedRecord> {
     }
     try {
       return VersionedRecord(
-        revision: Revision(
+        revision: Revision.fromJson(
           json[SerializationUtils.applyFieldRename(
-                'revision',
-                effectiveConfig.fieldRename,
-              )]
-              as int,
+            'revision',
+            effectiveConfig.fieldRename,
+          )],
         ),
         tags:
             (json[SerializationUtils.applyFieldRename(

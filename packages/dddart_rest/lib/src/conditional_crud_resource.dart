@@ -59,8 +59,8 @@ class ConditionalCrudResource<T extends VersionedAggregateRoot, TClaims>
   Map<String, dynamic> _representation(T value) {
     final wire =
         jsonDecode(jsonEncode(_codec.toJson(value))) as Map<String, dynamic>;
+    wire['revision'] = _wireRevision(wire['revision']).value;
     if (wire['id'] != value.id.uuid ||
-        wire['revision'] is! int ||
         wire['revision'] != value.revision.value ||
         wire['createdAt'] != value.createdAt.toIso8601String() ||
         wire['updatedAt'] != value.updatedAt.toIso8601String()) {
@@ -110,13 +110,12 @@ class ConditionalCrudResource<T extends VersionedAggregateRoot, TClaims>
         final decoded = jsonDecode(body);
         if (decoded is! Map<String, dynamic> ||
             decoded['id'] is! String ||
-            decoded['revision'] is! int ||
             decoded['createdAt'] is! String ||
             decoded['updatedAt'] is! String) {
           throw const FormatException('Incomplete conditional representation');
         }
         input = decoded;
-        Revision(decoded['revision'] as int);
+        decoded['revision'] = Revision.fromJson(decoded['revision']).value;
       },
     );
     if (value.id != uuid ||
@@ -204,5 +203,13 @@ class ConditionalCrudResource<T extends VersionedAggregateRoot, TClaims>
           ).every((index) => _same(a[index], b[index]));
     }
     return a == b;
+  }
+
+  Revision _wireRevision(Object? value) {
+    try {
+      return Revision.fromJson(value);
+    } on FormatException {
+      throw const RepositoryCapabilityException();
+    }
   }
 }

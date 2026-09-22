@@ -36,6 +36,31 @@ void main() {
     revision: revision,
   );
 
+  test(
+    'generated codec accepts whole numeric forms and emits canonical integers',
+    () {
+      final wire = codec.toJson(sample(const domain.Revision.zero()));
+      for (final token in ['0.0', '1.0', '1e0', '9007199254740991.0']) {
+        final encoded = jsonEncode(
+          wire,
+        ).replaceFirst('"revision":0', '"revision":$token');
+        final value = codec.deserialize(encoded);
+        expect(
+          value.revision.value,
+          token.startsWith('9007')
+              ? domain.Revision.maxValue
+              : token.startsWith('0')
+              ? 0
+              : 1,
+        );
+        expect(
+          jsonEncode(codec.toJson(value)['revision']),
+          value.revision.value.toString(),
+        );
+      }
+    },
+  );
+
   test('zero, positive and maximum revision round trip as integers', () {
     for (final number in [0, 1, domain.Revision.maxValue]) {
       final value = sample(domain.Revision(number));

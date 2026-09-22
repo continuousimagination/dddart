@@ -136,6 +136,70 @@ void main() {
       body: body ?? (method == 'PUT' ? codec.serialize(value) : null),
     ),
   );
+  for (final token in ['0.0', '0e0']) {
+    test('conditional PUT normalizes whole create revision $token', () async {
+      final value = record();
+      final response = await invoke(
+        'PUT',
+        value,
+        headers: {'if-none-match': '*'},
+        body: codec
+            .serialize(value)
+            .replaceFirst('"revision":0', '"revision":$token'),
+      );
+      expect(response.statusCode, 201);
+      expect(repository.calls, ['save']);
+      expect(jsonDecode(await response.readAsString())['revision'], 1);
+    });
+  }
+  for (final token in ['1.0', '1e0']) {
+    test('conditional PUT normalizes whole update revision $token', () async {
+      final value = record();
+      await repository.inner.save(
+        value,
+        precondition: const WritePrecondition.absent(),
+      );
+      final response = await invoke(
+        'PUT',
+        value,
+        headers: {'if-match': '"r1"'},
+        body: codec
+            .serialize(value)
+            .replaceFirst('"revision":0', '"revision":$token'),
+      );
+      expect(response.statusCode, 200);
+      expect(repository.calls, ['save']);
+      expect(jsonDecode(await response.readAsString())['revision'], 2);
+    });
+  }
+  test(
+    'invalid decoded revision forms reject with zero storage operations',
+    () async {
+      for (final token in [
+        '0.5',
+        '1.5',
+        '-1',
+        '9007199254740992.0',
+        '9007199254740993',
+        '1e309',
+        'true',
+        '"1"',
+        'null',
+      ]) {
+        final value = record();
+        final response = await invoke(
+          'PUT',
+          value,
+          headers: {'if-none-match': '*'},
+          body: codec
+              .serialize(value)
+              .replaceFirst('"revision":0', '"revision":$token'),
+        );
+        expect(response.statusCode, 400, reason: token);
+        expect(repository.calls, isEmpty);
+      }
+    },
+  );
   test(
     'create201 update200 accepted body and GET strong validator use one save without reread',
     () async {

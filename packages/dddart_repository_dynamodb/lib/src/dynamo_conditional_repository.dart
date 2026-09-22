@@ -57,12 +57,11 @@ class DynamoConditionalRepository<T extends VersionedAggregateRoot>
         );
       }
       final wire = AttributeValueConverter.attributeMapToJsonMap(item);
-      if (wire['id'] != id.uuid ||
-          wire['revision'] is! int ||
-          (wire['revision'] as int) <= 0) {
+      final revision = _wireRevision(wire['revision']);
+      if (wire['id'] != id.uuid || revision.value <= 0) {
         throw const RepositoryCapabilityException();
       }
-      Revision(wire['revision'] as int);
+      wire['revision'] = revision.value;
       if (wire.containsKey(retirementMarker)) {
         if (wire[retirementMarker] != true || wire.length != 3) {
           throw const RepositoryCapabilityException();
@@ -174,9 +173,9 @@ class DynamoConditionalRepository<T extends VersionedAggregateRoot>
 
   Map<String, dynamic> _wire(T value) {
     final wire = _detach(serializer.toJson(value));
+    wire['revision'] = _wireRevision(wire['revision']).value;
     if (wire.containsKey(retirementMarker) ||
         wire['id'] != value.id.uuid ||
-        wire['revision'] is! int ||
         wire['revision'] != value.revision.value ||
         wire['createdAt'] != value.createdAt.toIso8601String() ||
         wire['updatedAt'] != value.updatedAt.toIso8601String()) {
@@ -198,5 +197,13 @@ class DynamoConditionalRepository<T extends VersionedAggregateRoot>
           List.generate(a.length, (i) => i).every((i) => _same(a[i], b[i]));
     }
     return a == b;
+  }
+
+  Revision _wireRevision(Object? value) {
+    try {
+      return Revision.fromJson(value);
+    } on FormatException {
+      throw const RepositoryCapabilityException();
+    }
   }
 }

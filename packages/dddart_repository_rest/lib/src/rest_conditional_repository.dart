@@ -181,8 +181,8 @@ class RestConditionalRepository<T extends VersionedAggregateRoot>
     final wire =
         jsonDecode(jsonEncode(serializer.toJson(value)))
             as Map<String, dynamic>;
+    wire['revision'] = _wireRevision(wire['revision']).value;
     if (wire['id'] != value.id.uuid ||
-        wire['revision'] is! int ||
         wire['revision'] != value.revision.value ||
         wire['createdAt'] != value.createdAt.toIso8601String() ||
         wire['updatedAt'] != value.updatedAt.toIso8601String()) {
@@ -214,6 +214,14 @@ class RestConditionalRepository<T extends VersionedAggregateRoot>
       _ => RepositoryExceptionType.unknown,
     },
   );
+
+  Revision _wireRevision(Object? value) {
+    try {
+      return Revision.fromJson(value);
+    } on FormatException {
+      throw const RepositoryCapabilityException();
+    }
+  }
 
   bool _same(Object? a, Object? b) {
     if (a is Map && b is Map) {

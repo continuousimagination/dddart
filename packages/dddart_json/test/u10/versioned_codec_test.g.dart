@@ -66,12 +66,11 @@ class VersionedRecordJsonSerializer implements JsonSerializer<VersionedRecord> {
                   effectiveConfig.fieldRename,
                 )]
                 as String,
-        revision: domain.Revision(
+        revision: domain.Revision.fromJson(
           json[SerializationUtils.applyFieldRename(
-                'revision',
-                effectiveConfig.fieldRename,
-              )]
-              as int,
+            'revision',
+            effectiveConfig.fieldRename,
+          )],
         ),
         id: UuidValue.fromString(
           json[SerializationUtils.applyFieldRename(

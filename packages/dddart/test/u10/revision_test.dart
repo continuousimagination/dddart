@@ -1,7 +1,48 @@
+import 'dart:convert';
 import 'package:dddart/dddart.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('decoded whole JSON numbers normalize identically without coercion', () {
+    for (final token in [
+      '0',
+      '0.0',
+      '1',
+      '1.0',
+      '1e0',
+      '9007199254740991',
+      '9007199254740991.0',
+    ]) {
+      final value = Revision.fromJson(jsonDecode(token));
+      expect(value.value, isA<int>());
+      expect(
+        jsonEncode(value.value),
+        token.startsWith('9007')
+            ? '9007199254740991'
+            : token.startsWith('0')
+                ? '0'
+                : '1',
+      );
+    }
+    for (final value in [
+      null,
+      true,
+      '1',
+      double.nan,
+      double.infinity,
+      double.negativeInfinity,
+      -1,
+      0.5,
+      1.5,
+      9007199254740992,
+      9007199254740992.0,
+    ]) {
+      expect(() => Revision.fromJson(value), throwsFormatException);
+    }
+    for (final token in ['9007199254740993', '1e309', 'null', 'true', '"1"']) {
+      expect(() => Revision.fromJson(jsonDecode(token)), throwsFormatException);
+    }
+  });
   test('revision validates the portable integer range at runtime', () {
     expect(const Revision.zero(), Revision(0));
     expect(Revision(1), Revision(1));

@@ -25,6 +25,33 @@ VersionedRecord _record({int revision = 0, UuidValue? id}) => VersionedRecord(
 );
 void main() {
   test(
+    'GET normalizes whole numeric revision while preserving strict ETag',
+    () async {
+      final value = _record(revision: 1);
+      for (final token in ['1.0', '1e0']) {
+        var sends = 0;
+        final body = VersionedRecordJsonSerializer()
+            .serialize(value)
+            .replaceFirst('"revision":1', '"revision":$token');
+        final repository = ConditionalProbeRestRepository(
+          RestConnection(
+            baseUrl: 'https://example.invalid',
+            httpClient: MockClient((_) async {
+              sends++;
+              return http.Response(
+                body,
+                200,
+                headers: {'content-type': 'application/json', 'etag': '"r1"'},
+              );
+            }),
+          ),
+        );
+        expect((await repository.getById(value.id)).revision, Revision(1));
+        expect(sends, 1);
+      }
+    },
+  );
+  test(
     'denied authenticated write obtains one token and never refreshes or retries',
     () async {
       final auth = _Auth();

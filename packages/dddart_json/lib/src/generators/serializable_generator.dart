@@ -481,7 +481,7 @@ $fromJsonWithConfigBody
         "json[SerializationUtils.applyFieldRename('$fieldName', effectiveConfig.fieldRename)]";
 
     if (field.revisionConstructor != null) {
-      final parsed = '${field.revisionConstructor}($jsonAccess as int)';
+      final parsed = '${field.revisionConstructor}.fromJson($jsonAccess)';
       return field.isNullable ? '$jsonAccess == null ? null : $parsed' : parsed;
     }
 

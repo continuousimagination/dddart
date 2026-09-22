@@ -62,6 +62,30 @@ DynamoConnection _connect(_Transport transport) => DynamoConnection(
 );
 
 void main() {
+  test(
+    'strong reads normalize equivalent whole Dynamo numeric revisions',
+    () async {
+      final value = _record(revision: 1);
+      final wire = VersionedRecordJsonSerializer().toJson(value);
+      for (final token in ['1.0', '1e0', '9007199254740991.0']) {
+        final item = AttributeValueConverter.jsonMapToAttributeMap(
+          wire,
+        ).map((k, v) => MapEntry(k, v.toJson()));
+        item['revision'] = {'N': token};
+        final transport = _Transport((_, __) async => _reply({'Item': item}));
+        final repository = ConditionalProbeDynamoRepository(
+          _connect(transport),
+          tableName: 'records',
+        );
+        final observed = await repository.getById(value.id);
+        expect(
+          observed.revision.value,
+          token.startsWith('9007') ? Revision.maxValue : 1,
+        );
+        expect(transport.requests, hasLength(1));
+      }
+    },
+  );
   test('missing item remains a typed one-read notFound', () async {
     final transport = _Transport((_, __) async => _reply({}));
     final repo = ConditionalProbeDynamoRepository(
