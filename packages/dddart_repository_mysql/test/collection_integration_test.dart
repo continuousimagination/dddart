@@ -71,18 +71,17 @@ void main() {
     group('Primitive Collections', () {
       test('should create junction tables for primitive collections', () async {
         if (!mysqlAvailable) return;
-        final repo =
-            TestPrimitiveCollectionsMysqlRepository(helper!.connection);
+        final repo = TestPrimitiveCollectionsMysqlRepository(
+          helper!.connection,
+        );
         await repo.createTables();
 
         // Verify all junction tables were created
+        expect(await helper!.tableExists('test_primitive_collections'), isTrue);
         expect(
-          await helper!.tableExists('test_primitive_collections'),
-          isTrue,
-        );
-        expect(
-          await helper!
-              .tableExists('test_primitive_collections_favoriteNumbers_items'),
+          await helper!.tableExists(
+            'test_primitive_collections_favoriteNumbers_items',
+          ),
           isTrue,
         );
         expect(
@@ -90,15 +89,17 @@ void main() {
           isTrue,
         );
         expect(
-          await helper!
-              .tableExists('test_primitive_collections_scoresByGame_items'),
+          await helper!.tableExists(
+            'test_primitive_collections_scoresByGame_items',
+          ),
           isTrue,
         );
       });
 
       test('should save and load List<int> correctly', () async {
-        final repo =
-            TestPrimitiveCollectionsMysqlRepository(helper!.connection);
+        final repo = TestPrimitiveCollectionsMysqlRepository(
+          helper!.connection,
+        );
         await repo.createTables();
 
         final aggregate = TestPrimitiveCollections(
@@ -115,8 +116,9 @@ void main() {
       });
 
       test('should preserve list order', () async {
-        final repo =
-            TestPrimitiveCollectionsMysqlRepository(helper!.connection);
+        final repo = TestPrimitiveCollectionsMysqlRepository(
+          helper!.connection,
+        );
         await repo.createTables();
 
         final aggregate = TestPrimitiveCollections(
@@ -133,8 +135,9 @@ void main() {
       });
 
       test('should save and load Set<String> correctly', () async {
-        final repo =
-            TestPrimitiveCollectionsMysqlRepository(helper!.connection);
+        final repo = TestPrimitiveCollectionsMysqlRepository(
+          helper!.connection,
+        );
         await repo.createTables();
 
         final aggregate = TestPrimitiveCollections(
@@ -151,19 +154,16 @@ void main() {
       });
 
       test('should save and load Map<String, int> correctly', () async {
-        final repo =
-            TestPrimitiveCollectionsMysqlRepository(helper!.connection);
+        final repo = TestPrimitiveCollectionsMysqlRepository(
+          helper!.connection,
+        );
         await repo.createTables();
 
         final aggregate = TestPrimitiveCollections(
           name: 'Score Test',
           favoriteNumbers: [],
           tags: {},
-          scoresByGame: {
-            'chess': 1200,
-            'go': 800,
-            'poker': 500,
-          },
+          scoresByGame: {'chess': 1200, 'go': 800, 'poker': 500},
         );
 
         await repo.save(aggregate);
@@ -171,17 +171,14 @@ void main() {
 
         expect(
           loaded.scoresByGame,
-          equals({
-            'chess': 1200,
-            'go': 800,
-            'poker': 500,
-          }),
+          equals({'chess': 1200, 'go': 800, 'poker': 500}),
         );
       });
 
       test('should handle empty collections', () async {
-        final repo =
-            TestPrimitiveCollectionsMysqlRepository(helper!.connection);
+        final repo = TestPrimitiveCollectionsMysqlRepository(
+          helper!.connection,
+        );
         await repo.createTables();
 
         final aggregate = TestPrimitiveCollections(
@@ -200,8 +197,9 @@ void main() {
       });
 
       test('should update collections correctly', () async {
-        final repo =
-            TestPrimitiveCollectionsMysqlRepository(helper!.connection);
+        final repo = TestPrimitiveCollectionsMysqlRepository(
+          helper!.connection,
+        );
         await repo.createTables();
 
         final aggregate = TestPrimitiveCollections(
@@ -231,8 +229,9 @@ void main() {
       });
 
       test('should cascade delete collection items', () async {
-        final repo =
-            TestPrimitiveCollectionsMysqlRepository(helper!.connection);
+        final repo = TestPrimitiveCollectionsMysqlRepository(
+          helper!.connection,
+        );
         await repo.createTables();
 
         final aggregate = TestPrimitiveCollections(
@@ -246,8 +245,9 @@ void main() {
 
         // Verify items exist
         expect(
-          await helper!
-              .countRows('test_primitive_collections_favoriteNumbers_items'),
+          await helper!.countRows(
+            'test_primitive_collections_favoriteNumbers_items',
+          ),
           equals(3),
         );
         expect(
@@ -255,8 +255,9 @@ void main() {
           equals(2),
         );
         expect(
-          await helper!
-              .countRows('test_primitive_collections_scoresByGame_items'),
+          await helper!.countRows(
+            'test_primitive_collections_scoresByGame_items',
+          ),
           equals(1),
         );
 
@@ -265,8 +266,9 @@ void main() {
 
         // Verify cascade delete
         expect(
-          await helper!
-              .countRows('test_primitive_collections_favoriteNumbers_items'),
+          await helper!.countRows(
+            'test_primitive_collections_favoriteNumbers_items',
+          ),
           equals(0),
         );
         expect(
@@ -274,35 +276,39 @@ void main() {
           equals(0),
         );
         expect(
-          await helper!
-              .countRows('test_primitive_collections_scoresByGame_items'),
+          await helper!.countRows(
+            'test_primitive_collections_scoresByGame_items',
+          ),
           equals(0),
         );
       });
     });
 
     group('Value Object Collections', () {
-      test('should create junction tables with flattened value fields',
-          () async {
-        final repo = TestValueCollectionsMysqlRepository(helper!.connection);
-        await repo.createTables();
+      test(
+        'should create junction tables with flattened value fields',
+        () async {
+          final repo = TestValueCollectionsMysqlRepository(helper!.connection);
+          await repo.createTables();
 
-        // Verify junction tables exist
-        expect(await helper!.tableExists('test_value_collections'), isTrue);
-        expect(
-          await helper!.tableExists('test_value_collections_payments_items'),
-          isTrue,
-        );
-        expect(
-          await helper!.tableExists('test_value_collections_addresses_items'),
-          isTrue,
-        );
-        expect(
-          await helper!
-              .tableExists('test_value_collections_pricesByProduct_items'),
-          isTrue,
-        );
-      });
+          // Verify junction tables exist
+          expect(await helper!.tableExists('test_value_collections'), isTrue);
+          expect(
+            await helper!.tableExists('test_value_collections_payments_items'),
+            isTrue,
+          );
+          expect(
+            await helper!.tableExists('test_value_collections_addresses_items'),
+            isTrue,
+          );
+          expect(
+            await helper!.tableExists(
+              'test_value_collections_pricesByProduct_items',
+            ),
+            isTrue,
+          );
+        },
+      );
 
       test('should save and load List<Money> correctly', () async {
         final repo = TestValueCollectionsMysqlRepository(helper!.connection);
@@ -359,14 +365,8 @@ void main() {
         final loaded = await repo.getById(aggregate.id);
 
         expect(loaded.addresses, hasLength(2));
-        expect(
-          loaded.addresses.any((a) => a.street == '123 Main St'),
-          isTrue,
-        );
-        expect(
-          loaded.addresses.any((a) => a.street == '456 Oak Ave'),
-          isTrue,
-        );
+        expect(loaded.addresses.any((a) => a.street == '123 Main St'), isTrue);
+        expect(loaded.addresses.any((a) => a.street == '456 Oak Ave'), isTrue);
       });
 
       test('should save and load Map<String, Money> correctly', () async {
@@ -422,26 +422,27 @@ void main() {
         final repo = TestNullableCollectionsMysqlRepository(helper!.connection);
         await repo.createTables();
 
-        final aggregate = TestNullableCollections(
-          name: 'Null Test',
-        );
+        final aggregate = TestNullableCollections(name: 'Null Test');
 
         await repo.save(aggregate);
 
         // Verify no items were saved
         expect(
-          await helper!
-              .countRows('test_nullable_collections_optionalNumbers_items'),
+          await helper!.countRows(
+            'test_nullable_collections_optionalNumbers_items',
+          ),
           equals(0),
         );
         expect(
-          await helper!
-              .countRows('test_nullable_collections_optionalTags_items'),
+          await helper!.countRows(
+            'test_nullable_collections_optionalTags_items',
+          ),
           equals(0),
         );
         expect(
-          await helper!
-              .countRows('test_nullable_collections_optionalScores_items'),
+          await helper!.countRows(
+            'test_nullable_collections_optionalScores_items',
+          ),
           equals(0),
         );
       });
@@ -450,9 +451,7 @@ void main() {
         final repo = TestNullableCollectionsMysqlRepository(helper!.connection);
         await repo.createTables();
 
-        final aggregate = TestNullableCollections(
-          name: 'Empty Return Test',
-        );
+        final aggregate = TestNullableCollections(name: 'Empty Return Test');
 
         await repo.save(aggregate);
         final loaded = await repo.getById(aggregate.id);
@@ -485,8 +484,9 @@ void main() {
 
     group('Complex Scenarios', () {
       test('should handle aggregate with multiple collection types', () async {
-        final repo =
-            TestPrimitiveCollectionsMysqlRepository(helper!.connection);
+        final repo = TestPrimitiveCollectionsMysqlRepository(
+          helper!.connection,
+        );
         await repo.createTables();
 
         final aggregate = TestPrimitiveCollections(
@@ -505,8 +505,9 @@ void main() {
       });
 
       test('should handle large collections', () async {
-        final repo =
-            TestPrimitiveCollectionsMysqlRepository(helper!.connection);
+        final repo = TestPrimitiveCollectionsMysqlRepository(
+          helper!.connection,
+        );
         await repo.createTables();
 
         final largeList = List.generate(100, (i) => i);
@@ -531,8 +532,9 @@ void main() {
       });
 
       test('should handle multiple aggregates with collections', () async {
-        final repo =
-            TestPrimitiveCollectionsMysqlRepository(helper!.connection);
+        final repo = TestPrimitiveCollectionsMysqlRepository(
+          helper!.connection,
+        );
         await repo.createTables();
 
         final aggregate1 = TestPrimitiveCollections(
@@ -562,8 +564,9 @@ void main() {
 
     group('MySQL-Specific Features', () {
       test('should use MySQL DATETIME type for DateTime fields', () async {
-        final repo =
-            TestPrimitiveCollectionsMysqlRepository(helper!.connection);
+        final repo = TestPrimitiveCollectionsMysqlRepository(
+          helper!.connection,
+        );
         await repo.createTables();
 
         // This test verifies that the schema uses MySQL-specific types
@@ -573,8 +576,9 @@ void main() {
       });
 
       test('should use MySQL TINYINT for boolean fields', () async {
-        final repo =
-            TestPrimitiveCollectionsMysqlRepository(helper!.connection);
+        final repo = TestPrimitiveCollectionsMysqlRepository(
+          helper!.connection,
+        );
         await repo.createTables();
 
         // This test verifies that the schema uses MySQL-specific types
@@ -584,8 +588,9 @@ void main() {
       });
 
       test('should use MySQL BINARY(16) for UUID fields', () async {
-        final repo =
-            TestPrimitiveCollectionsMysqlRepository(helper!.connection);
+        final repo = TestPrimitiveCollectionsMysqlRepository(
+          helper!.connection,
+        );
         await repo.createTables();
 
         // This test verifies that the schema uses MySQL-specific types

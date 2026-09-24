@@ -4,9 +4,11 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/src/authentication_handler.dart';
 import 'package:dddart_rest/src/authentication_result.dart';
 import 'package:dddart_rest/src/crud_resource.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
+import 'package:dddart_rest/src/query_handler.dart';
 import 'package:shelf/shelf.dart';
 import 'package:test/test.dart';
+
+import 'json_serializer_test_support.dart';
 
 // Test aggregate root
 class TestUser extends AggregateRoot {
@@ -23,7 +25,7 @@ class TestUser extends AggregateRoot {
 }
 
 // Test serializer
-class TestUserSerializer implements Serializer<TestUser> {
+class TestUserSerializer extends TestJsonSerializer<TestUser> {
   @override
   String serialize(TestUser user, [dynamic config]) {
     return jsonEncode({
@@ -87,24 +89,26 @@ class MockRepository implements Repository<TestUser> {
 
 // Mock auth handler for testing
 class MockAuthHandler implements AuthenticationHandler<String> {
-  MockAuthHandler({
-    this.shouldAuthenticate = true,
-    this.errorMessage,
-  });
+  MockAuthHandler({this.shouldAuthenticate = true, this.errorMessage});
   final bool shouldAuthenticate;
   final String? errorMessage;
+  AuthenticationResult<String>? lastResult;
 
   @override
   Future<AuthenticationResult<String>> authenticate(Request request) async {
     if (shouldAuthenticate) {
-      return AuthenticationResult.success(
+      final result = AuthenticationResult<String>.success(
         userId: 'test-user-123',
         claims: 'test-claim',
       );
+      lastResult = result;
+      return result;
     } else {
-      return AuthenticationResult.failure(
+      final result = AuthenticationResult<String>.failure(
         errorMessage ?? 'Authentication failed',
       );
+      lastResult = result;
+      return result;
     }
   }
 }
@@ -117,12 +121,7 @@ Request createRequest({
   String? body,
 }) {
   final uri = Uri.parse('http://localhost:8080$path');
-  return Request(
-    method,
-    uri,
-    headers: headers,
-    body: body,
-  );
+  return Request(method, uri, headers: headers, body: body);
 }
 
 void main() {
@@ -153,15 +152,17 @@ void main() {
       final resource = CrudResource<TestUser, String>(
         path: '/users',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
         authenticationHandler: authHandler,
       );
       await repository.save(testUser);
       final request = createRequest(path: '/users/${testUser.id}');
 
       // Act
-      final response =
-          await resource.handleGetById(request, testUser.id.toString());
+      final response = await resource.handleGetById(
+        request,
+        testUser.id.toString(),
+      );
 
       // Assert
       expect(response.statusCode, equals(401));
@@ -177,15 +178,17 @@ void main() {
       final resource = CrudResource<TestUser, String>(
         path: '/users',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
         authenticationHandler: authHandler,
       );
       await repository.save(testUser);
       final request = createRequest(path: '/users/${testUser.id}');
 
       // Act
-      final response =
-          await resource.handleGetById(request, testUser.id.toString());
+      final response = await resource.handleGetById(
+        request,
+        testUser.id.toString(),
+      );
 
       // Assert
       expect(response.statusCode, equals(200));
@@ -197,7 +200,7 @@ void main() {
       final resource = CrudResource<TestUser, String>(
         path: '/users',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
         authenticationHandler: authHandler,
       );
       final request = createRequest(
@@ -219,7 +222,7 @@ void main() {
       final resource = CrudResource<TestUser, String>(
         path: '/users',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
         authenticationHandler: authHandler,
       );
       final request = createRequest(
@@ -230,8 +233,10 @@ void main() {
       );
 
       // Act
-      final response =
-          await resource.handleUpdate(request, testUser.id.toString());
+      final response = await resource.handleUpdate(
+        request,
+        testUser.id.toString(),
+      );
 
       // Assert
       expect(response.statusCode, equals(401));
@@ -243,7 +248,7 @@ void main() {
       final resource = CrudResource<TestUser, String>(
         path: '/users',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
         authenticationHandler: authHandler,
       );
       await repository.save(testUser);
@@ -253,8 +258,10 @@ void main() {
       );
 
       // Act
-      final response =
-          await resource.handleDelete(request, testUser.id.toString());
+      final response = await resource.handleDelete(
+        request,
+        testUser.id.toString(),
+      );
 
       // Assert
       expect(response.statusCode, equals(401));
@@ -266,7 +273,7 @@ void main() {
       final resource = CrudResource<TestUser, String>(
         path: '/users',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
         authenticationHandler: authHandler,
       );
       final request = createRequest();
@@ -278,23 +285,47 @@ void main() {
       expect(response.statusCode, equals(401));
     });
 
-    test('resource without auth handler allows unauthenticated access',
-        () async {
-      // Arrange
-      final resource = CrudResource<TestUser, dynamic>(
+    test('collection handler receives the authentication result', () async {
+      final authHandler = MockAuthHandler();
+      dynamic receivedAuthResult;
+      final resource = CrudResource<TestUser, String>(
         path: '/users',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
+        authenticationHandler: authHandler,
+        collectionHandler: (repo, params, skip, take, authResult) async {
+          receivedAuthResult = authResult;
+          return QueryResult<TestUser>(const [], totalCount: 0);
+        },
       );
-      await repository.save(testUser);
-      final request = createRequest(path: '/users/${testUser.id}');
 
-      // Act
-      final response =
-          await resource.handleGetById(request, testUser.id.toString());
+      final response = await resource.handleQuery(createRequest());
 
-      // Assert
       expect(response.statusCode, equals(200));
+      expect(receivedAuthResult, same(authHandler.lastResult));
     });
+
+    test(
+      'resource without auth handler allows unauthenticated access',
+      () async {
+        // Arrange
+        final resource = CrudResource<TestUser, dynamic>(
+          path: '/users',
+          repository: repository,
+          serializer: serializer,
+        );
+        await repository.save(testUser);
+        final request = createRequest(path: '/users/${testUser.id}');
+
+        // Act
+        final response = await resource.handleGetById(
+          request,
+          testUser.id.toString(),
+        );
+
+        // Assert
+        expect(response.statusCode, equals(200));
+      },
+    );
   });
 }

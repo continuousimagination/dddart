@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 /// Security utilities for authentication operations
 ///
@@ -32,8 +33,9 @@ class SecurityUtils {
 
     // If lengths differ, still compare to maintain constant time
     // Use the longer length to ensure we always do the same amount of work
-    final length =
-        bytesA.length > bytesB.length ? bytesA.length : bytesB.length;
+    final length = bytesA.length > bytesB.length
+        ? bytesA.length
+        : bytesB.length;
 
     var result = bytesA.length ^ bytesB.length;
 
@@ -139,12 +141,8 @@ class SecurityUtils {
   /// final token = SecurityUtils.generateSecureRandom(32);
   /// ```
   static String generateSecureRandom([int length = 32]) {
-    // Note: This is a simplified implementation
-    // In production, use a proper CSPRNG like dart:io's Random.secure()
-    final bytes = List<int>.generate(
-      length,
-      (i) => DateTime.now().microsecondsSinceEpoch % 256,
-    );
+    final random = Random.secure();
+    final bytes = List<int>.generate(length, (_) => random.nextInt(256));
     return base64Url.encode(bytes);
   }
 }

@@ -84,12 +84,12 @@ Future<void> main() async {
     print('8. Verifying deletion...');
     try {
       await userRepo.getById(user.id);
-      print('   ✗ User still exists (unexpected)');
+      throw StateError('User still exists after deletion');
     } on RepositoryException catch (e) {
       if (e.type == RepositoryExceptionType.notFound) {
         print('   ✓ User not found (expected)');
       } else {
-        print('   ✗ Unexpected error: ${e.message}');
+        rethrow;
       }
     }
 
@@ -97,6 +97,7 @@ Future<void> main() async {
   } catch (e, stackTrace) {
     print('\n✗ Error: $e');
     print('Stack trace: $stackTrace');
+    rethrow;
   } finally {
     // Step 9: Close connection
     print('\n9. Closing connection...');

@@ -30,11 +30,7 @@ class Address extends Value {
 
   /// Create a formatted address string for shipping labels
   String toShippingLabel() {
-    return [
-      street,
-      '$city, $state $zipCode',
-      country,
-    ].join('\n');
+    return [street, '$city, $state $zipCode', country].join('\n');
   }
 
   /// Check if this is a US address

@@ -17,101 +17,98 @@ import 'package:test/test.dart';
 
 void main() {
   group('Property 6: Unknown event types are skipped', () {
-    test(
-      'should skip events with unknown types without error',
-      () async {
-        final random = Random(42);
+    test('should skip events with unknown types without error', () async {
+      final random = Random(42);
 
-        for (var i = 0; i < 100; i++) {
-          final eventBus = EventBus();
-          final receivedEvents = <DomainEvent>[];
+      for (var i = 0; i < 100; i++) {
+        final eventBus = EventBus();
+        final receivedEvents = <DomainEvent>[];
 
-          eventBus.on<DomainEvent>().listen(receivedEvents.add);
+        eventBus.on<DomainEvent>().listen(receivedEvents.add);
 
-          // Generate mix of known and unknown events
-          final knownEventCount = 1 + random.nextInt(5);
-          final unknownEventCount = 1 + random.nextInt(5);
-          final baseTime = DateTime.now().add(const Duration(seconds: 1));
+        // Generate mix of known and unknown events
+        final knownEventCount = 1 + random.nextInt(5);
+        final unknownEventCount = 1 + random.nextInt(5);
+        final baseTime = DateTime.now().add(const Duration(seconds: 1));
 
-          final knownEvents = List.generate(
-            knownEventCount,
-            (j) =>
-                _generateKnownEvent(random, baseTime.add(Duration(seconds: j))),
-          );
+        final knownEvents = List.generate(
+          knownEventCount,
+          (j) =>
+              _generateKnownEvent(random, baseTime.add(Duration(seconds: j))),
+        );
 
-          final unknownEvents = List.generate(
-            unknownEventCount,
-            (j) => _generateUnknownEvent(
-              random,
-              baseTime.add(Duration(seconds: knownEventCount + j)),
-            ),
-          );
+        final unknownEvents = List.generate(
+          unknownEventCount,
+          (j) => _generateUnknownEvent(
+            random,
+            baseTime.add(Duration(seconds: knownEventCount + j)),
+          ),
+        );
 
-          // Mix events together
-          final allEvents = [...knownEvents, ...unknownEvents];
-          allEvents.shuffle(random);
+        // Mix events together
+        final allEvents = [...knownEvents, ...unknownEvents];
+        allEvents.shuffle(random);
 
-          // Mock client that returns all events
-          final mockClient = MockClient((request) async {
-            if (request.url.path.endsWith('/events') &&
-                request.method == 'GET') {
-              final since = request.url.queryParameters['since'];
-              final sinceTimestamp = DateTime.parse(since!);
+        // Mock client that returns all events
+        final mockClient = MockClient((request) async {
+          if (request.url.path.endsWith('/events') && request.method == 'GET') {
+            final since = request.url.queryParameters['since'];
+            final sinceTimestamp = DateTime.parse(since!);
 
-              final events = allEvents.where((e) {
-                final occurredAt = e['occurredAt'] as DateTime;
-                return occurredAt.isAfter(sinceTimestamp);
-              }).map((e) {
-                // Remove the DateTime object before serializing
-                final copy = Map<String, dynamic>.from(e);
-                copy.remove('occurredAt');
-                return copy;
-              }).toList();
+            final events = allEvents
+                .where((e) {
+                  final occurredAt = e['occurredAt'] as DateTime;
+                  return occurredAt.isAfter(sinceTimestamp);
+                })
+                .map((e) {
+                  // Remove the DateTime object before serializing
+                  final copy = Map<String, dynamic>.from(e);
+                  copy.remove('occurredAt');
+                  return copy;
+                })
+                .toList();
 
-              return http.Response(
-                jsonEncode(events),
-                200,
-                headers: {'content-type': 'application/json'},
-              );
-            }
-            return http.Response('Not Found', 404);
-          });
-
-          // Create client with registry that only knows about KnownEvent
-          final client = EventBusClient(
-            localEventBus: eventBus,
-            serverUrl: 'http://test-server',
-            eventRegistry: {
-              'KnownEvent': KnownEvent.fromJson,
-            },
-            pollingInterval: const Duration(milliseconds: 50),
-            httpClient: mockClient,
-          );
-
-          // Wait for polling
-          await Future<void>.delayed(const Duration(milliseconds: 150));
-
-          // Verify only known events were received
-          expect(
-            receivedEvents.length,
-            equals(knownEventCount),
-            reason: 'Iteration $i: only known events should be received',
-          );
-
-          // Verify all received events are KnownEvent
-          for (final event in receivedEvents) {
-            expect(
-              event,
-              isA<KnownEvent>(),
-              reason: 'Iteration $i: all received events should be KnownEvent',
+            return http.Response(
+              jsonEncode(events),
+              200,
+              headers: {'content-type': 'application/json'},
             );
           }
+          return http.Response('Not Found', 404);
+        });
 
-          // Clean up
-          await client.close();
+        // Create client with registry that only knows about KnownEvent
+        final client = EventBusClient(
+          localEventBus: eventBus,
+          serverUrl: 'http://test-server',
+          eventRegistry: {'KnownEvent': KnownEvent.fromJson},
+          pollingInterval: const Duration(milliseconds: 50),
+          httpClient: mockClient,
+        );
+
+        // Wait for polling
+        await Future<void>.delayed(const Duration(milliseconds: 150));
+
+        // Verify only known events were received
+        expect(
+          receivedEvents.length,
+          equals(knownEventCount),
+          reason: 'Iteration $i: only known events should be received',
+        );
+
+        // Verify all received events are KnownEvent
+        for (final event in receivedEvents) {
+          expect(
+            event,
+            isA<KnownEvent>(),
+            reason: 'Iteration $i: all received events should be KnownEvent',
+          );
         }
-      },
-    );
+
+        // Clean up
+        await client.close();
+      }
+    });
 
     test(
       'should continue processing after encountering unknown event',
@@ -145,15 +142,18 @@ void main() {
               final since = request.url.queryParameters['since'];
               final sinceTimestamp = DateTime.parse(since!);
 
-              final events = allEvents.where((e) {
-                final occurredAt = e['occurredAt'] as DateTime;
-                return occurredAt.isAfter(sinceTimestamp);
-              }).map((e) {
-                // Remove the DateTime object before serializing
-                final copy = Map<String, dynamic>.from(e);
-                copy.remove('occurredAt');
-                return copy;
-              }).toList();
+              final events = allEvents
+                  .where((e) {
+                    final occurredAt = e['occurredAt'] as DateTime;
+                    return occurredAt.isAfter(sinceTimestamp);
+                  })
+                  .map((e) {
+                    // Remove the DateTime object before serializing
+                    final copy = Map<String, dynamic>.from(e);
+                    copy.remove('occurredAt');
+                    return copy;
+                  })
+                  .toList();
 
               return http.Response(
                 jsonEncode(events),
@@ -167,9 +167,7 @@ void main() {
           final client = EventBusClient(
             localEventBus: eventBus,
             serverUrl: 'http://test-server',
-            eventRegistry: {
-              'KnownEvent': KnownEvent.fromJson,
-            },
+            eventRegistry: {'KnownEvent': KnownEvent.fromJson},
             pollingInterval: const Duration(milliseconds: 50),
             httpClient: mockClient,
           );
@@ -187,16 +185,12 @@ void main() {
           // Verify the events are the correct ones
           final receivedIds = receivedEvents.map((e) => e.eventId).toSet();
           expect(
-            receivedIds.contains(
-              UuidValue.fromString(event1['id'] as String),
-            ),
+            receivedIds.contains(UuidValue.fromString(event1['id'] as String)),
             isTrue,
             reason: 'Iteration $i: first known event should be received',
           );
           expect(
-            receivedIds.contains(
-              UuidValue.fromString(event3['id'] as String),
-            ),
+            receivedIds.contains(UuidValue.fromString(event3['id'] as String)),
             isTrue,
             reason: 'Iteration $i: second known event should be received',
           );
@@ -207,181 +201,174 @@ void main() {
       },
     );
 
-    test(
-      'should handle all unknown events gracefully',
-      () async {
-        final random = Random(44);
+    test('should handle all unknown events gracefully', () async {
+      final random = Random(44);
 
-        for (var i = 0; i < 50; i++) {
-          final eventBus = EventBus();
-          final receivedEvents = <DomainEvent>[];
+      for (var i = 0; i < 50; i++) {
+        final eventBus = EventBus();
+        final receivedEvents = <DomainEvent>[];
 
-          eventBus.on<DomainEvent>().listen(receivedEvents.add);
+        eventBus.on<DomainEvent>().listen(receivedEvents.add);
 
-          // Generate only unknown events
-          final unknownEventCount = 1 + random.nextInt(10);
-          final baseTime = DateTime.now().add(const Duration(seconds: 1));
+        // Generate only unknown events
+        final unknownEventCount = 1 + random.nextInt(10);
+        final baseTime = DateTime.now().add(const Duration(seconds: 1));
 
-          final unknownEvents = List.generate(
-            unknownEventCount,
-            (j) => _generateUnknownEvent(
-              random,
-              baseTime.add(Duration(seconds: j)),
-            ),
-          );
+        final unknownEvents = List.generate(
+          unknownEventCount,
+          (j) =>
+              _generateUnknownEvent(random, baseTime.add(Duration(seconds: j))),
+        );
 
-          // Mock client
-          final mockClient = MockClient((request) async {
-            if (request.url.path.endsWith('/events') &&
-                request.method == 'GET') {
-              final since = request.url.queryParameters['since'];
-              final sinceTimestamp = DateTime.parse(since!);
+        // Mock client
+        final mockClient = MockClient((request) async {
+          if (request.url.path.endsWith('/events') && request.method == 'GET') {
+            final since = request.url.queryParameters['since'];
+            final sinceTimestamp = DateTime.parse(since!);
 
-              final events = unknownEvents.where((e) {
-                final occurredAt = e['occurredAt'] as DateTime;
-                return occurredAt.isAfter(sinceTimestamp);
-              }).map((e) {
-                // Remove the DateTime object before serializing
-                final copy = Map<String, dynamic>.from(e);
-                copy.remove('occurredAt');
-                return copy;
-              }).toList();
-
-              return http.Response(
-                jsonEncode(events),
-                200,
-                headers: {'content-type': 'application/json'},
-              );
-            }
-            return http.Response('Not Found', 404);
-          });
-
-          final client = EventBusClient(
-            localEventBus: eventBus,
-            serverUrl: 'http://test-server',
-            eventRegistry: {
-              'KnownEvent': KnownEvent.fromJson,
-            },
-            pollingInterval: const Duration(milliseconds: 50),
-            httpClient: mockClient,
-          );
-
-          // Wait for polling
-          await Future<void>.delayed(const Duration(milliseconds: 150));
-
-          // Verify no events were received (all were unknown)
-          expect(
-            receivedEvents.length,
-            equals(0),
-            reason: 'Iteration $i: no events should be received',
-          );
-
-          // Clean up
-          await client.close();
-        }
-      },
-    );
-
-    test(
-      'should update timestamp even when skipping unknown events',
-      () async {
-        final random = Random(45);
-
-        for (var i = 0; i < 50; i++) {
-          final eventBus = EventBus();
-          final receivedEvents = <DomainEvent>[];
-
-          eventBus.on<DomainEvent>().listen(receivedEvents.add);
-
-          // First batch: unknown events
-          // Second batch: known events
-          final baseTime = DateTime.now().add(const Duration(seconds: 1));
-          final unknownEvents = List.generate(
-            3,
-            (j) => _generateUnknownEvent(
-              random,
-              baseTime.add(Duration(seconds: j)),
-            ),
-          );
-          final knownEvents = List.generate(
-            3,
-            (j) => _generateKnownEvent(
-              random,
-              baseTime.add(Duration(seconds: j + 10)),
-            ),
-          );
-
-          var pollCount = 0;
-          final mockClient = MockClient((request) async {
-            if (request.url.path.endsWith('/events') &&
-                request.method == 'GET') {
-              final since = request.url.queryParameters['since'];
-              final sinceTimestamp = DateTime.parse(since!);
-
-              pollCount++;
-
-              // First poll: return unknown events
-              if (pollCount == 1) {
-                final events = unknownEvents.where((e) {
+            final events = unknownEvents
+                .where((e) {
                   final occurredAt = e['occurredAt'] as DateTime;
                   return occurredAt.isAfter(sinceTimestamp);
-                }).map((e) {
+                })
+                .map((e) {
+                  // Remove the DateTime object before serializing
                   final copy = Map<String, dynamic>.from(e);
                   copy.remove('occurredAt');
                   return copy;
-                }).toList();
-                return http.Response(
-                  jsonEncode(events),
-                  200,
-                  headers: {'content-type': 'application/json'},
-                );
-              }
+                })
+                .toList();
 
-              // Second poll: should only return known events
-              // (unknown events should be filtered by updated timestamp)
-              final events = knownEvents.where((e) {
-                final occurredAt = e['occurredAt'] as DateTime;
-                return occurredAt.isAfter(sinceTimestamp);
-              }).map((e) {
-                final copy = Map<String, dynamic>.from(e);
-                copy.remove('occurredAt');
-                return copy;
-              }).toList();
+            return http.Response(
+              jsonEncode(events),
+              200,
+              headers: {'content-type': 'application/json'},
+            );
+          }
+          return http.Response('Not Found', 404);
+        });
+
+        final client = EventBusClient(
+          localEventBus: eventBus,
+          serverUrl: 'http://test-server',
+          eventRegistry: {'KnownEvent': KnownEvent.fromJson},
+          pollingInterval: const Duration(milliseconds: 50),
+          httpClient: mockClient,
+        );
+
+        // Wait for polling
+        await Future<void>.delayed(const Duration(milliseconds: 150));
+
+        // Verify no events were received (all were unknown)
+        expect(
+          receivedEvents.length,
+          equals(0),
+          reason: 'Iteration $i: no events should be received',
+        );
+
+        // Clean up
+        await client.close();
+      }
+    });
+
+    test('should update timestamp even when skipping unknown events', () async {
+      final random = Random(45);
+
+      for (var i = 0; i < 50; i++) {
+        final eventBus = EventBus();
+        final receivedEvents = <DomainEvent>[];
+
+        eventBus.on<DomainEvent>().listen(receivedEvents.add);
+
+        // First batch: unknown events
+        // Second batch: known events
+        final baseTime = DateTime.now().add(const Duration(seconds: 1));
+        final unknownEvents = List.generate(
+          3,
+          (j) =>
+              _generateUnknownEvent(random, baseTime.add(Duration(seconds: j))),
+        );
+        final knownEvents = List.generate(
+          3,
+          (j) => _generateKnownEvent(
+            random,
+            baseTime.add(Duration(seconds: j + 10)),
+          ),
+        );
+
+        var pollCount = 0;
+        final mockClient = MockClient((request) async {
+          if (request.url.path.endsWith('/events') && request.method == 'GET') {
+            final since = request.url.queryParameters['since'];
+            final sinceTimestamp = DateTime.parse(since!);
+
+            pollCount++;
+
+            // First poll: return unknown events
+            if (pollCount == 1) {
+              final events = unknownEvents
+                  .where((e) {
+                    final occurredAt = e['occurredAt'] as DateTime;
+                    return occurredAt.isAfter(sinceTimestamp);
+                  })
+                  .map((e) {
+                    final copy = Map<String, dynamic>.from(e);
+                    copy.remove('occurredAt');
+                    return copy;
+                  })
+                  .toList();
               return http.Response(
                 jsonEncode(events),
                 200,
                 headers: {'content-type': 'application/json'},
               );
             }
-            return http.Response('Not Found', 404);
-          });
 
-          final client = EventBusClient(
-            localEventBus: eventBus,
-            serverUrl: 'http://test-server',
-            eventRegistry: {
-              'KnownEvent': KnownEvent.fromJson,
-            },
-            pollingInterval: const Duration(milliseconds: 50),
-            initialTimestamp: baseTime,
-            httpClient: mockClient,
-          );
+            // Second poll: should only return known events
+            // (unknown events should be filtered by updated timestamp)
+            final events = knownEvents
+                .where((e) {
+                  final occurredAt = e['occurredAt'] as DateTime;
+                  return occurredAt.isAfter(sinceTimestamp);
+                })
+                .map((e) {
+                  final copy = Map<String, dynamic>.from(e);
+                  copy.remove('occurredAt');
+                  return copy;
+                })
+                .toList();
+            return http.Response(
+              jsonEncode(events),
+              200,
+              headers: {'content-type': 'application/json'},
+            );
+          }
+          return http.Response('Not Found', 404);
+        });
 
-          // Wait for multiple polls
-          await Future<void>.delayed(const Duration(milliseconds: 200));
+        final client = EventBusClient(
+          localEventBus: eventBus,
+          serverUrl: 'http://test-server',
+          eventRegistry: {'KnownEvent': KnownEvent.fromJson},
+          pollingInterval: const Duration(milliseconds: 50),
+          initialTimestamp: baseTime,
+          httpClient: mockClient,
+        );
 
-          // Verify only known events were received
-          expect(
-            receivedEvents.length,
-            equals(knownEvents.length),
-            reason: 'Iteration $i: only known events should be received',
-          );
+        // Wait for multiple polls
+        await Future<void>.delayed(const Duration(milliseconds: 200));
 
-          // Clean up
-          await client.close();
-        }
-      },
-    );
+        // Verify only known events were received
+        expect(
+          receivedEvents.length,
+          equals(knownEvents.length),
+          reason: 'Iteration $i: only known events should be received',
+        );
+
+        // Clean up
+        await client.close();
+      }
+    });
   });
 }
 

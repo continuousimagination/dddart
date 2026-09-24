@@ -12,7 +12,12 @@ class TestUserJsonSerializer implements JsonSerializer<TestUser> {
 
   /// Creates a serializer with the specified default configuration.
   TestUserJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(
@@ -106,7 +111,7 @@ class TestUserJsonSerializer implements JsonSerializer<TestUser> {
               )
             : DateTime.now(),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize TestUser',
         expectedType: 'TestUser',
@@ -141,7 +146,7 @@ class TestUserJsonSerializer implements JsonSerializer<TestUser> {
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'TestUser',
       );
     }
@@ -167,7 +172,12 @@ class TestProductJsonSerializer implements JsonSerializer<TestProduct> {
 
   /// Creates a serializer with the specified default configuration.
   TestProductJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(
@@ -272,7 +282,7 @@ class TestProductJsonSerializer implements JsonSerializer<TestProduct> {
               )
             : DateTime.now(),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize TestProduct',
         expectedType: 'TestProduct',
@@ -307,7 +317,7 @@ class TestProductJsonSerializer implements JsonSerializer<TestProduct> {
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'TestProduct',
       );
     }
@@ -333,7 +343,12 @@ class TestOrderJsonSerializer implements JsonSerializer<TestOrder> {
 
   /// Creates a serializer with the specified default configuration.
   TestOrderJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(
@@ -450,7 +465,7 @@ class TestOrderJsonSerializer implements JsonSerializer<TestOrder> {
               )
             : DateTime.now(),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize TestOrder',
         expectedType: 'TestOrder',
@@ -485,7 +500,7 @@ class TestOrderJsonSerializer implements JsonSerializer<TestOrder> {
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'TestOrder',
       );
     }
@@ -511,7 +526,12 @@ class TestAccountJsonSerializer implements JsonSerializer<TestAccount> {
 
   /// Creates a serializer with the specified default configuration.
   TestAccountJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(
@@ -630,7 +650,7 @@ class TestAccountJsonSerializer implements JsonSerializer<TestAccount> {
               )
             : DateTime.now(),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize TestAccount',
         expectedType: 'TestAccount',
@@ -665,7 +685,7 @@ class TestAccountJsonSerializer implements JsonSerializer<TestAccount> {
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'TestAccount',
       );
     }
@@ -682,6 +702,159 @@ class TestAccountJsonSerializer implements JsonSerializer<TestAccount> {
   /// Convenience method for static access with default configuration
   static TestAccount decode(dynamic json, [SerializationConfig? config]) {
     return TestAccountJsonSerializer().fromJson(json, config);
+  }
+}
+
+class InferredResourceJsonSerializer
+    implements JsonSerializer<InferredResource> {
+  /// Default configuration for this serializer.
+  final SerializationConfig _defaultConfig;
+
+  /// Creates a serializer with the specified default configuration.
+  InferredResourceJsonSerializer([SerializationConfig? defaultConfig])
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
+
+  @override
+  Map<String, dynamic> toJson(
+    InferredResource instance, [
+    SerializationConfig? config,
+  ]) {
+    final effectiveConfig = config ?? _defaultConfig;
+    final json = <String, dynamic>{
+      SerializationUtils.applyFieldRename('id', effectiveConfig.fieldRename):
+          instance.id.toString(),
+      SerializationUtils.applyFieldRename(
+        'createdAt',
+        effectiveConfig.fieldRename,
+      ): instance.createdAt
+          .toIso8601String(),
+      SerializationUtils.applyFieldRename(
+        'updatedAt',
+        effectiveConfig.fieldRename,
+      ): instance.updatedAt
+          .toIso8601String(),
+      SerializationUtils.applyFieldRename('name', effectiveConfig.fieldRename):
+          instance.name,
+    };
+    return json;
+  }
+
+  @override
+  InferredResource fromJson(dynamic json, [SerializationConfig? config]) {
+    final effectiveConfig = config ?? _defaultConfig;
+    if (json == null) {
+      throw DeserializationException(
+        'Cannot deserialize InferredResource from null JSON',
+        expectedType: 'InferredResource',
+      );
+    }
+    if (json is! Map<String, dynamic>) {
+      throw DeserializationException(
+        'Expected Map<String, dynamic> but got ${json.runtimeType}',
+        expectedType: 'InferredResource',
+      );
+    }
+    try {
+      return InferredResource(
+        name:
+            json[SerializationUtils.applyFieldRename(
+                  'name',
+                  effectiveConfig.fieldRename,
+                )]
+                as String,
+        id: UuidValue.fromString(
+          json[SerializationUtils.applyFieldRename(
+                'id',
+                effectiveConfig.fieldRename,
+              )]
+              as String,
+        ),
+        createdAt:
+            json[SerializationUtils.applyFieldRename(
+                  'createdAt',
+                  effectiveConfig.fieldRename,
+                )] !=
+                null
+            ? DateTime.parse(
+                json[SerializationUtils.applyFieldRename(
+                      'createdAt',
+                      effectiveConfig.fieldRename,
+                    )]
+                    as String,
+              )
+            : DateTime.now(),
+        updatedAt:
+            json[SerializationUtils.applyFieldRename(
+                  'updatedAt',
+                  effectiveConfig.fieldRename,
+                )] !=
+                null
+            ? DateTime.parse(
+                json[SerializationUtils.applyFieldRename(
+                      'updatedAt',
+                      effectiveConfig.fieldRename,
+                    )]
+                    as String,
+              )
+            : DateTime.now(),
+      );
+    } catch (e) {
+      throw DeserializationException(
+        'Failed to deserialize InferredResource',
+        expectedType: 'InferredResource',
+      );
+    }
+  }
+
+  @override
+  String serialize(InferredResource object, [dynamic config]) {
+    try {
+      return jsonEncode(toJson(object, config as SerializationConfig?));
+    } catch (_) {
+      throw SerializationException(
+        'Failed to serialize InferredResource',
+        expectedType: 'InferredResource',
+      );
+    }
+  }
+
+  @override
+  InferredResource deserialize(String data, [dynamic config]) {
+    try {
+      final json = jsonDecode(data);
+      if (json is! Map<String, dynamic>) {
+        throw DeserializationException(
+          'Expected JSON object',
+          expectedType: 'InferredResource',
+        );
+      }
+      return fromJson(json, config as SerializationConfig?);
+    } on DeserializationException {
+      rethrow;
+    } catch (_) {
+      throw DeserializationException(
+        'Failed to deserialize JSON',
+        expectedType: 'InferredResource',
+      );
+    }
+  }
+
+  /// Convenience method for static access with default configuration
+  static Map<String, dynamic> encode(
+    InferredResource instance, [
+    SerializationConfig? config,
+  ]) {
+    return InferredResourceJsonSerializer().toJson(instance, config);
+  }
+
+  /// Convenience method for static access with default configuration
+  static InferredResource decode(dynamic json, [SerializationConfig? config]) {
+    return InferredResourceJsonSerializer().fromJson(json, config);
   }
 }
 
@@ -711,8 +884,12 @@ class TestUserRestRepository implements Repository<TestUser> {
   @override
   Future<TestUser> getById(UuidValue id) async {
     try {
-      final response = await _connection.client.get(
-        Uri.parse('${_connection.baseUrl}$_resourcePath/${id.uuid}'),
+      final response = await _connection.executeRequest(
+        () => _connection.client.get(
+          Uri.parse('${_connection.baseUrl}$_resourcePath/${id.uuid}'),
+          headers: {'Accept': 'application/json'},
+        ),
+        operation: 'retrieve TestUser',
       );
 
       if (response.statusCode == 200) {
@@ -740,10 +917,18 @@ class TestUserRestRepository implements Repository<TestUser> {
       final json = _serializer.toJson(aggregate);
       final body = jsonEncode(json);
 
-      final response = await _connection.client.put(
-        Uri.parse('${_connection.baseUrl}$_resourcePath/${aggregate.id.uuid}'),
-        body: body,
-        headers: {'Content-Type': 'application/json'},
+      final response = await _connection.executeRequest(
+        () => _connection.client.put(
+          Uri.parse(
+            '${_connection.baseUrl}$_resourcePath/${aggregate.id.uuid}',
+          ),
+          body: body,
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+        ),
+        operation: 'save TestUser',
       );
 
       if (response.statusCode == 200 || response.statusCode == 204) {
@@ -764,8 +949,12 @@ class TestUserRestRepository implements Repository<TestUser> {
   @override
   Future<void> deleteById(UuidValue id) async {
     try {
-      final response = await _connection.client.delete(
-        Uri.parse('${_connection.baseUrl}$_resourcePath/${id.uuid}'),
+      final response = await _connection.executeRequest(
+        () => _connection.client.delete(
+          Uri.parse('${_connection.baseUrl}$_resourcePath/${id.uuid}'),
+          headers: {'Accept': 'application/json'},
+        ),
+        operation: 'delete TestUser',
       );
 
       if (response.statusCode == 204 || response.statusCode == 200) {
@@ -855,8 +1044,12 @@ class TestProductRestRepository implements Repository<TestProduct> {
   @override
   Future<TestProduct> getById(UuidValue id) async {
     try {
-      final response = await _connection.client.get(
-        Uri.parse('${_connection.baseUrl}$_resourcePath/${id.uuid}'),
+      final response = await _connection.executeRequest(
+        () => _connection.client.get(
+          Uri.parse('${_connection.baseUrl}$_resourcePath/${id.uuid}'),
+          headers: {'Accept': 'application/json'},
+        ),
+        operation: 'retrieve TestProduct',
       );
 
       if (response.statusCode == 200) {
@@ -884,10 +1077,18 @@ class TestProductRestRepository implements Repository<TestProduct> {
       final json = _serializer.toJson(aggregate);
       final body = jsonEncode(json);
 
-      final response = await _connection.client.put(
-        Uri.parse('${_connection.baseUrl}$_resourcePath/${aggregate.id.uuid}'),
-        body: body,
-        headers: {'Content-Type': 'application/json'},
+      final response = await _connection.executeRequest(
+        () => _connection.client.put(
+          Uri.parse(
+            '${_connection.baseUrl}$_resourcePath/${aggregate.id.uuid}',
+          ),
+          body: body,
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+        ),
+        operation: 'save TestProduct',
       );
 
       if (response.statusCode == 200 || response.statusCode == 204) {
@@ -908,8 +1109,12 @@ class TestProductRestRepository implements Repository<TestProduct> {
   @override
   Future<void> deleteById(UuidValue id) async {
     try {
-      final response = await _connection.client.delete(
-        Uri.parse('${_connection.baseUrl}$_resourcePath/${id.uuid}'),
+      final response = await _connection.executeRequest(
+        () => _connection.client.delete(
+          Uri.parse('${_connection.baseUrl}$_resourcePath/${id.uuid}'),
+          headers: {'Accept': 'application/json'},
+        ),
+        operation: 'delete TestProduct',
       );
 
       if (response.statusCode == 204 || response.statusCode == 200) {
@@ -1002,8 +1207,12 @@ abstract class TestOrderRestRepositoryBase implements TestOrderRepository {
   @override
   Future<TestOrder> getById(UuidValue id) async {
     try {
-      final response = await _connection.client.get(
-        Uri.parse('${_connection.baseUrl}$_resourcePath/${id.uuid}'),
+      final response = await _connection.executeRequest(
+        () => _connection.client.get(
+          Uri.parse('${_connection.baseUrl}$_resourcePath/${id.uuid}'),
+          headers: {'Accept': 'application/json'},
+        ),
+        operation: 'retrieve TestOrder',
       );
 
       if (response.statusCode == 200) {
@@ -1031,10 +1240,18 @@ abstract class TestOrderRestRepositoryBase implements TestOrderRepository {
       final json = _serializer.toJson(aggregate);
       final body = jsonEncode(json);
 
-      final response = await _connection.client.put(
-        Uri.parse('${_connection.baseUrl}$_resourcePath/${aggregate.id.uuid}'),
-        body: body,
-        headers: {'Content-Type': 'application/json'},
+      final response = await _connection.executeRequest(
+        () => _connection.client.put(
+          Uri.parse(
+            '${_connection.baseUrl}$_resourcePath/${aggregate.id.uuid}',
+          ),
+          body: body,
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+        ),
+        operation: 'save TestOrder',
       );
 
       if (response.statusCode == 200 || response.statusCode == 204) {
@@ -1055,8 +1272,12 @@ abstract class TestOrderRestRepositoryBase implements TestOrderRepository {
   @override
   Future<void> deleteById(UuidValue id) async {
     try {
-      final response = await _connection.client.delete(
-        Uri.parse('${_connection.baseUrl}$_resourcePath/${id.uuid}'),
+      final response = await _connection.executeRequest(
+        () => _connection.client.delete(
+          Uri.parse('${_connection.baseUrl}$_resourcePath/${id.uuid}'),
+          headers: {'Accept': 'application/json'},
+        ),
+        operation: 'delete TestOrder',
       );
 
       if (response.statusCode == 204 || response.statusCode == 200) {
@@ -1154,8 +1375,12 @@ class TestAccountRestRepository implements Repository<TestAccount> {
   @override
   Future<TestAccount> getById(UuidValue id) async {
     try {
-      final response = await _connection.client.get(
-        Uri.parse('${_connection.baseUrl}$_resourcePath/${id.uuid}'),
+      final response = await _connection.executeRequest(
+        () => _connection.client.get(
+          Uri.parse('${_connection.baseUrl}$_resourcePath/${id.uuid}'),
+          headers: {'Accept': 'application/json'},
+        ),
+        operation: 'retrieve TestAccount',
       );
 
       if (response.statusCode == 200) {
@@ -1183,10 +1408,18 @@ class TestAccountRestRepository implements Repository<TestAccount> {
       final json = _serializer.toJson(aggregate);
       final body = jsonEncode(json);
 
-      final response = await _connection.client.put(
-        Uri.parse('${_connection.baseUrl}$_resourcePath/${aggregate.id.uuid}'),
-        body: body,
-        headers: {'Content-Type': 'application/json'},
+      final response = await _connection.executeRequest(
+        () => _connection.client.put(
+          Uri.parse(
+            '${_connection.baseUrl}$_resourcePath/${aggregate.id.uuid}',
+          ),
+          body: body,
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+        ),
+        operation: 'save TestAccount',
       );
 
       if (response.statusCode == 200 || response.statusCode == 204) {
@@ -1207,8 +1440,12 @@ class TestAccountRestRepository implements Repository<TestAccount> {
   @override
   Future<void> deleteById(UuidValue id) async {
     try {
-      final response = await _connection.client.delete(
-        Uri.parse('${_connection.baseUrl}$_resourcePath/${id.uuid}'),
+      final response = await _connection.executeRequest(
+        () => _connection.client.delete(
+          Uri.parse('${_connection.baseUrl}$_resourcePath/${id.uuid}'),
+          headers: {'Accept': 'application/json'},
+        ),
+        operation: 'delete TestAccount',
       );
 
       if (response.statusCode == 204 || response.statusCode == 200) {
@@ -1221,6 +1458,166 @@ class TestAccountRestRepository implements Repository<TestAccount> {
     } catch (e) {
       throw RepositoryException(
         'Failed to delete TestAccount',
+        type: RepositoryExceptionType.unknown,
+      );
+    }
+  }
+
+  /// Maps status codes without exposing response bodies or provider text.
+  RepositoryException _mapHttpException(int statusCode, String _) {
+    switch (statusCode) {
+      case 400:
+      case 412:
+      case 422:
+        return RepositoryException(
+          'Request validation failed',
+          type: RepositoryExceptionType.constraint,
+        );
+      case 401:
+        return RepositoryException(
+          'Authentication required',
+          type: RepositoryExceptionType.unauthorized,
+        );
+      case 403:
+        return RepositoryException(
+          'Access denied',
+          type: RepositoryExceptionType.forbidden,
+        );
+      case 404:
+        return RepositoryException(
+          'Resource not found',
+          type: RepositoryExceptionType.notFound,
+        );
+      case 409:
+        return RepositoryException(
+          'Resource conflict',
+          type: RepositoryExceptionType.duplicate,
+        );
+      case 408:
+      case 504:
+        return RepositoryException(
+          'Request timed out',
+          type: RepositoryExceptionType.timeout,
+        );
+      case >= 500:
+        return RepositoryException(
+          'Remote service failed',
+          type: RepositoryExceptionType.connection,
+        );
+      default:
+        return RepositoryException(
+          'Unexpected HTTP response',
+          type: RepositoryExceptionType.unknown,
+        );
+    }
+  }
+}
+
+/// Generated REST repository for [InferredResource] aggregate.
+///
+/// This class can be used directly for basic CRUD operations or extended
+/// to add custom query methods.
+class InferredResourceRestRepository implements Repository<InferredResource> {
+  /// Creates a repository instance.
+  ///
+  /// [connection] - A REST connection to the API server.
+  InferredResourceRestRepository(this._connection);
+
+  /// The REST connection instance.
+  final RestConnection _connection;
+
+  /// The resource path for InferredResource aggregates.
+  String get _resourcePath => '/inferred-resources';
+
+  /// The JSON serializer for InferredResource aggregates.
+  final _serializer = InferredResourceJsonSerializer();
+
+  @override
+  Future<InferredResource> getById(UuidValue id) async {
+    try {
+      final response = await _connection.executeRequest(
+        () => _connection.client.get(
+          Uri.parse('${_connection.baseUrl}$_resourcePath/${id.uuid}'),
+          headers: {'Accept': 'application/json'},
+        ),
+        operation: 'retrieve InferredResource',
+      );
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        return _serializer.fromJson(json);
+      }
+
+      throw _mapHttpException(response.statusCode, response.body);
+    } on RepositoryException {
+      rethrow;
+    } catch (e) {
+      throw RepositoryException(
+        'Failed to retrieve InferredResource',
+        type: RepositoryExceptionType.unknown,
+      );
+    }
+  }
+
+  @override
+  Future<void> save(InferredResource aggregate) async {
+    if (aggregate is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
+    try {
+      final json = _serializer.toJson(aggregate);
+      final body = jsonEncode(json);
+
+      final response = await _connection.executeRequest(
+        () => _connection.client.put(
+          Uri.parse(
+            '${_connection.baseUrl}$_resourcePath/${aggregate.id.uuid}',
+          ),
+          body: body,
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+        ),
+        operation: 'save InferredResource',
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        return;
+      }
+
+      throw _mapHttpException(response.statusCode, response.body);
+    } on RepositoryException {
+      rethrow;
+    } catch (e) {
+      throw RepositoryException(
+        'Failed to save InferredResource',
+        type: RepositoryExceptionType.unknown,
+      );
+    }
+  }
+
+  @override
+  Future<void> deleteById(UuidValue id) async {
+    try {
+      final response = await _connection.executeRequest(
+        () => _connection.client.delete(
+          Uri.parse('${_connection.baseUrl}$_resourcePath/${id.uuid}'),
+          headers: {'Accept': 'application/json'},
+        ),
+        operation: 'delete InferredResource',
+      );
+
+      if (response.statusCode == 204 || response.statusCode == 200) {
+        return;
+      }
+
+      throw _mapHttpException(response.statusCode, response.body);
+    } on RepositoryException {
+      rethrow;
+    } catch (e) {
+      throw RepositoryException(
+        'Failed to delete InferredResource',
         type: RepositoryExceptionType.unknown,
       );
     }

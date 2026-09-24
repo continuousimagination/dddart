@@ -1,6 +1,5 @@
 import 'package:dddart/src/aggregate_root.dart';
 import 'package:dddart/src/conditional_repository_exception.dart';
-import 'package:dddart/src/queryable_repository.dart';
 import 'package:dddart/src/repository.dart';
 import 'package:dddart/src/repository_exception.dart';
 import 'package:dddart/src/uuid_value.dart';
@@ -66,12 +65,12 @@ import 'package:logging/logging.dart';
 ///   await repository.save(user2);
 ///
 ///   // Verify all users are stored
-///   final allUsers = repository.getAll();
+///   final allUsers = await repository.getAll();
 ///   expect(allUsers, hasLength(2));
 ///
 ///   // Clean up after test
 ///   repository.clear();
-///   expect(repository.getAll(), isEmpty);
+///   expect(await repository.getAll(), isEmpty);
 /// });
 /// ```
 ///
@@ -101,8 +100,7 @@ import 'package:logging/logging.dart';
 /// * [Repository] - The base repository interface
 /// * [AggregateRoot] - The base class for aggregate roots
 /// * [RepositoryException] - Exception thrown by repository operations
-class InMemoryRepository<T extends AggregateRoot>
-    implements QueryableRepository<T> {
+class InMemoryRepository<T extends AggregateRoot> implements Repository<T> {
   /// Creates ordinary storage; versioned roots require conditional storage.
   InMemoryRepository() {
     // The reified type argument is checked before storage can be used.
@@ -187,7 +185,7 @@ class InMemoryRepository<T extends AggregateRoot>
   ///
   ///   // Clean up
   ///   repository.clear();
-  ///   expect(repository.getAll(), isEmpty);
+  ///   expect(await repository.getAll(), isEmpty);
   /// });
   /// ```
   void clear() {
@@ -214,13 +212,12 @@ class InMemoryRepository<T extends AggregateRoot>
   /// await repository.save(User(name: 'Alice'));
   /// await repository.save(User(name: 'Bob'));
   ///
-  /// final allUsers = repository.getAll();
+  /// final allUsers = await repository.getAll();
   /// print('Total users: ${allUsers.length}');
   /// for (final user in allUsers) {
   ///   print('User: ${user.name}');
   /// }
   /// ```
-  @override
   Future<List<T>> getAll() async {
     return List.unmodifiable(_storage.values);
   }

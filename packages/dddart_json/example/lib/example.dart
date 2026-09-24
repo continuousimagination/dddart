@@ -120,7 +120,8 @@ class SerializationExample {
       print('Snake JSON keys: ${snakeJson.keys}');
       if (snakeJson['default_shipping_address'] != null) {
         print(
-            'Address keys: ${(snakeJson['default_shipping_address'] as Map).keys}');
+          'Address keys: ${(snakeJson['default_shipping_address'] as Map).keys}',
+        );
       }
       rethrow;
     }
@@ -167,11 +168,13 @@ class SerializationExample {
 
     // API serializer (always snake_case)
     final apiSerializer = AddressJsonSerializer(
-        SerializationConfig(fieldRename: FieldRename.snake));
+      SerializationConfig(fieldRename: FieldRename.snake),
+    );
 
     // Database serializer (always camelCase)
     final dbSerializer = AddressJsonSerializer(
-        SerializationConfig(fieldRename: FieldRename.none));
+      SerializationConfig(fieldRename: FieldRename.none),
+    );
 
     final apiJson = apiSerializer.toJson(address);
     final dbJson = dbSerializer.toJson(address);
@@ -202,8 +205,10 @@ class SerializationExample {
 
     // Verify complex object integrity
     assert(restoredOrder == order, 'Order round-trip failed');
-    assert(restoredOrder.items.length == order.items.length,
-        'Items count mismatch');
+    assert(
+      restoredOrder.items.length == order.items.length,
+      'Items count mismatch',
+    );
     assert(restoredOrder.total == order.total, 'Total calculation mismatch');
 
     print('\n📊 Order Summary:');
@@ -233,7 +238,7 @@ class SerializationExample {
           'id': '550e8400-e29b-41d4-a716-446655440000',
           'createdAt': '2024-01-01T12:00:00.000Z',
           'updatedAt': '2024-01-01T12:00:00.000Z',
-        }
+        },
       },
       {
         'name': 'Wrong field type',
@@ -251,7 +256,7 @@ class SerializationExample {
           'id': '550e8400-e29b-41d4-a716-446655440000',
           'createdAt': '2024-01-01T12:00:00.000Z',
           'updatedAt': '2024-01-01T12:00:00.000Z',
-        }
+        },
       },
       {
         'name': 'Invalid UUID format',
@@ -269,7 +274,7 @@ class SerializationExample {
           'id': 'invalid-uuid',
           'createdAt': '2024-01-01T12:00:00.000Z',
           'updatedAt': '2024-01-01T12:00:00.000Z',
-        }
+        },
       },
     ];
 
@@ -306,23 +311,28 @@ class SerializationExample {
 
     // Measure deserialization performance
     final deserializeStart = DateTime.now();
-    final restoredOrders =
-        jsonList.map((json) => serializer.fromJson(json)).toList();
+    final restoredOrders = jsonList
+        .map((json) => serializer.fromJson(json))
+        .toList();
     final deserializeEnd = DateTime.now();
     final deserializeDuration = deserializeEnd.difference(deserializeStart);
 
     print(
-        'Serialized ${orders.length} complex orders in ${serializeDuration.inMilliseconds}ms');
+      'Serialized ${orders.length} complex orders in ${serializeDuration.inMilliseconds}ms',
+    );
     print(
-        'Deserialized ${restoredOrders.length} complex orders in ${deserializeDuration.inMilliseconds}ms');
+      'Deserialized ${restoredOrders.length} complex orders in ${deserializeDuration.inMilliseconds}ms',
+    );
 
     final avgSerialize = serializeDuration.inMicroseconds / orders.length;
     final avgDeserialize = deserializeDuration.inMicroseconds / orders.length;
 
     print(
-        'Average serialization: ${avgSerialize.toStringAsFixed(1)}μs per order');
+      'Average serialization: ${avgSerialize.toStringAsFixed(1)}μs per order',
+    );
     print(
-        'Average deserialization: ${avgDeserialize.toStringAsFixed(1)}μs per order');
+      'Average deserialization: ${avgDeserialize.toStringAsFixed(1)}μs per order',
+    );
 
     // Verify integrity
     for (int i = 0; i < orders.length; i++) {

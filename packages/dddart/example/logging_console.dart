@@ -12,7 +12,7 @@ import 'lib/user_registered_event.dart';
 /// - Repository logging output
 /// - How to configure log levels
 ///
-/// Run with: dart run example/logging_console.dart
+/// Run from this example directory with: `dart run logging_console.dart`.
 Future<void> main() async {
   print('🔊 DDDart Console Logging Example\n');
   print('=' * 60);
@@ -39,7 +39,7 @@ Future<void> main() async {
   await _demonstrateEventBusLogging();
   await _demonstrateRepositoryLogging();
 
-  print('\n' + '=' * 60);
+  print('\n${'=' * 60}');
   print('✅ Console logging example completed!');
   print('=' * 60);
 }

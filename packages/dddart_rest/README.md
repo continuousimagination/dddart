@@ -10,7 +10,7 @@ RESTful CRUD API framework for DDDart - Provides REST endpoints for aggregate ro
 - **Atomic conditional writes** - Explicit revision preconditions through ConditionalCrudResource and ConditionalRepository
 - **JWT Authentication** - Built-in support for self-hosted and OAuth/OIDC authentication
 - **Device Flow** - OAuth2 device flow for CLI tools and limited-input devices
-- **Content negotiation** - Support multiple serialization formats (JSON, YAML, etc.) via HTTP headers
+- **JSON media contract** - JSON success bodies, JSON arrays for collections, and RFC 7807 errors
 - **Custom query handlers** - Define filterable endpoints with custom query parameters
 - **Pagination support** - Built-in pagination with configurable defaults and limits
 - **Custom exception handling** - Map domain exceptions to appropriate HTTP responses
@@ -26,6 +26,7 @@ Add to your `pubspec.yaml`:
 dependencies:
   dddart_rest: ^0.9.0
   dddart: ^0.9.0
+  dddart_json: ^0.9.0
   dddart_serialization: ^0.9.0
 ```
 
@@ -37,17 +38,18 @@ import 'package:dddart_rest/dddart_rest.dart';
 
 void main() async {
   // Create repository and serializer
-  final repository = InMemoryRepository<User>();
-  final serializer = UserSerializer();
+  final UserReadRepository repository = UserDatabaseRepository();
+  final serializer = UserJsonSerializer();
 
   // Create and configure HTTP server
   final server = HttpServer(port: 8080);
   
   server.registerResource(
-    CrudResource<User>(
+    CrudResource<User, void>(
       path: '/users',
       repository: repository,
-      serializers: {'application/json': serializer},
+      serializer: serializer,
+      collectionHandler: listUsers,
     ),
   );
 
@@ -57,7 +59,7 @@ void main() async {
 ```
 
 This creates the following endpoints:
-- `GET /users` - List all users
+- `GET /users` - List a datastore-paginated user collection
 - `GET /users/:id` - Get user by ID
 - `POST /users` - Create new user
 - `PUT /users/:id` - Update user
@@ -109,7 +111,13 @@ Response (200 OK):
 }
 ```
 
-#### GET - List all (collection)
+#### GET - Read a collection page
+
+This endpoint is available only when the resource configures a
+`collectionHandler`. The handler owns datastore-side selection, ordering,
+pagination, and the accurate total count. Without one, an unfiltered collection
+request returns a problem+json `400 Bad Request`; `CrudResource` never loads the
+repository and paginates it in memory.
 
 ```bash
 curl http://localhost:8080/users
@@ -133,7 +141,7 @@ Response (200 OK):
 ]
 ```
 
-Headers:
+Optional header (when the handler supplies `totalCount`):
 ```
 X-Total-Count: 150
 ```
@@ -195,62 +203,56 @@ curl -X DELETE http://localhost:8080/users/123e4567-e89b-12d3-a456-426614174000
 
 Response (204 No Content) - empty body
 
-### Content Negotiation
+### JSON Media Contract
 
-Support multiple serialization formats by registering multiple serializers:
+Each CRUD resource uses one `JsonSerializer<T>`:
 
 ```dart
 server.registerResource(
-  CrudResource<User>(
+  CrudResource<User, void>(
     path: '/users',
     repository: repository,
-    serializers: {
-      'application/json': jsonSerializer,  // First entry is default
-      'application/yaml': yamlSerializer,
-      'application/xml': xmlSerializer,
-    },
+    serializer: jsonSerializer,
   ),
 );
 ```
 
 #### Request Format (POST/PUT)
 
-Clients specify the request body format using the `Content-Type` header:
+`POST` and `PUT` require `Content-Type: application/json`. Media type
+parameters and casing are accepted, for example
+`Application/JSON; Charset=UTF-8`.
 
 ```bash
-# Send JSON
 curl -X POST http://localhost:8080/users \
   -H "Content-Type: application/json" \
   -d '{"firstName": "John", "email": "john@example.com"}'
-
-# Send YAML
-curl -X POST http://localhost:8080/users \
-  -H "Content-Type: application/yaml" \
-  -d 'firstName: John
-email: john@example.com'
 ```
 
-If `Content-Type` is missing, the first registered serializer is used as default.
-
-If `Content-Type` specifies an unsupported format, returns **415 Unsupported Media Type**.
+Missing or unsupported request media types return **415 Unsupported Media
+Type** before authentication, authorization, or repository side effects.
 
 #### Response Format (GET)
 
-Clients specify the desired response format using the `Accept` header:
+Success responses use `Content-Type: application/json`. Collection responses
+are JSON arrays, including `[]` for an empty collection.
 
 ```bash
-# Request JSON response
 curl http://localhost:8080/users/123 \
   -H "Accept: application/json"
-
-# Request YAML response
-curl http://localhost:8080/users/123 \
-  -H "Accept: application/yaml"
 ```
 
-If `Accept` is `*/*` or missing, the first registered serializer is used as default.
+Missing `Accept`, `*/*`, or any comma-separated range containing a positive
+quality `application/json` or `*/*` range selects JSON.
 
-If `Accept` specifies an unsupported format, returns **406 Not Acceptable**.
+An unsupported header, including `application/json;q=0` with no other supported
+positive-quality range, returns **406 Not Acceptable** before authentication,
+authorization, or repository side effects. Stock errors use
+`Content-Type: application/problem+json`.
+
+For `PUT /resource/:id`, the route ID is authoritative. The JSON body's
+aggregate ID must match it; otherwise the server returns a problem+json
+**400 Bad Request** before authorization, `If-Match` lookup, or persistence.
 
 ### Pagination
 
@@ -261,7 +263,8 @@ All collection endpoints support pagination via query parameters:
 curl http://localhost:8080/users?skip=20&take=10
 ```
 
-Response includes `X-Total-Count` header with the total number of items:
+When a handler supplies `totalCount`, the response includes an
+`X-Total-Count` header:
 
 ```
 HTTP/1.1 200 OK
@@ -276,10 +279,11 @@ Content-Type: application/json
 Configure pagination defaults when registering a resource:
 
 ```dart
-CrudResource<User>(
+CrudResource<User, void>(
   path: '/users',
   repository: repository,
-  serializers: {'application/json': serializer},
+  serializer: serializer,
+  collectionHandler: listUsers,
   defaultSkip: 0,      // Default: 0
   defaultTake: 20,     // Default: 50
   maxTake: 100,        // Default: 100 (prevents excessive queries)
@@ -292,36 +296,58 @@ Pagination applies to:
 
 ### Custom Query Handlers
 
-Define custom query handlers to enable filtering by specific fields:
+Define explicit application read contracts and adapt them to collection and
+filter handlers:
 
 ```dart
-// Define a query handler
+abstract interface class UserReadRepository implements Repository<User> {
+  Future<QueryResult<User>> listPage({
+    required int skip,
+    required int take,
+  });
+
+  Future<QueryResult<User>> findByFirstName(
+    String firstName, {
+    required int skip,
+    required int take,
+  });
+}
+
+Future<QueryResult<User>> listUsers(
+  Repository<User> repository,
+  Map<String, String> queryParams,
+  int skip,
+  int take,
+  dynamic authResult,
+) {
+  return (repository as UserReadRepository).listPage(
+    skip: skip,
+    take: take,
+  );
+}
+
 Future<QueryResult<User>> firstNameHandler(
   Repository<User> repository,
   Map<String, String> queryParams,
   int skip,
   int take,
-) async {
+  dynamic authResult,
+) {
   final firstName = queryParams['firstName']!;
-  
-  // Filter results
-  final allUsers = await repository.getAll();
-  final matches = allUsers
-      .where((u) => u.firstName.toLowerCase() == firstName.toLowerCase())
-      .toList();
-  
-  // Apply pagination
-  final paginated = matches.skip(skip).take(take).toList();
-  
-  return QueryResult(paginated, totalCount: matches.length);
+  return (repository as UserReadRepository).findByFirstName(
+    firstName,
+    skip: skip,
+    take: take,
+  );
 }
 
 // Register the handler
 server.registerResource(
-  CrudResource<User>(
+  CrudResource<User, void>(
     path: '/users',
     repository: repository,
-    serializers: {'application/json': serializer},
+    serializer: serializer,
+    collectionHandler: listUsers,
     queryHandlers: {
       'firstName': firstNameHandler,
       'email': emailHandler,
@@ -345,7 +371,8 @@ curl http://localhost:8080/users?firstName=John&skip=0&take=10
 
 #### Query Handler Rules
 
-1. **No filter params** - Returns all items (paginated)
+1. **No filter params** - Invokes `collectionHandler`, or returns 400 when no
+   collection handler is configured
    ```bash
    GET /users
    GET /users?skip=10&take=5
@@ -429,10 +456,10 @@ Response handleDuplicateEmail(Object error) {
 
 // Register handlers
 server.registerResource(
-  CrudResource<User>(
+  CrudResource<User, void>(
     path: '/users',
     repository: repository,
-    serializers: {'application/json': serializer},
+    serializer: serializer,
     customExceptionHandlers: {
       InvalidEmailException: handleInvalidEmail,
       DuplicateEmailException: handleDuplicateEmail,
@@ -604,7 +631,7 @@ dart run main.dart
 Then test the endpoints:
 
 ```bash
-# List all users
+# Read the default user page
 curl http://localhost:8080/users
 
 # Get user by ID
@@ -629,22 +656,24 @@ Main server class that manages the shelf HTTP server lifecycle.
 class HttpServer {
   HttpServer({this.port = 8080});
   
-  void registerResource<T extends AggregateRoot>(CrudResource<T> resource);
+  void registerResource(CrudResource resource);
   Future<void> start();
   Future<void> stop();
 }
 ```
 
-### CrudResource<T>
+### CrudResource<T, TClaims>
 
 Configures and handles CRUD operations for an aggregate root type.
 
 ```dart
-class CrudResource<T extends AggregateRoot> {
+class CrudResource<T extends AggregateRoot, TClaims> {
   CrudResource({
     required String path,
     required Repository<T> repository,
-    required Map<String, Serializer<T>> serializers,
+    JsonSerializer<T>? serializer,
+    Map<String, Serializer<T>>? serializers,
+    QueryHandler<T>? collectionHandler,
     Map<String, QueryHandler<T>> queryHandlers = const {},
     Map<Type, Response Function(Object)> customExceptionHandlers = const {},
     int defaultSkip = 0,
@@ -658,19 +687,25 @@ class CrudResource<T extends AggregateRoot> {
 **Parameters:**
 - `path` - Base URL path for the resource (e.g., '/users')
 - `repository` - Repository instance for persistence operations
-- `serializers` - Map of content types to serializer instances (first is default)
+- `serializer` - Canonical JSON serializer for request and success response bodies
+- `serializers` - Legacy content-type map (first is default); supply exactly one
+  of `serializer` and `serializers`, never both or neither
+- `collectionHandler` - Optional handler for an unfiltered collection GET. It
+  owns selection, ordering, pagination, and `totalCount`; without it the request
+  returns 400.
 - `queryHandlers` - Map of query parameter names to handler functions
 - `customExceptionHandlers` - Map of exception types to error response handlers
 - `defaultSkip` - Default skip value for pagination (default: 0)
 - `defaultTake` - Default take value for pagination (default: 50)
 - `maxTake` - Maximum allowed take value (default: 100)
 - `etagStrategy` - Ordinary GET/POST representation validator (default: timestamp); not atomic write protection
-- `serializers` - Map of content types to serializer instances (first is default)
-- `queryHandlers` - Map of query parameter names to handler functions
-- `customExceptionHandlers` - Map of exception types to error response handlers
-- `defaultSkip` - Default skip value for pagination (default: 0)
-- `defaultTake` - Default take value for pagination (default: 50)
-- `maxTake` - Maximum allowed take value (default: 100)
+
+The canonical `serializer:` contract validates JSON media headers before
+authentication, preserving its admission order. Legacy `serializers:` resources
+and conditional resources authenticate first. Every contract negotiates a
+success representation before mutation and authorizes protected reads before
+repository or collection-handler access. Authentication results remain local to
+each request; choosing a representation never grants authority.
 
 ### ConditionalCrudResource<T, TClaims>
 
@@ -693,8 +728,13 @@ typedef QueryHandler<T extends AggregateRoot> = Future<QueryResult<T>> Function(
   Map<String, String> queryParams,
   int skip,
   int take,
+  dynamic authResult,
 );
 ```
+
+For `collectionHandler`, `queryParams` is empty. Both collection and named
+handlers receive normalized pagination values and the current authentication
+result.
 
 ### QueryResult<T>
 
@@ -725,11 +765,13 @@ Builds HTTP responses with proper status codes and serialization.
 
 ```dart
 class ResponseBuilder<T extends AggregateRoot> {
-  Response ok(T aggregate, Serializer<T> serializer, String contentType);
-  Response created(T aggregate, Serializer<T> serializer, String contentType);
-  Response okList(List<T> aggregates, Serializer<T> serializer, String contentType, {int? totalCount});
+  Response ok(T aggregate, JsonSerializer<T> serializer, {String? etag});
+  Response created(T aggregate, JsonSerializer<T> serializer, {String? etag});
+  Response okList(List<T> aggregates, JsonSerializer<T> serializer, {int? totalCount});
   Response noContent();
   Response badRequest(String message);
+  Response notAcceptable(String message);
+  Response unsupportedMediaType(String message);
   Response notFound(String message);
 }
 ```
@@ -748,7 +790,7 @@ Router (matches path + method)
 CrudResource (determines operation type)
     ↓
 ├─ handleGetById() → Repository.getById()
-├─ handleQuery() → Custom Query Handler or getAll()
+├─ handleQuery() → Explicit Collection or Named Query Handler
 ├─ handleCreate() → Deserialize + Repository.save()
 ├─ handleUpdate() → Deserialize + Repository.save()
 └─ handleDelete() → Repository.deleteById()
@@ -823,6 +865,7 @@ dddart_rest provides comprehensive JWT-based authentication with support for bot
 **OAuth/OIDC Authentication:**
 - External provider (AWS Cognito, Auth0, Okta) manages authentication
 - Your application validates JWTs using provider's public keys (JWKS)
+- Expiration and not-before claims are enforced with configurable clock skew
 - No authentication endpoints needed (provider handles them)
 - No refresh token storage needed
 
@@ -830,7 +873,8 @@ dddart_rest provides comprehensive JWT-based authentication with support for bot
 
 #### 1. Define Custom Claims
 
-Create a class for your JWT claims and annotate with `@JwtSerializable()`:
+Create a class that can parse and serialize your JWT claims. The optional
+`@JwtSerializable()` annotation also generates convenience extension methods:
 
 ```dart
 import 'package:dddart_rest/dddart_rest.dart';
@@ -848,6 +892,18 @@ class UserClaims {
   final String userId;
   final String email;
   final List<String> roles;
+
+  factory UserClaims.fromJson(Map<String, dynamic> json) => UserClaims(
+    userId: json['userId'] as String,
+    email: json['email'] as String,
+    roles: (json['roles'] as List<dynamic>).cast<String>(),
+  );
+
+  Map<String, dynamic> toJson() => {
+    'userId': userId,
+    'email': email,
+    'roles': roles,
+  };
 }
 ```
 
@@ -856,7 +912,9 @@ Run code generation:
 dart run build_runner build
 ```
 
-This generates extension methods for serializing/deserializing claims.
+This generates convenience extension methods for serializing and deserializing
+claims. The auth handler constructor still requires explicit parser and
+serializer callbacks.
 
 #### 2. Set Up Repositories
 
@@ -867,58 +925,60 @@ Choose your persistence strategy:
 ```dart
 import 'package:dddart_rest/dddart_rest.dart';
 
-final refreshTokenRepo = InMemoryRepository<RefreshToken>();
-final deviceCodeRepo = InMemoryRepository<DeviceCode>();
+final refreshTokenRepo = InMemoryRefreshTokenRepository<RefreshToken>();
+final deviceCodeRepo = InMemoryDeviceCodeRepository<DeviceCode>(
+  lifecycle: const StandardDeviceCodeLifecycle(),
+);
 ```
 
-**Option B: MongoDB (Production)**
+**Production persistence**
 
-Extend the base classes and annotate for code generation:
+Use authentication-specific persistence adapters that implement and test the
+lookup and state-transition behavior required by the refresh-token and
+device-code flows. A refresh-token adapter implements
+`RefreshTokenRepository<T>` and performs `findByToken(String token)` as a
+datastore query. Do not assume that a generated CRUD repository is a production
+authentication adapter. In particular, the generated MongoDB repositories have
+not been verified as sufficient for these flows, and dddart does not currently
+ship a verified MongoDB authentication adapter.
+
+A production device-code adapter must implement `DeviceCodeRepository<T>`,
+including lookup by user code and device code. Its `consumeApproved` operation
+must be one database-level conditional operation that matches the device code,
+bound client ID, approved state, non-null user, and expiration, then persists
+and returns the typed consumed value. An ordinary read followed by `save()` is
+not atomic and does not satisfy this contract.
+
+If an application stores custom `RefreshToken` or `DeviceCode` subtypes, keep
+the same concrete type in the repository, handler or endpoints, and lifecycle:
 
 ```dart
-import 'package:dddart_rest/dddart_rest.dart';
-import 'package:dddart_repository_mongodb/dddart_repository_mongodb.dart';
+final authHandler = JwtAuthHandler<UserClaims, AppRefreshToken>(
+  secret: secret,
+  refreshTokenRepository: appRefreshTokenRepository,
+  refreshTokenLifecycle: const AppRefreshTokenLifecycle(),
+  claimsLoader: loadCurrentClaims,
+  parseClaimsFromJson: UserClaims.fromJson,
+  claimsToJson: (claims) => claims.toJson(),
+);
 
-@Serializable()
-@GenerateMongoRepository()
-class AppRefreshToken extends RefreshToken {
-  AppRefreshToken({
-    required super.id,
-    required super.userId,
-    required super.token,
-    required super.expiresAt,
-    super.revoked,
-    super.deviceInfo,
-  });
-}
-
-@Serializable()
-@GenerateMongoRepository()
-class AppDeviceCode extends DeviceCode {
-  AppDeviceCode({
-    required super.id,
-    required super.deviceCode,
-    required super.userCode,
-    required super.clientId,
-    required super.expiresAt,
-    super.userId,
-    super.status,
-  });
-}
-
-part 'auth_models.g.dart';
+final authEndpoints =
+    AuthEndpoints<UserClaims, AppRefreshToken, AppDeviceCode>(
+  authHandler: authHandler,
+  deviceCodeRepository: appDeviceCodeRepository,
+  deviceCodeLifecycle: const AppDeviceCodeLifecycle(),
+  userValidator: validateUser,
+);
 ```
 
-Run code generation:
-```bash
-dart run build_runner build
-```
-
-Then create repository instances:
-```dart
-final refreshTokenRepo = AppRefreshTokenMongoRepository(database);
-final deviceCodeRepo = AppDeviceCodeMongoRepository(database);
-```
+`AppRefreshTokenLifecycle` implements
+`RefreshTokenLifecycle<AppRefreshToken>` and returns `AppRefreshToken` from
+both `create` and `revoke`. `AppDeviceCodeLifecycle` implements
+`DeviceCodeLifecycle<AppDeviceCode>` and returns `AppDeviceCode` from `create`,
+`approve`, and `consume`. Each `create` method initializes the subtype-specific
+fields, and transition methods copy those fields from the current value while
+applying the required base-state change. This keeps the runtime subtype and
+custom state intact through lookup, transition, and typed persistence.
 
 #### 3. Create Auth Handler
 
@@ -926,12 +986,35 @@ final deviceCodeRepo = AppDeviceCodeMongoRepository(database);
 final authHandler = JwtAuthHandler<UserClaims, RefreshToken>(
   secret: 'your-256-bit-secret',  // Store in environment variable!
   refreshTokenRepository: refreshTokenRepo,
+  refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
+  claimsLoader: (userId) async {
+    // Read current application state every time a token is issued.
+    final user = await userDirectory.findActiveById(userId);
+    if (user == null) {
+      // Missing and disabled users must not receive tokens.
+      return null;
+    }
+    return UserClaims(
+      userId: user.id,
+      email: user.email,
+      roles: user.roles,
+    );
+  },
+  parseClaimsFromJson: UserClaims.fromJson,
+  claimsToJson: (claims) => claims.toJson(),
   issuer: 'https://api.example.com',
   audience: 'my-app',
-  accessTokenDuration: Duration(minutes: 15),
-  refreshTokenDuration: Duration(days: 7),
+  accessTokenDuration: const Duration(minutes: 15),
+  refreshTokenDuration: const Duration(days: 7),
 );
 ```
+
+`claimsLoader` is the authoritative, asynchronous source of application
+claims. It runs for initial issuance and again for every refresh, so role,
+tenant, and profile changes appear in the next access token. Return `null` when
+the user is missing, disabled, or otherwise ineligible. Refresh tokens remain
+opaque and contain no application claims; refresh never copies claims from an
+old access token.
 
 #### 4. Set Up Auth Endpoints
 
@@ -939,22 +1022,14 @@ final authHandler = JwtAuthHandler<UserClaims, RefreshToken>(
 final authEndpoints = AuthEndpoints(
   authHandler: authHandler,
   deviceCodeRepository: deviceCodeRepo,
+  deviceCodeLifecycle: const StandardDeviceCodeLifecycle(),
   userValidator: (username, password) async {
     // Validate credentials against your user database
     final user = await userRepo.findByUsername(username);
     if (user != null && user.verifyPassword(password)) {
-      return user.id;
+      return user.id.toString();
     }
     return null;
-  },
-  claimsBuilder: (userId) async {
-    // Build claims for the user
-    final user = await userRepo.getById(userId);
-    return UserClaims(
-      userId: user.id,
-      email: user.email,
-      roles: user.roles,
-    );
   },
 );
 
@@ -974,18 +1049,18 @@ server.registerResource(
   CrudResource<User, UserClaims>(
     path: '/users',
     repository: userRepo,
-    serializers: {'application/json': serializer},
-    authHandler: authHandler,  // Require authentication
+    serializer: serializer,
+    authenticationHandler: authHandler,  // Require authentication
   ),
 );
 
 // Public resource (no auth required)
 server.registerResource(
-  CrudResource<Product>(
+  CrudResource<Product, void>(
     path: '/products',
     repository: productRepo,
-    serializers: {'application/json': serializer},
-    // No authHandler = public access
+    serializer: serializer,
+    // No authenticationHandler = public access
   ),
 );
 ```
@@ -1016,11 +1091,17 @@ class CognitoClaims {
 ```dart
 final authHandler = OAuthJwtAuthHandler<CognitoClaims>(
   jwksUri: 'https://cognito-idp.us-east-1.amazonaws.com/us-east-1_ABC123/.well-known/jwks.json',
+  parseClaimsFromJson: CognitoClaims.fromJson,
   issuer: 'https://cognito-idp.us-east-1.amazonaws.com/us-east-1_ABC123',
   audience: 'your-cognito-client-id',
-  cacheDuration: Duration(hours: 24),
+  cacheDuration: const Duration(hours: 24),
+  clockSkewTolerance: const Duration(seconds: 30),
 );
 ```
+
+`OAuthJwtAuthHandler` rejects tokens at or after their `exp` time and tokens
+whose `nbf` time is still in the future. `clockSkewTolerance` applies the same
+allowance in both directions and defaults to zero.
 
 #### 3. Protect Resources
 
@@ -1029,8 +1110,8 @@ server.registerResource(
   CrudResource<User, CognitoClaims>(
     path: '/users',
     repository: userRepo,
-    serializers: {'application/json': serializer},
-    authHandler: authHandler,
+    serializer: serializer,
+    authenticationHandler: authHandler,
   ),
 );
 ```
@@ -1057,7 +1138,7 @@ queryHandlers: {
     final isAdmin = authResult.claims.roles.contains('admin');
     
     // Return user's own data
-    final user = await repo.getById(userId);
+    final user = await repo.getById(UuidValue.fromString(userId));
     return QueryResult([user], totalCount: 1);
   },
 }
@@ -1176,9 +1257,19 @@ Poll for device flow tokens.
 }
 ```
 
+The `client_id` must exactly match the client ID stored when the device code was
+created. A mismatch returns `invalid_grant`. An approved device grant is
+single-use: redemption atomically changes it to consumed, only that caller
+receives tokens, and every later attempt returns `invalid_grant`.
+
+If the successful response is lost after the grant is consumed, the tokens
+cannot be recovered by polling again. Restart login and request a new device
+code.
+
 ### JWT Claims Code Generation
 
-The `@JwtSerializable()` annotation generates extension methods for serializing and deserializing claims:
+The `@JwtSerializable()` annotation generates convenience extension methods on
+an existing compatible handler for serializing and deserializing claims:
 
 ```dart
 // Your claims class
@@ -1190,7 +1281,8 @@ class UserClaims {
 }
 
 // Generated extension (in user_claims.g.dart)
-extension JwtAuthHandlerUserClaimsExtension on JwtAuthHandler<UserClaims> {
+extension JwtAuthHandlerUserClaimsExtension
+    on JwtAuthHandler<UserClaims, dynamic> {
   UserClaims parseClaimsFromJson(Map<String, dynamic> json) {
     return UserClaims(
       userId: json['userId'] as String,
@@ -1207,7 +1299,9 @@ extension JwtAuthHandlerUserClaimsExtension on JwtAuthHandler<UserClaims> {
 }
 ```
 
-The extension methods are automatically used by the auth handler - no manual wiring needed!
+The generated methods are helpers; they are not automatically wired into the
+handler constructor. `JwtAuthHandler` still requires `claimsLoader`,
+`parseClaimsFromJson`, and `claimsToJson` callbacks, as shown above.
 
 ### Built-in StandardClaims
 
@@ -1217,6 +1311,10 @@ For simple cases, use the pre-generated `StandardClaims` class:
 final authHandler = JwtAuthHandler<StandardClaims, RefreshToken>(
   secret: 'your-secret',
   refreshTokenRepository: refreshTokenRepo,
+  refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
+  claimsLoader: loadCurrentStandardClaims,
+  parseClaimsFromJson: StandardClaims.fromJson,
+  claimsToJson: (claims) => claims.toJson(),
 );
 
 // StandardClaims includes: sub, email, name
@@ -1269,7 +1367,7 @@ final client = RestClient(
 );
 
 // Tokens automatically included and refreshed
-final response = await client.get('/users');
+final response = await client.getPath('/users');
 ```
 
 See the [dddart_rest_client documentation](../dddart_rest_client/README.md) for details.

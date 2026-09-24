@@ -33,13 +33,13 @@ void main() async {
   try {
     // Make authenticated requests
     print('\nFetching users...');
-    final response = await client.get('/users');
+    final response = await client.getPath('/users');
     print('Response: ${response.statusCode}');
     print(response.body);
 
     // Create a new user
     print('\nCreating user...');
-    final createResponse = await client.post(
+    final createResponse = await client.postPath(
       '/users',
       body: {'name': 'Alice', 'email': 'alice@example.com'},
     );

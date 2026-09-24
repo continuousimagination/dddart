@@ -45,9 +45,7 @@ void main() {
     });
 
     test('Excludes null DateTime fields by default', () {
-      final task = TaskAggregate(
-        title: 'Incomplete task',
-      );
+      final task = TaskAggregate(title: 'Incomplete task');
 
       final serializer = TaskAggregateJsonSerializer();
       final json = serializer.toJson(task);
@@ -58,9 +56,7 @@ void main() {
     });
 
     test('Includes null DateTime fields when includeNullFields is true', () {
-      final task = TaskAggregate(
-        title: 'Task with nulls',
-      );
+      final task = TaskAggregate(title: 'Task with nulls');
 
       final serializer = TaskAggregateJsonSerializer();
       const config = SerializationConfig(includeNullFields: true);
@@ -74,24 +70,22 @@ void main() {
     });
 
     test(
-        'Handles mixed null and non-null DateTime fields with includeNullFields',
-        () {
-      final dueDate = DateTime(2024, 12, 31);
-      final task = TaskAggregate(
-        title: 'Mixed task',
-        dueDate: dueDate,
-      );
+      'Handles mixed null and non-null DateTime fields with includeNullFields',
+      () {
+        final dueDate = DateTime(2024, 12, 31);
+        final task = TaskAggregate(title: 'Mixed task', dueDate: dueDate);
 
-      final serializer = TaskAggregateJsonSerializer();
-      const config = SerializationConfig(includeNullFields: true);
-      final json = serializer.toJson(task, config);
+        final serializer = TaskAggregateJsonSerializer();
+        const config = SerializationConfig(includeNullFields: true);
+        final json = serializer.toJson(task, config);
 
-      expect(json['title'], equals('Mixed task'));
-      expect(json.containsKey('completedAt'), isTrue);
-      expect(json['completedAt'], isNull);
-      expect(json.containsKey('dueDate'), isTrue);
-      expect(json['dueDate'], equals(dueDate.toIso8601String()));
-    });
+        expect(json['title'], equals('Mixed task'));
+        expect(json.containsKey('completedAt'), isTrue);
+        expect(json['completedAt'], isNull);
+        expect(json.containsKey('dueDate'), isTrue);
+        expect(json['dueDate'], equals(dueDate.toIso8601String()));
+      },
+    );
 
     test('Deserializes nullable DateTime fields correctly', () {
       final json = {

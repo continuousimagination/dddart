@@ -2,9 +2,10 @@ import 'dart:convert';
 
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/dddart_rest.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:shelf/shelf.dart';
 import 'package:test/test.dart';
+
+import 'json_serializer_test_support.dart';
 
 // Test aggregate root
 class TestUser extends AggregateRoot {
@@ -21,7 +22,7 @@ class TestUser extends AggregateRoot {
 }
 
 // Test serializer
-class TestUserSerializer implements Serializer<TestUser> {
+class TestUserSerializer extends TestJsonSerializer<TestUser> {
   @override
   String serialize(TestUser user, [dynamic config]) {
     return jsonEncode({
@@ -102,7 +103,7 @@ void main() {
       resource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: repository,
-        serializers: {'application/json': TestUserSerializer()},
+        serializer: TestUserSerializer(),
       );
 
       testUser = TestUser(
@@ -428,7 +429,7 @@ void main() {
       });
     });
 
-    group('concurrent update scenario', () {
+    group('competing legacy conditional requests', () {
       test('refuses both competing legacy conditional writes', () async {
         // Client A fetches user
         await repository.save(testUser);
@@ -472,7 +473,7 @@ void main() {
         );
         expect(clientAResponse.statusCode, equals(501));
 
-        // Client B tries to update with stale ETag
+        // Client B submits the same validator; neither legacy write is atomic.
         final clientBUpdate = jsonEncode({
           'id': testUser.id.toString(),
           'name': 'Updated by B',
@@ -512,7 +513,7 @@ void main() {
         final contentHashResource = CrudResource<TestUser, dynamic>(
           path: '/users',
           repository: repository,
-          serializers: {'application/json': TestUserSerializer()},
+          serializer: TestUserSerializer(),
           etagStrategy: ETagStrategy.contentHash,
         );
 

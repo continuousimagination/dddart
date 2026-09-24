@@ -26,7 +26,7 @@
 ///   User({required this.firstName, required this.lastName});
 /// }
 ///
-/// part 'user.mongo_repository.g.dart';
+/// part 'user.g.dart';
 ///
 /// // Usage:
 /// final connection = MongoConnection(
@@ -71,7 +71,7 @@
 ///   });
 /// }
 ///
-/// part 'user.mongo_repository.g.dart';
+/// part 'user.g.dart';
 ///
 /// // Extend generated base class and implement custom methods
 /// class UserMongoRepository extends UserMongoRepositoryBase {
@@ -137,10 +137,7 @@ class GenerateMongoRepository {
   /// base class will be generated requiring the developer to implement
   /// custom methods. If the interface only contains base `Repository<T>`
   /// methods, a concrete class will be generated.
-  const GenerateMongoRepository({
-    this.collectionName,
-    this.implements,
-  });
+  const GenerateMongoRepository({this.collectionName, this.implements});
 
   /// The MongoDB collection name for this aggregate type.
   ///

@@ -1,7 +1,6 @@
 /// Runtime coverage of the generated JWT extension, bypassing injected callbacks.
 library;
 
-import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/dddart_rest.dart';
 import 'package:test/test.dart';
 
@@ -26,7 +25,9 @@ class MigrationClaims {
 void main() {
   final handler = JwtAuthHandler<MigrationClaims, RefreshToken>(
     secret: 'test-only-not-a-live-credential',
-    refreshTokenRepository: InMemoryRepository<RefreshToken>(),
+    refreshTokenRepository: InMemoryRefreshTokenRepository<RefreshToken>(),
+    refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
+    claimsLoader: (_) async => const MigrationClaims(name: 'test', tags: []),
     parseClaimsFromJson: (_) =>
         throw StateError('Must exercise generated extension'),
     claimsToJson: (_) => throw StateError('Must exercise generated extension'),

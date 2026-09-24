@@ -17,8 +17,9 @@ import 'package:source_gen/source_gen.dart';
 /// This function is referenced in build.yaml and creates the builder
 /// that generates DynamoDB repository implementations.
 ///
-/// The builder uses [SharedPartBuilder] to generate `.dynamo_repository.g.dart`
-/// files for classes annotated with [@GenerateDynamoRepository].
+/// The builder uses [SharedPartBuilder] to emit internal
+/// `.dynamo_repository.g.part` fragments. The combining builder merges those
+/// fragments into each owning library's declared `*.g.dart` part.
 Builder dynamoRepositoryBuilder(BuilderOptions options) {
   return SharedPartBuilder([DynamoRepositoryGenerator()], 'dynamo_repository');
 }
@@ -460,10 +461,13 @@ class DynamoRepositoryGenerator
   /// (including Repository<T>), but excludes methods from Object and other
   /// system classes.
   List<MethodElement> _getInterfaceMethods(InterfaceType interfaceType) {
-    final methods = <MethodElement>[];
+    final methodsByName = <String, MethodElement>{};
 
-    // Get methods from the interface itself
-    methods.addAll(interfaceType.methods);
+    // Add the most-derived declarations first so inherited declarations with
+    // the same name cannot produce duplicate abstract members.
+    for (final method in interfaceType.methods) {
+      methodsByName.putIfAbsent(method.name!, () => method);
+    }
 
     // Get methods from all superinterfaces (including Repository<T>)
     // but exclude Object and system classes
@@ -475,10 +479,12 @@ class DynamoRepositoryGenerator
           supertype.element.library.isInSdk) {
         continue;
       }
-      methods.addAll(supertype.methods);
+      for (final method in supertype.methods) {
+        methodsByName.putIfAbsent(method.name!, () => method);
+      }
     }
 
-    return methods;
+    return methodsByName.values.toList();
   }
 
   /// Converts a camelCase or PascalCase string to snake_case.
@@ -585,30 +591,6 @@ class DynamoRepositoryGenerator
   }''';
   }
 
-  /// Generates the getAll method implementation (full table scan).
-  String _generateGetAllMethod(String className) {
-    return '''
-  @override
-  Future<List<$className>> getAll() async {
-    try {
-      final response = await _connection.client.scan(
-        tableName: tableName,
-      );
-
-      if (response.items == null || response.items!.isEmpty) {
-        return [];
-      }
-
-      return response.items!.map((item) {
-        final json = AttributeValueConverter.attributeMapToJsonMap(item);
-        return _serializer.fromJson(json);
-      }).toList();
-    } catch (e) {
-      throw _mapDynamoException(e, 'getAll');
-    }
-  }''';
-  }
-
   /// Generates the DynamoDB exception mapping helper method.
   String _generateMapDynamoExceptionMethod() {
     return '''
@@ -698,9 +680,10 @@ aws dynamodb create-table \\\\
   /// // Add to CloudFormation template
   /// ```
   static String getCloudFormationTemplate(String tableName) {
+    final logicalId = _cloudFormationLogicalId(tableName);
     return \'\'\'
 Resources:
-  \\\${tableName.split('_').map((s) => s[0].toUpperCase() + s.substring(1)).join()}Table:
+  \${logicalId}Table:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: \$tableName
@@ -712,6 +695,24 @@ Resources:
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
 \'\'\'.trim();
+  }
+
+  static String _cloudFormationLogicalId(String tableName) {
+    final segments = tableName
+        .split(RegExp('[^A-Za-z0-9]+'))
+        .where((segment) => segment.isNotEmpty);
+    var logicalId = segments
+        .map(
+          (segment) =>
+              segment[0].toUpperCase() + segment.substring(1),
+        )
+        .join();
+
+    if (logicalId.isEmpty) logicalId = 'Dynamo';
+    if (!RegExp('^[A-Za-z]').hasMatch(logicalId)) {
+      logicalId = 'Dynamo\$logicalId';
+    }
+    return logicalId;
   }''';
   }
 
@@ -732,7 +733,7 @@ Resources:
   }) {
     final interfaceClause = implements != null
         ? 'implements $interfaceName'
-        : 'implements QueryableRepository<$className>';
+        : 'implements Repository<$className>';
 
     final buffer = StringBuffer();
 
@@ -789,8 +790,7 @@ Resources:
 
     buffer.writeln(_generateDeleteByIdMethod(className));
     buffer.writeln();
-    buffer.writeln(_generateGetAllMethod(className));
-    buffer.writeln();
+
     // Generate exception mapping helper
     buffer.writeln(_generateMapDynamoExceptionMethod());
     buffer.writeln();
@@ -882,9 +882,6 @@ Resources:
     buffer.writeln();
 
     buffer.writeln(_generateDeleteByIdMethod(className));
-    buffer.writeln();
-
-    buffer.writeln(_generateGetAllMethod(className));
     buffer.writeln();
 
     // Generate exception mapping helper
@@ -989,7 +986,7 @@ Resources:
     final named = <String>[];
     for (final parameter in parameters) {
       var code =
-          '${parameter.isRequiredNamed ? 'required ' : ''}${_renderType(parameter.type, scope)}${parameter.name == null || parameter.name!.isEmpty ? '' : ' ${parameter.name}'}';
+          '${parameter.isRequiredNamed ? 'required ' : ''}${parameter.isCovariant ? 'covariant ' : ''}${_renderType(parameter.type, scope)}${parameter.name == null || parameter.name!.isEmpty ? '' : ' ${parameter.name}'}';
       if (parameter.defaultValueCode != null) {
         code += ' = ${_defaultLiteral(parameter, scope)}';
       }

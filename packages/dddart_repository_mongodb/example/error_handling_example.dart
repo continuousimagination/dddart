@@ -50,13 +50,13 @@ Future<void> _demonstrateNotFoundError() async {
 
     try {
       await userRepo.getById(nonExistentId);
-      print('   ✗ Should have thrown RepositoryException.notFound');
+      throw StateError('Expected RepositoryException.notFound');
     } on RepositoryException catch (e) {
       if (e.type == RepositoryExceptionType.notFound) {
         print('   ✓ Caught RepositoryException.notFound');
         print('   Message: ${e.message}');
       } else {
-        print('   ✗ Unexpected exception type: ${e.type}');
+        rethrow;
       }
     }
 
@@ -64,13 +64,13 @@ Future<void> _demonstrateNotFoundError() async {
     print('\n   Attempting to delete non-existent user: $nonExistentId');
     try {
       await userRepo.deleteById(nonExistentId);
-      print('   ✗ Should have thrown RepositoryException.notFound');
+      throw StateError('Expected RepositoryException.notFound');
     } on RepositoryException catch (e) {
       if (e.type == RepositoryExceptionType.notFound) {
         print('   ✓ Caught RepositoryException.notFound');
         print('   Message: ${e.message}');
       } else {
-        print('   ✗ Unexpected exception type: ${e.type}');
+        rethrow;
       }
     }
   } finally {
@@ -92,9 +92,10 @@ Future<void> _demonstrateConnectionError() async {
   print('   Attempting to connect to localhost:27018 (should fail)...');
   try {
     await connection.open();
-    print('   ✗ Connection should have failed');
     await connection.close();
+    throw StateError('Connection unexpectedly succeeded on localhost:27018');
   } catch (e) {
+    if (e is StateError) rethrow;
     print('   ✓ Caught connection error');
     print('   Error type: ${e.runtimeType}');
     print('   Message: ${e.toString().split('\n').first}');
@@ -150,6 +151,7 @@ Future<void> _demonstrateProperErrorHandling() async {
         print('   ✓ Delete failed (not found), continuing...');
       } else {
         print('   ✗ Unexpected error: ${e.message}');
+        rethrow;
       }
     }
 
@@ -169,6 +171,10 @@ Future<void> _demonstrateProperErrorHandling() async {
           print('   ✓ Handled: Duplicate key');
         case RepositoryExceptionType.constraint:
           print('   ✓ Handled: Constraint violation');
+        case RepositoryExceptionType.unauthorized:
+          print('   ✓ Handled: Unauthorized');
+        case RepositoryExceptionType.forbidden:
+          print('   ✓ Handled: Forbidden');
         case RepositoryExceptionType.unknown:
           print('   ✓ Handled: Unknown error');
       }

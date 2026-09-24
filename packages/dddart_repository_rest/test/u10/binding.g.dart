@@ -28,8 +28,12 @@ class ProbeRestRepository implements Repository<shared.RemoteRecord> {
   @override
   Future<shared.RemoteRecord> getById(UuidValue id) async {
     try {
-      final response = await _connection.client.get(
-        Uri.parse('${_connection.baseUrl}$_resourcePath/${id.uuid}'),
+      final response = await _connection.executeRequest(
+        () => _connection.client.get(
+          Uri.parse('${_connection.baseUrl}$_resourcePath/${id.uuid}'),
+          headers: {'Accept': 'application/json'},
+        ),
+        operation: 'retrieve shared.RemoteRecord',
       );
 
       if (response.statusCode == 200) {
@@ -57,10 +61,18 @@ class ProbeRestRepository implements Repository<shared.RemoteRecord> {
       final json = _serializer.toJson(aggregate);
       final body = jsonEncode(json);
 
-      final response = await _connection.client.put(
-        Uri.parse('${_connection.baseUrl}$_resourcePath/${aggregate.id.uuid}'),
-        body: body,
-        headers: {'Content-Type': 'application/json'},
+      final response = await _connection.executeRequest(
+        () => _connection.client.put(
+          Uri.parse(
+            '${_connection.baseUrl}$_resourcePath/${aggregate.id.uuid}',
+          ),
+          body: body,
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+        ),
+        operation: 'save shared.RemoteRecord',
       );
 
       if (response.statusCode == 200 || response.statusCode == 204) {
@@ -81,8 +93,12 @@ class ProbeRestRepository implements Repository<shared.RemoteRecord> {
   @override
   Future<void> deleteById(UuidValue id) async {
     try {
-      final response = await _connection.client.delete(
-        Uri.parse('${_connection.baseUrl}$_resourcePath/${id.uuid}'),
+      final response = await _connection.executeRequest(
+        () => _connection.client.delete(
+          Uri.parse('${_connection.baseUrl}$_resourcePath/${id.uuid}'),
+          headers: {'Accept': 'application/json'},
+        ),
+        operation: 'delete shared.RemoteRecord',
       );
 
       if (response.statusCode == 204 || response.statusCode == 200) {
@@ -175,8 +191,12 @@ abstract class CallbackRestRepositoryBase implements shared.RemotePort {
   @override
   Future<shared.RemoteRecord> getById(UuidValue id) async {
     try {
-      final response = await _connection.client.get(
-        Uri.parse('${_connection.baseUrl}$_resourcePath/${id.uuid}'),
+      final response = await _connection.executeRequest(
+        () => _connection.client.get(
+          Uri.parse('${_connection.baseUrl}$_resourcePath/${id.uuid}'),
+          headers: {'Accept': 'application/json'},
+        ),
+        operation: 'retrieve shared.RemoteRecord',
       );
 
       if (response.statusCode == 200) {
@@ -204,10 +224,18 @@ abstract class CallbackRestRepositoryBase implements shared.RemotePort {
       final json = _serializer.toJson(aggregate);
       final body = jsonEncode(json);
 
-      final response = await _connection.client.put(
-        Uri.parse('${_connection.baseUrl}$_resourcePath/${aggregate.id.uuid}'),
-        body: body,
-        headers: {'Content-Type': 'application/json'},
+      final response = await _connection.executeRequest(
+        () => _connection.client.put(
+          Uri.parse(
+            '${_connection.baseUrl}$_resourcePath/${aggregate.id.uuid}',
+          ),
+          body: body,
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+        ),
+        operation: 'save shared.RemoteRecord',
       );
 
       if (response.statusCode == 200 || response.statusCode == 204) {
@@ -228,8 +256,12 @@ abstract class CallbackRestRepositoryBase implements shared.RemotePort {
   @override
   Future<void> deleteById(UuidValue id) async {
     try {
-      final response = await _connection.client.delete(
-        Uri.parse('${_connection.baseUrl}$_resourcePath/${id.uuid}'),
+      final response = await _connection.executeRequest(
+        () => _connection.client.delete(
+          Uri.parse('${_connection.baseUrl}$_resourcePath/${id.uuid}'),
+          headers: {'Accept': 'application/json'},
+        ),
+        operation: 'delete shared.RemoteRecord',
       );
 
       if (response.statusCode == 204 || response.statusCode == 200) {

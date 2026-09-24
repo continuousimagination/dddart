@@ -64,8 +64,9 @@ class TestSqliteHelper {
     if (!isConnected) {
       throw StateError('Not connected. Call connect() first.');
     }
-    final result =
-        await _connection!.query('SELECT COUNT(*) as count FROM $tableName');
+    final result = await _connection!.query(
+      'SELECT COUNT(*) as count FROM $tableName',
+    );
     return result.first['count']! as int;
   }
 

@@ -6,12 +6,30 @@ class OrderWithCustomRepoMysqlRepository
   /// Creates a new custom repository instance.
   OrderWithCustomRepoMysqlRepository(super.connection);
 
+  static const _selectColumns = '''
+    `customerName`,
+    `shippingAddress_street`,
+    `shippingAddress_city`,
+    `shippingAddress_state`,
+    `shippingAddress_postalCode`,
+    `shippingAddress_country`,
+    `billingAddress_street`,
+    `billingAddress_city`,
+    `billingAddress_state`,
+    `billingAddress_postalCode`,
+    `billingAddress_country`,
+    BIN_TO_UUID(`id`) AS `id`,
+    `createdAt`,
+    `updatedAt`
+  ''';
+
   @override
   Future<List<OrderWithCustomRepo>> findByCustomerName(
     String customerName,
   ) async {
-    final sql = '''
-      SELECT * FROM $tableName
+    final sql =
+        '''
+      SELECT $_selectColumns FROM $tableName
       WHERE customerName = ?
       ORDER BY createdAt DESC
     ''';
@@ -23,7 +41,7 @@ class OrderWithCustomRepoMysqlRepository
       final json = _rowToJson(row);
 
       // Load related entities
-      final orderId = _dialect.decodeUuid(row['id']);
+      final orderId = UuidValue.fromString(row['id']! as String);
       final itemsJson = await _loadOrderItem(orderId);
       json['items'] = itemsJson;
 
@@ -39,7 +57,11 @@ class OrderWithCustomRepoMysqlRepository
     double minAmount,
   ) async {
     // First, get all orders
-    final sql = 'SELECT * FROM $tableName ORDER BY createdAt DESC';
+    final sql =
+        '''
+      SELECT $_selectColumns FROM $tableName
+      ORDER BY createdAt DESC
+    ''';
     final rows = await _connection.query(sql);
     final results = <OrderWithCustomRepo>[];
 
@@ -47,7 +69,7 @@ class OrderWithCustomRepoMysqlRepository
       final json = _rowToJson(row);
 
       // Load related entities
-      final orderId = _dialect.decodeUuid(row['id']);
+      final orderId = UuidValue.fromString(row['id']! as String);
       final itemsJson = await _loadOrderItem(orderId);
       json['items'] = itemsJson;
 

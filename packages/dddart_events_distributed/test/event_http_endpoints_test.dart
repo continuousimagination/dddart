@@ -49,10 +49,7 @@ void main() {
 
         // Assert
         expect(response.statusCode, equals(200));
-        expect(
-          response.headers['Content-Type'],
-          equals('application/json'),
-        );
+        expect(response.headers['Content-Type'], equals('application/json'));
 
         final body = await response.readAsString();
         final events = jsonDecode(body) as List<dynamic>;
@@ -76,10 +73,7 @@ void main() {
 
         // Assert
         expect(response.statusCode, equals(400));
-        expect(
-          response.headers['Content-Type'],
-          equals('application/json'),
-        );
+        expect(response.headers['Content-Type'], equals('application/json'));
 
         final body = await response.readAsString();
         final error = jsonDecode(body) as Map<String, dynamic>;
@@ -103,10 +97,7 @@ void main() {
 
         // Assert
         expect(response.statusCode, equals(400));
-        expect(
-          response.headers['Content-Type'],
-          equals('application/json'),
-        );
+        expect(response.headers['Content-Type'], equals('application/json'));
 
         final body = await response.readAsString();
         final error = jsonDecode(body) as Map<String, dynamic>;
@@ -160,39 +151,41 @@ void main() {
         expect(events[0]['userId'], equals('user-1'));
       });
 
-      test('should return empty array when no events match timestamp',
-          () async {
-        // Arrange
-        final repository = InMemoryEventRepository();
-        final event = StoredEvent(
-          id: UuidValue.generate(),
-          createdAt: DateTime(2024, 1, 1, 10),
-          aggregateId: UuidValue.generate(),
-          eventType: 'TestEvent',
-          eventJson: '{"data":"test"}',
-          userId: 'user-1',
-        );
-        await repository.save(event);
+      test(
+        'should return empty array when no events match timestamp',
+        () async {
+          // Arrange
+          final repository = InMemoryEventRepository();
+          final event = StoredEvent(
+            id: UuidValue.generate(),
+            createdAt: DateTime(2024, 1, 1, 10),
+            aggregateId: UuidValue.generate(),
+            eventType: 'TestEvent',
+            eventJson: '{"data":"test"}',
+            userId: 'user-1',
+          );
+          await repository.save(event);
 
-        final endpoints = EventHttpEndpoints<StoredEvent>(
-          eventRepository: repository,
-        );
+          final endpoints = EventHttpEndpoints<StoredEvent>(
+            eventRepository: repository,
+          );
 
-        final request = Request(
-          'GET',
-          Uri.parse('http://localhost/events?since=2025-01-01T00:00:00.000Z'),
-        );
+          final request = Request(
+            'GET',
+            Uri.parse('http://localhost/events?since=2025-01-01T00:00:00.000Z'),
+          );
 
-        // Act
-        final response = await endpoints.handleGetEvents(request);
+          // Act
+          final response = await endpoints.handleGetEvents(request);
 
-        // Assert
-        expect(response.statusCode, equals(200));
+          // Assert
+          expect(response.statusCode, equals(200));
 
-        final body = await response.readAsString();
-        final events = jsonDecode(body) as List<dynamic>;
-        expect(events.length, equals(0));
-      });
+          final body = await response.readAsString();
+          final events = jsonDecode(body) as List<dynamic>;
+          expect(events.length, equals(0));
+        },
+      );
 
       test('should handle repository errors gracefully', () async {
         // Arrange
@@ -211,10 +204,7 @@ void main() {
 
         // Assert
         expect(response.statusCode, equals(500));
-        expect(
-          response.headers['Content-Type'],
-          equals('application/json'),
-        );
+        expect(response.headers['Content-Type'], equals('application/json'));
 
         final body = await response.readAsString();
         final error = jsonDecode(body) as Map<String, dynamic>;
@@ -255,10 +245,7 @@ void main() {
 
         // Assert
         expect(response.statusCode, equals(201));
-        expect(
-          response.headers['Content-Type'],
-          equals('application/json'),
-        );
+        expect(response.headers['Content-Type'], equals('application/json'));
 
         final body = await response.readAsString();
         final result = jsonDecode(body) as Map<String, dynamic>;
@@ -290,10 +277,7 @@ void main() {
 
         // Assert
         expect(response.statusCode, equals(400));
-        expect(
-          response.headers['Content-Type'],
-          equals('application/json'),
-        );
+        expect(response.headers['Content-Type'], equals('application/json'));
 
         final body = await response.readAsString();
         final error = jsonDecode(body) as Map<String, dynamic>;
@@ -327,10 +311,7 @@ void main() {
 
         // Assert
         expect(response.statusCode, equals(400));
-        expect(
-          response.headers['Content-Type'],
-          equals('application/json'),
-        );
+        expect(response.headers['Content-Type'], equals('application/json'));
 
         final body = await response.readAsString();
         final error = jsonDecode(body) as Map<String, dynamic>;
@@ -367,10 +348,7 @@ void main() {
 
         // Assert
         expect(response.statusCode, equals(500));
-        expect(
-          response.headers['Content-Type'],
-          equals('application/json'),
-        );
+        expect(response.headers['Content-Type'], equals('application/json'));
 
         final body = await response.readAsString();
         final error = jsonDecode(body) as Map<String, dynamic>;

@@ -64,7 +64,6 @@ export 'src/entity.dart';
 export 'src/event_bus.dart';
 export 'src/in_memory_conditional_repository.dart';
 export 'src/in_memory_repository.dart';
-export 'src/queryable_repository.dart';
 export 'src/repository.dart';
 export 'src/repository_exception.dart';
 export 'src/revision.dart';

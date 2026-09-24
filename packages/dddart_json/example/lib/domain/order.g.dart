@@ -12,7 +12,12 @@ class OrderJsonSerializer implements JsonSerializer<Order> {
 
   /// Creates a serializer with the specified default configuration.
   OrderJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(Order instance, [SerializationConfig? config]) {
@@ -181,7 +186,7 @@ class OrderJsonSerializer implements JsonSerializer<Order> {
               )
             : DateTime.now(),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize Order',
         expectedType: 'Order',
@@ -216,7 +221,7 @@ class OrderJsonSerializer implements JsonSerializer<Order> {
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'Order',
       );
     }

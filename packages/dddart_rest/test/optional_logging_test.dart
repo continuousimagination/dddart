@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/dddart_rest.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:shelf/shelf.dart';
 import 'package:test/test.dart';
+
+import 'json_serializer_test_support.dart';
 
 // Test domain model
 class TestProduct extends AggregateRoot {
@@ -19,7 +20,7 @@ class TestProduct extends AggregateRoot {
 }
 
 // Test serializer
-class TestProductSerializer implements Serializer<TestProduct> {
+class TestProductSerializer extends TestJsonSerializer<TestProduct> {
   @override
   String serialize(TestProduct product, [dynamic config]) {
     return jsonEncode({
@@ -59,7 +60,7 @@ void main() {
       final resource = CrudResource<TestProduct, dynamic>(
         path: 'products',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
       );
 
       // Create a product
@@ -73,8 +74,10 @@ void main() {
         headers: {'accept': 'application/json'},
       );
 
-      final getResponse =
-          await resource.handleGetById(getRequest, product.id.toString());
+      final getResponse = await resource.handleGetById(
+        getRequest,
+        product.id.toString(),
+      );
       expect(getResponse.statusCode, equals(200));
 
       final responseBody = await getResponse.readAsString();
@@ -89,7 +92,7 @@ void main() {
       final resource = CrudResource<TestProduct, dynamic>(
         path: 'products',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
       );
 
       final product = TestProduct(name: 'New Product', price: 49.99);
@@ -119,7 +122,7 @@ void main() {
       final resource = CrudResource<TestProduct, dynamic>(
         path: 'products',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
       );
 
       // Create initial product
@@ -141,8 +144,10 @@ void main() {
         headers: {'content-type': 'application/json'},
       );
 
-      final putResponse =
-          await resource.handleUpdate(putRequest, product.id.toString());
+      final putResponse = await resource.handleUpdate(
+        putRequest,
+        product.id.toString(),
+      );
       expect(putResponse.statusCode, equals(200));
     });
 
@@ -153,7 +158,7 @@ void main() {
       final resource = CrudResource<TestProduct, dynamic>(
         path: 'products',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
       );
 
       // Create product
@@ -165,8 +170,10 @@ void main() {
         Uri.parse('http://localhost/products/${product.id}'),
       );
 
-      final deleteResponse =
-          await resource.handleDelete(deleteRequest, product.id.toString());
+      final deleteResponse = await resource.handleDelete(
+        deleteRequest,
+        product.id.toString(),
+      );
       expect(deleteResponse.statusCode, equals(204));
     });
 
@@ -177,7 +184,7 @@ void main() {
       final resource = CrudResource<TestProduct, dynamic>(
         path: 'products',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
       );
 
       // Try to get non-existent product
@@ -188,8 +195,10 @@ void main() {
         headers: {'accept': 'application/json'},
       );
 
-      final response =
-          await resource.handleGetById(getRequest, nonExistentId.toString());
+      final response = await resource.handleGetById(
+        getRequest,
+        nonExistentId.toString(),
+      );
       expect(response.statusCode, equals(404));
     });
 
@@ -200,7 +209,7 @@ void main() {
       final resource = CrudResource<TestProduct, dynamic>(
         path: 'products',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
       );
 
       // Perform multiple operations
@@ -214,8 +223,10 @@ void main() {
           headers: {'accept': 'application/json'},
         );
 
-        final response =
-            await resource.handleGetById(getRequest, product.id.toString());
+        final response = await resource.handleGetById(
+          getRequest,
+          product.id.toString(),
+        );
         expect(response.statusCode, equals(200));
       }
     });
@@ -229,7 +240,7 @@ void main() {
       final resource = CrudResource<TestProduct, dynamic>(
         path: 'products',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
       );
 
       final product = TestProduct(name: 'Test', price: 100);
@@ -241,8 +252,10 @@ void main() {
         headers: {'accept': 'application/json'},
       );
 
-      final response =
-          await resource.handleGetById(request, product.id.toString());
+      final response = await resource.handleGetById(
+        request,
+        product.id.toString(),
+      );
       expect(response.statusCode, equals(200));
     });
 
@@ -256,7 +269,7 @@ void main() {
       final resource = CrudResource<TestProduct, dynamic>(
         path: 'products',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
       );
 
       final product = TestProduct(name: 'Test', price: 100);
@@ -268,8 +281,10 @@ void main() {
         headers: {'accept': 'application/json'},
       );
 
-      final response =
-          await resource.handleGetById(request, product.id.toString());
+      final response = await resource.handleGetById(
+        request,
+        product.id.toString(),
+      );
       expect(response.statusCode, equals(200));
     });
   });

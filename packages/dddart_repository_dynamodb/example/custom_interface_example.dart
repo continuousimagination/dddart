@@ -1,6 +1,7 @@
 // ignore_for_file: avoid_print
 
 import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';
+import 'lib/dynamodb_example_tables.dart';
 import 'lib/domain/user_with_custom_repo.dart';
 
 /// Custom interface example demonstrating extended repository functionality.
@@ -8,13 +9,13 @@ import 'lib/domain/user_with_custom_repo.dart';
 /// This example shows:
 /// - Defining a custom repository interface with domain-specific methods
 /// - Using the generated abstract base class
-/// - Implementing custom query methods using DynamoDB Scan operations
+/// - Implementing bounded custom reads with indexed DynamoDB Query operations
 /// - Using both generated CRUD methods and custom query methods
 ///
 /// Prerequisites:
 /// - DynamoDB Local running on localhost:8000
 /// - Or update connection parameters below
-/// - Table 'users_with_custom_repo' must exist
+/// - The example creates the `users_with_custom_repo` table when needed
 Future<void> main() async {
   print('=== Custom Interface Example ===\n');
 
@@ -29,6 +30,17 @@ Future<void> main() async {
   print('   ✓ Custom repository created\n');
 
   try {
+    await ensureDynamoTable(
+      connection: connection,
+      tableName: userRepo.tableName,
+      createTable: userRepo.createTableWithIndexes,
+      requiredGlobalSecondaryIndexes: const {
+        UserWithCustomRepoDynamoRepository.emailIndexName,
+        UserWithCustomRepoDynamoRepository.lastNameIndexName,
+      },
+    );
+    print('   ✓ Table ready: ${userRepo.tableName}\n');
+
     // Step 3: Create and save multiple users
     print('3. Creating and saving multiple users...');
     final users = [
@@ -62,13 +74,13 @@ Future<void> main() async {
       print('   ✓ Found user: ${foundByEmail.fullName}');
       print('   Email: ${foundByEmail.email}');
     } else {
-      print('   ✗ User not found');
+      throw StateError('Expected to find jane.doe@example.com');
     }
     print('');
 
     // Step 5: Use custom query method - findByLastName
     print('5. Finding users by last name (custom method)...');
-    final doeUsers = await userRepo.findByLastName('Doe');
+    final doeUsers = await userRepo.findByLastName('Doe', limit: 10);
     print('   ✓ Found ${doeUsers.length} users with last name "Doe":');
     for (final user in doeUsers) {
       print('     - ${user.fullName} (${user.email})');
@@ -87,7 +99,7 @@ Future<void> main() async {
     if (notFound == null) {
       print('   ✓ Correctly returned null for non-existent email');
     } else {
-      print('   ✗ Unexpected result');
+      throw StateError('Unexpectedly found nonexistent@example.com');
     }
     print('');
 
@@ -102,6 +114,7 @@ Future<void> main() async {
   } catch (e, stackTrace) {
     print('\n✗ Error: $e');
     print('Stack trace: $stackTrace');
+    rethrow;
   } finally {
     // Step 9: Clean up connection
     print('\n9. Disposing connection...');

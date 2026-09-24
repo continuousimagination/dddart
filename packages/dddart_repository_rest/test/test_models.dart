@@ -110,3 +110,19 @@ class TestAccount extends AggregateRoot {
   /// Account balance.
   final double balance;
 }
+
+/// Test aggregate that relies on the inferred REST resource path.
+@Serializable()
+@GenerateRestRepository()
+class InferredResource extends AggregateRoot {
+  /// Creates an inferred-resource test aggregate.
+  InferredResource({
+    required this.name,
+    super.id,
+    super.createdAt,
+    super.updatedAt,
+  });
+
+  /// Resource name.
+  final String name;
+}

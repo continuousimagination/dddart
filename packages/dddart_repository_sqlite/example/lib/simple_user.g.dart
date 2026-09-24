@@ -12,7 +12,12 @@ class SimpleUserJsonSerializer implements JsonSerializer<SimpleUser> {
 
   /// Creates a serializer with the specified default configuration.
   SimpleUserJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(
@@ -124,7 +129,7 @@ class SimpleUserJsonSerializer implements JsonSerializer<SimpleUser> {
               )
             : DateTime.now(),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize SimpleUser',
         expectedType: 'SimpleUser',
@@ -159,7 +164,7 @@ class SimpleUserJsonSerializer implements JsonSerializer<SimpleUser> {
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'SimpleUser',
       );
     }

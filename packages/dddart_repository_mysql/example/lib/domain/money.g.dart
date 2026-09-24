@@ -12,7 +12,12 @@ class MoneyJsonSerializer implements JsonSerializer<Money> {
 
   /// Creates a serializer with the specified default configuration.
   MoneyJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(Money instance, [SerializationConfig? config]) {
@@ -71,7 +76,7 @@ class MoneyJsonSerializer implements JsonSerializer<Money> {
                 )]
                 as String,
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize Money',
         expectedType: 'Money',
@@ -106,7 +111,7 @@ class MoneyJsonSerializer implements JsonSerializer<Money> {
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'Money',
       );
     }

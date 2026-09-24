@@ -30,14 +30,19 @@ The example includes:
 dart pub get
 ```
 
-2. **Generate serialization code**:
+2. **Regenerate serialization code from a clean state**:
 ```bash
-dart run build_runner build
+dart run build_runner clean
+dart run build_runner build --delete-conflicting-outputs
 ```
 
-3. **Run the example**:
+This produces the combined `lib/domain/*.g.dart` parts declared by the domain
+libraries.
+
+3. **Run the examples**:
 ```bash
-dart run example/serialization_example.dart
+dart run serialization_example.dart
+dart run enum_example_runner.dart
 ```
 
 ## Code Structure
@@ -53,7 +58,8 @@ example/
 │   │   ├── money.dart          # Money value object
 │   │   └── product_info.dart   # ProductInfo value object
 │   └── example.dart            # Main example code
-├── serialization_example.dart  # Entry point
+├── serialization_example.dart  # Aggregate/value round-trip entry point
+├── enum_example_runner.dart     # Enum round-trip entry point
 ├── pubspec.yaml
 ├── build.yaml
 └── README.md

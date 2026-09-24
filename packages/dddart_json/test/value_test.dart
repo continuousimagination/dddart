@@ -60,8 +60,9 @@ void main() {
 
     group('Value objects with special types', () {
       test('serializes Value object with UuidValue and DateTime fields', () {
-        final testId =
-            UuidValue.fromString('550e8400-e29b-41d4-a716-446655440000');
+        final testId = UuidValue.fromString(
+          '550e8400-e29b-41d4-a716-446655440000',
+        );
         final testTime = DateTime.parse('2024-01-01T12:00:00.000Z');
         final value = TestValueWithSpecialTypes(
           id: testId,
@@ -104,23 +105,25 @@ void main() {
         expect(value.name, equals('Deserialized Value'));
       });
 
-      test('round-trip serialization with special types maintains equality',
-          () {
-        final original = TestValueWithSpecialTypes(
-          id: UuidValue.fromString('550e8400-e29b-41d4-a716-446655440002'),
-          timestamp: DateTime.parse('2024-01-03T09:45:00.000Z'),
-          name: 'Round Trip Test',
-        );
+      test(
+        'round-trip serialization with special types maintains equality',
+        () {
+          final original = TestValueWithSpecialTypes(
+            id: UuidValue.fromString('550e8400-e29b-41d4-a716-446655440002'),
+            timestamp: DateTime.parse('2024-01-03T09:45:00.000Z'),
+            name: 'Round Trip Test',
+          );
 
-        final serializer = TestValueWithSpecialTypesJsonSerializer();
-        final json = serializer.toJson(original);
-        final deserialized = serializer.fromJson(json);
+          final serializer = TestValueWithSpecialTypesJsonSerializer();
+          final json = serializer.toJson(original);
+          final deserialized = serializer.fromJson(json);
 
-        expect(deserialized, equals(original));
-        expect(deserialized.id, equals(original.id));
-        expect(deserialized.timestamp, equals(original.timestamp));
-        expect(deserialized.name, equals(original.name));
-      });
+          expect(deserialized, equals(original));
+          expect(deserialized.id, equals(original.id));
+          expect(deserialized.timestamp, equals(original.timestamp));
+          expect(deserialized.name, equals(original.name));
+        },
+      );
     });
 
     group('Props-based field inclusion', () {
@@ -147,36 +150,38 @@ void main() {
         expect(json['zipCode'], equals(expectedProps[2]));
       });
 
-      test('verifies props-based equality is preserved through serialization',
-          () {
-        const address1 = TestAddress(
-          street: 'Same Street',
-          city: 'Same City',
-          zipCode: 'Same Zip',
-        );
-        const address2 = TestAddress(
-          street: 'Same Street',
-          city: 'Same City',
-          zipCode: 'Same Zip',
-        );
+      test(
+        'verifies props-based equality is preserved through serialization',
+        () {
+          const address1 = TestAddress(
+            street: 'Same Street',
+            city: 'Same City',
+            zipCode: 'Same Zip',
+          );
+          const address2 = TestAddress(
+            street: 'Same Street',
+            city: 'Same City',
+            zipCode: 'Same Zip',
+          );
 
-        // Verify they are equal based on props
-        expect(address1, equals(address2));
-        expect(address1.props, equals(address2.props));
+          // Verify they are equal based on props
+          expect(address1, equals(address2));
+          expect(address1.props, equals(address2.props));
 
-        // Verify serialization produces identical JSON
-        final serializer = TestAddressJsonSerializer();
-        final json1 = serializer.toJson(address1);
-        final json2 = serializer.toJson(address2);
-        expect(json1, equals(json2));
+          // Verify serialization produces identical JSON
+          final serializer = TestAddressJsonSerializer();
+          final json1 = serializer.toJson(address1);
+          final json2 = serializer.toJson(address2);
+          expect(json1, equals(json2));
 
-        // Verify deserialization maintains equality
-        final deserialized1 = serializer.fromJson(json1);
-        final deserialized2 = serializer.fromJson(json2);
-        expect(deserialized1, equals(deserialized2));
-        expect(deserialized1, equals(address1));
-        expect(deserialized2, equals(address2));
-      });
+          // Verify deserialization maintains equality
+          final deserialized1 = serializer.fromJson(json1);
+          final deserialized2 = serializer.fromJson(json2);
+          expect(deserialized1, equals(deserialized2));
+          expect(deserialized1, equals(address1));
+          expect(deserialized2, equals(address2));
+        },
+      );
     });
 
     group('Value object immutability', () {

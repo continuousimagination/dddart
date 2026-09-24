@@ -12,7 +12,12 @@ class AddressJsonSerializer implements JsonSerializer<Address> {
 
   /// Creates a serializer with the specified default configuration.
   AddressJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(Address instance, [SerializationConfig? config]) {
@@ -86,7 +91,7 @@ class AddressJsonSerializer implements JsonSerializer<Address> {
                 )]
                 as String,
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize Address',
         expectedType: 'Address',
@@ -121,7 +126,7 @@ class AddressJsonSerializer implements JsonSerializer<Address> {
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'Address',
       );
     }

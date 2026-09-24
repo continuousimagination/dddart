@@ -13,7 +13,12 @@ class OrderWithCustomRepoJsonSerializer
 
   /// Creates a serializer with the specified default configuration.
   OrderWithCustomRepoJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(
@@ -162,7 +167,7 @@ class OrderWithCustomRepoJsonSerializer
               )
             : DateTime.now(),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize OrderWithCustomRepo',
         expectedType: 'OrderWithCustomRepo',
@@ -197,7 +202,7 @@ class OrderWithCustomRepoJsonSerializer
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'OrderWithCustomRepo',
       );
     }
@@ -246,7 +251,7 @@ abstract class OrderWithCustomRepoMysqlRepositoryBase
   final _serializer = OrderWithCustomRepoJsonSerializer();
 
   /// The table name for OrderWithCustomRepo aggregates.
-  String get tableName => 'orders_custom';
+  String get tableName => 'orders';
 
   /// Creates all tables for this aggregate.
   ///
@@ -257,9 +262,9 @@ abstract class OrderWithCustomRepoMysqlRepositoryBase
   /// multiple times.
   Future<void> createTables() async {
     await _connection.transaction(() async {
-      // Create table: orders_custom
+      // Create table: orders
       await _connection.execute('''
-CREATE TABLE IF NOT EXISTS orders_custom (
+CREATE TABLE IF NOT EXISTS orders (
   customerName VARCHAR(255) NOT NULL,
   shippingAddress_street VARCHAR(255) NOT NULL,
   shippingAddress_city VARCHAR(255) NOT NULL,
@@ -287,9 +292,9 @@ CREATE TABLE IF NOT EXISTS order_item (
   id BINARY(16) PRIMARY KEY NOT NULL,
   createdAt DATETIME NOT NULL,
   updatedAt DATETIME NOT NULL,
-  orderscustom_id BINARY(16) NOT NULL,
+  orders_id BINARY(16) NOT NULL,
   _list_position INTEGER NOT NULL,
-  FOREIGN KEY (orderscustom_id) REFERENCES `orders_custom`(id) ON DELETE CASCADE
+  FOREIGN KEY (orders_id) REFERENCES `orders`(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ''');
     });
@@ -301,7 +306,7 @@ CREATE TABLE IF NOT EXISTS order_item (
       try {
         // Query the aggregate root table
         final rows = await _connection.query(
-          'SELECT `customerName`, `shippingAddress_street`, `shippingAddress_city`, `shippingAddress_state`, `shippingAddress_postalCode`, `shippingAddress_country`, `billingAddress_street`, `billingAddress_city`, `billingAddress_state`, `billingAddress_postalCode`, `billingAddress_country`, BIN_TO_UUID(`id`) as `id`, `createdAt`, `updatedAt` FROM orders_custom WHERE id = ?',
+          'SELECT `customerName`, `shippingAddress_street`, `shippingAddress_city`, `shippingAddress_state`, `shippingAddress_postalCode`, `shippingAddress_country`, `billingAddress_street`, `billingAddress_city`, `billingAddress_state`, `billingAddress_postalCode`, `billingAddress_country`, BIN_TO_UUID(`id`) as `id`, `createdAt`, `updatedAt` FROM orders WHERE id = ?',
           [_dialect.encodeUuid(id)],
         );
 
@@ -345,7 +350,7 @@ CREATE TABLE IF NOT EXISTS order_item (
         final placeholders = List.filled(columns.length, '?').join(', ');
         final updateClauses = columns.map((c) => '$c = VALUES($c)').join(', ');
         await _connection.execute(
-          'INSERT INTO orders_custom (${columns.join(', ')}) VALUES ($placeholders) '
+          'INSERT INTO orders (${columns.join(', ')}) VALUES ($placeholders) '
           'ON DUPLICATE KEY UPDATE $updateClauses',
           values,
         );
@@ -364,7 +369,7 @@ CREATE TABLE IF NOT EXISTS order_item (
       try {
         // Check if aggregate exists
         final rows = await _connection.query(
-          'SELECT BIN_TO_UUID(id) as id FROM orders_custom WHERE id = ?',
+          'SELECT BIN_TO_UUID(id) as id FROM orders WHERE id = ?',
           [_dialect.encodeUuid(id)],
         );
 
@@ -376,7 +381,7 @@ CREATE TABLE IF NOT EXISTS order_item (
         }
 
         // Delete aggregate (CASCADE will handle related entities)
-        await _connection.execute('DELETE FROM orders_custom WHERE id = ?', [
+        await _connection.execute('DELETE FROM orders WHERE id = ?', [
           _dialect.encodeUuid(id),
         ]);
       } on RepositoryException {
@@ -393,10 +398,9 @@ CREATE TABLE IF NOT EXISTS order_item (
     Map<String, dynamic> json,
   ) async {
     // Delete existing entities for this aggregate
-    await _connection.execute(
-      'DELETE FROM order_item WHERE orderscustom_id = ?',
-      [_dialect.encodeUuid(aggregate.id)],
-    );
+    await _connection.execute('DELETE FROM order_item WHERE orders_id = ?', [
+      _dialect.encodeUuid(aggregate.id),
+    ]);
 
     // Get entities from JSON
     final entitiesJson = json['items'];
@@ -408,7 +412,7 @@ CREATE TABLE IF NOT EXISTS order_item (
       if (entityJson is! Map<String, dynamic>) continue;
 
       // Add parent foreign key
-      entityJson['orderscustom_id'] = aggregate.id.toString();
+      entityJson['orders_id'] = aggregate.id.toString();
 
       // Add position to preserve List order
       entityJson['_list_position'] = i;
@@ -438,14 +442,14 @@ CREATE TABLE IF NOT EXISTS order_item (
     UuidValue aggregateId,
   ) async {
     final rows = await _connection.query(
-      'SELECT `productName`, `quantity`, `unitPrice_amount`, `unitPrice_currency`, BIN_TO_UUID(`id`) as `id`, `createdAt`, `updatedAt`, BIN_TO_UUID(`orderscustom_id`) as `orderscustom_id`, `_list_position` FROM order_item WHERE orderscustom_id = ? ORDER BY _list_position',
+      'SELECT `productName`, `quantity`, `unitPrice_amount`, `unitPrice_currency`, BIN_TO_UUID(`id`) as `id`, `createdAt`, `updatedAt`, BIN_TO_UUID(`orders_id`) as `orders_id`, `_list_position` FROM order_item WHERE orders_id = ? ORDER BY _list_position',
       [_dialect.encodeUuid(aggregateId)],
     );
 
     // Convert rows to JSON and remove the parent FK and position columns
     return rows.map((row) {
       final json = _rowToJson(row);
-      json.remove('orderscustom_id');
+      json.remove('orders_id');
       json.remove('_list_position');
       return json;
     }).toList();

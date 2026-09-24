@@ -20,6 +20,7 @@ class ResourcePipeline<T extends AggregateRoot, TClaims> {
     required Map<String, Serializer<T>> serializers,
     this.authenticationHandler,
     this.authorizationHandler,
+    this.jsonContract = false,
     Map<Type, Response Function(Object)> customExceptionHandlers = const {},
   }) : serializers = Map.unmodifiable(serializers),
        customExceptionHandlers = Map.unmodifiable(customExceptionHandlers) {
@@ -48,6 +49,9 @@ class ResourcePipeline<T extends AggregateRoot, TClaims> {
 
   /// Existing trusted application exception customization.
   final Map<Type, Response Function(Object)> customExceptionHandlers;
+
+  /// The canonical JSON constructor validates media before authentication.
+  final bool jsonContract;
   final _logger = Logger('dddart.rest');
 
   /// Authenticates once, invokes request-local work, and safely maps failures.
@@ -59,6 +63,17 @@ class ResourcePipeline<T extends AggregateRoot, TClaims> {
     final query = request.url.query.isEmpty ? '' : '?[query]';
     _logger.info('${request.method} /$path$query - $operation $T');
     try {
+      if (jsonContract) {
+        select(request.headers['accept']);
+        if (request.method == 'POST' || request.method == 'PUT') {
+          final media = (request.headers['content-type'] ?? '')
+              .split(';')
+              .first
+              .trim()
+              .toLowerCase();
+          if (media != 'application/json') throw _RequestMediaFailure(media);
+        }
+      }
       AuthenticationResult<TClaims>? principal;
       if (authenticationHandler != null) {
         principal = await authenticationHandler!.authenticate(request);
@@ -159,36 +174,53 @@ class ResourcePipeline<T extends AggregateRoot, TClaims> {
 
   /// Selects a response representation before any mutation.
   ResourceSerialization<T> select(String? accept) {
-    if (accept == null || accept.isEmpty || accept == '*/*') {
+    if (accept == null || accept.trim().isEmpty) {
       final first = serializers.entries.first;
       return ResourceSerialization(first.value, first.key);
     }
-    final preferences = <({String type, double quality})>[];
-    for (final part in accept.split(',')) {
-      final fields = part.trim().split(';');
-      var quality = 1.0;
-      for (final parameter in fields.skip(1)) {
-        final normalized = parameter.trim();
-        if (normalized.startsWith('q=')) {
-          quality = double.tryParse(normalized.substring(2)) ?? 1.0;
+    ResourceSerialization<T>? selected;
+    var selectedQuality = 0.0;
+    for (final entry in serializers.entries) {
+      var specificity = -1;
+      var quality = 0.0;
+      for (final part in accept.split(',')) {
+        final segments = part.trim().split(';');
+        final media = segments.first.trim().toLowerCase();
+        final candidateSpecificity = media == entry.key.toLowerCase()
+            ? 2
+            : media == '${entry.key.split('/').first.toLowerCase()}/*'
+            ? 1
+            : media == '*/*'
+            ? 0
+            : -1;
+        if (candidateSpecificity < 0) continue;
+        var candidateQuality = 1.0;
+        for (final parameter in segments.skip(1)) {
+          final pair = parameter.trim().split('=');
+          if (pair.first.trim().toLowerCase() != 'q') continue;
+          candidateQuality = pair.length == 2
+              ? double.tryParse(pair.last.trim()) ?? 0
+              : 0;
+          if (!candidateQuality.isFinite ||
+              candidateQuality < 0 ||
+              candidateQuality > 1) {
+            candidateQuality = 0;
+          }
           break;
         }
-      }
-      preferences.add((
-        type: fields.first.trim().toLowerCase(),
-        quality: quality,
-      ));
-    }
-    preferences.sort((a, b) => b.quality.compareTo(a.quality));
-    for (final preference in preferences) {
-      if (preference.quality <= 0) continue;
-      for (final entry in serializers.entries) {
-        if (preference.type == '*/*' ||
-            entry.key.toLowerCase() == preference.type) {
-          return ResourceSerialization(entry.value, entry.key);
+        if (candidateSpecificity > specificity ||
+            (candidateSpecificity == specificity &&
+                candidateQuality > quality)) {
+          specificity = candidateSpecificity;
+          quality = candidateQuality;
         }
       }
+      if (quality > selectedQuality) {
+        selectedQuality = quality;
+        selected = ResourceSerialization(entry.value, entry.key);
+      }
     }
+    if (selected != null) return selected;
     throw UnsupportedMediaTypeException('Unsupported response representation');
   }
 

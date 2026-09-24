@@ -12,7 +12,12 @@ class TestUserJsonSerializer implements JsonSerializer<TestUser> {
 
   /// Creates a serializer with the specified default configuration.
   TestUserJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(
@@ -106,7 +111,7 @@ class TestUserJsonSerializer implements JsonSerializer<TestUser> {
               )
             : DateTime.now(),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize TestUser',
         expectedType: 'TestUser',
@@ -141,7 +146,7 @@ class TestUserJsonSerializer implements JsonSerializer<TestUser> {
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'TestUser',
       );
     }
@@ -167,7 +172,12 @@ class TestProductJsonSerializer implements JsonSerializer<TestProduct> {
 
   /// Creates a serializer with the specified default configuration.
   TestProductJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(
@@ -272,7 +282,7 @@ class TestProductJsonSerializer implements JsonSerializer<TestProduct> {
               )
             : DateTime.now(),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize TestProduct',
         expectedType: 'TestProduct',
@@ -307,7 +317,7 @@ class TestProductJsonSerializer implements JsonSerializer<TestProduct> {
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'TestProduct',
       );
     }
@@ -333,7 +343,12 @@ class TestOrderJsonSerializer implements JsonSerializer<TestOrder> {
 
   /// Creates a serializer with the specified default configuration.
   TestOrderJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(
@@ -450,7 +465,7 @@ class TestOrderJsonSerializer implements JsonSerializer<TestOrder> {
               )
             : DateTime.now(),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize TestOrder',
         expectedType: 'TestOrder',
@@ -485,7 +500,7 @@ class TestOrderJsonSerializer implements JsonSerializer<TestOrder> {
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'TestOrder',
       );
     }
@@ -511,7 +526,12 @@ class TestAccountJsonSerializer implements JsonSerializer<TestAccount> {
 
   /// Creates a serializer with the specified default configuration.
   TestAccountJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(
@@ -630,7 +650,7 @@ class TestAccountJsonSerializer implements JsonSerializer<TestAccount> {
               )
             : DateTime.now(),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize TestAccount',
         expectedType: 'TestAccount',
@@ -665,7 +685,7 @@ class TestAccountJsonSerializer implements JsonSerializer<TestAccount> {
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'TestAccount',
       );
     }

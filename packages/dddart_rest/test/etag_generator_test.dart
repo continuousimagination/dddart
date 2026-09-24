@@ -177,9 +177,8 @@ void main() {
 
       test('throws ArgumentError when serializer not provided', () {
         expect(
-          () => ETagGenerator<TestAggregate>(
-            strategy: ETagStrategy.contentHash,
-          ),
+          () =>
+              ETagGenerator<TestAggregate>(strategy: ETagStrategy.contentHash),
           throwsArgumentError,
         );
       });

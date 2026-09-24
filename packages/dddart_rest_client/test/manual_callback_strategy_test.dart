@@ -5,7 +5,8 @@ import 'package:test/test.dart';
 
 void main() {
   group('ManualCallbackStrategy', () {
-    // Testing stdin interaction requires manual testing or complex mocking.
+    // Note: Testing stdin interaction requires manual testing or complex
+    // mocking.
     // These tests focus on the parsing logic which is the core functionality.
 
     test('Property 7: Manual Input Parsing - full URL with code', () {
@@ -40,8 +41,8 @@ void main() {
         final state = _generateRandomString(random, 16);
         const redirectUri = 'https://example.com/callback';
 
-        final input = '$redirectUri?error=$error&error_description=$errorDesc'
-            '&state=$state';
+        final input = '$redirectUri?error=$error&'
+            'error_description=$errorDesc&state=$state';
         final uri = Uri.parse(input);
 
         expect(uri.queryParameters['error'], equals(error));
@@ -96,8 +97,8 @@ void main() {
 
     test('URL parsing handles URL-encoded parameters', () {
       const redirectUri = 'https://example.com/callback';
-      const input = '$redirectUri?code=test123&state=state456'
-          '&error_description=User%20denied%20access';
+      const input = '$redirectUri?code=test123&state=state456&'
+          'error_description=User%20denied%20access';
       final uri = Uri.parse(input);
 
       expect(uri.queryParameters['code'], equals('test123'));

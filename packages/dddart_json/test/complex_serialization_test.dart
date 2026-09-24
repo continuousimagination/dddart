@@ -221,10 +221,7 @@ void main() {
           description: 'A project for testing collections',
           collaborators: [user1, user2],
           milestones: {milestone1, milestone2},
-          settings: {
-            'home_office': homeOffice,
-            'main_office': mainOffice,
-          },
+          settings: {'home_office': homeOffice, 'main_office': mainOffice},
         );
 
         final serializer = TestProjectJsonSerializer();

@@ -10,58 +10,63 @@ void main() {
     // Feature: dynamodb-repository, Property 5: Table name snake_case conversion
     // Validates: Requirements 1.5
     test(
-        'Property 5: snake_case conversion should insert underscores before capitals and lowercase all characters',
-        () {
-      // Run 100 iterations with randomly generated PascalCase names
-      for (var i = 0; i < 100; i++) {
-        final pascalCase = _generatePascalCaseName();
-        final snakeCase = _toSnakeCase(pascalCase);
+      'Property 5: snake_case conversion should insert underscores before capitals and lowercase all characters',
+      () {
+        // Run 100 iterations with randomly generated PascalCase names
+        for (var i = 0; i < 100; i++) {
+          final pascalCase = _generatePascalCaseName();
+          final snakeCase = _toSnakeCase(pascalCase);
 
-        // Property 1: Result should be all lowercase
-        expect(
-          snakeCase,
-          equals(snakeCase.toLowerCase()),
-          reason:
-              'snake_case result should be all lowercase for input: $pascalCase',
-        );
+          // Property 1: Result should be all lowercase
+          expect(
+            snakeCase,
+            equals(snakeCase.toLowerCase()),
+            reason:
+                'snake_case result should be all lowercase for input: $pascalCase',
+          );
 
-        // Property 2: Result should not start with underscore
-        expect(
-          snakeCase.startsWith('_'),
-          isFalse,
-          reason:
-              'snake_case result should not start with underscore for input: $pascalCase',
-        );
+          // Property 2: Result should not start with underscore
+          expect(
+            snakeCase.startsWith('_'),
+            isFalse,
+            reason:
+                'snake_case result should not start with underscore for input: $pascalCase',
+          );
 
-        // Property 3: Result should not end with underscore
-        expect(
-          snakeCase.endsWith('_'),
-          isFalse,
-          reason:
-              'snake_case result should not end with underscore for input: $pascalCase',
-        );
+          // Property 3: Result should not end with underscore
+          expect(
+            snakeCase.endsWith('_'),
+            isFalse,
+            reason:
+                'snake_case result should not end with underscore for input: $pascalCase',
+          );
 
-        // Property 4: Result should not have consecutive underscores
-        expect(
-          snakeCase.contains('__'),
-          isFalse,
-          reason:
-              'snake_case result should not have consecutive underscores for input: $pascalCase',
-        );
+          // Property 4: Result should not have consecutive underscores
+          expect(
+            snakeCase.contains('__'),
+            isFalse,
+            reason:
+                'snake_case result should not have consecutive underscores for input: $pascalCase',
+          );
 
-        // Property 5: Number of underscores should equal number of capital letters minus 1
-        final capitalCount =
-            pascalCase.split('').where((c) => c == c.toUpperCase()).length;
-        final underscoreCount =
-            snakeCase.split('').where((c) => c == '_').length;
-        expect(
-          underscoreCount,
-          equals(capitalCount - 1),
-          reason:
-              'Number of underscores should be capitals - 1 for input: $pascalCase',
-        );
-      }
-    });
+          // Property 5: Number of underscores should equal number of capital letters minus 1
+          final capitalCount = pascalCase
+              .split('')
+              .where((c) => c == c.toUpperCase())
+              .length;
+          final underscoreCount = snakeCase
+              .split('')
+              .where((c) => c == '_')
+              .length;
+          expect(
+            underscoreCount,
+            equals(capitalCount - 1),
+            reason:
+                'Number of underscores should be capitals - 1 for input: $pascalCase',
+          );
+        }
+      },
+    );
 
     test('Property 5: snake_case conversion should handle known examples', () {
       // Test specific known examples to verify correctness
@@ -106,36 +111,38 @@ void main() {
       }
     });
 
-    test('Property 5: snake_case conversion should preserve word boundaries',
-        () {
-      // Each capital letter in PascalCase represents a word boundary
-      // After conversion, these should be separated by underscores
-      for (var i = 0; i < 100; i++) {
-        final pascalCase = _generatePascalCaseName();
-        final snakeCase = _toSnakeCase(pascalCase);
+    test(
+      'Property 5: snake_case conversion should preserve word boundaries',
+      () {
+        // Each capital letter in PascalCase represents a word boundary
+        // After conversion, these should be separated by underscores
+        for (var i = 0; i < 100; i++) {
+          final pascalCase = _generatePascalCaseName();
+          final snakeCase = _toSnakeCase(pascalCase);
 
-        // Split by underscores to get words
-        final words = snakeCase.split('_');
+          // Split by underscores to get words
+          final words = snakeCase.split('_');
 
-        // Each word should be non-empty
-        for (final word in words) {
-          expect(
-            word.isNotEmpty,
-            isTrue,
-            reason: 'Each word in snake_case should be non-empty',
-          );
+          // Each word should be non-empty
+          for (final word in words) {
+            expect(
+              word.isNotEmpty,
+              isTrue,
+              reason: 'Each word in snake_case should be non-empty',
+            );
+          }
+
+          // Each word should be all lowercase
+          for (final word in words) {
+            expect(
+              word,
+              equals(word.toLowerCase()),
+              reason: 'Each word in snake_case should be lowercase',
+            );
+          }
         }
-
-        // Each word should be all lowercase
-        for (final word in words) {
-          expect(
-            word,
-            equals(word.toLowerCase()),
-            reason: 'Each word in snake_case should be lowercase',
-          );
-        }
-      }
-    });
+      },
+    );
   });
 }
 

@@ -27,3 +27,25 @@ doc/api/
 # Temporary files
 *.tmp
 *.temp
+
+# Reviewed tracked consumer artifacts must remain visible to Pub.
+!/test/framework_base_identity_test.g.dart
+!/test/annotation_configuration_precedence_test.g.dart
+!/test/nullable_collection_elements_test.g.dart
+!/test/inherited_state_test.g.dart
+!/example/lib/domain/address.g.dart
+!/example/lib/domain/customer.g.dart
+!/example/lib/domain/enum_example.g.dart
+!/example/lib/domain/money.g.dart
+!/example/lib/domain/order.g.dart
+!/example/lib/domain/order_item.g.dart
+!/example/lib/domain/product_info.g.dart
+!/test/constructor_config_test.g.dart
+!/test/fixtures/shared_model/lib/shared_model.g.dart
+!/test/fixtures/shared_model/lib/versioned_model.g.dart
+!/test/nullable_datetime_test.g.dart
+!/test/runtime_config_test.g.dart
+!/test/simple_architecture_test.g.dart
+!/test/test_models.g.dart
+!/test/u10/inherited_codec_test.g.dart
+!/test/u10/versioned_codec_test.g.dart

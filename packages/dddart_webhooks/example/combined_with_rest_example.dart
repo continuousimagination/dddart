@@ -50,6 +50,7 @@
 ///
 /// - packages/dddart_rest/example/custom_routes_example.dart
 /// - packages/dddart_webhooks/example/form_encoded_example.dart
+library;
 
 void main() {
   print('═══════════════════════════════════════════════════════════');

@@ -28,64 +28,66 @@ void main() {
     // **Feature: sql-repository, Property 1: Aggregate round trip preserves all fields**
     // **Validates: Requirements 2.1, 2.2, 4.1, 4.3**
     group('Property 1: Aggregate round trip preserves all fields', () {
-      test('should preserve all fields when saving and retrieving Order',
-          () async {
-        final repo = OrderSqliteRepository(connection);
-        await repo.createTables();
+      test(
+        'should preserve all fields when saving and retrieving Order',
+        () async {
+          final repo = OrderSqliteRepository(connection);
+          await repo.createTables();
 
-        final random = Random(42);
+          final random = Random(42);
 
-        for (var i = 0; i < 100; i++) {
-          // Generate random order with nested entities and value objects
-          final order = _generateRandomOrder(random);
+          for (var i = 0; i < 100; i++) {
+            // Generate random order with nested entities and value objects
+            final order = _generateRandomOrder(random);
 
-          // Save the order
-          await repo.save(order);
+            // Save the order
+            await repo.save(order);
 
-          // Retrieve the order
-          final retrieved = await repo.getById(order.id);
+            // Retrieve the order
+            final retrieved = await repo.getById(order.id);
 
-          // Verify all fields match
-          expect(
-            retrieved.id,
-            equals(order.id),
-            reason: 'Iteration $i: ID should match',
-          );
-          expect(
-            retrieved.customerId,
-            equals(order.customerId),
-            reason: 'Iteration $i: Customer ID should match',
-          );
-          expect(
-            retrieved.totalAmount.amount,
-            equals(order.totalAmount.amount),
-            reason: 'Iteration $i: Total amount should match',
-          );
-          expect(
-            retrieved.totalAmount.currency,
-            equals(order.totalAmount.currency),
-            reason: 'Iteration $i: Total currency should match',
-          );
-          expect(
-            retrieved.shippingAddress.street,
-            equals(order.shippingAddress.street),
-            reason: 'Iteration $i: Shipping street should match',
-          );
-          expect(
-            retrieved.shippingAddress.city,
-            equals(order.shippingAddress.city),
-            reason: 'Iteration $i: Shipping city should match',
-          );
-          expect(
-            retrieved.shippingAddress.country,
-            equals(order.shippingAddress.country),
-            reason: 'Iteration $i: Shipping country should match',
-          );
+            // Verify all fields match
+            expect(
+              retrieved.id,
+              equals(order.id),
+              reason: 'Iteration $i: ID should match',
+            );
+            expect(
+              retrieved.customerId,
+              equals(order.customerId),
+              reason: 'Iteration $i: Customer ID should match',
+            );
+            expect(
+              retrieved.totalAmount.amount,
+              equals(order.totalAmount.amount),
+              reason: 'Iteration $i: Total amount should match',
+            );
+            expect(
+              retrieved.totalAmount.currency,
+              equals(order.totalAmount.currency),
+              reason: 'Iteration $i: Total currency should match',
+            );
+            expect(
+              retrieved.shippingAddress.street,
+              equals(order.shippingAddress.street),
+              reason: 'Iteration $i: Shipping street should match',
+            );
+            expect(
+              retrieved.shippingAddress.city,
+              equals(order.shippingAddress.city),
+              reason: 'Iteration $i: Shipping city should match',
+            );
+            expect(
+              retrieved.shippingAddress.country,
+              equals(order.shippingAddress.country),
+              reason: 'Iteration $i: Shipping country should match',
+            );
 
-          // Clean up for next iteration
-          await repo.deleteById(order.id);
-        }
-      });
+            // Clean up for next iteration
+            await repo.deleteById(order.id);
+          }
+        },
+      );
     });
 
     // **Feature: sql-repository, Property 2: Nested entities are preserved**
@@ -355,10 +357,7 @@ void main() {
           final order2 = _generateRandomOrder(random);
 
           // Save both concurrently
-          await Future.wait([
-            repo.save(order1),
-            repo.save(order2),
-          ]);
+          await Future.wait([repo.save(order1), repo.save(order2)]);
 
           // Verify both are fully persisted
           final retrieved1 = await repo.getById(order1.id);
@@ -431,49 +430,51 @@ void main() {
     // **Feature: sql-repository, Property 10: DateTime precision preserved**
     // **Validates: Requirements 3.6**
     group('Property 10: DateTime precision preserved', () {
-      test('should preserve DateTime values within millisecond precision',
-          () async {
-        final repo = OrderSqliteRepository(connection);
-        await repo.createTables();
+      test(
+        'should preserve DateTime values within millisecond precision',
+        () async {
+          final repo = OrderSqliteRepository(connection);
+          await repo.createTables();
 
-        final random = Random(50);
+          final random = Random(50);
 
-        for (var i = 0; i < 100; i++) {
-          final order = _generateRandomOrder(random);
+          for (var i = 0; i < 100; i++) {
+            final order = _generateRandomOrder(random);
 
-          await repo.save(order);
-          final retrieved = await repo.getById(order.id);
+            await repo.save(order);
+            final retrieved = await repo.getById(order.id);
 
-          // Verify DateTime fields (millisecond precision)
-          expect(
-            retrieved.createdAt.millisecondsSinceEpoch,
-            equals(order.createdAt.millisecondsSinceEpoch),
-            reason: 'Iteration $i: createdAt should match to millisecond',
-          );
-          expect(
-            retrieved.updatedAt.millisecondsSinceEpoch,
-            equals(order.updatedAt.millisecondsSinceEpoch),
-            reason: 'Iteration $i: updatedAt should match to millisecond',
-          );
-
-          for (var j = 0; j < order.items.length; j++) {
+            // Verify DateTime fields (millisecond precision)
             expect(
-              retrieved.items[j].createdAt.millisecondsSinceEpoch,
-              equals(order.items[j].createdAt.millisecondsSinceEpoch),
-              reason:
-                  'Iteration $i, Item $j: Item createdAt should match to millisecond',
+              retrieved.createdAt.millisecondsSinceEpoch,
+              equals(order.createdAt.millisecondsSinceEpoch),
+              reason: 'Iteration $i: createdAt should match to millisecond',
             );
             expect(
-              retrieved.items[j].updatedAt.millisecondsSinceEpoch,
-              equals(order.items[j].updatedAt.millisecondsSinceEpoch),
-              reason:
-                  'Iteration $i, Item $j: Item updatedAt should match to millisecond',
+              retrieved.updatedAt.millisecondsSinceEpoch,
+              equals(order.updatedAt.millisecondsSinceEpoch),
+              reason: 'Iteration $i: updatedAt should match to millisecond',
             );
+
+            for (var j = 0; j < order.items.length; j++) {
+              expect(
+                retrieved.items[j].createdAt.millisecondsSinceEpoch,
+                equals(order.items[j].createdAt.millisecondsSinceEpoch),
+                reason:
+                    'Iteration $i, Item $j: Item createdAt should match to millisecond',
+              );
+              expect(
+                retrieved.items[j].updatedAt.millisecondsSinceEpoch,
+                equals(order.items[j].updatedAt.millisecondsSinceEpoch),
+                reason:
+                    'Iteration $i, Item $j: Item updatedAt should match to millisecond',
+              );
+            }
+
+            await repo.deleteById(order.id);
           }
-
-          await repo.deleteById(order.id);
-        }
-      });
+        },
+      );
     });
 
     // **Feature: sql-repository, Property 11: Boolean values preserved**
@@ -562,7 +563,7 @@ Address _generateRandomAddress(Random random) {
 
 /// Generates a random DateTime within the last year.
 DateTime _generateRandomDateTime(Random random) {
-  final now = DateTime.now();
+  final now = DateTime.now().toUtc();
   final daysAgo = random.nextInt(365);
   return now.subtract(Duration(days: daysAgo));
 }

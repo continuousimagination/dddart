@@ -335,6 +335,46 @@ void main() {
       expect(savedCreds['id_token'], equals(newIdToken));
     });
 
+    test('form-encodes reserved characters in refresh fields', () async {
+      const refreshToken = 'refresh+token&part=value=';
+      const clientId = 'client+id&version=1';
+      final originalIdToken = createMockJwt({'sub': 'user-123'});
+      final file = File(tempCredentialsPath);
+      await file.parent.create(recursive: true);
+      await file.writeAsString(
+        jsonEncode({
+          'access_token': 'expired-token',
+          'id_token': originalIdToken,
+          'refresh_token': refreshToken,
+          'expires_at': DateTime.now()
+              .subtract(const Duration(hours: 1))
+              .toIso8601String(),
+        }),
+      );
+
+      final mockClient = MockClient((request) async {
+        final fields = Uri.splitQueryString(request.body);
+        expect(fields['grant_type'], 'refresh_token');
+        expect(fields['refresh_token'], refreshToken);
+        expect(fields['client_id'], clientId);
+        return http.Response(
+          jsonEncode({
+            'access_token': 'new-access-token',
+            'expires_in': 3600,
+          }),
+          200,
+        );
+      });
+      final provider = CognitoAuthProvider(
+        cognitoDomain: 'https://test.auth.us-east-1.amazoncognito.com',
+        clientId: clientId,
+        credentialsPath: tempCredentialsPath,
+        httpClient: mockClient,
+      );
+
+      expect(await provider.getAccessToken(), 'new-access-token');
+    });
+
     test('should include response body in token refresh error', () async {
       final idToken = createMockJwt({'sub': 'user-123'});
 

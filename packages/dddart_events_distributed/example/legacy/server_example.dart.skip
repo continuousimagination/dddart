@@ -1,4 +1,4 @@
-/// Example demonstrating EventBusServer with HTTP endpoints.
+/// Legacy WIP EventBusServer sketch deferred to EVENT-001 through EVENT-004.
 ///
 /// This example shows how to:
 /// - Set up EventBusServer with in-memory repository

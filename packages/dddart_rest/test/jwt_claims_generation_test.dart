@@ -1,4 +1,3 @@
-import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/dddart_rest.dart';
 import 'package:test/test.dart';
 
@@ -8,7 +7,7 @@ void main() {
       // This test verifies that the code generation worked correctly
       // by checking that we can use the generated extension methods
 
-      // Create a mock JWT auth handler (we'll implement the real one later)
+      // Create a minimal JWT auth handler to exercise the generated helpers.
       final handler = _MockJwtAuthHandler();
 
       // Test parseClaimsFromJson
@@ -40,9 +39,7 @@ void main() {
       final handler = _MockJwtAuthHandler();
 
       // Test with null optional fields
-      final json = {
-        'sub': 'user789',
-      };
+      final json = {'sub': 'user789'};
 
       final claims = handler.parseClaimsFromJson(json);
       expect(claims.sub, equals('user789'));
@@ -62,10 +59,12 @@ void main() {
 // Mock implementation for testing
 class _MockJwtAuthHandler extends JwtAuthHandler<StandardClaims, RefreshToken> {
   _MockJwtAuthHandler()
-      : super(
-          secret: 'test-secret',
-          refreshTokenRepository: InMemoryRepository<RefreshToken>(),
-          parseClaimsFromJson: StandardClaims.fromJson,
-          claimsToJson: (claims) => claims.toJson(),
-        );
+    : super(
+        secret: 'test-secret',
+        refreshTokenRepository: InMemoryRefreshTokenRepository<RefreshToken>(),
+        refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
+        claimsLoader: (userId) async => StandardClaims(sub: userId),
+        parseClaimsFromJson: StandardClaims.fromJson,
+        claimsToJson: (claims) => claims.toJson(),
+      );
 }

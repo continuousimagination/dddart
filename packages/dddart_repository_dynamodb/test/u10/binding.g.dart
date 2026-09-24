@@ -11,8 +11,7 @@ part of 'binding.dart';
 /// This class can be used directly for basic CRUD operations or
 /// extended
 /// to add custom query methods.
-class ProbeDynamoRepository
-    implements QueryableRepository<shared.RemoteRecord> {
+class ProbeDynamoRepository implements Repository<shared.RemoteRecord> {
   /// Creates a repository instance.
   ///
   /// [connection] - A DynamoDB connection instance.
@@ -118,24 +117,6 @@ class ProbeDynamoRepository
     }
   }
 
-  @override
-  Future<List<shared.RemoteRecord>> getAll() async {
-    try {
-      final response = await _connection.client.scan(tableName: tableName);
-
-      if (response.items == null || response.items!.isEmpty) {
-        return [];
-      }
-
-      return response.items!.map((item) {
-        final json = AttributeValueConverter.attributeMapToJsonMap(item);
-        return _serializer.fromJson(json);
-      }).toList();
-    } catch (e) {
-      throw _mapDynamoException(e, 'getAll');
-    }
-  }
-
   /// Maps typed SDK failures without exposing provider data or raw causes.
   RepositoryException _mapDynamoException(Object error, String operation) {
     return DynamoRepositoryException.map(error, operation);
@@ -207,9 +188,10 @@ aws dynamodb create-table \\
   /// // Add to CloudFormation template
   /// ```
   static String getCloudFormationTemplate(String tableName) {
+    final logicalId = _cloudFormationLogicalId(tableName);
     return '''
 Resources:
-  \${tableName.split('_').map((s) => s[0].toUpperCase() + s.substring(1)).join()}Table:
+  ${logicalId}Table:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: $tableName
@@ -222,6 +204,21 @@ Resources:
       BillingMode: PAY_PER_REQUEST
 '''
         .trim();
+  }
+
+  static String _cloudFormationLogicalId(String tableName) {
+    final segments = tableName
+        .split(RegExp('[^A-Za-z0-9]+'))
+        .where((segment) => segment.isNotEmpty);
+    var logicalId = segments
+        .map((segment) => segment[0].toUpperCase() + segment.substring(1))
+        .join();
+
+    if (logicalId.isEmpty) logicalId = 'Dynamo';
+    if (!RegExp('^[A-Za-z]').hasMatch(logicalId)) {
+      logicalId = 'Dynamo$logicalId';
+    }
+    return logicalId;
   }
 }
 
@@ -338,24 +335,6 @@ abstract class CallbackDynamoRepositoryBase implements shared.RemotePort {
     }
   }
 
-  @override
-  Future<List<shared.RemoteRecord>> getAll() async {
-    try {
-      final response = await _connection.client.scan(tableName: tableName);
-
-      if (response.items == null || response.items!.isEmpty) {
-        return [];
-      }
-
-      return response.items!.map((item) {
-        final json = AttributeValueConverter.attributeMapToJsonMap(item);
-        return _serializer.fromJson(json);
-      }).toList();
-    } catch (e) {
-      throw _mapDynamoException(e, 'getAll');
-    }
-  }
-
   /// Maps typed SDK failures without exposing provider data or raw causes.
   RepositoryException _mapDynamoException(Object error, String operation) {
     return DynamoRepositoryException.map(error, operation);
@@ -427,9 +406,10 @@ aws dynamodb create-table \\
   /// // Add to CloudFormation template
   /// ```
   static String getCloudFormationTemplate(String tableName) {
+    final logicalId = _cloudFormationLogicalId(tableName);
     return '''
 Resources:
-  \${tableName.split('_').map((s) => s[0].toUpperCase() + s.substring(1)).join()}Table:
+  ${logicalId}Table:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: $tableName
@@ -442,6 +422,21 @@ Resources:
       BillingMode: PAY_PER_REQUEST
 '''
         .trim();
+  }
+
+  static String _cloudFormationLogicalId(String tableName) {
+    final segments = tableName
+        .split(RegExp('[^A-Za-z0-9]+'))
+        .where((segment) => segment.isNotEmpty);
+    var logicalId = segments
+        .map((segment) => segment[0].toUpperCase() + segment.substring(1))
+        .join();
+
+    if (logicalId.isEmpty) logicalId = 'Dynamo';
+    if (!RegExp('^[A-Za-z]').hasMatch(logicalId)) {
+      logicalId = 'Dynamo$logicalId';
+    }
+    return logicalId;
   }
 
   // Custom methods (must be implemented by subclass)

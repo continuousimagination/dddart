@@ -12,8 +12,8 @@ import 'package:mysql_client/mysql_client.dart';
 
 /// MySQL database connection implementation.
 ///
-/// Manages the lifecycle of a MySQL database connection pool and provides
-/// methods for executing queries and transactions.
+/// Manages the lifecycle of one MySQL database connection and provides methods
+/// for executing queries and transactions.
 ///
 /// Example:
 /// ```dart
@@ -36,6 +36,10 @@ class MysqlConnection implements SqlConnection {
     required this.database,
     required this.user,
     required this.password,
+    @Deprecated(
+      'maxConnections is ignored because MysqlConnection uses one connection. '
+      'It will be removed in the next breaking release.',
+    )
     this.maxConnections = 5,
     this.timeout = const Duration(seconds: 30),
   });
@@ -55,7 +59,14 @@ class MysqlConnection implements SqlConnection {
   /// Database password.
   final String password;
 
-  /// Maximum number of connections in the pool.
+  /// Legacy no-op retained for source compatibility.
+  ///
+  /// [MysqlConnection] always opens one connection. Pooling, if added in the
+  /// future, will use a separate abstraction with explicit lifecycle rules.
+  @Deprecated(
+    'maxConnections is ignored because MysqlConnection uses one connection. '
+    'It will be removed in the next breaking release.',
+  )
   final int maxConnections;
 
   /// Connection timeout duration.
@@ -162,7 +173,8 @@ class MysqlConnection implements SqlConnection {
 
             // Don't convert fields that are likely to be string identifiers
             // even if they contain only digits (like zipCode, phone, etc.)
-            final isLikelyStringField = columnName.contains('code') ||
+            final isLikelyStringField =
+                columnName.contains('code') ||
                 columnName.contains('zip') ||
                 columnName.contains('phone') ||
                 columnName.contains('ssn') ||
@@ -170,8 +182,9 @@ class MysqlConnection implements SqlConnection {
 
             if (!isLikelyStringField) {
               // Only convert if it looks like a pure number
-              final isNumericString =
-                  RegExp(r'^-?(?:0|[1-9]\d*)(?:\.\d+)?$').hasMatch(value);
+              final isNumericString = RegExp(
+                r'^-?(?:0|[1-9]\d*)(?:\.\d+)?$',
+              ).hasMatch(value);
 
               if (isNumericString) {
                 // Try to parse as int first (for BIGINT, INT, etc.)
@@ -279,8 +292,9 @@ class MysqlConnection implements SqlConnection {
             ? paramValue
             : Uint8List.fromList(paramValue! as List<int>);
         // Inline as UNHEX('hexstring') instead of using a parameter
-        final hexString =
-            bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+        final hexString = bytes
+            .map((b) => b.toRadixString(16).padLeft(2, '0'))
+            .join();
         return "UNHEX('$hexString')";
       }
 

@@ -130,36 +130,32 @@ void main() {
     // **Feature: mysql-repository, Property 4: Connection error handling**
     // **Validates: Requirements 2.5, 7.1**
     group('Property 4: Connection error handling', () {
-      test(
-        'should throw RepositoryException with type connection for invalid '
-        'parameters',
-        () async {
-          final random = Random(51);
+      test('should throw RepositoryException with type connection for invalid '
+          'parameters', () async {
+        final random = Random(51);
 
-          for (var i = 0; i < 10; i++) {
-            // Generate invalid connection parameters
-            final connection = _generateInvalidConnection(random);
+        for (var i = 0; i < 10; i++) {
+          // Generate invalid connection parameters
+          final connection = _generateInvalidConnection(random);
 
-            // Should throw RepositoryException with connection type
-            try {
-              await connection.open();
-              fail('Should have thrown RepositoryException');
-            } catch (e) {
-              expect(
-                e,
-                isA<RepositoryException>(),
-                reason: 'Iteration $i: Should throw RepositoryException',
-              );
-              expect(
-                (e as RepositoryException).type,
-                equals(RepositoryExceptionType.connection),
-                reason: 'Iteration $i: Should have connection type',
-              );
-            }
+          // Should throw RepositoryException with connection type
+          try {
+            await connection.open();
+            fail('Should have thrown RepositoryException');
+          } catch (e) {
+            expect(
+              e,
+              isA<RepositoryException>(),
+              reason: 'Iteration $i: Should throw RepositoryException',
+            );
+            expect(
+              (e as RepositoryException).type,
+              equals(RepositoryExceptionType.connection),
+              reason: 'Iteration $i: Should have connection type',
+            );
           }
-        },
-        tags: ['property-test'],
-      );
+        }
+      }, tags: ['property-test']);
 
       test(
         'should include error details in exception message',
@@ -429,11 +425,7 @@ void main() {
               exceptionThrown = true;
             }
 
-            expect(
-              exceptionThrown,
-              isTrue,
-              reason: 'Transaction should fail',
-            );
+            expect(exceptionThrown, isTrue, reason: 'Transaction should fail');
 
             // Verify no rows exist (entire transaction rolled back)
             final results = await connection.query(
@@ -577,7 +569,6 @@ MysqlConnection _generateRandomConnection(Random random) {
     database: 'test_db',
     user: 'root',
     password: 'test_password',
-    maxConnections: random.nextInt(5) + 1,
     timeout: Duration(seconds: random.nextInt(30) + 10),
   );
 }
@@ -587,36 +578,36 @@ MysqlConnection _generateInvalidConnection(Random random) {
   final invalidConfigs = [
     // Invalid host
     () => MysqlConnection(
-          host: 'invalid-host-${random.nextInt(1000)}',
-          port: 3306,
-          database: 'test_db',
-          user: 'root',
-          password: 'password',
-        ),
+      host: 'invalid-host-${random.nextInt(1000)}',
+      port: 3306,
+      database: 'test_db',
+      user: 'root',
+      password: 'password',
+    ),
     // Invalid port
     () => MysqlConnection(
-          host: 'localhost',
-          port: 9999,
-          database: 'test_db',
-          user: 'root',
-          password: 'password',
-        ),
+      host: 'localhost',
+      port: 9999,
+      database: 'test_db',
+      user: 'root',
+      password: 'password',
+    ),
     // Invalid credentials
     () => MysqlConnection(
-          host: 'localhost',
-          port: 3306,
-          database: 'test_db',
-          user: 'invalid_user',
-          password: 'invalid_password',
-        ),
+      host: 'localhost',
+      port: 3306,
+      database: 'test_db',
+      user: 'invalid_user',
+      password: 'invalid_password',
+    ),
     // Invalid database
     () => MysqlConnection(
-          host: 'localhost',
-          port: 3306,
-          database: 'non_existent_db_${random.nextInt(1000)}',
-          user: 'root',
-          password: 'test_password',
-        ),
+      host: 'localhost',
+      port: 3306,
+      database: 'non_existent_db_${random.nextInt(1000)}',
+      user: 'root',
+      password: 'test_password',
+    ),
   ];
 
   return invalidConfigs[random.nextInt(invalidConfigs.length)]();

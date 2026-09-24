@@ -30,8 +30,8 @@ class GenericRecord<T> extends AggregateRoot {
   /// A field whose concrete type must be substituted through inheritance.
   final T payload;
 
-  /// A field narrowed by the derived class.
-  final Object? label;
+  /// Another field narrowed through the concrete generic superclass.
+  final T label;
 
   /// Associated aggregate identity.
   final UuidValue aggregateId;
@@ -52,13 +52,13 @@ class GenericRecord<T> extends AggregateRoot {
   final String? sessionId;
 }
 
-/// Derived state with an overridden field and its own nullable/collection data.
+/// Derived state with substituted inherited fields and nullable/collection data.
 @Serializable()
 class InheritedRecord extends GenericRecord<String> {
   /// Creates a complete concrete record.
   InheritedRecord({
     required super.payload,
-    required this.label,
+    required super.label,
     required super.aggregateId,
     required super.eventType,
     required super.eventJson,
@@ -71,12 +71,7 @@ class InheritedRecord extends GenericRecord<String> {
     super.sessionId,
     this.organizationId,
     this.count,
-  }) : super(label: label);
-
-  @override
-  // Deliberate field narrowing verifies most-derived codec type precedence.
-  // ignore: overridden_fields
-  final String label;
+  });
 
   /// Roles may be empty but are always present.
   final List<String> userRoles;
@@ -171,7 +166,7 @@ void main() {
       throwsA(isA<DeserializationException>()),
     );
   });
-  test('uses concrete substituted generic and overriding field types', () {
+  test('uses concrete substituted generic and inherited field types', () {
     final wire = serializer.toJson(sample());
     expect(
       () => serializer.fromJson({...wire, 'payload': 4}),

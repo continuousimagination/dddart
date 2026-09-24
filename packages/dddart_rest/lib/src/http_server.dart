@@ -68,10 +68,10 @@ class HttpServer {
   ///
   /// Example:
   /// ```dart
-  /// server.registerResource(CrudResource<User>(
+  /// server.registerResource(CrudResource<User, void>(
   ///   path: '/users',
   ///   repository: userRepository,
-  ///   serializers: {'application/json': jsonSerializer},
+  ///   serializer: jsonSerializer,
   /// ));
   /// ```
   void registerResource(HttpResource resource) {

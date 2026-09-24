@@ -24,7 +24,7 @@ class _Codec implements Serializer<_Record> {
   );
 }
 
-class _Repository implements QueryableRepository<_Record> {
+class _Repository implements Repository<_Record> {
   int reads = 0;
   int writes = 0;
   int queries = 0;
@@ -43,7 +43,6 @@ class _Repository implements QueryableRepository<_Record> {
 
   @override
   Future<void> deleteById(UuidValue id) async {}
-  @override
   Future<List<_Record>> getAll() async {
     queries++;
     return [];
@@ -209,15 +208,28 @@ void main() {
     expect(repo.reads, 1);
   });
   test('unfiltered and pagination-only queries are authorized', () async {
+    var handlerCalls = 0;
+    final explicitCollection = CrudResource<_Record, String>(
+      path: '/records',
+      repository: repo,
+      serializers: {'application/json': _Codec()},
+      authenticationHandler: _Authentication(),
+      authorizationHandler: auth,
+      collectionHandler: (repository, filters, skip, take, principal) async {
+        handlerCalls++;
+        return QueryResult(await repo.getAll(), totalCount: 0);
+      },
+    );
     for (final suffix in ['', '?skip=0&take=1']) {
       expect(
-        (await resource.handleQuery(
+        (await explicitCollection.handleQuery(
           Request('GET', Uri.parse('https://example.invalid/records$suffix')),
         )).statusCode,
         403,
       );
     }
     expect(auth.queries, 2);
+    expect(handlerCalls, 0);
     expect(repo.queries, 0);
   });
   test('PUT rejects path/body identity disagreement without saving', () async {

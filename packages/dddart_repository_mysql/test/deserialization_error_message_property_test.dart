@@ -171,7 +171,8 @@ void main() {
                       message.contains('price') ||
                       message.contains('error'),
                   isTrue,
-                  reason: 'Iteration $iteration: Error message should indicate '
+                  reason:
+                      'Iteration $iteration: Error message should indicate '
                       'field issue',
                 );
               }
@@ -187,182 +188,171 @@ void main() {
       tags: ['requires-mysql', 'property-test'],
     );
 
-    test(
-      'Property 14 (variant): Entity relationship deserialization errors '
-      'should indicate entity type',
-      () async {
-        final repo = OrderMysqlRepository(helper!.connection);
-        await repo.createTables();
+    test('Property 14 (variant): Entity relationship deserialization errors '
+        'should indicate entity type', () async {
+      final repo = OrderMysqlRepository(helper!.connection);
+      await repo.createTables();
 
-        // Insert order with valid data
-        final order = Order(
-          customerName: 'Test Customer',
-          items: [
-            OrderItem(productName: 'Product 1', quantity: 1, unitPrice: 10),
-          ],
+      // Insert order with valid data
+      final order = Order(
+        customerName: 'Test Customer',
+        items: [
+          OrderItem(productName: 'Product 1', quantity: 1, unitPrice: 10),
+        ],
+      );
+      await repo.save(order);
+
+      // Corrupt the order_item data
+      try {
+        await helper!.connection.execute(
+          'UPDATE order_item SET quantity = NULL WHERE order_id = UUID_TO_BIN(?)',
+          [order.id.toString()],
         );
-        await repo.save(order);
 
-        // Corrupt the order_item data
+        // Try to retrieve - should handle NULL in required field
         try {
-          await helper!.connection.execute(
-            'UPDATE order_item SET quantity = NULL WHERE order_id = UUID_TO_BIN(?)',
-            [order.id.toString()],
-          );
-
-          // Try to retrieve - should handle NULL in required field
-          try {
-            await repo.getById(order.id);
-            // If this succeeds, the NULL was handled somehow
-          } catch (e) {
-            // Expected - deserialization error
-            if (e is RepositoryException) {
-              expect(
-                e.message,
-                isNotEmpty,
-                reason: 'Error message should not be empty',
-              );
-
-              // Error should provide context about entity type
-              final message = e.message.toLowerCase();
-              expect(
-                message.contains('order') ||
-                    message.contains('item') ||
-                    message.contains('entity') ||
-                    message.contains('error'),
-                isTrue,
-                reason: 'Error message should indicate entity type',
-              );
-            }
-          }
+          await repo.getById(order.id);
+          // If this succeeds, the NULL was handled somehow
         } catch (e) {
-          // Expected - constraint or other error
-        }
-
-        // Clean up
-        await helper!.connection.execute('DROP TABLE order_item');
-        await helper!.connection.execute('DROP TABLE orders');
-      },
-      tags: ['requires-mysql', 'property-test'],
-    );
-
-    test(
-      'Property 14 (edge case): Value object deserialization errors should '
-      'indicate value type',
-      () async {
-        final repo = CustomerMysqlRepository(helper!.connection);
-        await repo.createTables();
-
-        // Insert customer with valid data
-        final customer = Customer(
-          name: 'Test Customer',
-          email: const Email(value: 'test@example.com'),
-          shippingAddress: const Address(
-            street: '123 Main St',
-            city: 'Springfield',
-            state: 'IL',
-            zipCode: '62701',
-          ),
-        );
-        await repo.save(customer);
-
-        // Corrupt the email value
-        try {
-          await helper!.connection.execute(
-            'UPDATE customer SET email_value = NULL WHERE id = UUID_TO_BIN(?)',
-            [customer.id.toString()],
-          );
-
-          // Try to retrieve - should handle NULL in required value field
-          try {
-            await repo.getById(customer.id);
-            // If this succeeds, the NULL was handled somehow
-          } catch (e) {
-            // Expected - deserialization error
-            if (e is RepositoryException) {
-              expect(
-                e.message,
-                isNotEmpty,
-                reason: 'Error message should not be empty',
-              );
-
-              // Error should provide context
-              final message = e.message.toLowerCase();
-              expect(
-                message.contains('customer') ||
-                    message.contains('email') ||
-                    message.contains('value') ||
-                    message.contains('error'),
-                isTrue,
-                reason: 'Error message should indicate value type',
-              );
-            }
-          }
-        } catch (e) {
-          // Expected - constraint or other error
-        }
-
-        // Clean up
-        await helper!.connection.execute('DROP TABLE customer');
-      },
-      tags: ['requires-mysql', 'property-test'],
-    );
-
-    test(
-      'Property 14 (edge case): Not found errors should clearly indicate '
-      'entity was not found',
-      () async {
-        final repo = SimpleProductMysqlRepository(helper!.connection);
-        await repo.createTables();
-
-        // Try to get non-existent entities
-        for (var iteration = 0; iteration < 50; iteration++) {
-          final nonExistentId = UuidValue.generate();
-
-          try {
-            await repo.getById(nonExistentId);
-            fail('Should have thrown RepositoryException for non-existent ID');
-          } catch (e) {
+          // Expected - deserialization error
+          if (e is RepositoryException) {
             expect(
-              e,
-              isA<RepositoryException>(),
-              reason: 'Iteration $iteration: Should throw RepositoryException',
-            );
-
-            final exception = e as RepositoryException;
-
-            // Should be notFound type
-            expect(
-              exception.type,
-              equals(RepositoryExceptionType.notFound),
-              reason: 'Iteration $iteration: Should be notFound error type',
-            );
-
-            // Error message should indicate not found
-            expect(
-              exception.message,
+              e.message,
               isNotEmpty,
-              reason: 'Iteration $iteration: Error message should not be empty',
+              reason: 'Error message should not be empty',
             );
 
-            final message = exception.message.toLowerCase();
+            // Error should provide context about entity type
+            final message = e.message.toLowerCase();
             expect(
-              message.contains('not found') ||
-                  message.contains('notfound') ||
-                  message.contains('does not exist') ||
-                  message.contains('not exist'),
+              message.contains('order') ||
+                  message.contains('item') ||
+                  message.contains('entity') ||
+                  message.contains('error'),
               isTrue,
-              reason: 'Iteration $iteration: Error message should indicate '
-                  'entity not found',
+              reason: 'Error message should indicate entity type',
             );
           }
         }
+      } catch (e) {
+        // Expected - constraint or other error
+      }
 
-        // Clean up
-        await helper!.connection.execute('DROP TABLE simple_product');
-      },
-      tags: ['requires-mysql', 'property-test'],
-    );
+      // Clean up
+      await helper!.connection.execute('DROP TABLE order_item');
+      await helper!.connection.execute('DROP TABLE orders');
+    }, tags: ['requires-mysql', 'property-test']);
+
+    test('Property 14 (edge case): Value object deserialization errors should '
+        'indicate value type', () async {
+      final repo = CustomerMysqlRepository(helper!.connection);
+      await repo.createTables();
+
+      // Insert customer with valid data
+      final customer = Customer(
+        name: 'Test Customer',
+        email: const Email(value: 'test@example.com'),
+        shippingAddress: const Address(
+          street: '123 Main St',
+          city: 'Springfield',
+          state: 'IL',
+          zipCode: '62701',
+        ),
+      );
+      await repo.save(customer);
+
+      // Corrupt the email value
+      try {
+        await helper!.connection.execute(
+          'UPDATE customer SET email_value = NULL WHERE id = UUID_TO_BIN(?)',
+          [customer.id.toString()],
+        );
+
+        // Try to retrieve - should handle NULL in required value field
+        try {
+          await repo.getById(customer.id);
+          // If this succeeds, the NULL was handled somehow
+        } catch (e) {
+          // Expected - deserialization error
+          if (e is RepositoryException) {
+            expect(
+              e.message,
+              isNotEmpty,
+              reason: 'Error message should not be empty',
+            );
+
+            // Error should provide context
+            final message = e.message.toLowerCase();
+            expect(
+              message.contains('customer') ||
+                  message.contains('email') ||
+                  message.contains('value') ||
+                  message.contains('error'),
+              isTrue,
+              reason: 'Error message should indicate value type',
+            );
+          }
+        }
+      } catch (e) {
+        // Expected - constraint or other error
+      }
+
+      // Clean up
+      await helper!.connection.execute('DROP TABLE customer');
+    }, tags: ['requires-mysql', 'property-test']);
+
+    test('Property 14 (edge case): Not found errors should clearly indicate '
+        'entity was not found', () async {
+      final repo = SimpleProductMysqlRepository(helper!.connection);
+      await repo.createTables();
+
+      // Try to get non-existent entities
+      for (var iteration = 0; iteration < 50; iteration++) {
+        final nonExistentId = UuidValue.generate();
+
+        try {
+          await repo.getById(nonExistentId);
+          fail('Should have thrown RepositoryException for non-existent ID');
+        } catch (e) {
+          expect(
+            e,
+            isA<RepositoryException>(),
+            reason: 'Iteration $iteration: Should throw RepositoryException',
+          );
+
+          final exception = e as RepositoryException;
+
+          // Should be notFound type
+          expect(
+            exception.type,
+            equals(RepositoryExceptionType.notFound),
+            reason: 'Iteration $iteration: Should be notFound error type',
+          );
+
+          // Error message should indicate not found
+          expect(
+            exception.message,
+            isNotEmpty,
+            reason: 'Iteration $iteration: Error message should not be empty',
+          );
+
+          final message = exception.message.toLowerCase();
+          expect(
+            message.contains('not found') ||
+                message.contains('notfound') ||
+                message.contains('does not exist') ||
+                message.contains('not exist'),
+            isTrue,
+            reason:
+                'Iteration $iteration: Error message should indicate '
+                'entity not found',
+          );
+        }
+      }
+
+      // Clean up
+      await helper!.connection.execute('DROP TABLE simple_product');
+    }, tags: ['requires-mysql', 'property-test']);
 
     test(
       'Property 14 (edge case): Batch operation errors should indicate which '

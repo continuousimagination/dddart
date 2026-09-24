@@ -6,15 +6,16 @@
 // - Combining authentication and authorization
 // - Different authorization rules for different operations
 //
-// Run: dart run example/authorization_example.dart
+// Run from this example directory: dart run authorization_example.dart
 // Then test with curl using JWT tokens
 
 import 'dart:async';
 import 'dart:convert';
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/dddart_rest.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:shelf/shelf.dart';
+
+import 'lib/json_serializer_support.dart';
 
 // Domain model - Document owned by a user
 class Document extends AggregateRoot {
@@ -30,9 +31,6 @@ class Document extends AggregateRoot {
   final String content;
   final String ownerId; // User ID who owns this document
   final bool isPublic;
-
-  @override
-  List<Object?> get props => [id, title, content, ownerId, isPublic];
 }
 
 // Custom JWT claims with user ID
@@ -72,8 +70,9 @@ class DocumentAuthorizationHandler
     AuthenticationResult<UserClaims> authResult,
   ) async {
     final claims = authResult.claims;
-    if (claims == null)
+    if (claims == null) {
       return AuthorizationResult.deny('Authentication claims required');
+    }
     final document = await repository.getById(id);
     return claims.isAdmin || document.ownerId == claims.userId
         ? AuthorizationResult.allow()
@@ -138,7 +137,7 @@ class DocumentAuthorizationHandler
 }
 
 // Simple serializer for Document
-class DocumentSerializer implements Serializer<Document> {
+class DocumentSerializer extends ExampleJsonSerializer<Document> {
   @override
   Document deserialize(String data, [dynamic config]) {
     final json = jsonDecode(data) as Map<String, dynamic>;
@@ -170,16 +169,36 @@ void main() async {
 
   // Create repositories
   final documentRepo = InMemoryRepository<Document>();
-  final refreshTokenRepo = InMemoryRepository<RefreshToken>();
-  final deviceCodeRepo = InMemoryRepository<DeviceCode>();
+  final refreshTokenRepo = InMemoryRefreshTokenRepository<RefreshToken>();
+  final deviceCodeRepo = InMemoryDeviceCodeRepository<DeviceCode>(
+    lifecycle: const StandardDeviceCodeLifecycle(),
+  );
 
   // Seed test documents
   await _seedDocuments(documentRepo);
+
+  // This represents the authoritative user directory for the example. The
+  // handler reloads it for login and refresh, so changes are reflected in the
+  // next access token and a removed user can no longer receive tokens.
+  final claimsByUserId = <String, UserClaims>{
+    'user-alice-id': const UserClaims(
+      userId: 'user-alice-id',
+      username: 'alice',
+    ),
+    'user-bob-id': const UserClaims(userId: 'user-bob-id', username: 'bob'),
+    'user-admin-id': const UserClaims(
+      userId: 'user-admin-id',
+      username: 'admin',
+      isAdmin: true,
+    ),
+  };
 
   // Create authentication handler
   final authHandler = JwtAuthHandler<UserClaims, RefreshToken>(
     secret: 'your-256-bit-secret-key-change-in-production',
     refreshTokenRepository: refreshTokenRepo,
+    refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
+    claimsLoader: (userId) async => claimsByUserId[userId],
     issuer: 'https://api.example.com',
     audience: 'example-app',
     accessTokenDuration: const Duration(minutes: 15),
@@ -195,6 +214,7 @@ void main() async {
   final authEndpoints = AuthEndpoints(
     authHandler: authHandler,
     deviceCodeRepository: deviceCodeRepo,
+    deviceCodeLifecycle: const StandardDeviceCodeLifecycle(),
     userValidator: (username, password) async {
       // Simplified user validation
       // In production, check against user database with proper password hashing
@@ -208,31 +228,6 @@ void main() async {
         return 'user-admin-id';
       }
       return null;
-    },
-    claimsBuilder: (userId) async {
-      // Build claims based on user ID
-      if (userId == 'user-alice-id') {
-        return const UserClaims(
-          userId: 'user-alice-id',
-          username: 'alice',
-          isAdmin: false,
-        );
-      }
-      if (userId == 'user-bob-id') {
-        return const UserClaims(
-          userId: 'user-bob-id',
-          username: 'bob',
-          isAdmin: false,
-        );
-      }
-      if (userId == 'user-admin-id') {
-        return const UserClaims(
-          userId: 'user-admin-id',
-          username: 'admin',
-          isAdmin: true,
-        );
-      }
-      throw Exception('User not found');
     },
   );
 
@@ -249,7 +244,7 @@ void main() async {
     CrudResource<Document, UserClaims>(
       path: '/documents',
       repository: documentRepo,
-      serializers: {'application/json': DocumentSerializer()},
+      serializer: DocumentSerializer(),
       authenticationHandler: authHandler,
       authorizationHandler: authzHandler, // Authorization handler added here
       queryHandlers: {

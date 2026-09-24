@@ -2,10 +2,12 @@ import 'dart:convert';
 
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/src/crud_resource.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
+import 'package:dddart_rest/src/query_handler.dart';
 import 'package:logging/logging.dart';
 import 'package:shelf/shelf.dart';
 import 'package:test/test.dart';
+
+import 'json_serializer_test_support.dart';
 
 // Test aggregate root
 class TestUser extends AggregateRoot {
@@ -22,7 +24,7 @@ class TestUser extends AggregateRoot {
 }
 
 // Test serializer
-class TestUserSerializer implements Serializer<TestUser> {
+class TestUserSerializer extends TestJsonSerializer<TestUser> {
   @override
   String serialize(TestUser user, [dynamic config]) {
     return jsonEncode({
@@ -48,7 +50,7 @@ class TestUserSerializer implements Serializer<TestUser> {
 }
 
 // Serializer that throws exception for testing deserialization failures
-class FailingSerializer implements Serializer<TestUser> {
+class FailingSerializer extends TestJsonSerializer<TestUser> {
   @override
   String serialize(TestUser user, [dynamic config]) {
     return jsonEncode({'id': user.id.toString()});
@@ -121,7 +123,7 @@ void main() {
     resource = CrudResource<TestUser, dynamic>(
       path: 'users',
       repository: repository,
-      serializers: {'application/json': serializer},
+      serializer: serializer,
     );
 
     testUser = TestUser(
@@ -255,7 +257,14 @@ void main() {
         final inMemoryResource = CrudResource<TestUser, dynamic>(
           path: 'users',
           repository: inMemoryRepo,
-          serializers: {'application/json': serializer},
+          serializer: serializer,
+          collectionHandler: (repo, params, skip, take, authResult) async {
+            final items = (repo as InMemoryRepository<TestUser>).getAllSync();
+            return QueryResult(
+              items.skip(skip).take(take).toList(),
+              totalCount: items.length,
+            );
+          },
         );
 
         final request = createRequest(path: '/users?skip=0&take=10');
@@ -405,7 +414,7 @@ void main() {
       final inMemoryResource = CrudResource<TestUser, dynamic>(
         path: 'users',
         repository: inMemoryRepo,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
       );
 
       final request = createRequest(
@@ -428,7 +437,7 @@ void main() {
       final failingResource = CrudResource<TestUser, dynamic>(
         path: 'users',
         repository: repository,
-        serializers: {'application/json': FailingSerializer()},
+        serializer: FailingSerializer(),
       );
 
       final request = createRequest(
@@ -453,7 +462,7 @@ void main() {
       final failingResource = CrudResource<TestUser, dynamic>(
         path: 'users',
         repository: repository,
-        serializers: {'application/json': FailingSerializer()},
+        serializer: FailingSerializer(),
       );
 
       final request = createRequest(
@@ -479,7 +488,7 @@ void main() {
       final failingResource = CrudResource<TestUser, dynamic>(
         path: 'users',
         repository: repository,
-        serializers: {'application/json': FailingSerializer()},
+        serializer: FailingSerializer(),
       );
 
       final request = createRequest(

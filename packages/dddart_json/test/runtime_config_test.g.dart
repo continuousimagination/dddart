@@ -12,7 +12,12 @@ class FlexibleUserJsonSerializer implements JsonSerializer<FlexibleUser> {
 
   /// Creates a serializer with the specified default configuration.
   FlexibleUserJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(
@@ -120,7 +125,7 @@ class FlexibleUserJsonSerializer implements JsonSerializer<FlexibleUser> {
               )
             : DateTime.now(),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize FlexibleUser',
         expectedType: 'FlexibleUser',
@@ -155,7 +160,7 @@ class FlexibleUserJsonSerializer implements JsonSerializer<FlexibleUser> {
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'FlexibleUser',
       );
     }

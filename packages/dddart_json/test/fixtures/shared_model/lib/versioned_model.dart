@@ -48,7 +48,8 @@ abstract interface class VersionedRepositoryPort<
   });
 }
 
-/// Custom contract exercises prefixed nested types and inherited conditional CRUD.
+/// Custom contract exercises prefixed nested types and inherited
+/// conditional CRUD.
 abstract interface class VersionedPort
     implements VersionedRepositoryPort<VersionedRecord> {
   /// Returns a model callback through the generated abstract adapter base.

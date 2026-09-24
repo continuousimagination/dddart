@@ -12,7 +12,12 @@ class ProductJsonSerializer implements JsonSerializer<Product> {
 
   /// Creates a serializer with the specified default configuration.
   ProductJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(Product instance, [SerializationConfig? config]) {
@@ -134,7 +139,7 @@ class ProductJsonSerializer implements JsonSerializer<Product> {
               )
             : DateTime.now(),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize Product',
         expectedType: 'Product',
@@ -169,7 +174,7 @@ class ProductJsonSerializer implements JsonSerializer<Product> {
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'Product',
       );
     }
@@ -218,8 +223,12 @@ abstract class ProductRestRepositoryBase implements ProductRepository {
   @override
   Future<Product> getById(UuidValue id) async {
     try {
-      final response = await _connection.client.get(
-        Uri.parse('${_connection.baseUrl}$_resourcePath/${id.uuid}'),
+      final response = await _connection.executeRequest(
+        () => _connection.client.get(
+          Uri.parse('${_connection.baseUrl}$_resourcePath/${id.uuid}'),
+          headers: {'Accept': 'application/json'},
+        ),
+        operation: 'retrieve Product',
       );
 
       if (response.statusCode == 200) {
@@ -247,10 +256,18 @@ abstract class ProductRestRepositoryBase implements ProductRepository {
       final json = _serializer.toJson(aggregate);
       final body = jsonEncode(json);
 
-      final response = await _connection.client.put(
-        Uri.parse('${_connection.baseUrl}$_resourcePath/${aggregate.id.uuid}'),
-        body: body,
-        headers: {'Content-Type': 'application/json'},
+      final response = await _connection.executeRequest(
+        () => _connection.client.put(
+          Uri.parse(
+            '${_connection.baseUrl}$_resourcePath/${aggregate.id.uuid}',
+          ),
+          body: body,
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+        ),
+        operation: 'save Product',
       );
 
       if (response.statusCode == 200 || response.statusCode == 204) {
@@ -271,8 +288,12 @@ abstract class ProductRestRepositoryBase implements ProductRepository {
   @override
   Future<void> deleteById(UuidValue id) async {
     try {
-      final response = await _connection.client.delete(
-        Uri.parse('${_connection.baseUrl}$_resourcePath/${id.uuid}'),
+      final response = await _connection.executeRequest(
+        () => _connection.client.delete(
+          Uri.parse('${_connection.baseUrl}$_resourcePath/${id.uuid}'),
+          headers: {'Accept': 'application/json'},
+        ),
+        operation: 'delete Product',
       );
 
       if (response.statusCode == 204 || response.statusCode == 200) {

@@ -27,7 +27,7 @@ dev_dependencies:
 dependency_overrides:
   dddart:
     path: ../../dddart
-  dddart_serialization:
-    path: ../../dddart_serialization
   dddart_json:
     path: ../../dddart_json
+  dddart_serialization:
+    path: ../../dddart_serialization

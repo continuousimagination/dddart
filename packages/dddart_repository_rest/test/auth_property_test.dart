@@ -57,7 +57,6 @@ void main() {
       testServer = await createTestServer<TestUser>(
         path: '/users',
         serializer: TestUserJsonSerializer(),
-        port: 8783,
       );
     });
 
@@ -66,65 +65,69 @@ void main() {
     });
 
     // **Feature: rest-repository, Property 10: Authentication is applied when configured**
-    test('Property 10: connection with auth provider works correctly',
-        () async {
-      // Run property test with 100 iterations
-      for (var i = 0; i < 100; i++) {
-        // Create a mock auth provider with a random token
-        final token = 'test-token-${generateRandomString(10)}';
-        final authProvider = MockAuthProvider(token);
+    test(
+      'Property 10: connection with auth provider works correctly',
+      () async {
+        // Run property test with 100 iterations
+        for (var i = 0; i < 100; i++) {
+          // Create a mock auth provider with a random token
+          final token = 'test-token-${generateRandomString(10)}';
+          final authProvider = MockAuthProvider(token);
 
-        // Create connection with auth provider
-        final connection = RestConnection(
-          baseUrl: testServer.baseUrl,
-          authProvider: authProvider,
-        );
+          // Create connection with auth provider
+          final connection = RestConnection(
+            baseUrl: testServer.baseUrl,
+            authProvider: authProvider,
+          );
 
-        try {
-          // Create repository
-          final repository = TestUserRestRepository(connection);
+          try {
+            // Create repository
+            final repository = TestUserRestRepository(connection);
 
-          // Generate random user
-          final user = generateRandomTestUser();
+            // Generate random user
+            final user = generateRandomTestUser();
 
-          // Perform operations - should work with auth provider configured
-          await repository.save(user);
-          final retrieved = await repository.getById(user.id);
+            // Perform operations - should work with auth provider configured
+            await repository.save(user);
+            final retrieved = await repository.getById(user.id);
 
-          // Verify operations succeeded with auth provider configured
-          expect(retrieved.id, equals(user.id));
-          expect(retrieved.name, equals(user.name));
-          expect(retrieved.email, equals(user.email));
-        } finally {
-          connection.dispose();
+            // Verify operations succeeded with auth provider configured
+            expect(retrieved.id, equals(user.id));
+            expect(retrieved.name, equals(user.name));
+            expect(retrieved.email, equals(user.email));
+          } finally {
+            connection.dispose();
+          }
         }
-      }
-    });
+      },
+    );
 
-    test('Property 10: unauthenticated requests work without auth provider',
-        () async {
-      // Run property test with 100 iterations
-      for (var i = 0; i < 100; i++) {
-        // Create connection WITHOUT auth provider
-        final connection = RestConnection(baseUrl: testServer.baseUrl);
+    test(
+      'Property 10: unauthenticated requests work without auth provider',
+      () async {
+        // Run property test with 100 iterations
+        for (var i = 0; i < 100; i++) {
+          // Create connection WITHOUT auth provider
+          final connection = RestConnection(baseUrl: testServer.baseUrl);
 
-        try {
-          // Create repository
-          final repository = TestUserRestRepository(connection);
+          try {
+            // Create repository
+            final repository = TestUserRestRepository(connection);
 
-          // Generate random user
-          final user = generateRandomTestUser();
+            // Generate random user
+            final user = generateRandomTestUser();
 
-          // Perform operations - should work without authentication
-          await repository.save(user);
-          final retrieved = await repository.getById(user.id);
+            // Perform operations - should work without authentication
+            await repository.save(user);
+            final retrieved = await repository.getById(user.id);
 
-          // Verify operations succeeded
-          expect(retrieved.id, equals(user.id));
-        } finally {
-          connection.dispose();
+            // Verify operations succeeded
+            expect(retrieved.id, equals(user.id));
+          } finally {
+            connection.dispose();
+          }
         }
-      }
-    });
+      },
+    );
   });
 }

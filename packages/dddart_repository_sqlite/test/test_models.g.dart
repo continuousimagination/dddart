@@ -12,7 +12,12 @@ class MoneyJsonSerializer implements JsonSerializer<Money> {
 
   /// Creates a serializer with the specified default configuration.
   MoneyJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(Money instance, [SerializationConfig? config]) {
@@ -71,7 +76,7 @@ class MoneyJsonSerializer implements JsonSerializer<Money> {
                 )]
                 as String,
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize Money',
         expectedType: 'Money',
@@ -106,7 +111,7 @@ class MoneyJsonSerializer implements JsonSerializer<Money> {
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'Money',
       );
     }
@@ -132,7 +137,12 @@ class AddressJsonSerializer implements JsonSerializer<Address> {
 
   /// Creates a serializer with the specified default configuration.
   AddressJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(Address instance, [SerializationConfig? config]) {
@@ -188,7 +198,7 @@ class AddressJsonSerializer implements JsonSerializer<Address> {
                 )]
                 as String,
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize Address',
         expectedType: 'Address',
@@ -223,7 +233,7 @@ class AddressJsonSerializer implements JsonSerializer<Address> {
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'Address',
       );
     }
@@ -249,7 +259,12 @@ class OrderItemJsonSerializer implements JsonSerializer<OrderItem> {
 
   /// Creates a serializer with the specified default configuration.
   OrderItemJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(
@@ -258,13 +273,18 @@ class OrderItemJsonSerializer implements JsonSerializer<OrderItem> {
   ]) {
     final effectiveConfig = config ?? _defaultConfig;
     final json = <String, dynamic>{
+      SerializationUtils.applyFieldRename('id', effectiveConfig.fieldRename):
+          instance.id.toString(),
       SerializationUtils.applyFieldRename(
         'createdAt',
         effectiveConfig.fieldRename,
       ): instance.createdAt
           .toIso8601String(),
-      SerializationUtils.applyFieldRename('id', effectiveConfig.fieldRename):
-          instance.id.toString(),
+      SerializationUtils.applyFieldRename(
+        'updatedAt',
+        effectiveConfig.fieldRename,
+      ): instance.updatedAt
+          .toIso8601String(),
       SerializationUtils.applyFieldRename('price', effectiveConfig.fieldRename):
           MoneyJsonSerializer().toJson(instance.price, effectiveConfig),
       SerializationUtils.applyFieldRename(
@@ -276,11 +296,6 @@ class OrderItemJsonSerializer implements JsonSerializer<OrderItem> {
         'quantity',
         effectiveConfig.fieldRename,
       ): instance.quantity,
-      SerializationUtils.applyFieldRename(
-        'updatedAt',
-        effectiveConfig.fieldRename,
-      ): instance.updatedAt
-          .toIso8601String(),
     };
     return json;
   }
@@ -302,20 +317,6 @@ class OrderItemJsonSerializer implements JsonSerializer<OrderItem> {
     }
     try {
       return OrderItem(
-        createdAt: DateTime.parse(
-          json[SerializationUtils.applyFieldRename(
-                'createdAt',
-                effectiveConfig.fieldRename,
-              )]
-              as String,
-        ),
-        id: UuidValue.fromString(
-          json[SerializationUtils.applyFieldRename(
-                'id',
-                effectiveConfig.fieldRename,
-              )]
-              as String,
-        ),
         price: MoneyJsonSerializer().fromJson(
           json[SerializationUtils.applyFieldRename(
                 'price',
@@ -337,15 +338,43 @@ class OrderItemJsonSerializer implements JsonSerializer<OrderItem> {
                   effectiveConfig.fieldRename,
                 )]
                 as int,
-        updatedAt: DateTime.parse(
+        id: UuidValue.fromString(
           json[SerializationUtils.applyFieldRename(
-                'updatedAt',
+                'id',
                 effectiveConfig.fieldRename,
               )]
               as String,
         ),
+        createdAt:
+            json[SerializationUtils.applyFieldRename(
+                  'createdAt',
+                  effectiveConfig.fieldRename,
+                )] !=
+                null
+            ? DateTime.parse(
+                json[SerializationUtils.applyFieldRename(
+                      'createdAt',
+                      effectiveConfig.fieldRename,
+                    )]
+                    as String,
+              )
+            : DateTime.now(),
+        updatedAt:
+            json[SerializationUtils.applyFieldRename(
+                  'updatedAt',
+                  effectiveConfig.fieldRename,
+                )] !=
+                null
+            ? DateTime.parse(
+                json[SerializationUtils.applyFieldRename(
+                      'updatedAt',
+                      effectiveConfig.fieldRename,
+                    )]
+                    as String,
+              )
+            : DateTime.now(),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize OrderItem',
         expectedType: 'OrderItem',
@@ -380,7 +409,7 @@ class OrderItemJsonSerializer implements JsonSerializer<OrderItem> {
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'OrderItem',
       );
     }
@@ -406,7 +435,12 @@ class OrderJsonSerializer implements JsonSerializer<Order> {
 
   /// Creates a serializer with the specified default configuration.
   OrderJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(Order instance, [SerializationConfig? config]) {
@@ -544,7 +578,7 @@ class OrderJsonSerializer implements JsonSerializer<Order> {
               )
             : DateTime.now(),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize Order',
         expectedType: 'Order',
@@ -579,7 +613,7 @@ class OrderJsonSerializer implements JsonSerializer<Order> {
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'Order',
       );
     }
@@ -605,7 +639,12 @@ class TestUserJsonSerializer implements JsonSerializer<TestUser> {
 
   /// Creates a serializer with the specified default configuration.
   TestUserJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(
@@ -709,7 +748,7 @@ class TestUserJsonSerializer implements JsonSerializer<TestUser> {
               )
             : DateTime.now(),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize TestUser',
         expectedType: 'TestUser',
@@ -744,7 +783,7 @@ class TestUserJsonSerializer implements JsonSerializer<TestUser> {
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'TestUser',
       );
     }
@@ -770,7 +809,12 @@ class TestProductJsonSerializer implements JsonSerializer<TestProduct> {
 
   /// Creates a serializer with the specified default configuration.
   TestProductJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(
@@ -888,7 +932,7 @@ class TestProductJsonSerializer implements JsonSerializer<TestProduct> {
               )
             : DateTime.now(),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize TestProduct',
         expectedType: 'TestProduct',
@@ -923,7 +967,7 @@ class TestProductJsonSerializer implements JsonSerializer<TestProduct> {
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'TestProduct',
       );
     }
@@ -950,7 +994,12 @@ class TestPrimitiveCollectionsJsonSerializer
 
   /// Creates a serializer with the specified default configuration.
   TestPrimitiveCollectionsJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(
@@ -1072,7 +1121,7 @@ class TestPrimitiveCollectionsJsonSerializer
               )
             : DateTime.now(),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize TestPrimitiveCollections',
         expectedType: 'TestPrimitiveCollections',
@@ -1107,7 +1156,7 @@ class TestPrimitiveCollectionsJsonSerializer
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'TestPrimitiveCollections',
       );
     }
@@ -1137,7 +1186,12 @@ class TestValueCollectionsJsonSerializer
 
   /// Creates a serializer with the specified default configuration.
   TestValueCollectionsJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(
@@ -1284,7 +1338,7 @@ class TestValueCollectionsJsonSerializer
               )
             : DateTime.now(),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize TestValueCollections',
         expectedType: 'TestValueCollections',
@@ -1319,7 +1373,7 @@ class TestValueCollectionsJsonSerializer
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'TestValueCollections',
       );
     }
@@ -1348,7 +1402,12 @@ class TestItemJsonSerializer implements JsonSerializer<TestItem> {
 
   /// Creates a serializer with the specified default configuration.
   TestItemJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(
@@ -1357,24 +1416,24 @@ class TestItemJsonSerializer implements JsonSerializer<TestItem> {
   ]) {
     final effectiveConfig = config ?? _defaultConfig;
     final json = <String, dynamic>{
+      SerializationUtils.applyFieldRename('id', effectiveConfig.fieldRename):
+          instance.id.toString(),
       SerializationUtils.applyFieldRename(
         'createdAt',
         effectiveConfig.fieldRename,
       ): instance.createdAt
           .toIso8601String(),
-      SerializationUtils.applyFieldRename('id', effectiveConfig.fieldRename):
-          instance.id.toString(),
+      SerializationUtils.applyFieldRename(
+        'updatedAt',
+        effectiveConfig.fieldRename,
+      ): instance.updatedAt
+          .toIso8601String(),
       SerializationUtils.applyFieldRename('name', effectiveConfig.fieldRename):
           instance.name,
       SerializationUtils.applyFieldRename(
         'quantity',
         effectiveConfig.fieldRename,
       ): instance.quantity,
-      SerializationUtils.applyFieldRename(
-        'updatedAt',
-        effectiveConfig.fieldRename,
-      ): instance.updatedAt
-          .toIso8601String(),
     };
     return json;
   }
@@ -1396,20 +1455,6 @@ class TestItemJsonSerializer implements JsonSerializer<TestItem> {
     }
     try {
       return TestItem(
-        createdAt: DateTime.parse(
-          json[SerializationUtils.applyFieldRename(
-                'createdAt',
-                effectiveConfig.fieldRename,
-              )]
-              as String,
-        ),
-        id: UuidValue.fromString(
-          json[SerializationUtils.applyFieldRename(
-                'id',
-                effectiveConfig.fieldRename,
-              )]
-              as String,
-        ),
         name:
             json[SerializationUtils.applyFieldRename(
                   'name',
@@ -1422,15 +1467,43 @@ class TestItemJsonSerializer implements JsonSerializer<TestItem> {
                   effectiveConfig.fieldRename,
                 )]
                 as int,
-        updatedAt: DateTime.parse(
+        id: UuidValue.fromString(
           json[SerializationUtils.applyFieldRename(
-                'updatedAt',
+                'id',
                 effectiveConfig.fieldRename,
               )]
               as String,
         ),
+        createdAt:
+            json[SerializationUtils.applyFieldRename(
+                  'createdAt',
+                  effectiveConfig.fieldRename,
+                )] !=
+                null
+            ? DateTime.parse(
+                json[SerializationUtils.applyFieldRename(
+                      'createdAt',
+                      effectiveConfig.fieldRename,
+                    )]
+                    as String,
+              )
+            : DateTime.now(),
+        updatedAt:
+            json[SerializationUtils.applyFieldRename(
+                  'updatedAt',
+                  effectiveConfig.fieldRename,
+                )] !=
+                null
+            ? DateTime.parse(
+                json[SerializationUtils.applyFieldRename(
+                      'updatedAt',
+                      effectiveConfig.fieldRename,
+                    )]
+                    as String,
+              )
+            : DateTime.now(),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize TestItem',
         expectedType: 'TestItem',
@@ -1465,7 +1538,7 @@ class TestItemJsonSerializer implements JsonSerializer<TestItem> {
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'TestItem',
       );
     }
@@ -1492,7 +1565,12 @@ class TestEntityCollectionsJsonSerializer
 
   /// Creates a serializer with the specified default configuration.
   TestEntityCollectionsJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(
@@ -1622,7 +1700,7 @@ class TestEntityCollectionsJsonSerializer
               )
             : DateTime.now(),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize TestEntityCollections',
         expectedType: 'TestEntityCollections',
@@ -1657,7 +1735,7 @@ class TestEntityCollectionsJsonSerializer
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'TestEntityCollections',
       );
     }
@@ -1687,7 +1765,12 @@ class TestNullableCollectionsJsonSerializer
 
   /// Creates a serializer with the specified default configuration.
   TestNullableCollectionsJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(
@@ -1839,7 +1922,7 @@ class TestNullableCollectionsJsonSerializer
               )
             : DateTime.now(),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize TestNullableCollections',
         expectedType: 'TestNullableCollections',
@@ -1874,7 +1957,7 @@ class TestNullableCollectionsJsonSerializer
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'TestNullableCollections',
       );
     }
@@ -1904,7 +1987,12 @@ class TestNullableElementsJsonSerializer
 
   /// Creates a serializer with the specified default configuration.
   TestNullableElementsJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(
@@ -2002,7 +2090,7 @@ class TestNullableElementsJsonSerializer
               )
             : DateTime.now(),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize TestNullableElements',
         expectedType: 'TestNullableElements',
@@ -2037,7 +2125,7 @@ class TestNullableElementsJsonSerializer
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'TestNullableElements',
       );
     }

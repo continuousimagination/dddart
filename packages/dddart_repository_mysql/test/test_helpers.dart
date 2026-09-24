@@ -24,16 +24,18 @@ class TestMysqlHelper {
     String? database,
     String? user,
     String? password,
-  })  : host = host ?? Platform.environment['MYSQL_HOST'] ?? 'localhost',
-        port = port ??
-            int.tryParse(Platform.environment['MYSQL_PORT'] ?? '') ??
-            3307,
-        database =
-            database ?? Platform.environment['MYSQL_DATABASE'] ?? 'test_db',
-        user = user ?? Platform.environment['MYSQL_USER'] ?? 'root',
-        password = password ??
-            Platform.environment['MYSQL_PASSWORD'] ??
-            'test_password';
+  }) : host = host ?? Platform.environment['MYSQL_HOST'] ?? 'localhost',
+       port =
+           port ??
+           int.tryParse(Platform.environment['MYSQL_PORT'] ?? '') ??
+           3307,
+       database =
+           database ?? Platform.environment['MYSQL_DATABASE'] ?? 'test_db',
+       user = user ?? Platform.environment['MYSQL_USER'] ?? 'root',
+       password =
+           password ??
+           Platform.environment['MYSQL_PASSWORD'] ??
+           'test_password';
 
   /// MySQL host.
   final String host;

@@ -87,40 +87,36 @@ void main() {
         tags: ['requires-mongo', 'property-test'],
       );
 
-      test(
-        'should handle updates correctly',
-        () async {
-          if (!mongoAvailable) {
-            markTestSkipped('MongoDB not available');
-            return;
-          }
+      test('should handle updates correctly', () async {
+        if (!mongoAvailable) {
+          markTestSkipped('MongoDB not available');
+          return;
+        }
 
-          final random = Random(101);
+        final random = Random(101);
 
-          for (var i = 0; i < 10; i++) {
-            // Create and save initial version
-            final original = _generateRandomUser(random);
-            await repository.save(original);
+        for (var i = 0; i < 10; i++) {
+          // Create and save initial version
+          final original = _generateRandomUser(random);
+          await repository.save(original);
 
-            // Update and save again
-            final updated = TestUser(
-              id: original.id,
-              name: 'Updated ${original.name}',
-              email: 'updated_${original.email}',
-              createdAt: original.createdAt,
-              updatedAt: DateTime.now(),
-            );
-            await repository.save(updated);
+          // Update and save again
+          final updated = TestUser(
+            id: original.id,
+            name: 'Updated ${original.name}',
+            email: 'updated_${original.email}',
+            createdAt: original.createdAt,
+            updatedAt: DateTime.now(),
+          );
+          await repository.save(updated);
 
-            // Retrieve and verify update
-            final retrieved = await repository.getById(original.id);
-            expect(retrieved.name, equals(updated.name));
-            expect(retrieved.email, equals(updated.email));
-            expect(retrieved.id, equals(original.id));
-          }
-        },
-        tags: ['requires-mongo', 'property-test'],
-      );
+          // Retrieve and verify update
+          final retrieved = await repository.getById(original.id);
+          expect(retrieved.name, equals(updated.name));
+          expect(retrieved.email, equals(updated.email));
+          expect(retrieved.id, equals(original.id));
+        }
+      }, tags: ['requires-mongo', 'property-test']);
     });
 
     // Property: CRUD operation correctness
@@ -434,9 +430,7 @@ TestUser _generateRandomUser(Random random) {
     id: UuidValue.generate(),
     name: 'User ${random.nextInt(10000)}',
     email: 'user${random.nextInt(10000)}@test.com',
-    createdAt: DateTime.now().subtract(
-      Duration(days: random.nextInt(365)),
-    ),
+    createdAt: DateTime.now().subtract(Duration(days: random.nextInt(365))),
     updatedAt: DateTime.now(),
   );
 }

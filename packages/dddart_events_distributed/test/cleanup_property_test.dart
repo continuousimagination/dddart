@@ -15,187 +15,177 @@ import 'package:test/test.dart';
 
 void main() {
   group('Property 11: Cleanup deletes old events', () {
-    test(
-      'should delete all events older than retention duration',
-      () async {
-        final random = Random(42);
+    test('should delete all events older than retention duration', () async {
+      final random = Random(42);
 
-        for (var i = 0; i < 100; i++) {
-          // Create fresh instances
-          final eventBus = EventBus();
-          final repository = InMemoryEventRepository();
+      for (var i = 0; i < 100; i++) {
+        // Create fresh instances
+        final eventBus = EventBus();
+        final repository = InMemoryEventRepository();
 
-          // Generate random retention duration (1-30 days)
-          final retentionDays = 1 + random.nextInt(30);
-          final retentionDuration = Duration(days: retentionDays);
+        // Generate random retention duration (1-30 days)
+        final retentionDays = 1 + random.nextInt(30);
+        final retentionDuration = Duration(days: retentionDays);
 
-          final server = EventBusServer<StoredEvent>(
-            localEventBus: eventBus,
-            eventRepository: repository,
-            storedEventFactory: StoredEvent.fromDomainEvent,
-            retentionDuration: retentionDuration,
-          );
+        final server = EventBusServer<StoredEvent>(
+          localEventBus: eventBus,
+          eventRepository: repository,
+          storedEventFactory: StoredEvent.fromDomainEvent,
+          retentionDuration: retentionDuration,
+        );
 
-          // Generate events with various ages
-          final now = DateTime.now();
-          final oldEventCount = 2 + random.nextInt(5); // 2-6 old events
-          final recentEventCount = 2 + random.nextInt(5); // 2-6 recent events
+        // Generate events with various ages
+        final now = DateTime.now();
+        final oldEventCount = 2 + random.nextInt(5); // 2-6 old events
+        final recentEventCount = 2 + random.nextInt(5); // 2-6 recent events
 
-          // Create old events (older than retention)
-          for (var j = 0; j < oldEventCount; j++) {
-            final daysOld = retentionDays + 1 + random.nextInt(30);
-            final oldTimestamp = now.subtract(Duration(days: daysOld));
-            final oldEvent = _createEventWithTimestamp(oldTimestamp);
-            await repository.save(oldEvent);
-          }
-
-          // Create recent events (within retention)
-          for (var j = 0; j < recentEventCount; j++) {
-            final daysOld = random.nextInt(retentionDays);
-            final recentTimestamp = now.subtract(Duration(days: daysOld));
-            final recentEvent = _createEventWithTimestamp(recentTimestamp);
-            await repository.save(recentEvent);
-          }
-
-          // Verify initial state
-          final beforeCleanup = await repository.findAll();
-          expect(
-            beforeCleanup.length,
-            equals(oldEventCount + recentEventCount),
-            reason: 'Iteration $i: should have all events before cleanup',
-          );
-
-          // Perform cleanup
-          await server.cleanup();
-
-          // Verify old events were deleted
-          final afterCleanup = await repository.findAll();
-          expect(
-            afterCleanup.length,
-            equals(recentEventCount),
-            reason:
-                'Iteration $i: should only have recent events after cleanup',
-          );
-
-          // Verify all remaining events are within retention
-          final cutoff = now.subtract(retentionDuration);
-          for (final event in afterCleanup) {
-            expect(
-              event.createdAt.isAfter(cutoff) ||
-                  event.createdAt.isAtSameMomentAs(cutoff),
-              isTrue,
-              reason: 'Iteration $i: all remaining events should be '
-                  'within retention',
-            );
-          }
-
-          // Clean up
-          await server.close();
+        // Create old events (older than retention)
+        for (var j = 0; j < oldEventCount; j++) {
+          final daysOld = retentionDays + 1 + random.nextInt(30);
+          final oldTimestamp = now.subtract(Duration(days: daysOld));
+          final oldEvent = _createEventWithTimestamp(oldTimestamp);
+          await repository.save(oldEvent);
         }
-      },
-    );
 
-    test(
-      'should handle cleanup with no old events',
-      () async {
-        final random = Random(43);
-
-        for (var i = 0; i < 50; i++) {
-          // Create fresh instances
-          final eventBus = EventBus();
-          final repository = InMemoryEventRepository();
-          const retentionDuration = Duration(days: 30);
-
-          final server = EventBusServer<StoredEvent>(
-            localEventBus: eventBus,
-            eventRepository: repository,
-            storedEventFactory: StoredEvent.fromDomainEvent,
-            retentionDuration: retentionDuration,
-          );
-
-          // Create only recent events
-          final now = DateTime.now();
-          final eventCount = 2 + random.nextInt(8); // 2-9 events
-
-          for (var j = 0; j < eventCount; j++) {
-            final daysOld = random.nextInt(30); // All within retention
-            final timestamp = now.subtract(Duration(days: daysOld));
-            final event = _createEventWithTimestamp(timestamp);
-            await repository.save(event);
-          }
-
-          // Verify initial state
-          final beforeCleanup = await repository.findAll();
-          expect(beforeCleanup.length, equals(eventCount));
-
-          // Perform cleanup
-          await server.cleanup();
-
-          // Verify no events were deleted
-          final afterCleanup = await repository.findAll();
-          expect(
-            afterCleanup.length,
-            equals(eventCount),
-            reason:
-                'Iteration $i: no events should be deleted when all are recent',
-          );
-
-          // Clean up
-          await server.close();
+        // Create recent events (within retention)
+        for (var j = 0; j < recentEventCount; j++) {
+          final daysOld = random.nextInt(retentionDays);
+          final recentTimestamp = now.subtract(Duration(days: daysOld));
+          final recentEvent = _createEventWithTimestamp(recentTimestamp);
+          await repository.save(recentEvent);
         }
-      },
-    );
 
-    test(
-      'should handle cleanup with all old events',
-      () async {
-        final random = Random(44);
+        // Verify initial state
+        final beforeCleanup = await repository.findAll();
+        expect(
+          beforeCleanup.length,
+          equals(oldEventCount + recentEventCount),
+          reason: 'Iteration $i: should have all events before cleanup',
+        );
 
-        for (var i = 0; i < 50; i++) {
-          // Create fresh instances
-          final eventBus = EventBus();
-          final repository = InMemoryEventRepository();
-          const retentionDuration = Duration(days: 7);
+        // Perform cleanup
+        await server.cleanup();
 
-          final server = EventBusServer<StoredEvent>(
-            localEventBus: eventBus,
-            eventRepository: repository,
-            storedEventFactory: StoredEvent.fromDomainEvent,
-            retentionDuration: retentionDuration,
-          );
+        // Verify old events were deleted
+        final afterCleanup = await repository.findAll();
+        expect(
+          afterCleanup.length,
+          equals(recentEventCount),
+          reason: 'Iteration $i: should only have recent events after cleanup',
+        );
 
-          // Create only old events
-          final now = DateTime.now();
-          final eventCount = 2 + random.nextInt(8); // 2-9 events
-
-          for (var j = 0; j < eventCount; j++) {
-            final daysOld = 8 + random.nextInt(30); // All older than retention
-            final timestamp = now.subtract(Duration(days: daysOld));
-            final event = _createEventWithTimestamp(timestamp);
-            await repository.save(event);
-          }
-
-          // Verify initial state
-          final beforeCleanup = await repository.findAll();
-          expect(beforeCleanup.length, equals(eventCount));
-
-          // Perform cleanup
-          await server.cleanup();
-
-          // Verify all events were deleted
-          final afterCleanup = await repository.findAll();
+        // Verify all remaining events are within retention
+        final cutoff = now.subtract(retentionDuration);
+        for (final event in afterCleanup) {
           expect(
-            afterCleanup.length,
-            equals(0),
+            event.createdAt.isAfter(cutoff) ||
+                event.createdAt.isAtSameMomentAs(cutoff),
+            isTrue,
             reason:
-                'Iteration $i: all events should be deleted when all are old',
+                'Iteration $i: all remaining events should be '
+                'within retention',
           );
-
-          // Clean up
-          await server.close();
         }
-      },
-    );
+
+        // Clean up
+        await server.close();
+      }
+    });
+
+    test('should handle cleanup with no old events', () async {
+      final random = Random(43);
+
+      for (var i = 0; i < 50; i++) {
+        // Create fresh instances
+        final eventBus = EventBus();
+        final repository = InMemoryEventRepository();
+        const retentionDuration = Duration(days: 30);
+
+        final server = EventBusServer<StoredEvent>(
+          localEventBus: eventBus,
+          eventRepository: repository,
+          storedEventFactory: StoredEvent.fromDomainEvent,
+          retentionDuration: retentionDuration,
+        );
+
+        // Create only recent events
+        final now = DateTime.now();
+        final eventCount = 2 + random.nextInt(8); // 2-9 events
+
+        for (var j = 0; j < eventCount; j++) {
+          final daysOld = random.nextInt(30); // All within retention
+          final timestamp = now.subtract(Duration(days: daysOld));
+          final event = _createEventWithTimestamp(timestamp);
+          await repository.save(event);
+        }
+
+        // Verify initial state
+        final beforeCleanup = await repository.findAll();
+        expect(beforeCleanup.length, equals(eventCount));
+
+        // Perform cleanup
+        await server.cleanup();
+
+        // Verify no events were deleted
+        final afterCleanup = await repository.findAll();
+        expect(
+          afterCleanup.length,
+          equals(eventCount),
+          reason:
+              'Iteration $i: no events should be deleted when all are recent',
+        );
+
+        // Clean up
+        await server.close();
+      }
+    });
+
+    test('should handle cleanup with all old events', () async {
+      final random = Random(44);
+
+      for (var i = 0; i < 50; i++) {
+        // Create fresh instances
+        final eventBus = EventBus();
+        final repository = InMemoryEventRepository();
+        const retentionDuration = Duration(days: 7);
+
+        final server = EventBusServer<StoredEvent>(
+          localEventBus: eventBus,
+          eventRepository: repository,
+          storedEventFactory: StoredEvent.fromDomainEvent,
+          retentionDuration: retentionDuration,
+        );
+
+        // Create only old events
+        final now = DateTime.now();
+        final eventCount = 2 + random.nextInt(8); // 2-9 events
+
+        for (var j = 0; j < eventCount; j++) {
+          final daysOld = 8 + random.nextInt(30); // All older than retention
+          final timestamp = now.subtract(Duration(days: daysOld));
+          final event = _createEventWithTimestamp(timestamp);
+          await repository.save(event);
+        }
+
+        // Verify initial state
+        final beforeCleanup = await repository.findAll();
+        expect(beforeCleanup.length, equals(eventCount));
+
+        // Perform cleanup
+        await server.cleanup();
+
+        // Verify all events were deleted
+        final afterCleanup = await repository.findAll();
+        expect(
+          afterCleanup.length,
+          equals(0),
+          reason: 'Iteration $i: all events should be deleted when all are old',
+        );
+
+        // Clean up
+        await server.close();
+      }
+    });
 
     test(
       'should handle cleanup with no retention duration configured',
@@ -237,7 +227,8 @@ void main() {
           expect(
             afterCleanup.length,
             equals(eventCount),
-            reason: 'Iteration $i: no events should be deleted when no '
+            reason:
+                'Iteration $i: no events should be deleted when no '
                 'retention is configured',
           );
 
@@ -247,61 +238,58 @@ void main() {
       },
     );
 
-    test(
-      'should handle cleanup at exact retention boundary',
-      () async {
-        for (var i = 0; i < 100; i++) {
-          // Create fresh instances
-          final eventBus = EventBus();
-          final repository = InMemoryEventRepository();
-          const retentionDuration = Duration(days: 10);
+    test('should handle cleanup at exact retention boundary', () async {
+      for (var i = 0; i < 100; i++) {
+        // Create fresh instances
+        final eventBus = EventBus();
+        final repository = InMemoryEventRepository();
+        const retentionDuration = Duration(days: 10);
 
-          final server = EventBusServer<StoredEvent>(
-            localEventBus: eventBus,
-            eventRepository: repository,
-            storedEventFactory: StoredEvent.fromDomainEvent,
-            retentionDuration: retentionDuration,
-          );
+        final server = EventBusServer<StoredEvent>(
+          localEventBus: eventBus,
+          eventRepository: repository,
+          storedEventFactory: StoredEvent.fromDomainEvent,
+          retentionDuration: retentionDuration,
+        );
 
-          // Use a fixed reference time to avoid timing issues
-          final now = DateTime.now();
+        // Use a fixed reference time to avoid timing issues
+        final now = DateTime.now();
 
-          // Create events relative to retention duration
-          // Old event: clearly before retention
-          final oldEvent = _createEventWithTimestamp(
-            now.subtract(retentionDuration).subtract(const Duration(days: 1)),
-          );
-          await repository.save(oldEvent);
+        // Create events relative to retention duration
+        // Old event: clearly before retention
+        final oldEvent = _createEventWithTimestamp(
+          now.subtract(retentionDuration).subtract(const Duration(days: 1)),
+        );
+        await repository.save(oldEvent);
 
-          // Recent event: clearly within retention
-          final recentEvent = _createEventWithTimestamp(
-            now.subtract(const Duration(days: 5)),
-          );
-          await repository.save(recentEvent);
+        // Recent event: clearly within retention
+        final recentEvent = _createEventWithTimestamp(
+          now.subtract(const Duration(days: 5)),
+        );
+        await repository.save(recentEvent);
 
-          // Perform cleanup
-          await server.cleanup();
+        // Perform cleanup
+        await server.cleanup();
 
-          // Verify boundary behavior
-          final afterCleanup = await repository.findAll();
-          expect(
-            afterCleanup.length,
-            equals(1),
-            reason: 'Iteration $i: only recent events should remain',
-          );
+        // Verify boundary behavior
+        final afterCleanup = await repository.findAll();
+        expect(
+          afterCleanup.length,
+          equals(1),
+          reason: 'Iteration $i: only recent events should remain',
+        );
 
-          // Verify the correct event remains
-          expect(
-            afterCleanup.first.id,
-            equals(recentEvent.id),
-            reason: 'Iteration $i: recent event should be kept',
-          );
+        // Verify the correct event remains
+        expect(
+          afterCleanup.first.id,
+          equals(recentEvent.id),
+          reason: 'Iteration $i: recent event should be kept',
+        );
 
-          // Clean up
-          await server.close();
-        }
-      },
-    );
+        // Clean up
+        await server.close();
+      }
+    });
   });
 }
 

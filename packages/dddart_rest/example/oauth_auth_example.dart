@@ -2,6 +2,7 @@
 //
 // This example demonstrates:
 // - Setting up OAuth JWT validation with Cognito
+// - Enforcing expiration and not-before claims with clock-skew tolerance
 // - Protecting resources with OAuth authentication
 // - Extracting claims from Cognito JWTs
 // - No auth endpoints needed (Cognito handles authentication)
@@ -11,15 +12,16 @@
 // - User Pool ID and Client ID
 // - JWKS endpoint URL
 //
-// Run: dart run example/oauth_auth_example.dart
+// Run from this example directory: dart run oauth_auth_example.dart
 // Then test with a JWT from Cognito
 
 import 'dart:async';
 import 'dart:convert';
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/dddart_rest.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:shelf/shelf.dart';
+
+import 'lib/json_serializer_support.dart';
 
 // Domain model
 class User extends AggregateRoot {
@@ -33,9 +35,6 @@ class User extends AggregateRoot {
   final String email;
   final String name;
   final List<String> cognitoGroups;
-
-  @override
-  List<Object?> get props => [id, email, name, cognitoGroups];
 }
 
 // Cognito JWT claims
@@ -56,25 +55,25 @@ class CognitoClaims {
   final String? cognitoUsername;
 
   Map<String, dynamic> toJson() => {
-        'sub': sub,
-        'email': email,
-        if (name != null) 'name': name,
-        'cognito:groups': cognitoGroups,
-        if (cognitoUsername != null) 'cognito:username': cognitoUsername,
-      };
+    'sub': sub,
+    'email': email,
+    if (name != null) 'name': name,
+    'cognito:groups': cognitoGroups,
+    if (cognitoUsername != null) 'cognito:username': cognitoUsername,
+  };
 
   factory CognitoClaims.fromJson(Map<String, dynamic> json) => CognitoClaims(
-        sub: json['sub'] as String,
-        email: json['email'] as String,
-        name: json['name'] as String?,
-        cognitoGroups:
-            (json['cognito:groups'] as List?)?.cast<String>() ?? const [],
-        cognitoUsername: json['cognito:username'] as String?,
-      );
+    sub: json['sub'] as String,
+    email: json['email'] as String,
+    name: json['name'] as String?,
+    cognitoGroups:
+        (json['cognito:groups'] as List?)?.cast<String>() ?? const [],
+    cognitoUsername: json['cognito:username'] as String?,
+  );
 }
 
 // Simple serializer for User
-class UserSerializer implements Serializer<User> {
+class UserSerializer extends ExampleJsonSerializer<User> {
   @override
   User deserialize(String data, [dynamic config]) {
     final json = jsonDecode(data) as Map<String, dynamic>;
@@ -129,6 +128,7 @@ void main() async {
     issuer: issuer,
     audience: clientId,
     cacheDuration: const Duration(hours: 24),
+    clockSkewTolerance: const Duration(seconds: 30),
     parseClaimsFromJson: CognitoClaims.fromJson,
   );
 
@@ -140,7 +140,7 @@ void main() async {
     CrudResource<User, CognitoClaims>(
       path: '/users',
       repository: userRepo,
-      serializers: {'application/json': UserSerializer()},
+      serializer: UserSerializer(),
       authenticationHandler: authHandler,
       queryHandlers: {
         'me': (repo, params, skip, take, authResult) async {
@@ -187,8 +187,10 @@ void main() async {
   // Register public health check
   server.addRoute('GET', '/health', (Request request) async {
     return Response.ok(
-      jsonEncode(
-          {'status': 'healthy', 'timestamp': DateTime.now().toIso8601String()}),
+      jsonEncode({
+        'status': 'healthy',
+        'timestamp': DateTime.now().toIso8601String(),
+      }),
       headers: {'Content-Type': 'application/json'},
     );
   });
@@ -200,7 +202,8 @@ void main() async {
   print('No login endpoints - users authenticate through Cognito.\n');
   print('To test:');
   print(
-      '1. Get a JWT from Cognito (use AWS Amplify, Cognito SDK, or device flow)');
+    '1. Get a JWT from Cognito (use AWS Amplify, Cognito SDK, or device flow)',
+  );
   print('2. Make requests with the JWT:\n');
   print('curl http://localhost:8080/users?me \\');
   print('  -H "Authorization: Bearer <cognito_jwt_token>"');

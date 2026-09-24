@@ -37,5 +37,5 @@ void main() {
   print(r'  DEMO_SLACK_BOT__TOKEN=xoxb-token \');
   print(r'  DEMO_DATABASE_MAX__CONNECTIONS=100 \');
   print(r'  DEMO_API_V2__ENDPOINT_URL=https://api.example.com \');
-  print('  dart run example/underscore_demo.dart');
+  print('  dart run underscore_demo.dart');
 }

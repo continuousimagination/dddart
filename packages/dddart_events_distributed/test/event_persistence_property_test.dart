@@ -87,182 +87,172 @@ void main() {
       },
     );
 
-    test(
-      'should persist multiple events in order',
-      () async {
-        final random = Random(43);
+    test('should persist multiple events in order', () async {
+      final random = Random(43);
 
-        for (var i = 0; i < 50; i++) {
-          // Create fresh instances
-          final eventBus = EventBus();
-          final repository = InMemoryEventRepository();
-          final server = EventBusServer<StoredEvent>(
-            localEventBus: eventBus,
-            eventRepository: repository,
-            storedEventFactory: StoredEvent.fromDomainEvent,
-          );
+      for (var i = 0; i < 50; i++) {
+        // Create fresh instances
+        final eventBus = EventBus();
+        final repository = InMemoryEventRepository();
+        final server = EventBusServer<StoredEvent>(
+          localEventBus: eventBus,
+          eventRepository: repository,
+          storedEventFactory: StoredEvent.fromDomainEvent,
+        );
 
-          // Generate random number of events (2-10)
-          final eventCount = 2 + random.nextInt(9);
-          final testEvents = List.generate(
-            eventCount,
-            (_) => _generateRandomTestEvent(random),
-          );
+        // Generate random number of events (2-10)
+        final eventCount = 2 + random.nextInt(9);
+        final testEvents = List.generate(
+          eventCount,
+          (_) => _generateRandomTestEvent(random),
+        );
 
-          // Publish all events
-          for (final event in testEvents) {
-            server.publish(event);
-          }
-
-          // Wait for async persistence to complete
-          await Future<void>.delayed(const Duration(milliseconds: 50));
-
-          // Verify all events were persisted
-          final persistedEvents = await repository.findAll();
-          expect(
-            persistedEvents.length,
-            equals(eventCount),
-            reason: 'Iteration $i: all $eventCount events should be persisted',
-          );
-
-          // Verify each event was persisted correctly
-          for (var j = 0; j < eventCount; j++) {
-            final testEvent = testEvents[j];
-            final persistedEvent = persistedEvents.firstWhere(
-              (e) => e.id == testEvent.eventId,
-            );
-
-            expect(
-              persistedEvent.aggregateId,
-              equals(testEvent.aggregateId),
-              reason: 'Iteration $i, Event $j: aggregateId should match',
-            );
-            expect(
-              persistedEvent.eventType,
-              equals('TestDomainEvent'),
-              reason: 'Iteration $i, Event $j: eventType should match',
-            );
-          }
-
-          // Clean up
-          await server.close();
+        // Publish all events
+        for (final event in testEvents) {
+          server.publish(event);
         }
-      },
-    );
 
-    test(
-      'should handle events with various context values',
-      () async {
-        final random = Random(44);
+        // Wait for async persistence to complete
+        await Future<void>.delayed(const Duration(milliseconds: 50));
 
-        for (var i = 0; i < 100; i++) {
-          // Create fresh instances
-          final eventBus = EventBus();
-          final repository = InMemoryEventRepository();
-          final server = EventBusServer<StoredEvent>(
-            localEventBus: eventBus,
-            eventRepository: repository,
-            storedEventFactory: StoredEvent.fromDomainEvent,
+        // Verify all events were persisted
+        final persistedEvents = await repository.findAll();
+        expect(
+          persistedEvents.length,
+          equals(eventCount),
+          reason: 'Iteration $i: all $eventCount events should be persisted',
+        );
+
+        // Verify each event was persisted correctly
+        for (var j = 0; j < eventCount; j++) {
+          final testEvent = testEvents[j];
+          final persistedEvent = persistedEvents.firstWhere(
+            (e) => e.id == testEvent.eventId,
           );
 
-          // Generate event with random context fields
-          final includeUserId = random.nextBool();
-          final includeTenantId = random.nextBool();
-          final includeSessionId = random.nextBool();
-
-          final context = <String, dynamic>{};
-          if (includeUserId) {
-            context['userId'] = 'user-${random.nextInt(10000)}';
-          }
-          if (includeTenantId) {
-            context['tenantId'] = 'tenant-${random.nextInt(1000)}';
-          }
-          if (includeSessionId) {
-            context['sessionId'] = 'session-${random.nextInt(100000)}';
-          }
-
-          final testEvent = TestDomainEvent(
-            aggregateId: UuidValue.generate(),
-            context: context,
-            data: 'test-${random.nextInt(1000)}',
+          expect(
+            persistedEvent.aggregateId,
+            equals(testEvent.aggregateId),
+            reason: 'Iteration $i, Event $j: aggregateId should match',
           );
+          expect(
+            persistedEvent.eventType,
+            equals('TestDomainEvent'),
+            reason: 'Iteration $i, Event $j: eventType should match',
+          );
+        }
 
-          // Publish event
+        // Clean up
+        await server.close();
+      }
+    });
+
+    test('should handle events with various context values', () async {
+      final random = Random(44);
+
+      for (var i = 0; i < 100; i++) {
+        // Create fresh instances
+        final eventBus = EventBus();
+        final repository = InMemoryEventRepository();
+        final server = EventBusServer<StoredEvent>(
+          localEventBus: eventBus,
+          eventRepository: repository,
+          storedEventFactory: StoredEvent.fromDomainEvent,
+        );
+
+        // Generate event with random context fields
+        final includeUserId = random.nextBool();
+        final includeTenantId = random.nextBool();
+        final includeSessionId = random.nextBool();
+
+        final context = <String, dynamic>{};
+        if (includeUserId) {
+          context['userId'] = 'user-${random.nextInt(10000)}';
+        }
+        if (includeTenantId) {
+          context['tenantId'] = 'tenant-${random.nextInt(1000)}';
+        }
+        if (includeSessionId) {
+          context['sessionId'] = 'session-${random.nextInt(100000)}';
+        }
+
+        final testEvent = TestDomainEvent(
+          aggregateId: UuidValue.generate(),
+          context: context,
+          data: 'test-${random.nextInt(1000)}',
+        );
+
+        // Publish event
+        server.publish(testEvent);
+
+        // Wait for persistence
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+
+        // Verify event was persisted with correct context
+        final persistedEvents = await repository.findAll();
+        expect(persistedEvents.length, equals(1));
+
+        final persistedEvent = persistedEvents.first;
+        expect(
+          persistedEvent.userId,
+          equals(context['userId']),
+          reason: 'Iteration $i: userId should match context (null or value)',
+        );
+        expect(
+          persistedEvent.tenantId,
+          equals(context['tenantId']),
+          reason: 'Iteration $i: tenantId should match context (null or value)',
+        );
+        expect(
+          persistedEvent.sessionId,
+          equals(context['sessionId']),
+          reason:
+              'Iteration $i: sessionId should match context (null or value)',
+        );
+
+        // Clean up
+        await server.close();
+      }
+    });
+
+    test('should continue persisting after persistence errors', () async {
+      final random = Random(45);
+
+      for (var i = 0; i < 50; i++) {
+        // Create instances with failing repository (30% failure rate)
+        final eventBus = EventBus();
+        final repository = FailingEventRepository(failureRate: 0.3);
+        final server = EventBusServer<StoredEvent>(
+          localEventBus: eventBus,
+          eventRepository: repository,
+          storedEventFactory: StoredEvent.fromDomainEvent,
+        );
+
+        // Publish multiple events
+        final eventCount = 10 + random.nextInt(11); // 10-20 events
+        for (var j = 0; j < eventCount; j++) {
+          final testEvent = _generateRandomTestEvent(random);
           server.publish(testEvent);
-
-          // Wait for persistence
-          await Future<void>.delayed(const Duration(milliseconds: 10));
-
-          // Verify event was persisted with correct context
-          final persistedEvents = await repository.findAll();
-          expect(persistedEvents.length, equals(1));
-
-          final persistedEvent = persistedEvents.first;
-          expect(
-            persistedEvent.userId,
-            equals(context['userId']),
-            reason: 'Iteration $i: userId should match context (null or value)',
-          );
-          expect(
-            persistedEvent.tenantId,
-            equals(context['tenantId']),
-            reason:
-                'Iteration $i: tenantId should match context (null or value)',
-          );
-          expect(
-            persistedEvent.sessionId,
-            equals(context['sessionId']),
-            reason:
-                'Iteration $i: sessionId should match context (null or value)',
-          );
-
-          // Clean up
-          await server.close();
         }
-      },
-    );
 
-    test(
-      'should continue persisting after persistence errors',
-      () async {
-        final random = Random(45);
+        // Wait for persistence attempts
+        await Future<void>.delayed(const Duration(milliseconds: 50));
 
-        for (var i = 0; i < 50; i++) {
-          // Create instances with failing repository (30% failure rate)
-          final eventBus = EventBus();
-          final repository = FailingEventRepository(failureRate: 0.3);
-          final server = EventBusServer<StoredEvent>(
-            localEventBus: eventBus,
-            eventRepository: repository,
-            storedEventFactory: StoredEvent.fromDomainEvent,
-          );
+        // Verify that some events were persisted despite failures
+        // (The server should continue processing even after errors)
+        // With 30% failure rate and 10-20 events, we should have some
+        // successful persists
+        final persistedEvents = await repository.findAll();
+        expect(
+          persistedEvents.length,
+          greaterThan(0),
+          reason: 'Iteration $i: at least some events should be persisted',
+        );
 
-          // Publish multiple events
-          final eventCount = 10 + random.nextInt(11); // 10-20 events
-          for (var j = 0; j < eventCount; j++) {
-            final testEvent = _generateRandomTestEvent(random);
-            server.publish(testEvent);
-          }
-
-          // Wait for persistence attempts
-          await Future<void>.delayed(const Duration(milliseconds: 50));
-
-          // Verify that some events were persisted despite failures
-          // (The server should continue processing even after errors)
-          // With 30% failure rate and 10-20 events, we should have some
-          // successful persists
-          final persistedEvents = await repository.findAll();
-          expect(
-            persistedEvents.length,
-            greaterThan(0),
-            reason: 'Iteration $i: at least some events should be persisted',
-          );
-
-          // Clean up
-          await server.close();
-        }
-      },
-    );
+        // Clean up
+        await server.close();
+      }
+    });
   });
 }
 

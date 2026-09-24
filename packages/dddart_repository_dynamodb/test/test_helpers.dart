@@ -199,9 +199,7 @@ class TestDynamoHelper {
 
     final result = await _connection!.client.getItem(
       tableName: tableName,
-      key: {
-        'id': AttributeValue(s: id),
-      },
+      key: {'id': AttributeValue(s: id)},
     );
 
     return result.item;

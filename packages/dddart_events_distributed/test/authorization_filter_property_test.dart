@@ -64,8 +64,9 @@ void main() {
           final returnedEvents = jsonDecode(body) as List<dynamic>;
 
           // Verify only authorized events are returned
-          final expectedCount =
-              events.where((e) => e.userId == allowedUserId).length;
+          final expectedCount = events
+              .where((e) => e.userId == allowedUserId)
+              .length;
           expect(
             returnedEvents.length,
             equals(expectedCount),
@@ -84,8 +85,9 @@ void main() {
           }
 
           // Verify excluded events are not in response
-          final excludedEvents =
-              events.where((e) => e.userId != allowedUserId).toList();
+          final excludedEvents = events
+              .where((e) => e.userId != allowedUserId)
+              .toList();
           for (final excludedEvent in excludedEvents) {
             final found = returnedEvents.any(
               (json) => json['id'] == excludedEvent.id.toString(),
@@ -151,150 +153,141 @@ void main() {
       },
     );
 
-    test(
-      'should handle authorization filter exceptions gracefully',
-      () async {
-        final random = Random(44);
+    test('should handle authorization filter exceptions gracefully', () async {
+      final random = Random(44);
 
-        for (var i = 0; i < 50; i++) {
-          // Create repository with random events
-          final repository = InMemoryEventRepository();
-          final eventCount = 5 + random.nextInt(11); // 5-15 events
+      for (var i = 0; i < 50; i++) {
+        // Create repository with random events
+        final repository = InMemoryEventRepository();
+        final eventCount = 5 + random.nextInt(11); // 5-15 events
 
-          final events = <StoredEvent>[];
-          for (var j = 0; j < eventCount; j++) {
-            final event = _generateRandomStoredEvent(random);
-            await repository.save(event);
-            events.add(event);
-          }
-
-          // Create endpoints with filter that throws for some events
-          final endpoints = EventHttpEndpoints<StoredEvent>(
-            eventRepository: repository,
-            authorizationFilter: (event, request) {
-              // Throw exception for events with null userId
-              if (event.userId == null) {
-                throw Exception('Authorization check failed');
-              }
-              return true;
-            },
-          );
-
-          // Create mock request
-          final request = Request(
-            'GET',
-            Uri.parse('http://localhost/events?since=2020-01-01T00:00:00.000Z'),
-          );
-
-          // Call GET endpoint - should not throw
-          final response = await endpoints.handleGetEvents(request);
-
-          // Verify response is successful
-          expect(response.statusCode, equals(200));
-
-          // Parse response body
-          final body = await response.readAsString();
-          final returnedEvents = jsonDecode(body) as List<dynamic>;
-
-          // Verify only events with non-null userId are returned
-          // (events that caused exceptions should be excluded)
-          final expectedCount = events.where((e) => e.userId != null).length;
-          expect(
-            returnedEvents.length,
-            equals(expectedCount),
-            reason:
-                'Iteration $i: events causing filter exceptions should be excluded',
-          );
-
-          // Verify all returned events have non-null userId
-          for (final eventJson in returnedEvents) {
-            final userId = eventJson['userId'];
-            expect(
-              userId,
-              isNotNull,
-              reason:
-                  'Iteration $i: returned events should have non-null userId',
-            );
-          }
+        final events = <StoredEvent>[];
+        for (var j = 0; j < eventCount; j++) {
+          final event = _generateRandomStoredEvent(random);
+          await repository.save(event);
+          events.add(event);
         }
-      },
-    );
 
-    test(
-      'should apply complex authorization logic correctly',
-      () async {
-        final random = Random(45);
+        // Create endpoints with filter that throws for some events
+        final endpoints = EventHttpEndpoints<StoredEvent>(
+          eventRepository: repository,
+          authorizationFilter: (event, request) {
+            // Throw exception for events with null userId
+            if (event.userId == null) {
+              throw Exception('Authorization check failed');
+            }
+            return true;
+          },
+        );
 
-        for (var i = 0; i < 100; i++) {
-          // Create repository with random events
-          final repository = InMemoryEventRepository();
-          final eventCount = 10 + random.nextInt(21); // 10-30 events
+        // Create mock request
+        final request = Request(
+          'GET',
+          Uri.parse('http://localhost/events?since=2020-01-01T00:00:00.000Z'),
+        );
 
-          final events = <StoredEvent>[];
-          for (var j = 0; j < eventCount; j++) {
-            final event = _generateRandomStoredEvent(random);
-            await repository.save(event);
-            events.add(event);
-          }
+        // Call GET endpoint - should not throw
+        final response = await endpoints.handleGetEvents(request);
 
-          // Pick random tenantId and sessionId for filtering
-          final allowedTenantId = 'tenant-${random.nextInt(5)}';
-          final allowedSessionId = 'session-${random.nextInt(10)}';
+        // Verify response is successful
+        expect(response.statusCode, equals(200));
 
-          // Create endpoints with complex authorization filter
-          final endpoints = EventHttpEndpoints<StoredEvent>(
-            eventRepository: repository,
-            authorizationFilter: (event, request) {
-              // Allow if tenantId matches OR sessionId matches
-              return event.tenantId == allowedTenantId ||
-                  event.sessionId == allowedSessionId;
-            },
-          );
+        // Parse response body
+        final body = await response.readAsString();
+        final returnedEvents = jsonDecode(body) as List<dynamic>;
 
-          // Create mock request
-          final request = Request(
-            'GET',
-            Uri.parse('http://localhost/events?since=2020-01-01T00:00:00.000Z'),
-          );
+        // Verify only events with non-null userId are returned
+        // (events that caused exceptions should be excluded)
+        final expectedCount = events.where((e) => e.userId != null).length;
+        expect(
+          returnedEvents.length,
+          equals(expectedCount),
+          reason:
+              'Iteration $i: events causing filter exceptions should be excluded',
+        );
 
-          // Call GET endpoint
-          final response = await endpoints.handleGetEvents(request);
-
-          // Verify response
-          expect(response.statusCode, equals(200));
-
-          // Parse response body
-          final body = await response.readAsString();
-          final returnedEvents = jsonDecode(body) as List<dynamic>;
-
-          // Verify correct events are returned
-          final expectedEvents = events.where(
-            (e) =>
-                e.tenantId == allowedTenantId ||
-                e.sessionId == allowedSessionId,
-          );
+        // Verify all returned events have non-null userId
+        for (final eventJson in returnedEvents) {
+          final userId = eventJson['userId'];
           expect(
-            returnedEvents.length,
-            equals(expectedEvents.length),
-            reason: 'Iteration $i: correct number of events should be returned',
+            userId,
+            isNotNull,
+            reason: 'Iteration $i: returned events should have non-null userId',
           );
-
-          // Verify all returned events match the filter criteria
-          for (final eventJson in returnedEvents) {
-            final tenantId = eventJson['tenantId'] as String?;
-            final sessionId = eventJson['sessionId'] as String?;
-            final matches =
-                tenantId == allowedTenantId || sessionId == allowedSessionId;
-            expect(
-              matches,
-              isTrue,
-              reason:
-                  'Iteration $i: returned event should match filter criteria',
-            );
-          }
         }
-      },
-    );
+      }
+    });
+
+    test('should apply complex authorization logic correctly', () async {
+      final random = Random(45);
+
+      for (var i = 0; i < 100; i++) {
+        // Create repository with random events
+        final repository = InMemoryEventRepository();
+        final eventCount = 10 + random.nextInt(21); // 10-30 events
+
+        final events = <StoredEvent>[];
+        for (var j = 0; j < eventCount; j++) {
+          final event = _generateRandomStoredEvent(random);
+          await repository.save(event);
+          events.add(event);
+        }
+
+        // Pick random tenantId and sessionId for filtering
+        final allowedTenantId = 'tenant-${random.nextInt(5)}';
+        final allowedSessionId = 'session-${random.nextInt(10)}';
+
+        // Create endpoints with complex authorization filter
+        final endpoints = EventHttpEndpoints<StoredEvent>(
+          eventRepository: repository,
+          authorizationFilter: (event, request) {
+            // Allow if tenantId matches OR sessionId matches
+            return event.tenantId == allowedTenantId ||
+                event.sessionId == allowedSessionId;
+          },
+        );
+
+        // Create mock request
+        final request = Request(
+          'GET',
+          Uri.parse('http://localhost/events?since=2020-01-01T00:00:00.000Z'),
+        );
+
+        // Call GET endpoint
+        final response = await endpoints.handleGetEvents(request);
+
+        // Verify response
+        expect(response.statusCode, equals(200));
+
+        // Parse response body
+        final body = await response.readAsString();
+        final returnedEvents = jsonDecode(body) as List<dynamic>;
+
+        // Verify correct events are returned
+        final expectedEvents = events.where(
+          (e) =>
+              e.tenantId == allowedTenantId || e.sessionId == allowedSessionId,
+        );
+        expect(
+          returnedEvents.length,
+          equals(expectedEvents.length),
+          reason: 'Iteration $i: correct number of events should be returned',
+        );
+
+        // Verify all returned events match the filter criteria
+        for (final eventJson in returnedEvents) {
+          final tenantId = eventJson['tenantId'] as String?;
+          final sessionId = eventJson['sessionId'] as String?;
+          final matches =
+              tenantId == allowedTenantId || sessionId == allowedSessionId;
+          expect(
+            matches,
+            isTrue,
+            reason: 'Iteration $i: returned event should match filter criteria',
+          );
+        }
+      }
+    });
   });
 }
 

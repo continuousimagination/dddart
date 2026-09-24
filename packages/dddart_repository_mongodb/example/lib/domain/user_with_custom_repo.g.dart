@@ -13,7 +13,12 @@ class UserWithCustomRepoJsonSerializer
 
   /// Creates a serializer with the specified default configuration.
   UserWithCustomRepoJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(
@@ -119,7 +124,7 @@ class UserWithCustomRepoJsonSerializer
               )
             : DateTime.now(),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize UserWithCustomRepo',
         expectedType: 'UserWithCustomRepo',
@@ -154,7 +159,7 @@ class UserWithCustomRepoJsonSerializer
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'UserWithCustomRepo',
       );
     }

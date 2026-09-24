@@ -12,7 +12,12 @@ class MoneyJsonSerializer implements JsonSerializer<Money> {
 
   /// Creates a serializer with the specified default configuration.
   MoneyJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(Money instance, [SerializationConfig? config]) {
@@ -71,7 +76,7 @@ class MoneyJsonSerializer implements JsonSerializer<Money> {
                 )]
                 as String,
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize Money',
         expectedType: 'Money',
@@ -106,7 +111,7 @@ class MoneyJsonSerializer implements JsonSerializer<Money> {
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'Money',
       );
     }
@@ -132,7 +137,12 @@ class AddressJsonSerializer implements JsonSerializer<Address> {
 
   /// Creates a serializer with the specified default configuration.
   AddressJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(Address instance, [SerializationConfig? config]) {
@@ -188,7 +198,7 @@ class AddressJsonSerializer implements JsonSerializer<Address> {
                 )]
                 as String,
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize Address',
         expectedType: 'Address',
@@ -223,7 +233,7 @@ class AddressJsonSerializer implements JsonSerializer<Address> {
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'Address',
       );
     }
@@ -249,7 +259,12 @@ class OrderJsonSerializer implements JsonSerializer<Order> {
 
   /// Creates a serializer with the specified default configuration.
   OrderJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(Order instance, [SerializationConfig? config]) {
@@ -409,7 +424,7 @@ class OrderJsonSerializer implements JsonSerializer<Order> {
               )
             : DateTime.now(),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize Order',
         expectedType: 'Order',
@@ -444,7 +459,7 @@ class OrderJsonSerializer implements JsonSerializer<Order> {
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'Order',
       );
     }

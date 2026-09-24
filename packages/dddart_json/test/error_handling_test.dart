@@ -173,6 +173,30 @@ void main() {
     });
 
     group('Malformed JSON', () {
+      test('deserialize wraps malformed JSON syntax', () {
+        expect(
+          () => TestUserJsonSerializer().deserialize('{"private-input":'),
+          throwsA(
+            isA<DeserializationException>()
+                .having(
+                  (exception) => exception.message,
+                  'message',
+                  contains('Failed to deserialize JSON'),
+                )
+                .having(
+                  (exception) => exception.expectedType,
+                  'expectedType',
+                  'TestUser',
+                )
+                .having(
+                  (exception) => exception.toString(),
+                  'safe diagnostic',
+                  isNot(contains('private-input')),
+                ),
+          ),
+        );
+      });
+
       test('throws error for null JSON input', () {
         expect(
           () => TestUserJsonSerializer().fromJson(null as dynamic),

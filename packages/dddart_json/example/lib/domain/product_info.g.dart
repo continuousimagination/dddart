@@ -12,7 +12,12 @@ class ProductInfoJsonSerializer implements JsonSerializer<ProductInfo> {
 
   /// Creates a serializer with the specified default configuration.
   ProductInfoJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(
@@ -80,7 +85,7 @@ class ProductInfoJsonSerializer implements JsonSerializer<ProductInfo> {
                 )]
                 as String,
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize ProductInfo',
         expectedType: 'ProductInfo',
@@ -115,7 +120,7 @@ class ProductInfoJsonSerializer implements JsonSerializer<ProductInfo> {
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'ProductInfo',
       );
     }

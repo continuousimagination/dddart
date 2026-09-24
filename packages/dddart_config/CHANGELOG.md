@@ -22,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New example demonstrating underscore conversion (`example/underscore_demo.dart`)
 - Documentation for underscore naming convention in README
 
-## [1.0.0] - 2025-11-11
+## [0.1.0] - 2025-11-11
 
 ### Added
 
@@ -54,4 +54,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for custom configuration providers
 - Follows 12-factor app principles for configuration management
 
-[1.0.0]: https://github.com/example/dddart_config/releases/tag/v1.0.0
+[0.1.0]: https://github.com/continuousimagination/dddart/releases/tag/dddart_config-v0.1.0

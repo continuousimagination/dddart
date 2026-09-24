@@ -6,15 +6,16 @@
 // - Protecting resources with authentication
 // - Using in-memory repositories for quick start
 //
-// Run: dart run example/self_hosted_auth_example.dart
+// Run from this example directory: dart run self_hosted_auth_example.dart
 // Then test with curl or the CLI client example
 
 import 'dart:async';
 import 'dart:convert';
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/dddart_rest.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:shelf/shelf.dart';
+
+import 'lib/json_serializer_support.dart';
 
 // Domain model
 class User extends AggregateRoot {
@@ -30,9 +31,48 @@ class User extends AggregateRoot {
   final String email;
   final String passwordHash;
   final List<String> roles;
+}
+
+/// User-specific persistence contract used by the authentication flow.
+abstract interface class UserRepository implements Repository<User> {
+  /// Finds a user by login name.
+  Future<User?> findByUsername(String username);
+}
+
+/// Instance-local user repository for this example.
+final class InMemoryUserRepository implements UserRepository {
+  final InMemoryRepository<User> _repository = InMemoryRepository<User>();
+  final Map<String, UuidValue> _idsByUsername = {};
+  final Map<UuidValue, String> _usernamesById = {};
 
   @override
-  List<Object?> get props => [id, username, email, passwordHash, roles];
+  Future<User> getById(UuidValue id) => _repository.getById(id);
+
+  @override
+  Future<void> save(User aggregate) async {
+    final previousUsername = _usernamesById[aggregate.id];
+    if (previousUsername != null && previousUsername != aggregate.username) {
+      _idsByUsername.remove(previousUsername);
+    }
+    await _repository.save(aggregate);
+    _idsByUsername[aggregate.username] = aggregate.id;
+    _usernamesById[aggregate.id] = aggregate.username;
+  }
+
+  @override
+  Future<void> deleteById(UuidValue id) async {
+    await _repository.deleteById(id);
+    final username = _usernamesById.remove(id);
+    if (username != null) {
+      _idsByUsername.remove(username);
+    }
+  }
+
+  @override
+  Future<User?> findByUsername(String username) {
+    final id = _idsByUsername[username];
+    return id == null ? Future.value() : _repository.getById(id);
+  }
 }
 
 // Custom JWT claims
@@ -50,22 +90,22 @@ class UserClaims {
   final List<String> roles;
 
   Map<String, dynamic> toJson() => {
-        'userId': userId,
-        'username': username,
-        'email': email,
-        'roles': roles,
-      };
+    'userId': userId,
+    'username': username,
+    'email': email,
+    'roles': roles,
+  };
 
   factory UserClaims.fromJson(Map<String, dynamic> json) => UserClaims(
-        userId: json['userId'] as String,
-        username: json['username'] as String,
-        email: json['email'] as String,
-        roles: (json['roles'] as List?)?.cast<String>() ?? const [],
-      );
+    userId: json['userId'] as String,
+    username: json['username'] as String,
+    email: json['email'] as String,
+    roles: (json['roles'] as List?)?.cast<String>() ?? const [],
+  );
 }
 
 // Simple serializer for User
-class UserSerializer implements Serializer<User> {
+class UserSerializer extends ExampleJsonSerializer<User> {
   @override
   User deserialize(String data, [dynamic config]) {
     final json = jsonDecode(data) as Map<String, dynamic>;
@@ -95,17 +135,40 @@ void main() async {
   print('Starting self-hosted auth example...\n');
 
   // Create repositories
-  final userRepo = InMemoryRepository<User>();
-  final refreshTokenRepo = InMemoryRepository<RefreshToken>();
-  final deviceCodeRepo = InMemoryRepository<DeviceCode>();
+  final userRepo = InMemoryUserRepository();
+  final refreshTokenRepo = InMemoryRefreshTokenRepository<RefreshToken>();
+  final deviceCodeRepo = InMemoryDeviceCodeRepository<DeviceCode>(
+    lifecycle: const StandardDeviceCodeLifecycle(),
+  );
 
   // Seed test users
   await _seedUsers(userRepo);
 
-  // Create auth handler with custom claims
+  // Create auth handler with custom claims. This loader is the authoritative
+  // source for both login and refresh, so role and profile changes are picked
+  // up whenever a new access token is issued.
   final authHandler = JwtAuthHandler<UserClaims, RefreshToken>(
     secret: 'your-256-bit-secret-key-change-in-production',
     refreshTokenRepository: refreshTokenRepo,
+    refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
+    claimsLoader: (userId) async {
+      final User user;
+      try {
+        user = await userRepo.getById(UuidValue.fromString(userId));
+      } on RepositoryException catch (error) {
+        if (error.type == RepositoryExceptionType.notFound) {
+          return null;
+        }
+        rethrow;
+      }
+
+      return UserClaims(
+        userId: user.id.toString(),
+        username: user.username,
+        email: user.email,
+        roles: user.roles,
+      );
+    },
     issuer: 'https://api.example.com',
     audience: 'example-app',
     accessTokenDuration: const Duration(minutes: 15),
@@ -118,10 +181,9 @@ void main() async {
   final authEndpoints = AuthEndpoints(
     authHandler: authHandler,
     deviceCodeRepository: deviceCodeRepo,
+    deviceCodeLifecycle: const StandardDeviceCodeLifecycle(),
     userValidator: (username, password) async {
-      // Find user by username
-      final users = await userRepo.getAll();
-      final user = users.where((u) => u.username == username).firstOrNull;
+      final user = await userRepo.findByUsername(username);
 
       if (user == null) {
         return null;
@@ -135,15 +197,6 @@ void main() async {
 
       return null;
     },
-    claimsBuilder: (userId) async {
-      final user = await userRepo.getById(UuidValue.fromString(userId));
-      return UserClaims(
-        userId: user.id.toString(),
-        username: user.username,
-        email: user.email,
-        roles: user.roles,
-      );
-    },
   );
 
   // Create HTTP server
@@ -155,7 +208,10 @@ void main() async {
   server.addRoute('POST', '/auth/logout', authEndpoints.handleLogout);
   server.addRoute('POST', '/auth/device', authEndpoints.handleDeviceCode);
   server.addRoute(
-      'GET', '/auth/device/verify', authEndpoints.handleDeviceVerify);
+    'GET',
+    '/auth/device/verify',
+    authEndpoints.handleDeviceVerify,
+  );
   server.addRoute('POST', '/auth/token', authEndpoints.handleToken);
 
   // Register protected user resource
@@ -163,7 +219,7 @@ void main() async {
     CrudResource<User, UserClaims>(
       path: '/users',
       repository: userRepo,
-      serializers: {'application/json': UserSerializer()},
+      serializer: UserSerializer(),
       authenticationHandler: authHandler,
       queryHandlers: {
         'me': (repo, params, skip, take, authResult) async {
@@ -183,8 +239,10 @@ void main() async {
   // Register public health check
   server.addRoute('GET', '/health', (Request request) async {
     return Response.ok(
-      jsonEncode(
-          {'status': 'healthy', 'timestamp': DateTime.now().toIso8601String()}),
+      jsonEncode({
+        'status': 'healthy',
+        'timestamp': DateTime.now().toIso8601String(),
+      }),
       headers: {'Content-Type': 'application/json'},
     );
   });

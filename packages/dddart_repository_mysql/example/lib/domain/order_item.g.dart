@@ -12,7 +12,12 @@ class OrderItemJsonSerializer implements JsonSerializer<OrderItem> {
 
   /// Creates a serializer with the specified default configuration.
   OrderItemJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(
@@ -21,13 +26,18 @@ class OrderItemJsonSerializer implements JsonSerializer<OrderItem> {
   ]) {
     final effectiveConfig = config ?? _defaultConfig;
     final json = <String, dynamic>{
+      SerializationUtils.applyFieldRename('id', effectiveConfig.fieldRename):
+          instance.id.toString(),
       SerializationUtils.applyFieldRename(
         'createdAt',
         effectiveConfig.fieldRename,
       ): instance.createdAt
           .toIso8601String(),
-      SerializationUtils.applyFieldRename('id', effectiveConfig.fieldRename):
-          instance.id.toString(),
+      SerializationUtils.applyFieldRename(
+        'updatedAt',
+        effectiveConfig.fieldRename,
+      ): instance.updatedAt
+          .toIso8601String(),
       SerializationUtils.applyFieldRename(
         'productName',
         effectiveConfig.fieldRename,
@@ -43,11 +53,6 @@ class OrderItemJsonSerializer implements JsonSerializer<OrderItem> {
         instance.unitPrice,
         effectiveConfig,
       ),
-      SerializationUtils.applyFieldRename(
-        'updatedAt',
-        effectiveConfig.fieldRename,
-      ): instance.updatedAt
-          .toIso8601String(),
     };
     return json;
   }
@@ -69,20 +74,6 @@ class OrderItemJsonSerializer implements JsonSerializer<OrderItem> {
     }
     try {
       return OrderItem(
-        createdAt: DateTime.parse(
-          json[SerializationUtils.applyFieldRename(
-                'createdAt',
-                effectiveConfig.fieldRename,
-              )]
-              as String,
-        ),
-        id: UuidValue.fromString(
-          json[SerializationUtils.applyFieldRename(
-                'id',
-                effectiveConfig.fieldRename,
-              )]
-              as String,
-        ),
         productName:
             json[SerializationUtils.applyFieldRename(
                   'productName',
@@ -103,15 +94,43 @@ class OrderItemJsonSerializer implements JsonSerializer<OrderItem> {
               as Map<String, dynamic>,
           effectiveConfig,
         ),
-        updatedAt: DateTime.parse(
+        id: UuidValue.fromString(
           json[SerializationUtils.applyFieldRename(
-                'updatedAt',
+                'id',
                 effectiveConfig.fieldRename,
               )]
               as String,
         ),
+        createdAt:
+            json[SerializationUtils.applyFieldRename(
+                  'createdAt',
+                  effectiveConfig.fieldRename,
+                )] !=
+                null
+            ? DateTime.parse(
+                json[SerializationUtils.applyFieldRename(
+                      'createdAt',
+                      effectiveConfig.fieldRename,
+                    )]
+                    as String,
+              )
+            : DateTime.now(),
+        updatedAt:
+            json[SerializationUtils.applyFieldRename(
+                  'updatedAt',
+                  effectiveConfig.fieldRename,
+                )] !=
+                null
+            ? DateTime.parse(
+                json[SerializationUtils.applyFieldRename(
+                      'updatedAt',
+                      effectiveConfig.fieldRename,
+                    )]
+                    as String,
+              )
+            : DateTime.now(),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize OrderItem',
         expectedType: 'OrderItem',
@@ -146,7 +165,7 @@ class OrderItemJsonSerializer implements JsonSerializer<OrderItem> {
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'OrderItem',
       );
     }

@@ -1,13 +1,13 @@
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
-import 'package:dddart/dddart.dart' hide UuidValue;
 import 'package:dddart/dddart.dart' as dddart show UuidValue;
 import 'package:dddart_rest/src/auth_error_mapper.dart';
 import 'package:dddart_rest/src/device_code.dart';
+import 'package:dddart_rest/src/device_code_lifecycle.dart';
+import 'package:dddart_rest/src/device_code_repository.dart';
 import 'package:dddart_rest/src/jwt_auth_handler.dart';
 import 'package:dddart_rest/src/refresh_token.dart';
-import 'package:dddart_rest/src/repository_query_support.dart';
 import 'package:dddart_rest/src/security_utils.dart';
 import 'package:shelf/shelf.dart';
 import 'package:uuid/uuid.dart';
@@ -23,6 +23,7 @@ import 'package:uuid/uuid.dart';
 /// final authEndpoints = AuthEndpoints<UserClaims, RefreshToken, DeviceCode>(
 ///   authHandler: jwtAuthHandler,
 ///   deviceCodeRepository: deviceCodeRepo,
+///   deviceCodeLifecycle: const StandardDeviceCodeLifecycle(),
 ///   userValidator: (username, password) async {
 ///     // Validate credentials and return user ID
 ///     if (username == 'admin' && password == 'secret') {
@@ -30,20 +31,19 @@ import 'package:uuid/uuid.dart';
 ///     }
 ///     return null;
 ///   },
-///   claimsBuilder: (userId) async {
-///     // Build claims for the user
-///     return UserClaims(userId: userId, email: 'user@example.com');
-///   },
 /// );
 /// ```
-class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
-    TDeviceCode extends DeviceCode> {
+class AuthEndpoints<
+  TClaims,
+  TRefreshToken extends RefreshToken,
+  TDeviceCode extends DeviceCode
+> {
   /// Creates authentication endpoints
   AuthEndpoints({
     required this.authHandler,
     required this.deviceCodeRepository,
+    required this.deviceCodeLifecycle,
     required this.userValidator,
-    required this.claimsBuilder,
     this.verificationUri = '/auth/device/verify',
     this.deviceCodeExpiration = const Duration(minutes: 10),
     this.pollingInterval = 5,
@@ -52,16 +52,16 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
   /// JWT auth handler for issuing/validating tokens
   final JwtAuthHandler<TClaims, TRefreshToken> authHandler;
 
-  /// Repository for storing device codes
-  final Repository<TDeviceCode> deviceCodeRepository;
+  /// Repository for looking up and atomically consuming device codes.
+  final DeviceCodeRepository<TDeviceCode> deviceCodeRepository;
+
+  /// Typed construction and transition behavior for device codes.
+  final DeviceCodeLifecycle<TDeviceCode> deviceCodeLifecycle;
 
   /// Callback to validate username/password and return user ID
   /// Returns user ID if valid, null if invalid
   final Future<String?> Function(String username, String password)
-      userValidator;
-
-  /// Callback to build claims for a user ID
-  final Future<TClaims> Function(String userId) claimsBuilder;
+  userValidator;
 
   /// Verification URI for device flow
   final String verificationUri;
@@ -120,22 +120,18 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
         );
       }
 
-      // Build claims
-      final claims = await claimsBuilder(userId);
-
       // Issue tokens
       final tokens = await authHandler.issueTokens(
         userId,
-        claims,
         deviceInfo: request.headers['user-agent'],
       );
 
       return _jsonResponse(tokens.toJson());
-    } catch (e) {
+    } catch (_) {
       return _problemResponse(
         status: 500,
         title: 'Internal Server Error',
-        detail: 'Failed to process login: $e',
+        detail: 'Failed to process login',
       );
     }
   }
@@ -220,11 +216,11 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
       await authHandler.revoke(refreshToken);
 
       return Response(204);
-    } catch (e) {
+    } catch (_) {
       return _problemResponse(
         status: 500,
         title: 'Internal Server Error',
-        detail: 'Failed to logout: $e',
+        detail: 'Failed to logout',
       );
     }
   }
@@ -274,13 +270,14 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
       final now = DateTime.now();
       final expiresAt = now.add(deviceCodeExpiration);
 
-      final deviceCode = DeviceCode(
+      final deviceCode = deviceCodeLifecycle.create(
         id: dddart.UuidValue.generate(),
         deviceCode: deviceCodeString,
         userCode: userCode,
         clientId: clientId,
         expiresAt: expiresAt,
-      ) as TDeviceCode;
+        createdAt: now,
+      );
 
       // Store in repository
       await deviceCodeRepository.save(deviceCode);
@@ -293,11 +290,11 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
         'expires_in': deviceCodeExpiration.inSeconds,
         'interval': pollingInterval,
       });
-    } catch (e) {
+    } catch (_) {
       return _problemResponse(
         status: 500,
         title: 'Internal Server Error',
-        detail: 'Failed to create device code: $e',
+        detail: 'Failed to create device code',
       );
     }
   }
@@ -384,10 +381,7 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
 </html>
 ''';
 
-    return Response.ok(
-      html,
-      headers: {'Content-Type': 'text/html'},
-    );
+    return Response.ok(html, headers: {'Content-Type': 'text/html'});
   }
 
   /// Handles device verification form submission
@@ -428,7 +422,11 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
       }
 
       // Approve device code
-      final approvedCode = deviceCode.approve(userId) as TDeviceCode;
+      final approvedCode = deviceCodeLifecycle.approve(
+        deviceCode,
+        userId: userId,
+        approvedAt: DateTime.now(),
+      );
       await deviceCodeRepository.save(approvedCode);
 
       // Return success page
@@ -457,18 +455,17 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
 </html>
 ''';
 
-      return Response.ok(
-        html,
-        headers: {'Content-Type': 'text/html'},
-      );
-    } catch (e) {
-      return _deviceVerifyError('Failed to verify device: $e');
+      return Response.ok(html, headers: {'Content-Type': 'text/html'});
+    } catch (_) {
+      return _deviceVerifyError('Failed to verify device');
     }
   }
 
   /// Returns an error page for device verification
   Response _deviceVerifyError(String message) {
-    final html = '''
+    final escapedMessage = const HtmlEscape().convert(message);
+    final html =
+        '''
 <!DOCTYPE html>
 <html>
 <head>
@@ -495,16 +492,13 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
 </head>
 <body>
   <h1>Verification Error</h1>
-  <p class="error">$message</p>
+  <p class="error">$escapedMessage</p>
   <p><a href="/auth/device/verify">Try again</a></p>
 </body>
 </html>
 ''';
 
-    return Response.ok(
-      html,
-      headers: {'Content-Type': 'text/html'},
-    );
+    return Response.ok(html, headers: {'Content-Type': 'text/html'});
   }
 
   /// POST /auth/token - Poll for device flow tokens
@@ -595,18 +589,23 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
         // Look up device code.
         final deviceCode = await _findDeviceCodeByDeviceCode(deviceCodeString);
         if (deviceCode == null) {
-          return _jsonResponse(
-            {'error': 'invalid_grant'},
-            statusCode: 400,
-          );
+          return _jsonResponse({'error': 'invalid_grant'}, statusCode: 400);
+        }
+
+        // A device grant belongs only to the client that requested it. Check
+        // this before exposing its status to another client.
+        if (deviceCode.clientId != clientId) {
+          return _jsonResponse({'error': 'invalid_grant'}, statusCode: 400);
+        }
+
+        // A consumed grant is always invalid, even after its original expiry.
+        if (deviceCode.status == DeviceCodeStatus.consumed) {
+          return _jsonResponse({'error': 'invalid_grant'}, statusCode: 400);
         }
 
         // Check if expired
         if (deviceCode.isExpired) {
-          return _jsonResponse(
-            {'error': 'expired_token'},
-            statusCode: 400,
-          );
+          return _jsonResponse({'error': 'expired_token'}, statusCode: 400);
         }
 
         // Validate timestamp age to prevent replay attacks
@@ -615,46 +614,41 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
           deviceCode.expiresAt,
           maxAge: deviceCodeExpiration,
         )) {
-          return _jsonResponse(
-            {'error': 'expired_token'},
-            statusCode: 400,
-          );
+          return _jsonResponse({'error': 'expired_token'}, statusCode: 400);
         }
 
         // Check status
         if (deviceCode.status == DeviceCodeStatus.pending) {
-          return _jsonResponse(
-            {'error': 'authorization_pending'},
-            statusCode: 400,
-          );
+          return _jsonResponse({
+            'error': 'authorization_pending',
+          }, statusCode: 400);
         }
 
         if (deviceCode.status == DeviceCodeStatus.denied) {
-          return _jsonResponse(
-            {'error': 'access_denied'},
-            statusCode: 400,
-          );
+          return _jsonResponse({'error': 'access_denied'}, statusCode: 400);
         }
 
         if (deviceCode.status == DeviceCodeStatus.approved &&
             deviceCode.userId != null) {
-          // Build claims
-          final claims = await claimsBuilder(deviceCode.userId!);
+          final consumedCode = await deviceCodeRepository.consumeApproved(
+            deviceCode: deviceCodeString,
+            clientId: clientId,
+            consumedAt: DateTime.now(),
+          );
+          if (consumedCode == null || consumedCode.userId == null) {
+            return _jsonResponse({'error': 'invalid_grant'}, statusCode: 400);
+          }
 
           // Issue tokens
           final tokens = await authHandler.issueTokens(
-            deviceCode.userId!,
-            claims,
+            consumedCode.userId!,
             deviceInfo: 'Device Code Flow',
           );
 
           return _jsonResponse(tokens.toJson());
         }
 
-        return _jsonResponse(
-          {'error': 'invalid_grant'},
-          statusCode: 400,
-        );
+        return _jsonResponse({'error': 'invalid_grant'}, statusCode: 400);
       }
 
       return _problemResponse(
@@ -662,11 +656,11 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
         title: 'Bad Request',
         detail: 'Unsupported grant_type',
       );
-    } catch (e) {
+    } catch (_) {
       return _problemResponse(
         status: 500,
         title: 'Internal Server Error',
-        detail: 'Failed to process token request: $e',
+        detail: 'Failed to process token request',
       );
     }
   }
@@ -693,27 +687,19 @@ class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
     return code.toString();
   }
 
-  Future<DeviceCode?> _findDeviceCodeByUserCode(String userCode) async {
+  Future<TDeviceCode?> _findDeviceCodeByUserCode(String userCode) async {
     try {
-      return await findFirstItem(
-        deviceCodeRepository,
-        (code) => code.userCode == userCode,
-        operationName: 'device verification',
-      );
+      return await deviceCodeRepository.findByUserCode(userCode);
     } catch (_) {
       return null;
     }
   }
 
-  Future<DeviceCode?> _findDeviceCodeByDeviceCode(
+  Future<TDeviceCode?> _findDeviceCodeByDeviceCode(
     String deviceCodeString,
   ) async {
     try {
-      return await findFirstItem(
-        deviceCodeRepository,
-        (code) => code.deviceCode == deviceCodeString,
-        operationName: 'device token exchange',
-      );
+      return await deviceCodeRepository.findByDeviceCode(deviceCodeString);
     } catch (_) {
       return null;
     }

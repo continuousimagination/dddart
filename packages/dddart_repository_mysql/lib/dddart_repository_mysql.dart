@@ -4,7 +4,7 @@
 /// pattern for DDDart aggregate roots, with automatic code generation support.
 ///
 /// Key features:
-/// - MySQL-specific connection management with connection pooling
+/// - MySQL-specific single-connection lifecycle management
 /// - Automatic schema generation with InnoDB and utf8mb4 support
 /// - Value object embedding with prefixed columns
 /// - Transaction support with nested transaction handling

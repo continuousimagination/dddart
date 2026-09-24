@@ -75,10 +75,7 @@ void main() {
     group('CRUD operations', () {
       test('should save and retrieve an aggregate', () async {
         final repo = TestUserMongoRepository(helper.database);
-        final user = TestUser(
-          name: 'John Doe',
-          email: 'john@example.com',
-        );
+        final user = TestUser(name: 'John Doe', email: 'john@example.com');
 
         // Save
         await repo.save(user);
@@ -93,10 +90,7 @@ void main() {
 
       test('should update an existing aggregate', () async {
         final repo = TestUserMongoRepository(helper.database);
-        final user = TestUser(
-          name: 'Jane Doe',
-          email: 'jane@example.com',
-        );
+        final user = TestUser(name: 'Jane Doe', email: 'jane@example.com');
 
         // Save initial version
         await repo.save(user);
@@ -120,10 +114,7 @@ void main() {
 
       test('should delete an aggregate by ID', () async {
         final repo = TestUserMongoRepository(helper.database);
-        final user = TestUser(
-          name: 'Bob Smith',
-          email: 'bob@example.com',
-        );
+        final user = TestUser(name: 'Bob Smith', email: 'bob@example.com');
 
         // Save
         await repo.save(user);
@@ -148,49 +139,49 @@ void main() {
         );
       });
 
-      test('should throw RepositoryException.notFound for non-existent ID',
-          () async {
-        final repo = TestUserMongoRepository(helper.database);
-        final nonExistentId = UuidValue.generate();
+      test(
+        'should throw RepositoryException.notFound for non-existent ID',
+        () async {
+          final repo = TestUserMongoRepository(helper.database);
+          final nonExistentId = UuidValue.generate();
 
-        expect(
-          () => repo.getById(nonExistentId),
-          throwsA(
-            isA<RepositoryException>().having(
-              (e) => e.type,
-              'type',
-              RepositoryExceptionType.notFound,
+          expect(
+            () => repo.getById(nonExistentId),
+            throwsA(
+              isA<RepositoryException>().having(
+                (e) => e.type,
+                'type',
+                RepositoryExceptionType.notFound,
+              ),
             ),
-          ),
-        );
-      });
+          );
+        },
+      );
 
       test(
-          'should throw RepositoryException.notFound when deleting non-existent ID',
-          () async {
-        final repo = TestUserMongoRepository(helper.database);
-        final nonExistentId = UuidValue.generate();
+        'should throw RepositoryException.notFound when deleting non-existent ID',
+        () async {
+          final repo = TestUserMongoRepository(helper.database);
+          final nonExistentId = UuidValue.generate();
 
-        expect(
-          () => repo.deleteById(nonExistentId),
-          throwsA(
-            isA<RepositoryException>().having(
-              (e) => e.type,
-              'type',
-              RepositoryExceptionType.notFound,
+          expect(
+            () => repo.deleteById(nonExistentId),
+            throwsA(
+              isA<RepositoryException>().having(
+                (e) => e.type,
+                'type',
+                RepositoryExceptionType.notFound,
+              ),
             ),
-          ),
-        );
-      });
+          );
+        },
+      );
     });
 
     group('ID mapping', () {
       test('should map aggregate id to MongoDB _id on save', () async {
         final repo = TestUserMongoRepository(helper.database);
-        final user = TestUser(
-          name: 'Test User',
-          email: 'test@example.com',
-        );
+        final user = TestUser(name: 'Test User', email: 'test@example.com');
 
         await repo.save(user);
 
@@ -228,10 +219,7 @@ void main() {
     group('custom collection names', () {
       test('should use custom collection name from annotation', () async {
         final repo = TestProductMongoRepository(helper.database);
-        final product = TestProduct(
-          name: 'Widget',
-          price: 19.99,
-        );
+        final product = TestProduct(name: 'Widget', price: 19.99);
 
         await repo.save(product);
 
@@ -248,10 +236,7 @@ void main() {
 
       test('should retrieve from custom collection', () async {
         final repo = TestProductMongoRepository(helper.database);
-        final product = TestProduct(
-          name: 'Gadget',
-          price: 29.99,
-        );
+        final product = TestProduct(name: 'Gadget', price: 29.99);
 
         await repo.save(product);
         final retrieved = await repo.getById(product.id);
@@ -273,14 +258,8 @@ void main() {
         final userRepo = TestUserMongoRepository(helper.database);
         final productRepo = TestProductMongoRepository(helper.database);
 
-        final user = TestUser(
-          name: 'Alice',
-          email: 'alice@example.com',
-        );
-        final product = TestProduct(
-          name: 'Book',
-          price: 15.99,
-        );
+        final user = TestUser(name: 'Alice', email: 'alice@example.com');
+        final product = TestProduct(name: 'Book', price: 15.99);
 
         await userRepo.save(user);
         await productRepo.save(product);
@@ -296,14 +275,8 @@ void main() {
         final userRepo = TestUserMongoRepository(helper.database);
         final productRepo = TestProductMongoRepository(helper.database);
 
-        final user = TestUser(
-          name: 'Bob',
-          email: 'bob@example.com',
-        );
-        final product = TestProduct(
-          name: 'Pen',
-          price: 2.99,
-        );
+        final user = TestUser(name: 'Bob', email: 'bob@example.com');
+        final product = TestProduct(name: 'Pen', price: 2.99);
 
         await userRepo.save(user);
         await productRepo.save(product);
@@ -348,39 +321,40 @@ void main() {
         }
       });
 
-      test('should map connection errors to RepositoryException.connection',
-          () async {
-        // Create a repository with a closed connection
-        final closedDb = await Db.create('mongodb://localhost:27017/closed_db');
-        try {
-          await closedDb.open();
-          await closedDb.close();
-
-          final repo = TestUserMongoRepository(closedDb);
-          final user = TestUser(
-            name: 'Test',
-            email: 'test@example.com',
+      test(
+        'should map connection errors to RepositoryException.connection',
+        () async {
+          // Create a repository with a closed connection
+          final closedDb = await Db.create(
+            'mongodb://localhost:27017/closed_db',
           );
+          try {
+            await closedDb.open();
+            await closedDb.close();
 
-          // Attempt to save should throw connection error
-          expect(
-            () => repo.save(user),
-            throwsA(
-              isA<RepositoryException>().having(
-                (e) => e.type,
-                'type',
-                anyOf(
-                  RepositoryExceptionType.connection,
-                  RepositoryExceptionType.unknown,
+            final repo = TestUserMongoRepository(closedDb);
+            final user = TestUser(name: 'Test', email: 'test@example.com');
+
+            // Attempt to save should throw connection error
+            expect(
+              () => repo.save(user),
+              throwsA(
+                isA<RepositoryException>().having(
+                  (e) => e.type,
+                  'type',
+                  anyOf(
+                    RepositoryExceptionType.connection,
+                    RepositoryExceptionType.unknown,
+                  ),
                 ),
               ),
-            ),
-          );
-        } catch (e) {
-          // If we can't connect to MongoDB, skip this test
-          markTestSkipped('MongoDB not available for connection test');
-        }
-      });
+            );
+          } catch (e) {
+            // If we can't connect to MongoDB, skip this test
+            markTestSkipped('MongoDB not available for connection test');
+          }
+        },
+      );
 
       test('should preserve original error in cause field', () async {
         final repo = TestUserMongoRepository(helper.database);
@@ -449,10 +423,7 @@ void main() {
         final customerOrders = await repo.findByCustomerId('CUST-123');
 
         expect(customerOrders.length, equals(2));
-        expect(
-          customerOrders.every((o) => o.customerId == 'CUST-123'),
-          isTrue,
-        );
+        expect(customerOrders.every((o) => o.customerId == 'CUST-123'), isTrue);
       });
 
       test('should support custom single-result query methods', () async {
@@ -489,10 +460,7 @@ void main() {
 
         final users = List.generate(
           10,
-          (i) => TestUser(
-            name: 'User $i',
-            email: 'user$i@example.com',
-          ),
+          (i) => TestUser(name: 'User $i', email: 'user$i@example.com'),
         );
 
         // Save all users concurrently
@@ -542,10 +510,7 @@ void main() {
         // Verify one of the updates won (last write wins)
         final final_ = await repo.getById(userId);
         expect(final_.id, equals(userId));
-        expect(
-          ['Update 1', 'Update 2'].contains(final_.name),
-          isTrue,
-        );
+        expect(['Update 1', 'Update 2'].contains(final_.name), isTrue);
       });
     });
 
@@ -600,17 +565,14 @@ void main() {
 
         // Insert document with camelCase fields
         final directId = UuidValue.generate();
-        await helper.insertDocument(
-          'test_accounts',
-          {
-            '_id': directId.toString(),
-            'accountName': 'Direct Insert',
-            'accountType': 'Savings',
-            'balance': 500,
-            'createdAt': DateTime.now().toIso8601String(),
-            'updatedAt': DateTime.now().toIso8601String(),
-          },
-        );
+        await helper.insertDocument('test_accounts', {
+          '_id': directId.toString(),
+          'accountName': 'Direct Insert',
+          'accountType': 'Savings',
+          'balance': 500,
+          'createdAt': DateTime.now().toIso8601String(),
+          'updatedAt': DateTime.now().toIso8601String(),
+        });
 
         // Retrieve and verify
         final retrieved = await repo.getById(directId);

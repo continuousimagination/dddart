@@ -1,11 +1,11 @@
 import 'package:dddart/dddart.dart';
+import 'package:dddart_json/dddart_json.dart';
 import 'package:dddart_rest/src/authentication_handler.dart';
 import 'package:dddart_rest/src/authentication_result.dart';
 import 'package:dddart_rest/src/authorization_handler.dart';
 import 'package:dddart_rest/src/etag_generator.dart';
 import 'package:dddart_rest/src/http_resource.dart';
 import 'package:dddart_rest/src/query_handler.dart';
-import 'package:dddart_rest/src/repository_query_support.dart';
 import 'package:dddart_rest/src/resource_pipeline.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:shelf/shelf.dart';
@@ -20,7 +20,9 @@ class CrudResource<T extends AggregateRoot, TClaims> implements HttpResource {
   CrudResource({
     required this.path,
     required this.repository,
-    required Map<String, Serializer<T>> serializers,
+    JsonSerializer<T>? serializer,
+    Map<String, Serializer<T>>? serializers,
+    this.collectionHandler,
     this.authenticationHandler,
     this.authorizationHandler,
     Map<String, QueryHandler<T>> queryHandlers = const {},
@@ -30,7 +32,7 @@ class CrudResource<T extends AggregateRoot, TClaims> implements HttpResource {
     this.maxTake = 100,
     ETagStrategy etagStrategy = ETagStrategy.timestamp,
     this.preCreate,
-  }) : serializers = Map.unmodifiable(serializers),
+  }) : serializers = _configureSerializers(serializer, serializers),
        queryHandlers = Map.unmodifiable(queryHandlers),
        customExceptionHandlers = Map.unmodifiable(customExceptionHandlers) {
     // Reified generic type check prevents a legacy view of versioned state.
@@ -44,11 +46,12 @@ class CrudResource<T extends AggregateRoot, TClaims> implements HttpResource {
       authenticationHandler: authenticationHandler,
       authorizationHandler: authorizationHandler,
       customExceptionHandlers: this.customExceptionHandlers,
+      jsonContract: serializer != null,
     );
     _etagGenerator = ETagGenerator<T>(
       strategy: etagStrategy,
       serializer: etagStrategy == ETagStrategy.contentHash
-          ? serializers.values.first
+          ? this.serializers.values.first
           : null,
     );
   }
@@ -60,6 +63,29 @@ class CrudResource<T extends AggregateRoot, TClaims> implements HttpResource {
 
   /// Immutable configured media types/codecs.
   final Map<String, Serializer<T>> serializers;
+
+  /// Explicit unfiltered query; pagination belongs to the datastore adapter.
+  final QueryHandler<T>? collectionHandler;
+
+  /// Canonical JSON codec for resources configured through the JSON constructor.
+  JsonSerializer<T> get serializer {
+    final value = serializers['application/json'];
+    if (value is! JsonSerializer<T>) {
+      throw StateError('This legacy resource has no JSON serializer');
+    }
+    return value;
+  }
+
+  static Map<String, Serializer<A>> _configureSerializers<
+    A extends AggregateRoot
+  >(JsonSerializer<A>? serializer, Map<String, Serializer<A>>? serializers) {
+    if ((serializer == null) == (serializers == null)) {
+      throw ArgumentError('Provide exactly one serializer or serializers map');
+    }
+    return Map.unmodifiable(
+      serializer == null ? serializers! : {'application/json': serializer},
+    );
+  }
 
   /// Trusted optional authenticator.
   final AuthenticationHandler<TClaims>? authenticationHandler;
@@ -143,14 +169,16 @@ class CrudResource<T extends AggregateRoot, TClaims> implements HttpResource {
     final representation = _pipeline.select(request.headers['accept']);
     QueryResult<T> result;
     if (filters.isEmpty) {
-      final all = await getAllItems(
-        repository,
-        operationName: 'collection query',
-      );
-      result = QueryResult(
-        all.skip(skip).take(take).toList(),
-        totalCount: all.length,
-      );
+      final handler = collectionHandler;
+      if (handler == null) {
+        return ResourcePipeline.problem(
+          400,
+          'Bad Request',
+          'Unfiltered collection retrieval is unsupported for this resource. '
+              'Configure a collectionHandler.',
+        );
+      }
+      result = await handler(repository, const {}, skip, take, principal);
     } else if (filters.length > 1) {
       return ResourcePipeline.problem(
         400,
@@ -231,6 +259,7 @@ class CrudResource<T extends AggregateRoot, TClaims> implements HttpResource {
         );
         if (denied != null) return denied;
         _unconditional(request);
+        _pipeline.select(request.headers['accept']);
         await _pipeline.persist(() => repository.deleteById(uuid));
         return Response(204);
       });

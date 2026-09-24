@@ -200,49 +200,26 @@ class TestNestedValue extends Value {
 }
 
 /// Enum for game state.
-enum GameState {
-  waitingForPlayers,
-  inProgress,
-  completed,
-  stalemate,
-}
+enum GameState { waitingForPlayers, inProgress, completed, stalemate }
 
 /// Test AggregateRoot with enum field.
 @Serializable()
 class TestGame extends AggregateRoot {
-  TestGame({
-    required this.state,
-    super.id,
-    super.createdAt,
-    super.updatedAt,
-  });
+  TestGame({required this.state, super.id, super.createdAt, super.updatedAt});
 
   final GameState state;
 }
 
 /// Enum for player role.
-enum PlayerRole {
-  admin,
-  moderator,
-  player,
-  guest,
-}
+enum PlayerRole { admin, moderator, player, guest }
 
 /// Enum for player status.
-enum PlayerStatus {
-  active,
-  inactive,
-  banned,
-}
+enum PlayerStatus { active, inactive, banned }
 
 /// Test Value with enum fields (both required and nullable).
 @Serializable()
 class TestPlayer extends Value {
-  const TestPlayer({
-    required this.name,
-    required this.role,
-    this.status,
-  });
+  const TestPlayer({required this.name, required this.role, this.status});
 
   final String name;
   final PlayerRole role;

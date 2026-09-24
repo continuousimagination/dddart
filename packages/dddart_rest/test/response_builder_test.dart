@@ -2,8 +2,9 @@ import 'dart:convert';
 
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/src/response_builder.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:test/test.dart';
+
+import 'json_serializer_test_support.dart';
 
 // Test aggregate root
 class TestUser extends AggregateRoot {
@@ -20,7 +21,7 @@ class TestUser extends AggregateRoot {
 }
 
 // Test serializer
-class TestUserSerializer implements Serializer<TestUser> {
+class TestUserSerializer extends TestJsonSerializer<TestUser> {
   @override
   String serialize(TestUser user, [dynamic config]) {
     return jsonEncode({
@@ -65,11 +66,7 @@ void main() {
   group('ResponseBuilder - Single aggregate responses', () {
     test('ok() method returns 200 with serialized body', () async {
       // Act
-      final response = responseBuilder.ok(
-        testUser,
-        serializer,
-        'application/json',
-      );
+      final response = responseBuilder.ok(testUser, serializer);
 
       // Assert
       expect(response.statusCode, equals(200));
@@ -86,11 +83,7 @@ void main() {
 
     test('created() method returns 201 with serialized body', () async {
       // Act
-      final response = responseBuilder.created(
-        testUser,
-        serializer,
-        'application/json',
-      );
+      final response = responseBuilder.created(testUser, serializer);
 
       // Assert
       expect(response.statusCode, equals(201));
@@ -103,27 +96,10 @@ void main() {
       expect(body['email'], equals('john@example.com'));
     });
 
-    test('Content-Type header is set correctly for different formats',
-        () async {
-      // Act - JSON
-      final jsonResponse = responseBuilder.ok(
-        testUser,
-        serializer,
-        'application/json',
-      );
+    test('Content-Type is always application/json', () async {
+      final jsonResponse = responseBuilder.ok(testUser, serializer);
 
-      // Assert - JSON
       expect(jsonResponse.headers['Content-Type'], equals('application/json'));
-
-      // Act - YAML (hypothetical)
-      final yamlResponse = responseBuilder.ok(
-        testUser,
-        serializer,
-        'application/yaml',
-      );
-
-      // Assert - YAML
-      expect(yamlResponse.headers['Content-Type'], equals('application/yaml'));
     });
   });
 
@@ -140,11 +116,7 @@ void main() {
       final users = [testUser, user2];
 
       // Act
-      final response = responseBuilder.okList(
-        users,
-        serializer,
-        'application/json',
-      );
+      final response = responseBuilder.okList(users, serializer);
 
       // Assert
       expect(response.statusCode, equals(200));
@@ -167,7 +139,6 @@ void main() {
       final response = responseBuilder.okList(
         users,
         serializer,
-        'application/json',
         totalCount: 150,
       );
 
@@ -181,11 +152,7 @@ void main() {
       final users = [testUser];
 
       // Act
-      final response = responseBuilder.okList(
-        users,
-        serializer,
-        'application/json',
-      );
+      final response = responseBuilder.okList(users, serializer);
 
       // Assert
       expect(response.statusCode, equals(200));
@@ -197,12 +164,7 @@ void main() {
       final users = [testUser];
 
       // Act
-      final response = responseBuilder.okList(
-        users,
-        serializer,
-        'application/json',
-        totalCount: 1,
-      );
+      final response = responseBuilder.okList(users, serializer, totalCount: 1);
 
       // Assert
       expect(response.headers['Content-Type'], equals('application/json'));
@@ -213,12 +175,7 @@ void main() {
       final users = <TestUser>[];
 
       // Act
-      final response = responseBuilder.okList(
-        users,
-        serializer,
-        'application/json',
-        totalCount: 0,
-      );
+      final response = responseBuilder.okList(users, serializer, totalCount: 0);
 
       // Assert
       expect(response.statusCode, equals(200));
@@ -284,17 +241,16 @@ void main() {
       expect(body['status'], equals(404));
       expect(
         body['detail'],
-        equals(
-          'User with ID 123e4567-e89b-12d3-a456-426614174000 not found',
-        ),
+        equals('User with ID 123e4567-e89b-12d3-a456-426614174000 not found'),
       );
     });
 
     test('error responses include all required RFC 7807 fields', () async {
       // Act - badRequest
       final badRequestResponse = responseBuilder.badRequest('Test message');
-      final badRequestBody =
-          jsonDecode(await badRequestResponse.readAsString());
+      final badRequestBody = jsonDecode(
+        await badRequestResponse.readAsString(),
+      );
 
       // Assert - badRequest has all required fields
       expect(badRequestBody.containsKey('type'), isTrue);

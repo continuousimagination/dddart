@@ -7,7 +7,7 @@
 // - Making authenticated API requests
 // - Error handling
 //
-// Run: dart run example/cli_tool_example.dart <command>
+// Run from this directory: dart run cli_tool_example.dart <command>
 // Commands: login, logout, list-users, get-user, create-user, me
 
 import 'dart:io';
@@ -55,7 +55,7 @@ void main(List<String> args) async {
     }
   } on AuthenticationException catch (e) {
     print('❌ Authentication error: ${e.message}');
-    print('Run "dart run example/cli_tool_example.dart login" to authenticate');
+    print('Run "dart run cli_tool_example.dart login" to authenticate');
     exit(1);
   } on HttpException catch (e) {
     print('❌ Network error: $e');
@@ -72,7 +72,7 @@ void main(List<String> args) async {
 void _printUsage() {
   print('User Management CLI Tool');
   print('');
-  print('Usage: dart run example/cli_tool_example.dart <command> [args]');
+  print('Usage: dart run cli_tool_example.dart <command> [args]');
   print('');
   print('Commands:');
   print('  login                      Login with device flow');
@@ -84,11 +84,10 @@ void _printUsage() {
   print('  help                       Show this help message');
   print('');
   print('Examples:');
-  print('  dart run example/cli_tool_example.dart login');
-  print('  dart run example/cli_tool_example.dart list-users');
-  print(
-      '  dart run example/cli_tool_example.dart create-user alice alice@example.com');
-  print('  dart run example/cli_tool_example.dart me');
+  print('  dart run cli_tool_example.dart login');
+  print('  dart run cli_tool_example.dart list-users');
+  print('  dart run cli_tool_example.dart create-user alice alice@example.com');
+  print('  dart run cli_tool_example.dart me');
 }
 
 class UserCLI {
@@ -162,7 +161,7 @@ class UserCLI {
   Future<void> listUsers() async {
     print('📋 Fetching users...\n');
 
-    final response = await client.get('/users');
+    final response = await client.getPath('/users');
 
     if (response.statusCode == 200) {
       final users = jsonDecode(response.body) as List;
@@ -184,7 +183,7 @@ class UserCLI {
   Future<void> getUser(String userId) async {
     print('🔍 Fetching user $userId...\n');
 
-    final response = await client.get('/users/$userId');
+    final response = await client.getPath('/users/$userId');
 
     if (response.statusCode == 200) {
       final user = jsonDecode(response.body) as Map<String, dynamic>;
@@ -197,7 +196,7 @@ class UserCLI {
   Future<void> createUser(String username, String email) async {
     print('➕ Creating user...\n');
 
-    final response = await client.post(
+    final response = await client.postPath(
       '/users',
       body: {
         'username': username,
@@ -219,7 +218,7 @@ class UserCLI {
   Future<void> getCurrentUser() async {
     print('👤 Fetching current user info...\n');
 
-    final response = await client.get('/users?me');
+    final response = await client.getPath('/users?me');
 
     if (response.statusCode == 200) {
       final users = jsonDecode(response.body) as List;

@@ -6,13 +6,18 @@ This directory contains comprehensive examples demonstrating the domain events s
 
 ```bash
 # Main events example - comprehensive event patterns
-dart run example/events_example.dart
+dart run events_example.dart
 
 # Event serialization - persistence and message queues
-dart run example/event_serialization_example.dart
+dart run event_serialization_example.dart
 
 # Error handling - graceful failure and compensation
-dart run example/error_handling_example.dart
+dart run error_handling_example.dart
+
+# Logging sinks and hierarchy
+dart run logging_console.dart
+dart run logging_file.dart
+dart run logging_hierarchical.dart
 ```
 
 ## Examples Overview

@@ -118,8 +118,10 @@ void main() {
       };
 
       const defaultConfig = SerializationConfig(); // camelCase
-      final user2 =
-          serializer.fromJson(camelJson, defaultConfig); // Override config
+      final user2 = serializer.fromJson(
+        camelJson,
+        defaultConfig,
+      ); // Override config
       expect(user2.firstName, equals('Charlie'));
       expect(user2.lastName, equals('Brown'));
     });
@@ -164,13 +166,17 @@ void main() {
 
       // Static methods with custom config
       const snakeConfig = SerializationConfig(fieldRename: FieldRename.snake);
-      final snakeJson =
-          ConfigurableUserJsonSerializer.encode(user, snakeConfig);
+      final snakeJson = ConfigurableUserJsonSerializer.encode(
+        user,
+        snakeConfig,
+      );
       expect(snakeJson['first_name'], equals('Eva'));
       expect(snakeJson['last_name'], equals('Davis'));
 
-      final restored =
-          ConfigurableUserJsonSerializer.decode(snakeJson, snakeConfig);
+      final restored = ConfigurableUserJsonSerializer.decode(
+        snakeJson,
+        snakeConfig,
+      );
       expect(restored.firstName, equals('Eva'));
       expect(restored.lastName, equals('Davis'));
     });

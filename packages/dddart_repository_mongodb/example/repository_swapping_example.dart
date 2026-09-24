@@ -68,10 +68,12 @@ Future<void> _demonstrateInMemoryRepository() async {
   // Verify deletion
   try {
     await userRepo.getById(user2.id);
-    print('   ✗ User should have been deleted');
+    throw StateError('User should have been deleted');
   } on RepositoryException catch (e) {
     if (e.type == RepositoryExceptionType.notFound) {
       print('   ✓ Confirmed deletion');
+    } else {
+      rethrow;
     }
   }
 
@@ -160,9 +162,7 @@ Future<void> _demonstrateBusinessLogicWithSwappableRepo() async {
 /// - UserWithCustomRepoMongoRepository for production
 /// - MockRepository for integration tests
 /// - Future: RestRepository, PostgresRepository, etc.
-Future<void> _runBusinessLogic(
-  Repository<UserWithCustomRepo> userRepo,
-) async {
+Future<void> _runBusinessLogic(Repository<UserWithCustomRepo> userRepo) async {
   // Create user
   final user = UserWithCustomRepo(
     firstName: 'Test',

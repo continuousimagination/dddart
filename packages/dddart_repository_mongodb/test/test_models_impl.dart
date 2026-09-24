@@ -8,8 +8,9 @@ class TestOrderMongoRepositoryImpl extends TestOrderMongoRepositoryBase {
 
   @override
   Future<List<TestOrder>> findByCustomerId(String customerId) async {
-    final docs =
-        await _collection.find(where.eq('customerId', customerId)).toList();
+    final docs = await _collection
+        .find(where.eq('customerId', customerId))
+        .toList();
 
     return docs.map((doc) {
       doc['id'] = doc['_id'];

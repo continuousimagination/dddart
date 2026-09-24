@@ -21,10 +21,7 @@ import 'test_models.dart';
 
 /// Simple claims for testing.
 class TestClaims {
-  const TestClaims({
-    required this.userId,
-    required this.email,
-  });
+  const TestClaims({required this.userId, required this.email});
 
   factory TestClaims.fromJson(Map<String, dynamic> json) {
     return TestClaims(
@@ -37,10 +34,7 @@ class TestClaims {
   final String email;
 
   Map<String, dynamic> toJson() {
-    return {
-      'userId': userId,
-      'email': email,
-    };
+    return {'userId': userId, 'email': email};
   }
 }
 
@@ -113,13 +107,18 @@ Future<AuthenticatedTestServer> createAuthenticatedTestServer({
 }) async {
   // Create repositories
   final userRepository = InMemoryRepository<TestUser>();
-  final refreshTokenRepository = InMemoryRepository<RefreshToken>();
-  final deviceCodeRepository = InMemoryRepository<DeviceCode>();
+  final refreshTokenRepository = InMemoryRefreshTokenRepository<RefreshToken>();
+  final deviceCodeRepository = InMemoryDeviceCodeRepository<DeviceCode>(
+    lifecycle: const StandardDeviceCodeLifecycle(),
+  );
 
   // Create JWT auth handler
   final authHandler = JwtAuthHandler<TestClaims, RefreshToken>(
     secret: secret,
     refreshTokenRepository: refreshTokenRepository,
+    refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
+    claimsLoader: (userId) async =>
+        TestClaims(userId: userId, email: 'test@example.com'),
     parseClaimsFromJson: TestClaims.fromJson,
     claimsToJson: (claims) => claims.toJson(),
   );
@@ -128,18 +127,13 @@ Future<AuthenticatedTestServer> createAuthenticatedTestServer({
   final authEndpoints = AuthEndpoints<TestClaims, RefreshToken, DeviceCode>(
     authHandler: authHandler,
     deviceCodeRepository: deviceCodeRepository,
+    deviceCodeLifecycle: const StandardDeviceCodeLifecycle(),
     userValidator: (username, password) async {
       // Simple test validator
       if (username == 'testuser' && password == 'testpass') {
         return 'user-123';
       }
       return null;
-    },
-    claimsBuilder: (userId) async {
-      return TestClaims(
-        userId: userId,
-        email: 'test@example.com',
-      );
     },
   );
 
@@ -156,7 +150,7 @@ Future<AuthenticatedTestServer> createAuthenticatedTestServer({
     CrudResource<TestUser, TestClaims>(
       path: path,
       repository: userRepository,
-      serializers: {'application/json': serializer},
+      serializer: serializer,
       authenticationHandler: authHandler,
     ),
   );
@@ -195,10 +189,7 @@ void main() {
       final loginRequest = Request(
         'POST',
         Uri.parse('${testServer.baseUrl}/auth/login'),
-        body: jsonEncode({
-          'username': 'testuser',
-          'password': 'testpass',
-        }),
+        body: jsonEncode({'username': 'testuser', 'password': 'testpass'}),
       );
       final loginResponse = await testServer.authEndpoints.handleLogin(
         loginRequest,
@@ -222,34 +213,30 @@ void main() {
       expect(authProvider.getAccessTokenCallCount, equals(1));
     });
 
-    test('unauthenticated requests should fail with auth-required server',
-        () async {
-      // Arrange - Try to login with invalid credentials
-      final loginRequest = Request(
-        'POST',
-        Uri.parse('${testServer.baseUrl}/auth/login'),
-        body: jsonEncode({
-          'username': 'wronguser',
-          'password': 'wrongpass',
-        }),
-      );
-      final loginResponse = await testServer.authEndpoints.handleLogin(
-        loginRequest,
-      );
+    test(
+      'unauthenticated requests should fail with auth-required server',
+      () async {
+        // Arrange - Try to login with invalid credentials
+        final loginRequest = Request(
+          'POST',
+          Uri.parse('${testServer.baseUrl}/auth/login'),
+          body: jsonEncode({'username': 'wronguser', 'password': 'wrongpass'}),
+        );
+        final loginResponse = await testServer.authEndpoints.handleLogin(
+          loginRequest,
+        );
 
-      // Assert - Login fails without valid credentials
-      expect(loginResponse.statusCode, equals(401));
-    });
+        // Assert - Login fails without valid credentials
+        expect(loginResponse.statusCode, equals(401));
+      },
+    );
 
     test('token refresh scenario should work', () async {
       // Arrange - Login to get tokens
       final loginRequest = Request(
         'POST',
         Uri.parse('${testServer.baseUrl}/auth/login'),
-        body: jsonEncode({
-          'username': 'testuser',
-          'password': 'testpass',
-        }),
+        body: jsonEncode({'username': 'testuser', 'password': 'testpass'}),
       );
       final loginResponse = await testServer.authEndpoints.handleLogin(
         loginRequest,
@@ -275,83 +262,72 @@ void main() {
       final refreshRequest = Request(
         'POST',
         Uri.parse('${testServer.baseUrl}/auth/refresh'),
-        body: jsonEncode({
-          'refresh_token': refreshToken,
-        }),
+        body: jsonEncode({'refresh_token': refreshToken}),
       );
       final refreshResponse = await testServer.authEndpoints.handleRefresh(
         refreshRequest,
       );
 
-      // Assert - Refresh succeeds or fails gracefully
-      // Note: Refresh may fail if the token lookup mechanism doesn't work
-      // with InMemoryRepository in the test environment
-      if (refreshResponse.statusCode == 200) {
-        final refreshBody = await refreshResponse.readAsString();
-        final refreshJson = jsonDecode(refreshBody) as Map<String, dynamic>;
-        expect(refreshJson['access_token'], isNotNull);
-      } else {
-        // Refresh failed - this is expected in test environment
-        // where InMemoryRepository doesn't support query operations
-        expect(refreshResponse.statusCode, greaterThanOrEqualTo(400));
-      }
+      // Assert - The token-specific in-memory repository supports the complete
+      // refresh flow.
+      expect(refreshResponse.statusCode, equals(200));
+      final refreshBody = await refreshResponse.readAsString();
+      final refreshJson = jsonDecode(refreshBody) as Map<String, dynamic>;
+      expect(refreshJson['access_token'], isA<String>());
+      expect(refreshJson['refresh_token'], equals(refreshToken));
     });
 
-    test('multiple repositories should share authenticated connection',
-        () async {
-      // Arrange - Login to get access token
-      final loginRequest = Request(
-        'POST',
-        Uri.parse('${testServer.baseUrl}/auth/login'),
-        body: jsonEncode({
-          'username': 'testuser',
-          'password': 'testpass',
-        }),
-      );
-      final loginResponse = await testServer.authEndpoints.handleLogin(
-        loginRequest,
-      );
+    test(
+      'multiple repositories should share authenticated connection',
+      () async {
+        // Arrange - Login to get access token
+        final loginRequest = Request(
+          'POST',
+          Uri.parse('${testServer.baseUrl}/auth/login'),
+          body: jsonEncode({'username': 'testuser', 'password': 'testpass'}),
+        );
+        final loginResponse = await testServer.authEndpoints.handleLogin(
+          loginRequest,
+        );
 
-      expect(loginResponse.statusCode, equals(200));
-      final loginBody = await loginResponse.readAsString();
-      final loginJson = jsonDecode(loginBody) as Map<String, dynamic>;
-      final accessToken = loginJson['access_token'] as String;
+        expect(loginResponse.statusCode, equals(200));
+        final loginBody = await loginResponse.readAsString();
+        final loginJson = jsonDecode(loginBody) as Map<String, dynamic>;
+        final accessToken = loginJson['access_token'] as String;
 
-      // Create auth provider
-      final authProvider = TestAuthProvider(accessToken);
+        // Create auth provider
+        final authProvider = TestAuthProvider(accessToken);
 
-      // Create connection with auth provider
-      final connection = RestConnection(
-        baseUrl: testServer.baseUrl,
-        authProvider: authProvider,
-      );
+        // Create connection with auth provider
+        final connection = RestConnection(
+          baseUrl: testServer.baseUrl,
+          authProvider: authProvider,
+        );
 
-      try {
-        // Create multiple repositories sharing the same connection
-        final userRepo1 = TestUserRestRepository(connection);
-        final userRepo2 = TestUserRestRepository(connection);
+        try {
+          // Create multiple repositories sharing the same connection
+          final userRepo1 = TestUserRestRepository(connection);
+          final userRepo2 = TestUserRestRepository(connection);
 
-        // Assert - Both repositories share the same connection
-        expect(userRepo1, isNotNull);
-        expect(userRepo2, isNotNull);
+          // Assert - Both repositories share the same connection
+          expect(userRepo1, isNotNull);
+          expect(userRepo2, isNotNull);
 
-        // Verify connection has auth configured
-        expect(connection.authProvider != null, isTrue);
-        expect(connection.authProvider, equals(authProvider));
-      } finally {
-        connection.dispose();
-      }
-    });
+          // Verify connection has auth configured
+          expect(connection.authProvider != null, isTrue);
+          expect(connection.authProvider, equals(authProvider));
+        } finally {
+          connection.dispose();
+        }
+      },
+    );
 
     test('logout should revoke refresh token', () async {
       // Arrange - Login to get tokens
       final loginRequest = Request(
         'POST',
         Uri.parse('${testServer.baseUrl}/auth/login'),
-        body: jsonEncode({
-          'username': 'testuser',
-          'password': 'testpass',
-        }),
+        body: jsonEncode({'username': 'testuser', 'password': 'testpass'}),
       );
       final loginResponse = await testServer.authEndpoints.handleLogin(
         loginRequest,
@@ -366,9 +342,7 @@ void main() {
       final logoutRequest = Request(
         'POST',
         Uri.parse('${testServer.baseUrl}/auth/logout'),
-        body: jsonEncode({
-          'refresh_token': refreshToken,
-        }),
+        body: jsonEncode({'refresh_token': refreshToken}),
       );
       final logoutResponse = await testServer.authEndpoints.handleLogout(
         logoutRequest,
@@ -381,9 +355,7 @@ void main() {
       final refreshRequest = Request(
         'POST',
         Uri.parse('${testServer.baseUrl}/auth/refresh'),
-        body: jsonEncode({
-          'refresh_token': refreshToken,
-        }),
+        body: jsonEncode({'refresh_token': refreshToken}),
       );
       final refreshResponse = await testServer.authEndpoints.handleRefresh(
         refreshRequest,
@@ -403,7 +375,7 @@ void main() {
         path: '/users',
         serializer: TestUserJsonSerializer(),
         secret: secret,
-        port: 8781,
+        port: 0,
       );
     });
 
@@ -416,10 +388,7 @@ void main() {
       final loginRequest = Request(
         'POST',
         Uri.parse('${testServer.baseUrl}/auth/login'),
-        body: jsonEncode({
-          'username': 'wronguser',
-          'password': 'wrongpass',
-        }),
+        body: jsonEncode({'username': 'wronguser', 'password': 'wrongpass'}),
       );
       final loginResponse = await testServer.authEndpoints.handleLogin(
         loginRequest,
@@ -449,9 +418,7 @@ void main() {
       final refreshRequest = Request(
         'POST',
         Uri.parse('${testServer.baseUrl}/auth/refresh'),
-        body: jsonEncode({
-          'refresh_token': 'invalid-token',
-        }),
+        body: jsonEncode({'refresh_token': 'invalid-token'}),
       );
       final refreshResponse = await testServer.authEndpoints.handleRefresh(
         refreshRequest,
@@ -486,7 +453,7 @@ void main() {
         path: '/users',
         serializer: TestUserJsonSerializer(),
         secret: secret,
-        port: 8782,
+        port: 0,
       );
     });
 
@@ -499,10 +466,7 @@ void main() {
       final loginRequest = Request(
         'POST',
         Uri.parse('${testServer.baseUrl}/auth/login'),
-        body: jsonEncode({
-          'username': 'testuser',
-          'password': 'testpass',
-        }),
+        body: jsonEncode({'username': 'testuser', 'password': 'testpass'}),
       );
       final loginResponse = await testServer.authEndpoints.handleLogin(
         loginRequest,
@@ -533,10 +497,7 @@ void main() {
       final loginRequest = Request(
         'POST',
         Uri.parse('${testServer.baseUrl}/auth/login'),
-        body: jsonEncode({
-          'username': 'testuser',
-          'password': 'testpass',
-        }),
+        body: jsonEncode({'username': 'testuser', 'password': 'testpass'}),
       );
       final loginResponse = await testServer.authEndpoints.handleLogin(
         loginRequest,

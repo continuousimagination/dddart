@@ -40,9 +40,10 @@ aws dynamodb list-tables --endpoint-url http://localhost:8000
 dart pub get
 ```
 
-2. Generate code (serializers and repositories):
+2. Generate code from a clean state (serializers and repositories):
 ```bash
-dart run build_runner build
+dart run build_runner clean
+dart run build_runner build --delete-conflicting-outputs
 ```
 
 ## Examples
@@ -80,7 +81,7 @@ dart run basic_crud_example.dart
 - Defining custom repository interfaces
 - Using `@GenerateDynamoRepository(implements: ...)` annotation
 - Extending generated abstract base classes
-- Implementing custom query methods using DynamoDB Scan
+- Implementing bounded custom reads with DynamoDB global secondary indexes
 - Using both generated and custom methods
 
 **Run:**
@@ -93,7 +94,8 @@ dart run custom_interface_example.dart
 - `UserWithCustomRepoDynamoRepositoryBase` generated abstract class
 - `UserWithCustomRepoDynamoRepository` concrete implementation
 - Custom queries: `findByEmail()`, `findByLastName()`
-- DynamoDB Scan operations with filter expressions
+- Indexed DynamoDB `Query` operations with explicit result limits
+- Example table creation with the required email and last-name GSIs
 
 ---
 
@@ -130,7 +132,6 @@ dart run local_development_example.dart
 - Creating tables programmatically
 - Getting AWS CLI commands for table creation
 - Getting CloudFormation templates
-- Getting CreateTableInput definitions
 - Best practices for table management
 
 **Run:**
@@ -140,7 +141,6 @@ dart run table_creation_example.dart
 
 **Key concepts:**
 - `createTable()` method for programmatic creation
-- `createTableDefinition()` for CreateTableInput
 - `getCreateTableCommand()` for AWS CLI commands
 - `getCloudFormationTemplate()` for IaC
 - PAY_PER_REQUEST billing mode
@@ -198,11 +198,11 @@ Additional aggregate for examples:
 The examples use code generation for:
 
 1. **JSON Serialization** (`dddart_json`)
-   - Generates `*.g.dart` files with `JsonSerializer` classes
+   - Adds `JsonSerializer` classes to each combined `*.g.dart` part
    - Handles aggregate serialization to/from JSON
 
 2. **DynamoDB Repositories** (`dddart_repository_dynamodb`)
-   - Generates `*.dynamo_repository.g.dart` files
+   - Adds repository implementations to the same combined `*.g.dart` parts
    - Creates concrete or abstract base repository classes
    - Implements CRUD operations with DynamoDB AttributeValue conversion
 
@@ -226,7 +226,8 @@ dart run build_runner build --delete-conflicting-outputs
 **Error:** `ResourceNotFoundException` or table not found
 
 **Solution:**
-- Run `table_creation_example.dart` first to create tables
+- Each runnable example creates its required table idempotently and waits for
+  it to become active
 - Or manually create tables using AWS CLI:
 ```bash
 aws dynamodb create-table \
@@ -282,7 +283,8 @@ After exploring these examples:
 
 1. **Create your own aggregates** with `@Serializable()` and `@GenerateDynamoRepository()`
 2. **Define custom repository interfaces** for domain-specific queries
-3. **Implement custom query methods** using DynamoDB operations
+3. **Implement custom query methods** using bounded, indexed DynamoDB `Query`
+   operations
 4. **Write tests** using `InMemoryRepository` for fast unit tests
 5. **Configure production** using environment variables
 6. **Deploy tables** using CloudFormation or Terraform
@@ -293,7 +295,8 @@ After exploring these examples:
 - **Batch Operations**: For bulk operations, consider using BatchWriteItem (future enhancement)
 - **Consistent Reads**: Default to eventually consistent reads for better performance
 - **Projection Expressions**: For custom queries, retrieve only needed attributes
-- **Pagination**: For scan/query operations, implement pagination for large result sets
+- **Bounded Reads**: Require an explicit limit for multi-result queries and
+  model continuation only when the application access pattern needs it
 
 ## Additional Resources
 

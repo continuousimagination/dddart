@@ -1,10 +1,10 @@
 // ignore_for_file: avoid_print
 
-import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
-import 'lib/domain/address.dart';
-import 'lib/domain/money.dart';
-import 'lib/domain/order_item.dart';
-import 'lib/domain/order_with_custom_repo.dart';
+import 'package:dddart_repository_mysql_example/domain/address.dart';
+import 'package:dddart_repository_mysql_example/domain/money.dart';
+import 'package:dddart_repository_mysql_example/domain/order_item.dart';
+import 'package:dddart_repository_mysql_example/domain/order_with_custom_repo.dart';
+import 'package:dddart_repository_mysql_example/mysql_example_connection.dart';
 
 /// Custom repository example demonstrating extended repository functionality.
 ///
@@ -15,21 +15,14 @@ import 'lib/domain/order_with_custom_repo.dart';
 /// - Using both generated CRUD methods and custom query methods
 ///
 /// Prerequisites:
-/// - MySQL running on localhost:3306
-/// - Database 'dddart_example' created
-/// - User 'root' with password 'password' (or update connection parameters)
+/// - MySQL configured through MYSQL_HOST, MYSQL_PORT, MYSQL_DATABASE,
+///   MYSQL_USER, and MYSQL_PASSWORD (documented local defaults are used)
 Future<void> main() async {
   print('=== Custom Repository Example ===\n');
 
   // Step 1: Create and open connection
   print('1. Connecting to MySQL...');
-  final connection = MysqlConnection(
-    host: 'localhost',
-    port: 3306,
-    database: 'dddart_example',
-    user: 'root',
-    password: 'password',
-  );
+  final connection = createMysqlExampleConnection();
 
   try {
     await connection.open();
@@ -108,8 +101,10 @@ Future<void> main() async {
 
     for (final order in orders) {
       await orderRepo.save(order);
-      print('   ✓ Saved: ${order.customerName} - '
-          '\$${order.totalAmount.amount.toStringAsFixed(2)}');
+      print(
+        '   ✓ Saved: ${order.customerName} - '
+        '\$${order.totalAmount.amount.toStringAsFixed(2)}',
+      );
     }
     print('');
 
@@ -118,10 +113,14 @@ Future<void> main() async {
     final aliceOrders = await orderRepo.findByCustomerName('Alice Johnson');
     print('   ✓ Found ${aliceOrders.length} orders for Alice Johnson:');
     for (final order in aliceOrders) {
-      print('     - Order ${order.id}: '
-          '\$${order.totalAmount.amount.toStringAsFixed(2)}');
-      print('       Shipping to: ${order.shippingAddress.city}, '
-          '${order.shippingAddress.state}');
+      print(
+        '     - Order ${order.id}: '
+        '\$${order.totalAmount.amount.toStringAsFixed(2)}',
+      );
+      print(
+        '       Shipping to: ${order.shippingAddress.city}, '
+        '${order.shippingAddress.state}',
+      );
     }
     print('');
 
@@ -130,8 +129,10 @@ Future<void> main() async {
     final highValueOrders = await orderRepo.findByMinimumAmount(200);
     print('   ✓ Found ${highValueOrders.length} orders >= \$200.00:');
     for (final order in highValueOrders) {
-      print('     - ${order.customerName}: '
-          '\$${order.totalAmount.amount.toStringAsFixed(2)}');
+      print(
+        '     - ${order.customerName}: '
+        '\$${order.totalAmount.amount.toStringAsFixed(2)}',
+      );
     }
     print('');
 
@@ -148,7 +149,7 @@ Future<void> main() async {
     if (notFound.isEmpty) {
       print('   ✓ Correctly returned empty list for non-existent customer');
     } else {
-      print('   ✗ Unexpected result');
+      throw StateError('Unexpectedly found orders for a missing customer');
     }
     print('');
 
@@ -163,6 +164,7 @@ Future<void> main() async {
   } catch (e, stackTrace) {
     print('\n✗ Error: $e');
     print('Stack trace: $stackTrace');
+    rethrow;
   } finally {
     // Step 10: Close connection
     print('\n10. Closing connection...');

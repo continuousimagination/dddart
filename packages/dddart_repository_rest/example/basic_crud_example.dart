@@ -16,9 +16,7 @@ import 'lib/user.dart';
 
 Future<void> main() async {
   // Create a REST connection to the API server
-  final connection = RestConnection(
-    baseUrl: 'http://localhost:8080',
-  );
+  final connection = RestConnection(baseUrl: 'http://localhost:8080');
 
   // Create a repository instance
   final userRepository = UserRestRepository(connection);

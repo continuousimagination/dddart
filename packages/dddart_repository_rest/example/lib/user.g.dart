@@ -12,7 +12,12 @@ class UserJsonSerializer implements JsonSerializer<User> {
 
   /// Creates a serializer with the specified default configuration.
   UserJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(User instance, [SerializationConfig? config]) {
@@ -115,7 +120,7 @@ class UserJsonSerializer implements JsonSerializer<User> {
               )
             : DateTime.now(),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize User',
         expectedType: 'User',
@@ -150,7 +155,7 @@ class UserJsonSerializer implements JsonSerializer<User> {
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'User',
       );
     }
@@ -196,8 +201,12 @@ class UserRestRepository implements Repository<User> {
   @override
   Future<User> getById(UuidValue id) async {
     try {
-      final response = await _connection.client.get(
-        Uri.parse('${_connection.baseUrl}$_resourcePath/${id.uuid}'),
+      final response = await _connection.executeRequest(
+        () => _connection.client.get(
+          Uri.parse('${_connection.baseUrl}$_resourcePath/${id.uuid}'),
+          headers: {'Accept': 'application/json'},
+        ),
+        operation: 'retrieve User',
       );
 
       if (response.statusCode == 200) {
@@ -225,10 +234,18 @@ class UserRestRepository implements Repository<User> {
       final json = _serializer.toJson(aggregate);
       final body = jsonEncode(json);
 
-      final response = await _connection.client.put(
-        Uri.parse('${_connection.baseUrl}$_resourcePath/${aggregate.id.uuid}'),
-        body: body,
-        headers: {'Content-Type': 'application/json'},
+      final response = await _connection.executeRequest(
+        () => _connection.client.put(
+          Uri.parse(
+            '${_connection.baseUrl}$_resourcePath/${aggregate.id.uuid}',
+          ),
+          body: body,
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+        ),
+        operation: 'save User',
       );
 
       if (response.statusCode == 200 || response.statusCode == 204) {
@@ -249,8 +266,12 @@ class UserRestRepository implements Repository<User> {
   @override
   Future<void> deleteById(UuidValue id) async {
     try {
-      final response = await _connection.client.delete(
-        Uri.parse('${_connection.baseUrl}$_resourcePath/${id.uuid}'),
+      final response = await _connection.executeRequest(
+        () => _connection.client.delete(
+          Uri.parse('${_connection.baseUrl}$_resourcePath/${id.uuid}'),
+          headers: {'Accept': 'application/json'},
+        ),
+        operation: 'delete User',
       );
 
       if (response.statusCode == 204 || response.statusCode == 200) {

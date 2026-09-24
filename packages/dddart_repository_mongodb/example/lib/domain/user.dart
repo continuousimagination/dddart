@@ -4,6 +4,8 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_json/dddart_json.dart';
 import 'package:dddart_repository_mongodb/dddart_repository_mongodb.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
+// The generated repository part uses mongo_dart's public database types.
+// ignore: unused_import
 import 'package:mongo_dart/mongo_dart.dart';
 
 part 'user.g.dart';

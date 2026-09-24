@@ -62,6 +62,32 @@ void main() {
       expect(command.triggerId, isNull);
     });
 
+    test('should deserialize a complete form without legacy user_name', () {
+      final form = {
+        'command': '/weather',
+        'text': 'Madrid',
+        'user_id': 'U-CANONICAL',
+        'team_id': 'T123456',
+        'channel_id': 'C123456',
+        'response_url': 'https://hooks.slack.com/commands/123/456',
+        'trigger_id': '123.456.abc',
+      };
+
+      final command = SlackSlashCommand.fromForm(form);
+
+      expect(command.command, equals('/weather'));
+      expect(command.text, equals('Madrid'));
+      expect(command.userId, equals('U-CANONICAL'));
+      expect(command.userName, isNull);
+      expect(command.teamId, equals('T123456'));
+      expect(command.channelId, equals('C123456'));
+      expect(
+        command.responseUrl,
+        equals('https://hooks.slack.com/commands/123/456'),
+      );
+      expect(command.triggerId, equals('123.456.abc'));
+    });
+
     test('should handle empty text field', () {
       // Arrange
       final form = {

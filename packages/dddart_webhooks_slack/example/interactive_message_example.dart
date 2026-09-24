@@ -30,7 +30,7 @@ void main() async {
     print('');
     print('Then run:');
     print('export SLACK_SIGNING_SECRET="your-signing-secret"');
-    print('dart run example/interactive_message_example.dart');
+    print('dart run interactive_message_example.dart');
     exit(1);
   }
 

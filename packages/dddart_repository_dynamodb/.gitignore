@@ -17,3 +17,6 @@ coverage/
 # OS
 .DS_Store
 Thumbs.db
+
+# Reviewed tracked consumer artifacts must remain visible to Pub.
+!/example/pubspec.lock

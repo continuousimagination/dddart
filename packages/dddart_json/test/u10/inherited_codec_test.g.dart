@@ -12,7 +12,12 @@ class InheritedRecordJsonSerializer implements JsonSerializer<InheritedRecord> {
 
   /// Creates a serializer with the specified default configuration.
   InheritedRecordJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(
@@ -193,7 +198,7 @@ class InheritedRecordJsonSerializer implements JsonSerializer<InheritedRecord> {
               as String,
         ),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize InheritedRecord',
         expectedType: 'InheritedRecord',
@@ -228,7 +233,7 @@ class InheritedRecordJsonSerializer implements JsonSerializer<InheritedRecord> {
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'InheritedRecord',
       );
     }

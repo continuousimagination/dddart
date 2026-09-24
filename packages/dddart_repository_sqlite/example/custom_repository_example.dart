@@ -4,11 +4,10 @@
 /// - Defining a custom repository interface
 /// - Extending the generated abstract base class
 /// - Implementing custom SQL queries
-/// - Using protected connection and serializer members
+/// - Sharing library-private connection and serializer members through parts
 /// - Domain-specific query methods
 library;
 
-import 'package:dddart/dddart.dart';
 import 'package:dddart_repository_sqlite/dddart_repository_sqlite.dart';
 
 import 'lib/custom_user.dart';
@@ -64,8 +63,10 @@ Future<void> main() async {
 
     for (final user in users) {
       await repository.save(user);
-      print('Created: ${user.name} (${user.email}) - '
-          'Active: ${user.isActive}');
+      print(
+        'Created: ${user.name} (${user.email}) - '
+        'Active: ${user.isActive}',
+      );
     }
 
     // Use custom query: Find active users
@@ -91,12 +92,15 @@ Future<void> main() async {
 
     // Use custom query: Find registered after date
     print('\n--- Custom Query: Find Registered After Date ---');
-    final recentUsers =
-        await repository.findRegisteredAfter(DateTime(2024, 3, 1));
+    final recentUsers = await repository.findRegisteredAfter(
+      DateTime(2024, 3, 1),
+    );
     print('Found ${recentUsers.length} users registered after March 1, 2024:');
     for (final user in recentUsers) {
-      print('  - ${user.name} registered on '
-          '${user.registeredAt.toIso8601String().split('T')[0]}');
+      print(
+        '  - ${user.name} registered on '
+        '${user.registeredAt.toIso8601String().split('T')[0]}',
+      );
     }
 
     // Standard CRUD operations still work
@@ -115,6 +119,7 @@ Future<void> main() async {
   } catch (e, stackTrace) {
     print('✗ Error: $e');
     print(stackTrace);
+    rethrow;
   } finally {
     await connection.close();
     print('\n✓ Database connection closed');

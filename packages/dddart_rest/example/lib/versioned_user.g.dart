@@ -12,7 +12,12 @@ class VersionedUserJsonSerializer implements JsonSerializer<VersionedUser> {
 
   /// Creates a serializer with the specified default configuration.
   VersionedUserJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(
@@ -94,7 +99,7 @@ class VersionedUserJsonSerializer implements JsonSerializer<VersionedUser> {
               as String,
         ),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize VersionedUser',
         expectedType: 'VersionedUser',
@@ -129,7 +134,7 @@ class VersionedUserJsonSerializer implements JsonSerializer<VersionedUser> {
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'VersionedUser',
       );
     }

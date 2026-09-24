@@ -232,12 +232,15 @@ void main() {
           final sql = dialect.insertOrReplace(tableName, columns);
 
           // Verify VALUES clause with correct number of placeholders
-          final expectedPlaceholders =
-              List.filled(columns.length, '?').join(', ');
+          final expectedPlaceholders = List.filled(
+            columns.length,
+            '?',
+          ).join(', ');
           expect(
             sql,
             contains('VALUES ($expectedPlaceholders)'),
-            reason: 'Iteration $i: Should have correct number of '
+            reason:
+                'Iteration $i: Should have correct number of '
                 'value placeholders',
           );
         }
@@ -301,7 +304,8 @@ UuidValue _generateRandomUuid(Random random) {
 
   // Convert to hex string with proper UUID format
   final hex = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-  final uuidString = '${hex.substring(0, 8)}-${hex.substring(8, 12)}-'
+  final uuidString =
+      '${hex.substring(0, 8)}-${hex.substring(8, 12)}-'
       '${hex.substring(12, 16)}-${hex.substring(16, 20)}-'
       '${hex.substring(20, 32)}';
 

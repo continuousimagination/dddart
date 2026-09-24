@@ -120,24 +120,6 @@ abstract class UserWithCustomRepoDynamoRepositoryBase
     }
   }
 
-  @override
-  Future<List<UserWithCustomRepo>> getAll() async {
-    try {
-      final response = await _connection.client.scan(tableName: tableName);
-
-      if (response.items == null || response.items!.isEmpty) {
-        return [];
-      }
-
-      return response.items!.map((item) {
-        final json = AttributeValueConverter.attributeMapToJsonMap(item);
-        return _serializer.fromJson(json);
-      }).toList();
-    } catch (e) {
-      throw _mapDynamoException(e, 'getAll');
-    }
-  }
-
   /// Maps typed SDK failures without exposing provider data or raw causes.
   RepositoryException _mapDynamoException(Object error, String operation) {
     return DynamoRepositoryException.map(error, operation);
@@ -209,9 +191,10 @@ aws dynamodb create-table \\
   /// // Add to CloudFormation template
   /// ```
   static String getCloudFormationTemplate(String tableName) {
+    final logicalId = _cloudFormationLogicalId(tableName);
     return '''
 Resources:
-  \${tableName.split('_').map((s) => s[0].toUpperCase() + s.substring(1)).join()}Table:
+  ${logicalId}Table:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: $tableName
@@ -226,13 +209,31 @@ Resources:
         .trim();
   }
 
+  static String _cloudFormationLogicalId(String tableName) {
+    final segments = tableName
+        .split(RegExp('[^A-Za-z0-9]+'))
+        .where((segment) => segment.isNotEmpty);
+    var logicalId = segments
+        .map((segment) => segment[0].toUpperCase() + segment.substring(1))
+        .join();
+
+    if (logicalId.isEmpty) logicalId = 'Dynamo';
+    if (!RegExp('^[A-Za-z]').hasMatch(logicalId)) {
+      logicalId = 'Dynamo$logicalId';
+    }
+    return logicalId;
+  }
+
   // Custom methods (must be implemented by subclass)
 
   @override
   Future<UserWithCustomRepo?> findByEmail(String email);
 
   @override
-  Future<List<UserWithCustomRepo>> findByLastName(String lastName);
+  Future<List<UserWithCustomRepo>> findByLastName(
+    String lastName, {
+    required int limit,
+  });
 }
 
 // **************************************************************************
@@ -246,7 +247,12 @@ class UserWithCustomRepoJsonSerializer
 
   /// Creates a serializer with the specified default configuration.
   UserWithCustomRepoJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(
@@ -352,7 +358,7 @@ class UserWithCustomRepoJsonSerializer
               )
             : DateTime.now(),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize UserWithCustomRepo',
         expectedType: 'UserWithCustomRepo',
@@ -387,7 +393,7 @@ class UserWithCustomRepoJsonSerializer
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'UserWithCustomRepo',
       );
     }

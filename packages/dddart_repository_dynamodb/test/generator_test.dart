@@ -262,7 +262,7 @@ class User extends AggregateRoot {
         );
 
         expect(output, contains('class UserDynamoRepository'));
-        expect(output, contains('implements QueryableRepository<User>'));
+        expect(output, contains('implements Repository<User>'));
         expect(output, contains('final DynamoConnection _connection'));
         expect(output, contains("tableName ?? 'users'"));
         expect(output, contains('final _serializer = UserJsonSerializer()'));
@@ -271,6 +271,8 @@ class User extends AggregateRoot {
         expect(output, contains('Future<User> getById(UuidValue id)'));
         expect(output, contains('Future<void> save(User aggregate)'));
         expect(output, contains('Future<void> deleteById(UuidValue id)'));
+        expect(output, isNot(contains('Future<List<User>> getAll()')));
+        expect(output, isNot(contains('_connection.client.scan')));
 
         // Verify exception mapping method is generated
         expect(output, contains('_mapDynamoException'));
@@ -332,6 +334,8 @@ class User extends AggregateRoot {
       expect(output, contains('class UserDynamoRepository'));
       expect(output, contains('implements UserRepository'));
       expect(output, isNot(contains('abstract class')));
+      expect(output, isNot(contains('Future<List<User>> getAll()')));
+      expect(output, isNot(contains('_connection.client.scan')));
     });
 
     test(
@@ -387,6 +391,8 @@ class User extends AggregateRoot {
         expect(output, contains('Future<User> getById(UuidValue id)'));
         expect(output, contains('Future<void> save(User aggregate)'));
         expect(output, contains('Future<void> deleteById(UuidValue id)'));
+        expect(output, isNot(contains('Future<List<User>> getAll()')));
+        expect(output, isNot(contains('_connection.client.scan')));
 
         // Verify exception mapping method is generated
         expect(output, contains('_mapDynamoException'));

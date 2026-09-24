@@ -12,12 +12,15 @@ import 'package:dddart_config/dddart_config.dart';
 /// - Use custom validators for business rules
 /// - Handle validation failures gracefully
 void main() {
+  final configPath = File.fromUri(
+    Platform.script.resolve('config.yaml'),
+  ).path;
   print('=== Configuration Validation Example ===\n');
 
   // Create configuration
   final config = Configuration([
     EnvironmentConfigProvider(prefix: 'MYAPP'),
-    YamlConfigProvider('example/config.yaml'),
+    YamlConfigProvider(configPath),
   ]);
 
   print('Validating configuration...\n');

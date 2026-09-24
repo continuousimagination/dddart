@@ -15,12 +15,25 @@ import 'lib/order_placed_event.dart';
 /// - Proper cleanup with close()
 /// - Custom log formatting
 ///
-/// Run with: dart run example/logging_file.dart
+/// Run from this example directory with: `dart run logging_file.dart`.
 Future<void> main() async {
+  final tempDirectory = await Directory.systemTemp.createTemp(
+    'dddart_logging_example_',
+  );
+  final logFile =
+      '${tempDirectory.path}${Platform.pathSeparator}dddart_example.log';
+  try {
+    await _runExample(logFile);
+  } finally {
+    if (await tempDirectory.exists()) {
+      await tempDirectory.delete(recursive: true);
+    }
+  }
+}
+
+Future<void> _runExample(String logFile) async {
   print('📁 DDDart File Logging Example\n');
   print('=' * 60);
-
-  final logFile = 'dddart_example.log';
 
   // Delete existing log file if it exists
   final file = File(logFile);
@@ -33,7 +46,7 @@ Future<void> main() async {
   final fileHandler = FileLogHandler(logFile);
 
   Logger.root.level = Level.ALL;
-  Logger.root.onRecord.listen(fileHandler);
+  Logger.root.onRecord.listen(fileHandler.call);
 
   print('File logging configured. Logs will be written to: $logFile\n');
   print('=' * 60);
@@ -42,7 +55,7 @@ Future<void> main() async {
   await _performOperations();
 
   // Important: Close the file handler to flush and close the file
-  print('\n' + '=' * 60);
+  print('\n${'=' * 60}');
   print('Closing file handler...');
   await fileHandler.close();
   print('File handler closed.');
@@ -50,7 +63,7 @@ Future<void> main() async {
   // Display the log file contents
   await _displayLogFile(logFile);
 
-  print('\n' + '=' * 60);
+  print('\n${'=' * 60}');
   print('✅ File logging example completed!');
   print('Log file saved to: $logFile');
   print('=' * 60);
@@ -140,7 +153,7 @@ Future<void> _performOperations() async {
 
 /// Display the contents of the log file
 Future<void> _displayLogFile(String logFile) async {
-  print('\n' + '=' * 60);
+  print('\n${'=' * 60}');
   print('📄 Log File Contents:');
   print('=' * 60);
   print('');

@@ -435,9 +435,9 @@ class RestRepositoryGenerator
   ///
   /// Converts PascalCase to kebab-case and pluralizes.
   /// Examples:
-  /// - User → users
-  /// - OrderItem → order-items
-  /// - Company → companies
+  /// - User → /users
+  /// - OrderItem → /order-items
+  /// - Company → /companies
   String _generateResourcePath(String className) {
     // Convert PascalCase to kebab-case
     final kebab = className
@@ -449,13 +449,13 @@ class RestRepositoryGenerator
 
     // Simple pluralization
     if (kebab.endsWith('y')) {
-      return '${kebab.substring(0, kebab.length - 1)}ies';
+      return '/${kebab.substring(0, kebab.length - 1)}ies';
     } else if (kebab.endsWith('s') ||
         kebab.endsWith('x') ||
         kebab.endsWith('ch')) {
-      return '${kebab}es';
+      return '/${kebab}es';
     } else {
-      return '${kebab}s';
+      return '/${kebab}s';
     }
   }
 
@@ -658,8 +658,12 @@ class RestRepositoryGenerator
   @override
   Future<$className> getById(UuidValue id) async {
     try {
-      final response = await _connection.client.get(
-        Uri.parse('\${_connection.baseUrl}\$_resourcePath/\${id.uuid}'),
+      final response = await _connection.executeRequest(
+        () => _connection.client.get(
+          Uri.parse('\${_connection.baseUrl}\$_resourcePath/\${id.uuid}'),
+          headers: {'Accept': 'application/json'},
+        ),
+        operation: 'retrieve $className',
       );
       
       if (response.statusCode == 200) {
@@ -691,10 +695,16 @@ class RestRepositoryGenerator
       final json = _serializer.toJson(aggregate);
       final body = jsonEncode(json);
       
-      final response = await _connection.client.put(
-        Uri.parse('\${_connection.baseUrl}\$_resourcePath/\${aggregate.id.uuid}'),
-        body: body,
-        headers: {'Content-Type': 'application/json'},
+      final response = await _connection.executeRequest(
+        () => _connection.client.put(
+          Uri.parse('\${_connection.baseUrl}\$_resourcePath/\${aggregate.id.uuid}'),
+          body: body,
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+        ),
+        operation: 'save $className',
       );
       
       if (response.statusCode == 200 || response.statusCode == 204) {
@@ -719,8 +729,12 @@ class RestRepositoryGenerator
   @override
   Future<void> deleteById(UuidValue id) async {
     try {
-      final response = await _connection.client.delete(
-        Uri.parse('\${_connection.baseUrl}\$_resourcePath/\${id.uuid}'),
+      final response = await _connection.executeRequest(
+        () => _connection.client.delete(
+          Uri.parse('\${_connection.baseUrl}\$_resourcePath/\${id.uuid}'),
+          headers: {'Accept': 'application/json'},
+        ),
+        operation: 'delete $className',
       );
       
       if (response.statusCode == 204 || response.statusCode == 200) {
@@ -847,7 +861,7 @@ class RestRepositoryGenerator
     final named = <String>[];
     for (final parameter in parameters) {
       var code =
-          '${parameter.isRequiredNamed ? 'required ' : ''}${_renderType(parameter.type, scope)}${parameter.name == null || parameter.name!.isEmpty ? '' : ' ${parameter.name}'}';
+          '${parameter.isRequiredNamed ? 'required ' : ''}${parameter.isCovariant ? 'covariant ' : ''}${_renderType(parameter.type, scope)}${parameter.name == null || parameter.name!.isEmpty ? '' : ' ${parameter.name}'}';
       if (parameter.defaultValueCode != null) {
         code += ' = ${_defaultLiteral(parameter, scope)}';
       }

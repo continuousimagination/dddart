@@ -1,5 +1,7 @@
 // ignore_for_file: avoid_print
 
+import 'dart:io';
+
 import 'package:dddart_config/dddart_config.dart';
 
 /// Demonstrates basic configuration usage with multiple providers.
@@ -10,11 +12,14 @@ import 'package:dddart_config/dddart_config.dart';
 /// - Use default values for optional settings
 /// - Handle missing configuration gracefully
 void main() {
+  final configPath = File.fromUri(
+    Platform.script.resolve('config.yaml'),
+  ).path;
   // Create configuration with layered providers
   // Environment variables take precedence over YAML file values
   final config = Configuration([
     EnvironmentConfigProvider(prefix: 'MYAPP'),
-    YamlConfigProvider('example/config.yaml'),
+    YamlConfigProvider(configPath),
   ]);
 
   print('=== Basic Configuration Access ===\n');

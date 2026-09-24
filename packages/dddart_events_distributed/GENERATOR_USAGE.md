@@ -1,5 +1,13 @@
 # Event Registry Generator
 
+> [!WARNING]
+> **Work in progress — not supported current guidance.** The registry output
+> and its client/server integration are deferred under EVENT-001. The active
+> example explicitly disables this builder; see the
+> [example status](example/README.md), where the former registry, client, and
+> server sketches are preserved as legacy `.skip` files. Do not enable or copy
+> this workflow as a current package contract.
+
 The event registry generator automatically creates a map of event type names to their `fromJson` factory functions, enabling automatic deserialization of distributed events in the EventBusClient.
 
 ## Overview

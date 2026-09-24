@@ -217,9 +217,9 @@ class $className extends AggregateRoot {
           // Verify the generated resource path follows naming convention
           expect(
             output,
-            contains("String get _resourcePath => '$expectedPath'"),
+            contains("String get _resourcePath => '/$expectedPath'"),
             reason:
-                'Class name "$className" should generate resource path "$expectedPath"',
+                'Class name "$className" should generate resource path "/$expectedPath"',
           );
         }
       },

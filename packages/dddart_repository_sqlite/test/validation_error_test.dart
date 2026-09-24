@@ -43,27 +43,31 @@ void main() {
       expect(true, isTrue, reason: 'Validation happens at build time');
     });
 
-    test('should reject value objects as map keys with clear error message',
-        () {
-      // Expected error for ValueAsKey.itemsByProduct field:
-      // "Unsupported collection type in field "itemsByProduct":
-      // Value objects cannot be used as map keys.
-      // Type: Map<Product, int>.
-      // Suggestion: Use a primitive type as the key, or use the entity's ID."
+    test(
+      'should reject value objects as map keys with clear error message',
+      () {
+        // Expected error for ValueAsKey.itemsByProduct field:
+        // "Unsupported collection type in field "itemsByProduct":
+        // Value objects cannot be used as map keys.
+        // Type: Map<Product, int>.
+        // Suggestion: Use a primitive type as the key, or use the entity's ID."
 
-      expect(true, isTrue, reason: 'Validation happens at build time');
-    });
+        expect(true, isTrue, reason: 'Validation happens at build time');
+      },
+    );
 
-    test('should reject aggregate root collections with clear error message',
-        () {
-      // Expected error for AggregateCollections.orders field:
-      // "Unsupported collection type in field "orders":
-      // Collections of aggregate roots violate aggregate boundaries.
-      // Type: List<OtherAggregate>.
-      // Suggestion: Store aggregate IDs instead: List<UuidValue>."
+    test(
+      'should reject aggregate root collections with clear error message',
+      () {
+        // Expected error for AggregateCollections.orders field:
+        // "Unsupported collection type in field "orders":
+        // Collections of aggregate roots violate aggregate boundaries.
+        // Type: List<OtherAggregate>.
+        // Suggestion: Store aggregate IDs instead: List<UuidValue>."
 
-      expect(true, isTrue, reason: 'Validation happens at build time');
-    });
+        expect(true, isTrue, reason: 'Validation happens at build time');
+      },
+    );
 
     test('should reject Set<dynamic> with clear error message', () {
       // Expected error for DynamicSet.items field:

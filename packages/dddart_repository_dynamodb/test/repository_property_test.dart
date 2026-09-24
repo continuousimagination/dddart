@@ -37,142 +37,148 @@ void main() {
     // **Feature: dynamodb-repository, Property 1: Repository round-trip persistence**
     // **Validates: Requirements 2.1, 2.3**
     group('Property 1: Repository round-trip persistence', () {
-      test('should preserve all fields when saving and retrieving TestUser',
-          () async {
-        final repo = TestUserDynamoRepository(connection);
-        final random = Random(42);
+      test(
+        'should preserve all fields when saving and retrieving TestUser',
+        () async {
+          final repo = TestUserDynamoRepository(connection);
+          final random = Random(42);
 
-        for (var i = 0; i < 100; i++) {
-          // Generate random user
-          final user = _generateRandomTestUser(random);
+          for (var i = 0; i < 100; i++) {
+            // Generate random user
+            final user = _generateRandomTestUser(random);
 
-          // Save the user
-          await repo.save(user);
+            // Save the user
+            await repo.save(user);
 
-          // Retrieve the user
-          final retrieved = await repo.getById(user.id);
+            // Retrieve the user
+            final retrieved = await repo.getById(user.id);
 
-          // Verify all fields match
-          expect(
-            retrieved.id,
-            equals(user.id),
-            reason: 'Iteration $i: ID should match',
-          );
-          expect(
-            retrieved.name,
-            equals(user.name),
-            reason: 'Iteration $i: Name should match',
-          );
-          expect(
-            retrieved.email,
-            equals(user.email),
-            reason: 'Iteration $i: Email should match',
-          );
-          expect(
-            retrieved.createdAt,
-            equals(user.createdAt),
-            reason: 'Iteration $i: CreatedAt should match',
-          );
-          expect(
-            retrieved.updatedAt,
-            equals(user.updatedAt),
-            reason: 'Iteration $i: UpdatedAt should match',
-          );
-        }
-      });
+            // Verify all fields match
+            expect(
+              retrieved.id,
+              equals(user.id),
+              reason: 'Iteration $i: ID should match',
+            );
+            expect(
+              retrieved.name,
+              equals(user.name),
+              reason: 'Iteration $i: Name should match',
+            );
+            expect(
+              retrieved.email,
+              equals(user.email),
+              reason: 'Iteration $i: Email should match',
+            );
+            expect(
+              retrieved.createdAt,
+              equals(user.createdAt),
+              reason: 'Iteration $i: CreatedAt should match',
+            );
+            expect(
+              retrieved.updatedAt,
+              equals(user.updatedAt),
+              reason: 'Iteration $i: UpdatedAt should match',
+            );
+          }
+        },
+      );
 
-      test('should preserve all fields when saving and retrieving TestProduct',
-          () async {
-        final repo = TestProductDynamoRepository(connection);
-        final random = Random(43);
+      test(
+        'should preserve all fields when saving and retrieving TestProduct',
+        () async {
+          final repo = TestProductDynamoRepository(connection);
+          final random = Random(43);
 
-        for (var i = 0; i < 100; i++) {
-          // Generate random product
-          final product = _generateRandomTestProduct(random);
+          for (var i = 0; i < 100; i++) {
+            // Generate random product
+            final product = _generateRandomTestProduct(random);
 
-          // Save the product
-          await repo.save(product);
+            // Save the product
+            await repo.save(product);
 
-          // Retrieve the product
-          final retrieved = await repo.getById(product.id);
+            // Retrieve the product
+            final retrieved = await repo.getById(product.id);
 
-          // Verify all fields match
-          expect(
-            retrieved.id,
-            equals(product.id),
-            reason: 'Iteration $i: ID should match',
-          );
-          expect(
-            retrieved.name,
-            equals(product.name),
-            reason: 'Iteration $i: Name should match',
-          );
-          expect(
-            retrieved.price,
-            equals(product.price),
-            reason: 'Iteration $i: Price should match',
-          );
-          expect(
-            retrieved.createdAt,
-            equals(product.createdAt),
-            reason: 'Iteration $i: CreatedAt should match',
-          );
-          expect(
-            retrieved.updatedAt,
-            equals(product.updatedAt),
-            reason: 'Iteration $i: UpdatedAt should match',
-          );
-        }
-      });
+            // Verify all fields match
+            expect(
+              retrieved.id,
+              equals(product.id),
+              reason: 'Iteration $i: ID should match',
+            );
+            expect(
+              retrieved.name,
+              equals(product.name),
+              reason: 'Iteration $i: Name should match',
+            );
+            expect(
+              retrieved.price,
+              equals(product.price),
+              reason: 'Iteration $i: Price should match',
+            );
+            expect(
+              retrieved.createdAt,
+              equals(product.createdAt),
+              reason: 'Iteration $i: CreatedAt should match',
+            );
+            expect(
+              retrieved.updatedAt,
+              equals(product.updatedAt),
+              reason: 'Iteration $i: UpdatedAt should match',
+            );
+          }
+        },
+      );
 
-      test('should preserve all fields when saving and retrieving TestAccount',
-          () async {
-        final repo = TestAccountDynamoRepository(connection);
-        final random = Random(44);
+      test(
+        'should preserve all fields when saving and retrieving TestAccount',
+        () async {
+          final repo = TestAccountDynamoRepository(connection);
+          final random = Random(44);
 
-        for (var i = 0; i < 100; i++) {
-          // Generate random account
-          final account = _generateRandomTestAccount(random);
+          for (var i = 0; i < 100; i++) {
+            // Generate random account
+            final account = _generateRandomTestAccount(random);
 
-          // Save the account
-          await repo.save(account);
+            // Save the account
+            await repo.save(account);
 
-          // Retrieve the account
-          final retrieved = await repo.getById(account.id);
+            // Retrieve the account
+            final retrieved = await repo.getById(account.id);
 
-          // Verify all fields match
-          expect(
-            retrieved.id,
-            equals(account.id),
-            reason: 'Iteration $i: ID should match',
-          );
-          expect(
-            retrieved.accountName,
-            equals(account.accountName),
-            reason: 'Iteration $i: Account name should match',
-          );
-          expect(
-            retrieved.accountType,
-            equals(account.accountType),
-            reason: 'Iteration $i: Account type should match',
-          );
-          expect(
-            retrieved.balance,
-            equals(account.balance),
-            reason: 'Iteration $i: Balance should match',
-          );
-          expect(
-            retrieved.createdAt,
-            equals(account.createdAt),
-            reason: 'Iteration $i: CreatedAt should match',
-          );
-          expect(
-            retrieved.updatedAt,
-            equals(account.updatedAt),
-            reason: 'Iteration $i: UpdatedAt should match',
-          );
-        }
-      });
+            // Verify all fields match
+            expect(
+              retrieved.id,
+              equals(account.id),
+              reason: 'Iteration $i: ID should match',
+            );
+            expect(
+              retrieved.accountName,
+              equals(account.accountName),
+              reason: 'Iteration $i: Account name should match',
+            );
+            expect(
+              retrieved.accountType,
+              equals(account.accountType),
+              reason: 'Iteration $i: Account type should match',
+            );
+            expect(
+              retrieved.balance,
+              equals(account.balance),
+              reason: 'Iteration $i: Balance should match',
+            );
+            expect(
+              retrieved.createdAt,
+              equals(account.createdAt),
+              reason: 'Iteration $i: CreatedAt should match',
+            );
+            expect(
+              retrieved.updatedAt,
+              equals(account.updatedAt),
+              reason: 'Iteration $i: UpdatedAt should match',
+            );
+          }
+        },
+      );
     });
 
     // **Feature: dynamodb-repository, Property 2: Repository upsert behavior**
@@ -229,57 +235,59 @@ void main() {
         }
       });
 
-      test('should replace existing product when saving with same ID',
-          () async {
-        final repo = TestProductDynamoRepository(connection);
-        final random = Random(46);
+      test(
+        'should replace existing product when saving with same ID',
+        () async {
+          final repo = TestProductDynamoRepository(connection);
+          final random = Random(46);
 
-        for (var i = 0; i < 100; i++) {
-          // Generate random product
-          final product1 = _generateRandomTestProduct(random);
+          for (var i = 0; i < 100; i++) {
+            // Generate random product
+            final product1 = _generateRandomTestProduct(random);
 
-          // Save the product
-          await repo.save(product1);
+            // Save the product
+            await repo.save(product1);
 
-          // Create modified version with same ID
-          final product2 = TestProduct(
-            id: product1.id,
-            name: _generateRandomString(random, maxLength: 20),
-            price: _generateRandomPrice(random),
-            createdAt: product1.createdAt,
-            updatedAt: DateTime.now(),
-          );
+            // Create modified version with same ID
+            final product2 = TestProduct(
+              id: product1.id,
+              name: _generateRandomString(random, maxLength: 20),
+              price: _generateRandomPrice(random),
+              createdAt: product1.createdAt,
+              updatedAt: DateTime.now(),
+            );
 
-          // Save the modified product
-          await repo.save(product2);
+            // Save the modified product
+            await repo.save(product2);
 
-          // Retrieve the product
-          final retrieved = await repo.getById(product1.id);
+            // Retrieve the product
+            final retrieved = await repo.getById(product1.id);
 
-          // Verify it has the updated values
-          expect(
-            retrieved.name,
-            equals(product2.name),
-            reason: 'Iteration $i: Name should be updated',
-          );
-          expect(
-            retrieved.price,
-            equals(product2.price),
-            reason: 'Iteration $i: Price should be updated',
-          );
+            // Verify it has the updated values
+            expect(
+              retrieved.name,
+              equals(product2.name),
+              reason: 'Iteration $i: Name should be updated',
+            );
+            expect(
+              retrieved.price,
+              equals(product2.price),
+              reason: 'Iteration $i: Price should be updated',
+            );
 
-          // Verify only one item exists
-          final count = await helper.countItems('custom_products');
-          expect(
-            count,
-            equals(1),
-            reason: 'Iteration $i: Should only have one item after upsert',
-          );
+            // Verify only one item exists
+            final count = await helper.countItems('custom_products');
+            expect(
+              count,
+              equals(1),
+              reason: 'Iteration $i: Should only have one item after upsert',
+            );
 
-          // Clean up for next iteration
-          await repo.deleteById(product1.id);
-        }
-      });
+            // Clean up for next iteration
+            await repo.deleteById(product1.id);
+          }
+        },
+      );
     });
 
     // **Feature: dynamodb-repository, Property 3: Repository deletion removes items**
@@ -321,79 +329,83 @@ void main() {
         }
       });
 
-      test('should throw notFound exception after deleting TestProduct',
-          () async {
-        final repo = TestProductDynamoRepository(connection);
-        final random = Random(48);
+      test(
+        'should throw notFound exception after deleting TestProduct',
+        () async {
+          final repo = TestProductDynamoRepository(connection);
+          final random = Random(48);
 
-        for (var i = 0; i < 100; i++) {
-          // Generate random product
-          final product = _generateRandomTestProduct(random);
+          for (var i = 0; i < 100; i++) {
+            // Generate random product
+            final product = _generateRandomTestProduct(random);
 
-          // Save the product
-          await repo.save(product);
+            // Save the product
+            await repo.save(product);
 
-          // Verify it exists
-          final retrieved = await repo.getById(product.id);
-          expect(
-            retrieved.id,
-            equals(product.id),
-            reason: 'Iteration $i: Product should exist before deletion',
-          );
-
-          // Delete the product
-          await repo.deleteById(product.id);
-
-          // Verify getById throws notFound exception
-          try {
-            await repo.getById(product.id);
-            fail('Iteration $i: Should have thrown RepositoryException');
-          } on RepositoryException catch (e) {
+            // Verify it exists
+            final retrieved = await repo.getById(product.id);
             expect(
-              e.type,
-              equals(RepositoryExceptionType.notFound),
-              reason: 'Iteration $i: Should throw notFound exception',
+              retrieved.id,
+              equals(product.id),
+              reason: 'Iteration $i: Product should exist before deletion',
             );
+
+            // Delete the product
+            await repo.deleteById(product.id);
+
+            // Verify getById throws notFound exception
+            try {
+              await repo.getById(product.id);
+              fail('Iteration $i: Should have thrown RepositoryException');
+            } on RepositoryException catch (e) {
+              expect(
+                e.type,
+                equals(RepositoryExceptionType.notFound),
+                reason: 'Iteration $i: Should throw notFound exception',
+              );
+            }
           }
-        }
-      });
+        },
+      );
 
-      test('should throw notFound exception after deleting TestAccount',
-          () async {
-        final repo = TestAccountDynamoRepository(connection);
-        final random = Random(49);
+      test(
+        'should throw notFound exception after deleting TestAccount',
+        () async {
+          final repo = TestAccountDynamoRepository(connection);
+          final random = Random(49);
 
-        for (var i = 0; i < 100; i++) {
-          // Generate random account
-          final account = _generateRandomTestAccount(random);
+          for (var i = 0; i < 100; i++) {
+            // Generate random account
+            final account = _generateRandomTestAccount(random);
 
-          // Save the account
-          await repo.save(account);
+            // Save the account
+            await repo.save(account);
 
-          // Verify it exists
-          final retrieved = await repo.getById(account.id);
-          expect(
-            retrieved.id,
-            equals(account.id),
-            reason: 'Iteration $i: Account should exist before deletion',
-          );
-
-          // Delete the account
-          await repo.deleteById(account.id);
-
-          // Verify getById throws notFound exception
-          try {
-            await repo.getById(account.id);
-            fail('Iteration $i: Should have thrown RepositoryException');
-          } on RepositoryException catch (e) {
+            // Verify it exists
+            final retrieved = await repo.getById(account.id);
             expect(
-              e.type,
-              equals(RepositoryExceptionType.notFound),
-              reason: 'Iteration $i: Should throw notFound exception',
+              retrieved.id,
+              equals(account.id),
+              reason: 'Iteration $i: Account should exist before deletion',
             );
+
+            // Delete the account
+            await repo.deleteById(account.id);
+
+            // Verify getById throws notFound exception
+            try {
+              await repo.getById(account.id);
+              fail('Iteration $i: Should have thrown RepositoryException');
+            } on RepositoryException catch (e) {
+              expect(
+                e.type,
+                equals(RepositoryExceptionType.notFound),
+                reason: 'Iteration $i: Should throw notFound exception',
+              );
+            }
           }
-        }
-      });
+        },
+      );
 
       test('should throw notFound when deleting non-existent item', () async {
         final repo = TestUserDynamoRepository(connection);
@@ -473,8 +485,10 @@ String _generateRandomString(Random random, {int maxLength = 50}) {
 
 /// Generates a random email address.
 String _generateRandomEmail(Random random) {
-  final username =
-      _generateRandomString(random, maxLength: 15).replaceAll(' ', '');
+  final username = _generateRandomString(
+    random,
+    maxLength: 15,
+  ).replaceAll(' ', '');
   final domains = ['example.com', 'test.com', 'demo.org', 'sample.net'];
   final domain = domains[random.nextInt(domains.length)];
   return '${username.toLowerCase()}@$domain';

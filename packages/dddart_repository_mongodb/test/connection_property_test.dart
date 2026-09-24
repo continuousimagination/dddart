@@ -175,89 +175,77 @@ void main() {
     // Property: URI parsing correctness
     // Validates: URIs are parsed correctly into connection parameters
     group('Property: URI parsing correctness', () {
-      test(
-        'should correctly parse various URI formats',
-        () {
-          final testCases = [
-            (
-              uri: 'mongodb://localhost:27017/testdb',
-              host: 'localhost',
-              port: 27017,
-              db: 'testdb',
-              user: null,
-              pass: null,
-            ),
-            (
-              uri: 'mongodb://user:pass@localhost:27017/testdb',
-              host: 'localhost',
-              port: 27017,
-              db: 'testdb',
-              user: 'user',
-              pass: 'pass',
-            ),
-            (
-              uri: 'mongodb://localhost/testdb',
-              host: 'localhost',
-              port: 27017,
-              db: 'testdb',
-              user: null,
-              pass: null,
-            ),
-          ];
+      test('should correctly parse various URI formats', () {
+        final testCases = [
+          (
+            uri: 'mongodb://localhost:27017/testdb',
+            host: 'localhost',
+            port: 27017,
+            db: 'testdb',
+            user: null,
+            pass: null,
+          ),
+          (
+            uri: 'mongodb://user:pass@localhost:27017/testdb',
+            host: 'localhost',
+            port: 27017,
+            db: 'testdb',
+            user: 'user',
+            pass: 'pass',
+          ),
+          (
+            uri: 'mongodb://localhost/testdb',
+            host: 'localhost',
+            port: 27017,
+            db: 'testdb',
+            user: null,
+            pass: null,
+          ),
+        ];
 
-          for (final testCase in testCases) {
-            final connection = MongoConnection.fromUri(testCase.uri);
+        for (final testCase in testCases) {
+          final connection = MongoConnection.fromUri(testCase.uri);
 
-            expect(connection.host, equals(testCase.host));
-            expect(connection.port, equals(testCase.port));
-            expect(connection.databaseName, equals(testCase.db));
-            expect(connection.username, equals(testCase.user));
-            expect(connection.password, equals(testCase.pass));
-          }
-        },
-        tags: ['property-test'],
-      );
+          expect(connection.host, equals(testCase.host));
+          expect(connection.port, equals(testCase.port));
+          expect(connection.databaseName, equals(testCase.db));
+          expect(connection.username, equals(testCase.user));
+          expect(connection.password, equals(testCase.pass));
+        }
+      }, tags: ['property-test']);
 
-      test(
-        'should reject invalid URI schemes',
-        () {
-          final invalidSchemes = [
-            'http://localhost:27017/testdb',
-            'https://localhost:27017/testdb',
-            'postgres://localhost:27017/testdb',
-            'mysql://localhost:27017/testdb',
-          ];
+      test('should reject invalid URI schemes', () {
+        final invalidSchemes = [
+          'http://localhost:27017/testdb',
+          'https://localhost:27017/testdb',
+          'postgres://localhost:27017/testdb',
+          'mysql://localhost:27017/testdb',
+        ];
 
-          for (final uri in invalidSchemes) {
-            expect(
-              () => MongoConnection.fromUri(uri),
-              throwsA(isA<ArgumentError>()),
-              reason: 'Should reject URI: $uri',
-            );
-          }
-        },
-        tags: ['property-test'],
-      );
+        for (final uri in invalidSchemes) {
+          expect(
+            () => MongoConnection.fromUri(uri),
+            throwsA(isA<ArgumentError>()),
+            reason: 'Should reject URI: $uri',
+          );
+        }
+      }, tags: ['property-test']);
 
-      test(
-        'should reject URIs without database name',
-        () {
-          final invalidUris = [
-            'mongodb://localhost:27017/',
-            'mongodb://localhost:27017',
-            'mongodb://user:pass@localhost:27017/',
-          ];
+      test('should reject URIs without database name', () {
+        final invalidUris = [
+          'mongodb://localhost:27017/',
+          'mongodb://localhost:27017',
+          'mongodb://user:pass@localhost:27017/',
+        ];
 
-          for (final uri in invalidUris) {
-            expect(
-              () => MongoConnection.fromUri(uri),
-              throwsA(isA<ArgumentError>()),
-              reason: 'Should reject URI without database: $uri',
-            );
-          }
-        },
-        tags: ['property-test'],
-      );
+        for (final uri in invalidUris) {
+          expect(
+            () => MongoConnection.fromUri(uri),
+            throwsA(isA<ArgumentError>()),
+            reason: 'Should reject URI without database: $uri',
+          );
+        }
+      }, tags: ['property-test']);
     });
 
     // Property: Connection string building
@@ -315,24 +303,21 @@ MongoConnection _generateInvalidConnection(Random random) {
   final invalidConfigs = [
     // Invalid host
     () => MongoConnection(
-          host: 'invalid-host-${random.nextInt(1000)}',
-          port: 27017,
-          databaseName: 'test_db',
-        ),
+      host: 'invalid-host-${random.nextInt(1000)}',
+      port: 27017,
+      databaseName: 'test_db',
+    ),
     // Invalid port
-    () => MongoConnection(
-          host: 'localhost',
-          port: 9999,
-          databaseName: 'test_db',
-        ),
+    () =>
+        MongoConnection(host: 'localhost', port: 9999, databaseName: 'test_db'),
     // Invalid credentials
     () => MongoConnection(
-          host: 'localhost',
-          port: 27017,
-          databaseName: 'test_db',
-          username: 'invalid_user',
-          password: 'invalid_password',
-        ),
+      host: 'localhost',
+      port: 27017,
+      databaseName: 'test_db',
+      username: 'invalid_user',
+      password: 'invalid_password',
+    ),
   ];
 
   return invalidConfigs[random.nextInt(invalidConfigs.length)]();

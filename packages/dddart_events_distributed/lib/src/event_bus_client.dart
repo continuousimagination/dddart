@@ -56,8 +56,8 @@ class EventBusClient {
     DateTime? initialTimestamp,
     http.Client? httpClient,
     String? authToken,
-  })  : _httpClient = httpClient ?? http.Client(),
-        _authToken = authToken {
+  }) : _httpClient = httpClient ?? http.Client(),
+       _authToken = authToken {
     _lastTimestamp = initialTimestamp ?? DateTime.now().toUtc();
     _logger.info('EventBusClient starting with lastTimestamp: $_lastTimestamp');
 
@@ -112,9 +112,9 @@ class EventBusClient {
   /// Polls server for new events.
   Future<void> _poll() async {
     try {
-      final url = Uri.parse('$serverUrl/events').replace(
-        queryParameters: {'since': _lastTimestamp.toIso8601String()},
-      );
+      final url = Uri.parse(
+        '$serverUrl/events',
+      ).replace(queryParameters: {'since': _lastTimestamp.toIso8601String()});
 
       _logger.finest('Polling: $url');
 
@@ -151,8 +151,9 @@ class EventBusClient {
   Future<void> _processEvent(Map<String, dynamic> storedEventJson) async {
     try {
       final eventType = storedEventJson['eventType'] as String;
-      final eventDataJson = jsonDecode(storedEventJson['eventJson'] as String)
-          as Map<String, dynamic>;
+      final eventDataJson =
+          jsonDecode(storedEventJson['eventJson'] as String)
+              as Map<String, dynamic>;
       final timestamp = DateTime.parse(storedEventJson['createdAt'] as String);
 
       // Update last timestamp to be after this event to avoid re-processing

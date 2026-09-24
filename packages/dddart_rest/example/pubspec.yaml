@@ -15,6 +15,7 @@ dependencies:
     path: ../../dddart_serialization
   dddart_rest:
     path: ../
+  http: ^1.2.0
   shelf: ^1.4.0
 
 dependency_overrides:
@@ -24,8 +25,6 @@ dependency_overrides:
     path: ../../dddart_json
   dddart_serialization:
     path: ../../dddart_serialization
-  dddart_rest:
-    path: ../
 
 dev_dependencies:
   build_runner: ^2.15.0

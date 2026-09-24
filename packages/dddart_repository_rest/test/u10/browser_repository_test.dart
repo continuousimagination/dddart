@@ -83,7 +83,7 @@ void main() {
     },
   );
   test(
-    'raw transport failures stay uncertain without leaking values or replay',
+    'raw legacy transport failures retain connection category without replay',
     () async {
       const marker = 'restricted-network-value';
       var sends = 0;
@@ -98,7 +98,8 @@ void main() {
         await ProbeRestRepository(connection).save(record());
         fail('Expected repository failure');
       } on RepositoryException catch (error) {
-        expect(error.type, RepositoryExceptionType.unknown);
+        expect(error.type, RepositoryExceptionType.connection);
+        expect(error.cause, isNull);
         expect(error.toString(), isNot(contains(marker)));
       }
       expect(sends, 1);

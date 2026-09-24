@@ -57,8 +57,62 @@ class _Policy extends AuthorizationHandler<VersionedRecord, String> {
   ) async => AuthorizationResult.deny('Unsupported');
 }
 
+class _RefreshedReadPolicy extends _Policy {
+  @override
+  Future<AuthorizationResult> authorizeRead(
+    UuidValue id,
+    AuthenticationResult<String> auth,
+  ) async => auth.claims == 'reader'
+      ? AuthorizationResult.allow()
+      : AuthorizationResult.deny('Read denied');
+}
+
 void main() {
   final codec = VersionedRecordJsonSerializer();
+  test(
+    'refreshed authoritative claims deny reads before repository access',
+    () async {
+      String? currentRole = 'reader';
+      final auth = JwtAuthHandler<String, RefreshToken>(
+        secret: 'synthetic-refresh-read-test-key',
+        refreshTokenRepository: InMemoryRefreshTokenRepository<RefreshToken>(),
+        refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
+        claimsLoader: (_) async => currentRole,
+        claimsToJson: (claims) => {'role': claims},
+        parseClaimsFromJson: (json) => json['role'] as String,
+      );
+      final repository = RecordingConditional();
+      final initial = record();
+      await repository.inner.save(
+        initial,
+        precondition: const WritePrecondition.absent(),
+      );
+      final resource = ConditionalCrudResource<VersionedRecord, String>(
+        path: '/records',
+        repository: repository,
+        serializers: {'application/json': codec},
+        authenticationHandler: auth,
+        authorizationHandler: _RefreshedReadPolicy(),
+      );
+      Future<Response> read(String token) => resource.handleGetById(
+        Request(
+          'GET',
+          Uri.parse('http://local/records/${initial.id}'),
+          headers: {'authorization': 'Bearer $token'},
+        ),
+        initial.id.uuid,
+      );
+      final issued = await auth.issueTokens('synthetic-user');
+      expect((await read(issued.accessToken)).statusCode, 200);
+      currentRole = 'blocked';
+      final refreshed = await auth.refresh(issued.refreshToken);
+      expect((await read(refreshed.accessToken)).statusCode, 403);
+      expect(repository.calls, ['read']);
+      currentRole = null;
+      await expectLater(auth.refresh(issued.refreshToken), throwsException);
+      expect(repository.calls, ['read']);
+    },
+  );
   test(
     'concurrent create requests produce exactly one accepted mutation',
     () async {

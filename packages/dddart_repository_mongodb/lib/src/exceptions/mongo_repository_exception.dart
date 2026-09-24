@@ -8,11 +8,7 @@ class MongoRepositoryException implements Exception {
   /// [message] - A description of the error
   /// [cause] - The underlying exception that caused this error (optional)
   /// [stackTrace] - The stack trace where the error occurred (optional)
-  const MongoRepositoryException(
-    this.message, {
-    this.cause,
-    this.stackTrace,
-  });
+  const MongoRepositoryException(this.message, {this.cause, this.stackTrace});
 
   /// A description of the error.
   final String message;

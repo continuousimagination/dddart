@@ -11,7 +11,7 @@ part of 'test_models.dart';
 /// This class can be used directly for basic CRUD operations or
 /// extended
 /// to add custom query methods.
-class TestUserDynamoRepository implements QueryableRepository<TestUser> {
+class TestUserDynamoRepository implements Repository<TestUser> {
   /// Creates a repository instance.
   ///
   /// [connection] - A DynamoDB connection instance.
@@ -117,24 +117,6 @@ class TestUserDynamoRepository implements QueryableRepository<TestUser> {
     }
   }
 
-  @override
-  Future<List<TestUser>> getAll() async {
-    try {
-      final response = await _connection.client.scan(tableName: tableName);
-
-      if (response.items == null || response.items!.isEmpty) {
-        return [];
-      }
-
-      return response.items!.map((item) {
-        final json = AttributeValueConverter.attributeMapToJsonMap(item);
-        return _serializer.fromJson(json);
-      }).toList();
-    } catch (e) {
-      throw _mapDynamoException(e, 'getAll');
-    }
-  }
-
   /// Maps typed SDK failures without exposing provider data or raw causes.
   RepositoryException _mapDynamoException(Object error, String operation) {
     return DynamoRepositoryException.map(error, operation);
@@ -206,9 +188,10 @@ aws dynamodb create-table \\
   /// // Add to CloudFormation template
   /// ```
   static String getCloudFormationTemplate(String tableName) {
+    final logicalId = _cloudFormationLogicalId(tableName);
     return '''
 Resources:
-  \${tableName.split('_').map((s) => s[0].toUpperCase() + s.substring(1)).join()}Table:
+  ${logicalId}Table:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: $tableName
@@ -222,6 +205,21 @@ Resources:
 '''
         .trim();
   }
+
+  static String _cloudFormationLogicalId(String tableName) {
+    final segments = tableName
+        .split(RegExp('[^A-Za-z0-9]+'))
+        .where((segment) => segment.isNotEmpty);
+    var logicalId = segments
+        .map((segment) => segment[0].toUpperCase() + segment.substring(1))
+        .join();
+
+    if (logicalId.isEmpty) logicalId = 'Dynamo';
+    if (!RegExp('^[A-Za-z]').hasMatch(logicalId)) {
+      logicalId = 'Dynamo$logicalId';
+    }
+    return logicalId;
+  }
 }
 
 /// Generated DynamoDB repository for [TestProduct] aggregate.
@@ -229,7 +227,7 @@ Resources:
 /// This class can be used directly for basic CRUD operations or
 /// extended
 /// to add custom query methods.
-class TestProductDynamoRepository implements QueryableRepository<TestProduct> {
+class TestProductDynamoRepository implements Repository<TestProduct> {
   /// Creates a repository instance.
   ///
   /// [connection] - A DynamoDB connection instance.
@@ -335,24 +333,6 @@ class TestProductDynamoRepository implements QueryableRepository<TestProduct> {
     }
   }
 
-  @override
-  Future<List<TestProduct>> getAll() async {
-    try {
-      final response = await _connection.client.scan(tableName: tableName);
-
-      if (response.items == null || response.items!.isEmpty) {
-        return [];
-      }
-
-      return response.items!.map((item) {
-        final json = AttributeValueConverter.attributeMapToJsonMap(item);
-        return _serializer.fromJson(json);
-      }).toList();
-    } catch (e) {
-      throw _mapDynamoException(e, 'getAll');
-    }
-  }
-
   /// Maps typed SDK failures without exposing provider data or raw causes.
   RepositoryException _mapDynamoException(Object error, String operation) {
     return DynamoRepositoryException.map(error, operation);
@@ -424,9 +404,10 @@ aws dynamodb create-table \\
   /// // Add to CloudFormation template
   /// ```
   static String getCloudFormationTemplate(String tableName) {
+    final logicalId = _cloudFormationLogicalId(tableName);
     return '''
 Resources:
-  \${tableName.split('_').map((s) => s[0].toUpperCase() + s.substring(1)).join()}Table:
+  ${logicalId}Table:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: $tableName
@@ -439,6 +420,21 @@ Resources:
       BillingMode: PAY_PER_REQUEST
 '''
         .trim();
+  }
+
+  static String _cloudFormationLogicalId(String tableName) {
+    final segments = tableName
+        .split(RegExp('[^A-Za-z0-9]+'))
+        .where((segment) => segment.isNotEmpty);
+    var logicalId = segments
+        .map((segment) => segment[0].toUpperCase() + segment.substring(1))
+        .join();
+
+    if (logicalId.isEmpty) logicalId = 'Dynamo';
+    if (!RegExp('^[A-Za-z]').hasMatch(logicalId)) {
+      logicalId = 'Dynamo$logicalId';
+    }
+    return logicalId;
   }
 }
 
@@ -555,24 +551,6 @@ abstract class TestOrderDynamoRepositoryBase implements TestOrderRepository {
     }
   }
 
-  @override
-  Future<List<TestOrder>> getAll() async {
-    try {
-      final response = await _connection.client.scan(tableName: tableName);
-
-      if (response.items == null || response.items!.isEmpty) {
-        return [];
-      }
-
-      return response.items!.map((item) {
-        final json = AttributeValueConverter.attributeMapToJsonMap(item);
-        return _serializer.fromJson(json);
-      }).toList();
-    } catch (e) {
-      throw _mapDynamoException(e, 'getAll');
-    }
-  }
-
   /// Maps typed SDK failures without exposing provider data or raw causes.
   RepositoryException _mapDynamoException(Object error, String operation) {
     return DynamoRepositoryException.map(error, operation);
@@ -644,9 +622,10 @@ aws dynamodb create-table \\
   /// // Add to CloudFormation template
   /// ```
   static String getCloudFormationTemplate(String tableName) {
+    final logicalId = _cloudFormationLogicalId(tableName);
     return '''
 Resources:
-  \${tableName.split('_').map((s) => s[0].toUpperCase() + s.substring(1)).join()}Table:
+  ${logicalId}Table:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: $tableName
@@ -659,6 +638,21 @@ Resources:
       BillingMode: PAY_PER_REQUEST
 '''
         .trim();
+  }
+
+  static String _cloudFormationLogicalId(String tableName) {
+    final segments = tableName
+        .split(RegExp('[^A-Za-z0-9]+'))
+        .where((segment) => segment.isNotEmpty);
+    var logicalId = segments
+        .map((segment) => segment[0].toUpperCase() + segment.substring(1))
+        .join();
+
+    if (logicalId.isEmpty) logicalId = 'Dynamo';
+    if (!RegExp('^[A-Za-z]').hasMatch(logicalId)) {
+      logicalId = 'Dynamo$logicalId';
+    }
+    return logicalId;
   }
 
   // Custom methods (must be implemented by subclass)
@@ -675,7 +669,7 @@ Resources:
 /// This class can be used directly for basic CRUD operations or
 /// extended
 /// to add custom query methods.
-class TestAccountDynamoRepository implements QueryableRepository<TestAccount> {
+class TestAccountDynamoRepository implements Repository<TestAccount> {
   /// Creates a repository instance.
   ///
   /// [connection] - A DynamoDB connection instance.
@@ -781,24 +775,6 @@ class TestAccountDynamoRepository implements QueryableRepository<TestAccount> {
     }
   }
 
-  @override
-  Future<List<TestAccount>> getAll() async {
-    try {
-      final response = await _connection.client.scan(tableName: tableName);
-
-      if (response.items == null || response.items!.isEmpty) {
-        return [];
-      }
-
-      return response.items!.map((item) {
-        final json = AttributeValueConverter.attributeMapToJsonMap(item);
-        return _serializer.fromJson(json);
-      }).toList();
-    } catch (e) {
-      throw _mapDynamoException(e, 'getAll');
-    }
-  }
-
   /// Maps typed SDK failures without exposing provider data or raw causes.
   RepositoryException _mapDynamoException(Object error, String operation) {
     return DynamoRepositoryException.map(error, operation);
@@ -870,9 +846,10 @@ aws dynamodb create-table \\
   /// // Add to CloudFormation template
   /// ```
   static String getCloudFormationTemplate(String tableName) {
+    final logicalId = _cloudFormationLogicalId(tableName);
     return '''
 Resources:
-  \${tableName.split('_').map((s) => s[0].toUpperCase() + s.substring(1)).join()}Table:
+  ${logicalId}Table:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: $tableName
@@ -886,6 +863,21 @@ Resources:
 '''
         .trim();
   }
+
+  static String _cloudFormationLogicalId(String tableName) {
+    final segments = tableName
+        .split(RegExp('[^A-Za-z0-9]+'))
+        .where((segment) => segment.isNotEmpty);
+    var logicalId = segments
+        .map((segment) => segment[0].toUpperCase() + segment.substring(1))
+        .join();
+
+    if (logicalId.isEmpty) logicalId = 'Dynamo';
+    if (!RegExp('^[A-Za-z]').hasMatch(logicalId)) {
+      logicalId = 'Dynamo$logicalId';
+    }
+    return logicalId;
+  }
 }
 
 // **************************************************************************
@@ -898,7 +890,12 @@ class TestUserJsonSerializer implements JsonSerializer<TestUser> {
 
   /// Creates a serializer with the specified default configuration.
   TestUserJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(
@@ -992,7 +989,7 @@ class TestUserJsonSerializer implements JsonSerializer<TestUser> {
               )
             : DateTime.now(),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize TestUser',
         expectedType: 'TestUser',
@@ -1027,7 +1024,7 @@ class TestUserJsonSerializer implements JsonSerializer<TestUser> {
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'TestUser',
       );
     }
@@ -1053,7 +1050,12 @@ class TestProductJsonSerializer implements JsonSerializer<TestProduct> {
 
   /// Creates a serializer with the specified default configuration.
   TestProductJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(
@@ -1158,7 +1160,7 @@ class TestProductJsonSerializer implements JsonSerializer<TestProduct> {
               )
             : DateTime.now(),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize TestProduct',
         expectedType: 'TestProduct',
@@ -1193,7 +1195,7 @@ class TestProductJsonSerializer implements JsonSerializer<TestProduct> {
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'TestProduct',
       );
     }
@@ -1219,7 +1221,12 @@ class TestOrderJsonSerializer implements JsonSerializer<TestOrder> {
 
   /// Creates a serializer with the specified default configuration.
   TestOrderJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(
@@ -1336,7 +1343,7 @@ class TestOrderJsonSerializer implements JsonSerializer<TestOrder> {
               )
             : DateTime.now(),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize TestOrder',
         expectedType: 'TestOrder',
@@ -1371,7 +1378,7 @@ class TestOrderJsonSerializer implements JsonSerializer<TestOrder> {
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'TestOrder',
       );
     }
@@ -1397,7 +1404,12 @@ class TestAccountJsonSerializer implements JsonSerializer<TestAccount> {
 
   /// Creates a serializer with the specified default configuration.
   TestAccountJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(
@@ -1516,7 +1528,7 @@ class TestAccountJsonSerializer implements JsonSerializer<TestAccount> {
               )
             : DateTime.now(),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize TestAccount',
         expectedType: 'TestAccount',
@@ -1551,7 +1563,7 @@ class TestAccountJsonSerializer implements JsonSerializer<TestAccount> {
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'TestAccount',
       );
     }

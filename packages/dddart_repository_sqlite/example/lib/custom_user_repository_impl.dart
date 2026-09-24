@@ -28,7 +28,7 @@ class CustomUserRepositoryImpl extends CustomUserSqliteRepositoryBase {
     // SELECT * FROM custom_users WHERE isActive = 1 ORDER BY name
     //
     // For this example, we'll use a workaround since we can't access
-    // the protected members directly.
+    // library-private members directly within this `part` library.
 
     // This is a simplified implementation that demonstrates the concept
     // In production, you would implement proper SQL queries

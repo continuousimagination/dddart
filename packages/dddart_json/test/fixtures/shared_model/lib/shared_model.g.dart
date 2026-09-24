@@ -12,7 +12,12 @@ class RemoteRecordJsonSerializer implements JsonSerializer<RemoteRecord> {
 
   /// Creates a serializer with the specified default configuration.
   RemoteRecordJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(
@@ -84,7 +89,7 @@ class RemoteRecordJsonSerializer implements JsonSerializer<RemoteRecord> {
               as String,
         ),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize RemoteRecord',
         expectedType: 'RemoteRecord',
@@ -119,7 +124,7 @@ class RemoteRecordJsonSerializer implements JsonSerializer<RemoteRecord> {
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'RemoteRecord',
       );
     }

@@ -12,7 +12,12 @@ class VersionedRecordJsonSerializer implements JsonSerializer<VersionedRecord> {
 
   /// Creates a serializer with the specified default configuration.
   VersionedRecordJsonSerializer([SerializationConfig? defaultConfig])
-    : _defaultConfig = defaultConfig ?? const SerializationConfig();
+    : _defaultConfig =
+          defaultConfig ??
+          const SerializationConfig(
+            fieldRename: FieldRename.none,
+            includeNullFields: false,
+          );
 
   @override
   Map<String, dynamic> toJson(
@@ -104,7 +109,7 @@ class VersionedRecordJsonSerializer implements JsonSerializer<VersionedRecord> {
               as String,
         ),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw DeserializationException(
         'Failed to deserialize VersionedRecord',
         expectedType: 'VersionedRecord',
@@ -139,7 +144,7 @@ class VersionedRecordJsonSerializer implements JsonSerializer<VersionedRecord> {
       rethrow;
     } catch (_) {
       throw DeserializationException(
-        'Invalid JSON input',
+        'Failed to deserialize JSON',
         expectedType: 'VersionedRecord',
       );
     }

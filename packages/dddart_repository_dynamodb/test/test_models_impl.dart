@@ -13,9 +13,7 @@ class TestOrderDynamoRepositoryImpl extends TestOrderDynamoRepositoryBase {
     final response = await _connection.client.scan(
       tableName: tableName,
       filterExpression: 'customerId = :customerId',
-      expressionAttributeValues: {
-        ':customerId': AttributeValue(s: customerId),
-      },
+      expressionAttributeValues: {':customerId': AttributeValue(s: customerId)},
     );
 
     if (response.items == null || response.items!.isEmpty) {

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dddart_rest/dddart_rest.dart';
 import 'package:test/test.dart';
 
@@ -57,44 +59,25 @@ void main() {
 
       test('returns false for timestamp too old', () {
         final timestamp = DateTime.now().subtract(const Duration(minutes: 15));
-        expect(
-          SecurityUtils.validateTimestampAge(
-            timestamp,
-          ),
-          isFalse,
-        );
+        expect(SecurityUtils.validateTimestampAge(timestamp), isFalse);
       });
 
       test('returns false for timestamp too far in future', () {
         final timestamp = DateTime.now().add(const Duration(minutes: 10));
-        expect(
-          SecurityUtils.validateTimestampAge(
-            timestamp,
-          ),
-          isFalse,
-        );
+        expect(SecurityUtils.validateTimestampAge(timestamp), isFalse);
       });
 
       test('returns true for timestamp within clock skew tolerance', () {
         final timestamp = DateTime.now().add(const Duration(minutes: 3));
-        expect(
-          SecurityUtils.validateTimestampAge(
-            timestamp,
-          ),
-          isTrue,
-        );
+        expect(SecurityUtils.validateTimestampAge(timestamp), isTrue);
       });
 
       test('returns true for timestamp near max age boundary', () {
         // Use slightly less than max age to avoid timing issues
-        final timestamp =
-            DateTime.now().subtract(const Duration(minutes: 9, seconds: 59));
-        expect(
-          SecurityUtils.validateTimestampAge(
-            timestamp,
-          ),
-          isTrue,
+        final timestamp = DateTime.now().subtract(
+          const Duration(minutes: 9, seconds: 59),
         );
+        expect(SecurityUtils.validateTimestampAge(timestamp), isTrue);
       });
 
       test('respects custom max age', () {
@@ -135,25 +118,20 @@ void main() {
         final expiresAt = DateTime.now().add(const Duration(minutes: 5));
 
         expect(
-          SecurityUtils.validateDeviceCodeAge(
-            createdAt,
-            expiresAt,
-          ),
+          SecurityUtils.validateDeviceCodeAge(createdAt, expiresAt),
           isFalse,
         );
       });
 
       test('returns true for device code near age boundary', () {
         // Use slightly less than max age to avoid timing issues
-        final createdAt =
-            DateTime.now().subtract(const Duration(minutes: 9, seconds: 59));
+        final createdAt = DateTime.now().subtract(
+          const Duration(minutes: 9, seconds: 59),
+        );
         final expiresAt = DateTime.now().add(const Duration(minutes: 5));
 
         expect(
-          SecurityUtils.validateDeviceCodeAge(
-            createdAt,
-            expiresAt,
-          ),
+          SecurityUtils.validateDeviceCodeAge(createdAt, expiresAt),
           isTrue,
         );
       });
@@ -187,15 +165,12 @@ void main() {
 
       test('respects custom length', () {
         final random = SecurityUtils.generateSecureRandom(16);
-        expect(random, isNotEmpty);
-        // Base64 encoding of 16 bytes should be around 22-24 characters
-        expect(random.length, greaterThan(16));
+        expect(base64Url.decode(random), hasLength(16));
       });
 
       test('generates valid base64 string', () {
         final random = SecurityUtils.generateSecureRandom();
-        // Should not throw when decoding
-        expect(() => Uri.decodeComponent(random), returnsNormally);
+        expect(base64Url.decode(random), hasLength(32));
       });
     });
   });

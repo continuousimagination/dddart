@@ -4,8 +4,10 @@ import 'dart:io' as io;
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/src/crud_resource.dart';
 import 'package:dddart_rest/src/http_server.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
+import 'package:dddart_rest/src/query_handler.dart';
 import 'package:test/test.dart';
+
+import 'json_serializer_test_support.dart';
 
 // Test aggregate root
 class TestUser extends AggregateRoot {
@@ -22,7 +24,7 @@ class TestUser extends AggregateRoot {
 }
 
 // Test serializer
-class TestUserSerializer implements Serializer<TestUser> {
+class TestUserSerializer extends TestJsonSerializer<TestUser> {
   @override
   String serialize(TestUser user, [dynamic config]) {
     return jsonEncode({
@@ -62,7 +64,7 @@ class TestProduct extends AggregateRoot {
 }
 
 // Test product serializer
-class TestProductSerializer implements Serializer<TestProduct> {
+class TestProductSerializer extends TestJsonSerializer<TestProduct> {
   @override
   String serialize(TestProduct product, [dynamic config]) {
     return jsonEncode({
@@ -87,6 +89,20 @@ class TestProductSerializer implements Serializer<TestProduct> {
   }
 }
 
+Future<QueryResult<T>> inMemoryCollectionHandler<T extends AggregateRoot>(
+  Repository<T> repository,
+  Map<String, String> queryParams,
+  int skip,
+  int take,
+  dynamic authResult,
+) async {
+  final items = (repository as InMemoryRepository<T>).getAllSync();
+  return QueryResult<T>(
+    items.skip(skip).take(take).toList(),
+    totalCount: items.length,
+  );
+}
+
 void main() {
   group('HttpServer - Resource Registration', () {
     test('registerResource() adds resource to internal list', () async {
@@ -97,7 +113,8 @@ void main() {
       final resource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
+        collectionHandler: inMemoryCollectionHandler,
       );
 
       // Act
@@ -129,7 +146,8 @@ void main() {
       final userResource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: userRepository,
-        serializers: {'application/json': userSerializer},
+        serializer: userSerializer,
+        collectionHandler: inMemoryCollectionHandler,
       );
 
       final productRepository = InMemoryRepository<TestProduct>();
@@ -137,7 +155,8 @@ void main() {
       final productResource = CrudResource<TestProduct, dynamic>(
         path: '/products',
         repository: productRepository,
-        serializers: {'application/json': productSerializer},
+        serializer: productSerializer,
+        collectionHandler: inMemoryCollectionHandler,
       );
 
       // Act
@@ -154,8 +173,11 @@ void main() {
         expect(usersResponse.statusCode, equals(200));
 
         // Test products endpoint
-        final productsRequest =
-            await client.get('localhost', 8082, '/products');
+        final productsRequest = await client.get(
+          'localhost',
+          8082,
+          '/products',
+        );
         final productsResponse = await productsRequest.close();
         expect(productsResponse.statusCode, equals(200));
       } finally {
@@ -166,33 +188,36 @@ void main() {
   });
 
   group('HttpServer - Server Lifecycle', () {
-    test('start() creates router and starts shelf server on configured port',
-        () async {
-      // Arrange
-      final server = HttpServer(port: 8083);
-      final repository = InMemoryRepository<TestUser>();
-      final serializer = TestUserSerializer();
-      final resource = CrudResource<TestUser, dynamic>(
-        path: '/users',
-        repository: repository,
-        serializers: {'application/json': serializer},
-      );
-      server.registerResource(resource);
+    test(
+      'start() creates router and starts shelf server on configured port',
+      () async {
+        // Arrange
+        final server = HttpServer(port: 8083);
+        final repository = InMemoryRepository<TestUser>();
+        final serializer = TestUserSerializer();
+        final resource = CrudResource<TestUser, dynamic>(
+          path: '/users',
+          repository: repository,
+          serializer: serializer,
+          collectionHandler: inMemoryCollectionHandler,
+        );
+        server.registerResource(resource);
 
-      // Act
-      await server.start();
+        // Act
+        await server.start();
 
-      // Assert - verify server is running on the configured port
-      final client = io.HttpClient();
-      try {
-        final request = await client.get('localhost', 8083, '/users');
-        final response = await request.close();
-        expect(response.statusCode, equals(200));
-      } finally {
-        client.close();
-        await server.stop();
-      }
-    });
+        // Assert - verify server is running on the configured port
+        final client = io.HttpClient();
+        try {
+          final request = await client.get('localhost', 8083, '/users');
+          final response = await request.close();
+          expect(response.statusCode, equals(200));
+        } finally {
+          client.close();
+          await server.stop();
+        }
+      },
+    );
 
     test('stop() closes shelf server cleanly', () async {
       // Arrange
@@ -202,7 +227,8 @@ void main() {
       final resource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
+        collectionHandler: inMemoryCollectionHandler,
       );
       server.registerResource(resource);
       await server.start();
@@ -248,7 +274,8 @@ void main() {
       final resource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
+        collectionHandler: inMemoryCollectionHandler,
       );
       server.registerResource(resource);
       await server.start();
@@ -308,7 +335,8 @@ void main() {
       final resource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
+        collectionHandler: inMemoryCollectionHandler,
       );
       server.registerResource(resource);
       await server.start();
@@ -316,14 +344,20 @@ void main() {
       final client = io.HttpClient();
       try {
         // Test GET collection
-        final getCollectionRequest =
-            await client.get('localhost', 8087, '/users');
+        final getCollectionRequest = await client.get(
+          'localhost',
+          8087,
+          '/users',
+        );
         final getCollectionResponse = await getCollectionRequest.close();
         expect(getCollectionResponse.statusCode, equals(200));
 
         // Test GET by ID
-        final getByIdRequest =
-            await client.get('localhost', 8087, '/users/${testUser.id}');
+        final getByIdRequest = await client.get(
+          'localhost',
+          8087,
+          '/users/${testUser.id}',
+        );
         final getByIdResponse = await getByIdRequest.close();
         expect(getByIdResponse.statusCode, equals(200));
 
@@ -342,8 +376,11 @@ void main() {
         expect(postResponse.statusCode, equals(201));
 
         // Test PUT
-        final putRequest =
-            await client.put('localhost', 8087, '/users/${testUser.id}');
+        final putRequest = await client.put(
+          'localhost',
+          8087,
+          '/users/${testUser.id}',
+        );
         putRequest.headers.set('Content-Type', 'application/json');
         final updatedUser = TestUser(
           id: testUser.id,
@@ -357,8 +394,11 @@ void main() {
         expect(putResponse.statusCode, equals(200));
 
         // Test DELETE
-        final deleteRequest =
-            await client.delete('localhost', 8087, '/users/${testUser.id}');
+        final deleteRequest = await client.delete(
+          'localhost',
+          8087,
+          '/users/${testUser.id}',
+        );
         final deleteResponse = await deleteRequest.close();
         expect(deleteResponse.statusCode, equals(204));
       } finally {
@@ -386,7 +426,8 @@ void main() {
       final userResource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: userRepository,
-        serializers: {'application/json': userSerializer},
+        serializer: userSerializer,
+        collectionHandler: inMemoryCollectionHandler,
       );
 
       // Set up products resource
@@ -404,7 +445,8 @@ void main() {
       final productResource = CrudResource<TestProduct, dynamic>(
         path: '/products',
         repository: productRepository,
-        serializers: {'application/json': productSerializer},
+        serializer: productSerializer,
+        collectionHandler: inMemoryCollectionHandler,
       );
 
       server.registerResource(userResource);
@@ -418,30 +460,41 @@ void main() {
         final usersGetResponse = await usersGetRequest.close();
         expect(usersGetResponse.statusCode, equals(200));
 
-        final userGetByIdRequest =
-            await client.get('localhost', 8088, '/users/${testUser.id}');
+        final userGetByIdRequest = await client.get(
+          'localhost',
+          8088,
+          '/users/${testUser.id}',
+        );
         final userGetByIdResponse = await userGetByIdRequest.close();
         expect(userGetByIdResponse.statusCode, equals(200));
 
         // Test products routes
-        final productsGetRequest =
-            await client.get('localhost', 8088, '/products');
+        final productsGetRequest = await client.get(
+          'localhost',
+          8088,
+          '/products',
+        );
         final productsGetResponse = await productsGetRequest.close();
         expect(productsGetResponse.statusCode, equals(200));
 
-        final productGetByIdRequest =
-            await client.get('localhost', 8088, '/products/${testProduct.id}');
+        final productGetByIdRequest = await client.get(
+          'localhost',
+          8088,
+          '/products/${testProduct.id}',
+        );
         final productGetByIdResponse = await productGetByIdRequest.close();
         expect(productGetByIdResponse.statusCode, equals(200));
 
         // Verify responses contain correct data
-        final userBody =
-            await userGetByIdResponse.transform(utf8.decoder).join();
+        final userBody = await userGetByIdResponse
+            .transform(utf8.decoder)
+            .join();
         final userData = jsonDecode(userBody);
         expect(userData['name'], equals('Test User'));
 
-        final productBody =
-            await productGetByIdResponse.transform(utf8.decoder).join();
+        final productBody = await productGetByIdResponse
+            .transform(utf8.decoder)
+            .join();
         final productData = jsonDecode(productBody);
         expect(productData['name'], equals('Test Product'));
       } finally {
@@ -468,7 +521,8 @@ void main() {
       final resource = CrudResource<TestUser, dynamic>(
         path: '/users',
         repository: repository,
-        serializers: {'application/json': serializer},
+        serializer: serializer,
+        collectionHandler: inMemoryCollectionHandler,
       );
       server.registerResource(resource);
       await server.start();
@@ -481,14 +535,20 @@ void main() {
         expect(collectionResponse.statusCode, equals(200));
 
         // Verify item endpoint pattern: /resource/:id
-        final itemRequest =
-            await client.get('localhost', 8089, '/users/${testUser.id}');
+        final itemRequest = await client.get(
+          'localhost',
+          8089,
+          '/users/${testUser.id}',
+        );
         final itemResponse = await itemRequest.close();
         expect(itemResponse.statusCode, equals(200));
 
         // Verify invalid patterns return 404
-        final invalidRequest =
-            await client.get('localhost', 8089, '/users/invalid/extra/path');
+        final invalidRequest = await client.get(
+          'localhost',
+          8089,
+          '/users/invalid/extra/path',
+        );
         final invalidResponse = await invalidRequest.close();
         expect(invalidResponse.statusCode, equals(404));
       } finally {

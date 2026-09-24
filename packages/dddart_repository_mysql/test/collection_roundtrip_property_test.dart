@@ -127,31 +127,25 @@ void main() {
       },
     );
 
-    test(
-      'should handle empty List collections correctly',
-      () async {
-        final repo = OrderMysqlRepository(helper!.connection);
-        await repo.createTables();
+    test('should handle empty List collections correctly', () async {
+      final repo = OrderMysqlRepository(helper!.connection);
+      await repo.createTables();
 
-        // Create order with empty items list
-        final order = Order(
-          customerName: 'Customer with no items',
-          items: [],
-        );
+      // Create order with empty items list
+      final order = Order(customerName: 'Customer with no items', items: []);
 
-        // Save
-        await repo.save(order);
+      // Save
+      await repo.save(order);
 
-        // Retrieve
-        final retrieved = await repo.getById(order.id);
+      // Retrieve
+      final retrieved = await repo.getById(order.id);
 
-        // Verify collection is a List
-        expect(retrieved.items, isA<List<OrderItem>>());
+      // Verify collection is a List
+      expect(retrieved.items, isA<List<OrderItem>>());
 
-        // Verify collection is empty
-        expect(retrieved.items.length, equals(0));
-      },
-    );
+      // Verify collection is empty
+      expect(retrieved.items.length, equals(0));
+    });
 
     test(
       'should preserve List order through persist and retrieve cycles',
@@ -170,10 +164,7 @@ void main() {
             ),
           );
 
-          final order = Order(
-            customerName: 'Customer $i',
-            items: items,
-          );
+          final order = Order(customerName: 'Customer $i', items: items);
 
           // Save
           await repo.save(order);

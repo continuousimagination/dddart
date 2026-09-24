@@ -29,36 +29,38 @@ class FlexibleUser extends AggregateRoot {
 
 void main() {
   group('Runtime Configuration Tests', () {
-    test('Same class can be serialized with different field naming strategies',
-        () {
-      final user = FlexibleUser(
-        firstName: 'John',
-        lastName: 'Doe',
-        emailAddress: 'john.doe@example.com',
-      );
+    test(
+      'Same class can be serialized with different field naming strategies',
+      () {
+        final user = FlexibleUser(
+          firstName: 'John',
+          lastName: 'Doe',
+          emailAddress: 'john.doe@example.com',
+        );
 
-      final serializer = FlexibleUserJsonSerializer();
+        final serializer = FlexibleUserJsonSerializer();
 
-      // Default camelCase
-      final camelJson = serializer.toJson(user);
-      expect(camelJson['firstName'], equals('John'));
-      expect(camelJson['lastName'], equals('Doe'));
-      expect(camelJson['emailAddress'], equals('john.doe@example.com'));
+        // Default camelCase
+        final camelJson = serializer.toJson(user);
+        expect(camelJson['firstName'], equals('John'));
+        expect(camelJson['lastName'], equals('Doe'));
+        expect(camelJson['emailAddress'], equals('john.doe@example.com'));
 
-      // Snake case configuration - override at method level
-      const snakeConfig = SerializationConfig(fieldRename: FieldRename.snake);
-      final snakeJson = serializer.toJson(user, snakeConfig);
-      expect(snakeJson['first_name'], equals('John'));
-      expect(snakeJson['last_name'], equals('Doe'));
-      expect(snakeJson['email_address'], equals('john.doe@example.com'));
+        // Snake case configuration - override at method level
+        const snakeConfig = SerializationConfig(fieldRename: FieldRename.snake);
+        final snakeJson = serializer.toJson(user, snakeConfig);
+        expect(snakeJson['first_name'], equals('John'));
+        expect(snakeJson['last_name'], equals('Doe'));
+        expect(snakeJson['email_address'], equals('john.doe@example.com'));
 
-      // Kebab case configuration - override at method level
-      const kebabConfig = SerializationConfig(fieldRename: FieldRename.kebab);
-      final kebabJson = serializer.toJson(user, kebabConfig);
-      expect(kebabJson['first-name'], equals('John'));
-      expect(kebabJson['last-name'], equals('Doe'));
-      expect(kebabJson['email-address'], equals('john.doe@example.com'));
-    });
+        // Kebab case configuration - override at method level
+        const kebabConfig = SerializationConfig(fieldRename: FieldRename.kebab);
+        final kebabJson = serializer.toJson(user, kebabConfig);
+        expect(kebabJson['first-name'], equals('John'));
+        expect(kebabJson['last-name'], equals('Doe'));
+        expect(kebabJson['email-address'], equals('john.doe@example.com'));
+      },
+    );
 
     test('Can deserialize JSON with different naming strategies', () {
       final serializer = FlexibleUserJsonSerializer();
@@ -135,8 +137,10 @@ void main() {
       expect(kebabJson['first-name'], equals('Charlie'));
       expect(kebabJson['last-name'], equals('Brown'));
 
-      final restored =
-          FlexibleUserJsonSerializer.decode(kebabJson, kebabConfig);
+      final restored = FlexibleUserJsonSerializer.decode(
+        kebabJson,
+        kebabConfig,
+      );
       expect(restored.firstName, equals('Charlie'));
       expect(restored.lastName, equals('Brown'));
     });

@@ -1,9 +1,11 @@
+// Legacy sketch targeting obsolete collection APIs.
 // ignore_for_file: avoid_print
+
+import 'dart:io';
 
 import 'package:dddart/dddart.dart';
 import 'package:dddart_json/dddart_json.dart';
-import 'package:dddart_repository_sqlite/dddart_repository_sqlite.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
+import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
 
 part 'collection_examples.g.dart';
 
@@ -13,7 +15,7 @@ part 'collection_examples.g.dart';
 
 /// User aggregate with primitive collections
 @Serializable()
-@GenerateSqliteRepository()
+@GenerateMysqlRepository(tableName: 'users')
 class User extends AggregateRoot {
   User({
     required UuidValue id,
@@ -31,13 +33,10 @@ class User extends AggregateRoot {
   final List<DateTime> loginDates; // List of DateTime values
 }
 
-Future<void> primitiveCollectionsExample() async {
+Future<void> primitiveCollectionsExample(MysqlConnection connection) async {
   print('\n=== Primitive Collections Example ===\n');
 
-  final connection = SqliteConnection.memory();
-  await connection.open();
-
-  final repository = UserSqliteRepository(connection);
+  final repository = UserMysqlRepository(connection);
   await repository.createTables();
 
   // Create user with primitive collections
@@ -94,7 +93,6 @@ Future<void> primitiveCollectionsExample() async {
   print('Updated tags: ${reloaded.tags}');
   print('Updated scores: ${reloaded.scoresByGame}');
 
-  await connection.close();
   print('\n✓ Primitive collections example completed');
 }
 
@@ -103,7 +101,7 @@ Future<void> primitiveCollectionsExample() async {
 // ============================================================================
 
 @Serializable()
-class Money extends Value {
+class Money {
   Money({required this.amount, required this.currency});
 
   final double amount;
@@ -114,7 +112,7 @@ class Money extends Value {
 }
 
 @Serializable()
-class Address extends Value {
+class Address {
   Address({
     required this.street,
     required this.city,
@@ -129,20 +127,9 @@ class Address extends Value {
   String toString() => '$street, $city, $country';
 }
 
-@Serializable()
-class Color extends Value {
-  Color({required this.name, required this.hex});
-
-  final String name;
-  final String hex;
-
-  @override
-  String toString() => '$name ($hex)';
-}
-
 /// Order aggregate with value object collections
 @Serializable()
-@GenerateSqliteRepository()
+@GenerateMysqlRepository(tableName: 'orders')
 class Order extends AggregateRoot {
   Order({
     required UuidValue id,
@@ -158,13 +145,10 @@ class Order extends AggregateRoot {
   final Map<String, Money> discountsByCode; // Discounts by code
 }
 
-Future<void> valueObjectCollectionsExample() async {
+Future<void> valueObjectCollectionsExample(MysqlConnection connection) async {
   print('\n=== Value Object Collections Example ===\n');
 
-  final connection = SqliteConnection.memory();
-  await connection.open();
-
-  final repository = OrderSqliteRepository(connection);
+  final repository = OrderMysqlRepository(connection);
   await repository.createTables();
 
   // Create order with value object collections
@@ -209,7 +193,6 @@ Future<void> valueObjectCollectionsExample() async {
     print('  $code: $discount');
   });
 
-  await connection.close();
   print('\n✓ Value object collections example completed');
 }
 
@@ -255,7 +238,7 @@ class Discount extends Entity {
 
 /// Shopping cart aggregate with entity collections
 @Serializable()
-@GenerateSqliteRepository()
+@GenerateMysqlRepository(tableName: 'shopping_carts')
 class ShoppingCart extends AggregateRoot {
   ShoppingCart({
     required UuidValue id,
@@ -271,13 +254,10 @@ class ShoppingCart extends AggregateRoot {
   final Map<String, CartItem> savedItems; // Named saved items
 }
 
-Future<void> entityCollectionsExample() async {
+Future<void> entityCollectionsExample(MysqlConnection connection) async {
   print('\n=== Entity Collections Example ===\n');
 
-  final connection = SqliteConnection.memory();
-  await connection.open();
-
-  final repository = ShoppingCartSqliteRepository(connection);
+  final repository = ShoppingCartMysqlRepository(connection);
   await repository.createTables();
 
   // Create shopping cart with entity collections
@@ -353,7 +333,6 @@ Future<void> entityCollectionsExample() async {
     print('  $name: $item');
   });
 
-  await connection.close();
   print('\n✓ Entity collections example completed');
 }
 
@@ -362,7 +341,7 @@ Future<void> entityCollectionsExample() async {
 // ============================================================================
 
 @Serializable()
-@GenerateSqliteRepository()
+@GenerateMysqlRepository(tableName: 'products')
 class Product extends AggregateRoot {
   Product({
     required UuidValue id,
@@ -378,13 +357,10 @@ class Product extends AggregateRoot {
   final List<int?> nullableRatings; // Nullable elements
 }
 
-Future<void> nullableCollectionsExample() async {
+Future<void> nullableCollectionsExample(MysqlConnection connection) async {
   print('\n=== Nullable Collections Example ===\n');
 
-  final connection = SqliteConnection.memory();
-  await connection.open();
-
-  final repository = ProductSqliteRepository(connection);
+  final repository = ProductMysqlRepository(connection);
   await repository.createTables();
 
   // Create product with null and empty collections
@@ -423,7 +399,6 @@ Future<void> nullableCollectionsExample() async {
   print('Updated reviews: ${reloaded.reviews}');
   print('Updated ratings: ${reloaded.nullableRatings}');
 
-  await connection.close();
   print('\n✓ Nullable collections example completed');
 }
 
@@ -431,13 +406,10 @@ Future<void> nullableCollectionsExample() async {
 // Example 5: Cascade Delete
 // ============================================================================
 
-Future<void> cascadeDeleteExample() async {
+Future<void> cascadeDeleteExample(MysqlConnection connection) async {
   print('\n=== Cascade Delete Example ===\n');
 
-  final connection = SqliteConnection.memory();
-  await connection.open();
-
-  final repository = ShoppingCartSqliteRepository(connection);
+  final repository = ShoppingCartMysqlRepository(connection);
   await repository.createTables();
 
   // Create cart with collections
@@ -504,7 +476,6 @@ Future<void> cascadeDeleteExample() async {
   );
   print('Discounts after delete: ${discountsAfter.first['count']}');
 
-  await connection.close();
   print('\n✓ Cascade delete example completed');
 }
 
@@ -513,14 +484,42 @@ Future<void> cascadeDeleteExample() async {
 // ============================================================================
 
 void main() async {
-  print('DDDart SQLite Collection Examples');
-  print('==================================');
+  print('DDDart MySQL Collection Examples');
+  print('=================================');
 
-  await primitiveCollectionsExample();
-  await valueObjectCollectionsExample();
-  await entityCollectionsExample();
-  await nullableCollectionsExample();
-  await cascadeDeleteExample();
+  // Get MySQL connection details from environment or use defaults
+  final host = Platform.environment['MYSQL_HOST'] ?? 'localhost';
+  final port = int.parse(Platform.environment['MYSQL_PORT'] ?? '3306');
+  final database = Platform.environment['MYSQL_DATABASE'] ?? 'dddart_examples';
+  final user = Platform.environment['MYSQL_USER'] ?? 'root';
+  final password = Platform.environment['MYSQL_PASSWORD'] ?? '';
 
-  print('\n✓ All examples completed successfully!');
+  print('\nConnecting to MySQL at $host:$port/$database...');
+
+  final connection = MysqlConnection(
+    host: host,
+    port: port,
+    database: database,
+    user: user,
+    password: password,
+  );
+
+  try {
+    await connection.open();
+    print('✓ Connected to MySQL\n');
+
+    await primitiveCollectionsExample(connection);
+    await valueObjectCollectionsExample(connection);
+    await entityCollectionsExample(connection);
+    await nullableCollectionsExample(connection);
+    await cascadeDeleteExample(connection);
+
+    print('\n✓ All examples completed successfully!');
+  } catch (e, stackTrace) {
+    print('\n✗ Error: $e');
+    print(stackTrace);
+  } finally {
+    await connection.close();
+    print('\n✓ Connection closed');
+  }
 }

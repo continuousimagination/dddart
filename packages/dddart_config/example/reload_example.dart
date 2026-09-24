@@ -16,7 +16,12 @@ void main() async {
   print('=== Configuration Reload Example ===\n');
 
   // Create a temporary config file for this example
-  final tempConfigFile = File('example/temp_config.yaml');
+  final tempDirectory = await Directory.systemTemp.createTemp(
+    'dddart_config_reload_',
+  );
+  final tempConfigFile = File(
+    '${tempDirectory.path}${Platform.pathSeparator}config.yaml',
+  );
   await _writeConfigFile(tempConfigFile, version: 1);
 
   try {
@@ -57,8 +62,8 @@ void main() async {
 
     try {
       await config.reload();
-      print('✓ Reload succeeded (unexpected)');
-    } on FileAccessException catch (e) {
+      throw StateError('Invalid YAML unexpectedly reloaded');
+    } on ConfigException catch (e) {
       print('✗ Caught expected error during reload:');
       print('   ${e.message}');
     }
@@ -95,10 +100,9 @@ void main() async {
     print('4. Validate configuration after reload');
     print('5. Consider thread safety in concurrent applications');
   } finally {
-    // Clean up temporary file
-    if (await tempConfigFile.exists()) {
-      await tempConfigFile.delete();
-      print('\nCleaned up temporary config file.');
+    if (await tempDirectory.exists()) {
+      await tempDirectory.delete(recursive: true);
+      print('\nCleaned up temporary configuration directory.');
     }
   }
 }

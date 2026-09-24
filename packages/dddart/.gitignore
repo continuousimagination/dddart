@@ -27,3 +27,6 @@ doc/api/
 
 # Log files
 *.log
+
+# Reviewed tracked consumer artifacts must remain visible to Pub.
+!/example/pubspec.lock

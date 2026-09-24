@@ -17,132 +17,129 @@ import 'package:test/test.dart';
 
 void main() {
   group('Property 5: Event registry deserializes correctly', () {
-    test(
-      'should deserialize registered events correctly',
-      () async {
-        final random = Random(42);
+    test('should deserialize registered events correctly', () async {
+      final random = Random(42);
 
-        for (var i = 0; i < 100; i++) {
-          final eventBus = EventBus();
-          final receivedEvents = <DomainEvent>[];
+      for (var i = 0; i < 100; i++) {
+        final eventBus = EventBus();
+        final receivedEvents = <DomainEvent>[];
 
-          eventBus.on<DomainEvent>().listen(receivedEvents.add);
+        eventBus.on<DomainEvent>().listen(receivedEvents.add);
 
-          // Generate random events of different types
-          final eventCount = 1 + random.nextInt(10);
-          final serverEvents = <DomainEvent>[];
-          final baseTime = DateTime.now().add(const Duration(seconds: 1));
+        // Generate random events of different types
+        final eventCount = 1 + random.nextInt(10);
+        final serverEvents = <DomainEvent>[];
+        final baseTime = DateTime.now().add(const Duration(seconds: 1));
 
-          for (var j = 0; j < eventCount; j++) {
-            // Randomly choose event type
-            final eventType = random.nextInt(3);
-            final eventTime = baseTime.add(Duration(seconds: j));
+        for (var j = 0; j < eventCount; j++) {
+          // Randomly choose event type
+          final eventType = random.nextInt(3);
+          final eventTime = baseTime.add(Duration(seconds: j));
 
-            switch (eventType) {
-              case 0:
-                serverEvents
-                    .add(_generateTestEventAWithTimestamp(random, eventTime));
-              case 1:
-                serverEvents
-                    .add(_generateTestEventBWithTimestamp(random, eventTime));
-              case 2:
-                serverEvents
-                    .add(_generateTestEventCWithTimestamp(random, eventTime));
-            }
+          switch (eventType) {
+            case 0:
+              serverEvents.add(
+                _generateTestEventAWithTimestamp(random, eventTime),
+              );
+            case 1:
+              serverEvents.add(
+                _generateTestEventBWithTimestamp(random, eventTime),
+              );
+            case 2:
+              serverEvents.add(
+                _generateTestEventCWithTimestamp(random, eventTime),
+              );
           }
-
-          // Mock client that returns these events
-          final mockClient = MockClient((request) async {
-            if (request.url.path.endsWith('/events') &&
-                request.method == 'GET') {
-              final since = request.url.queryParameters['since'];
-              final sinceTimestamp = DateTime.parse(since!);
-
-              // Only return events after the since timestamp
-              final events = serverEvents
-                  .where((e) => e.occurredAt.isAfter(sinceTimestamp))
-                  .map(_eventToStoredEventJson)
-                  .toList();
-
-              return http.Response(
-                jsonEncode(events),
-                200,
-                headers: {'content-type': 'application/json'},
-              );
-            }
-            return http.Response('Not Found', 404);
-          });
-
-          // Create client with event registry
-          final client = EventBusClient(
-            localEventBus: eventBus,
-            serverUrl: 'http://test-server',
-            eventRegistry: {
-              'TestEventA': TestEventA.fromJson,
-              'TestEventB': TestEventB.fromJson,
-              'TestEventC': TestEventC.fromJson,
-            },
-            pollingInterval: const Duration(milliseconds: 50),
-            httpClient: mockClient,
-          );
-
-          // Wait for polling
-          await Future<void>.delayed(const Duration(milliseconds: 150));
-
-          // Verify all events were received and deserialized correctly
-          expect(
-            receivedEvents.length,
-            equals(eventCount),
-            reason: 'Iteration $i: all $eventCount events should be received',
-          );
-
-          // Verify each event was deserialized correctly
-          for (var j = 0; j < eventCount; j++) {
-            final serverEvent = serverEvents[j];
-            final receivedEvent = receivedEvents.firstWhere(
-              (e) => e.eventId == serverEvent.eventId,
-            );
-
-            expect(
-              receivedEvent.runtimeType,
-              equals(serverEvent.runtimeType),
-              reason: 'Iteration $i, Event $j: type should match',
-            );
-            expect(
-              receivedEvent.aggregateId,
-              equals(serverEvent.aggregateId),
-              reason: 'Iteration $i, Event $j: aggregateId should match',
-            );
-
-            // Verify type-specific data
-            if (serverEvent is TestEventA && receivedEvent is TestEventA) {
-              expect(
-                receivedEvent.dataA,
-                equals(serverEvent.dataA),
-                reason: 'Iteration $i, Event $j: dataA should match',
-              );
-            } else if (serverEvent is TestEventB &&
-                receivedEvent is TestEventB) {
-              expect(
-                receivedEvent.dataB,
-                equals(serverEvent.dataB),
-                reason: 'Iteration $i, Event $j: dataB should match',
-              );
-            } else if (serverEvent is TestEventC &&
-                receivedEvent is TestEventC) {
-              expect(
-                receivedEvent.dataC,
-                equals(serverEvent.dataC),
-                reason: 'Iteration $i, Event $j: dataC should match',
-              );
-            }
-          }
-
-          // Clean up
-          await client.close();
         }
-      },
-    );
+
+        // Mock client that returns these events
+        final mockClient = MockClient((request) async {
+          if (request.url.path.endsWith('/events') && request.method == 'GET') {
+            final since = request.url.queryParameters['since'];
+            final sinceTimestamp = DateTime.parse(since!);
+
+            // Only return events after the since timestamp
+            final events = serverEvents
+                .where((e) => e.occurredAt.isAfter(sinceTimestamp))
+                .map(_eventToStoredEventJson)
+                .toList();
+
+            return http.Response(
+              jsonEncode(events),
+              200,
+              headers: {'content-type': 'application/json'},
+            );
+          }
+          return http.Response('Not Found', 404);
+        });
+
+        // Create client with event registry
+        final client = EventBusClient(
+          localEventBus: eventBus,
+          serverUrl: 'http://test-server',
+          eventRegistry: {
+            'TestEventA': TestEventA.fromJson,
+            'TestEventB': TestEventB.fromJson,
+            'TestEventC': TestEventC.fromJson,
+          },
+          pollingInterval: const Duration(milliseconds: 50),
+          httpClient: mockClient,
+        );
+
+        // Wait for polling
+        await Future<void>.delayed(const Duration(milliseconds: 150));
+
+        // Verify all events were received and deserialized correctly
+        expect(
+          receivedEvents.length,
+          equals(eventCount),
+          reason: 'Iteration $i: all $eventCount events should be received',
+        );
+
+        // Verify each event was deserialized correctly
+        for (var j = 0; j < eventCount; j++) {
+          final serverEvent = serverEvents[j];
+          final receivedEvent = receivedEvents.firstWhere(
+            (e) => e.eventId == serverEvent.eventId,
+          );
+
+          expect(
+            receivedEvent.runtimeType,
+            equals(serverEvent.runtimeType),
+            reason: 'Iteration $i, Event $j: type should match',
+          );
+          expect(
+            receivedEvent.aggregateId,
+            equals(serverEvent.aggregateId),
+            reason: 'Iteration $i, Event $j: aggregateId should match',
+          );
+
+          // Verify type-specific data
+          if (serverEvent is TestEventA && receivedEvent is TestEventA) {
+            expect(
+              receivedEvent.dataA,
+              equals(serverEvent.dataA),
+              reason: 'Iteration $i, Event $j: dataA should match',
+            );
+          } else if (serverEvent is TestEventB && receivedEvent is TestEventB) {
+            expect(
+              receivedEvent.dataB,
+              equals(serverEvent.dataB),
+              reason: 'Iteration $i, Event $j: dataB should match',
+            );
+          } else if (serverEvent is TestEventC && receivedEvent is TestEventC) {
+            expect(
+              receivedEvent.dataC,
+              equals(serverEvent.dataC),
+              reason: 'Iteration $i, Event $j: dataC should match',
+            );
+          }
+        }
+
+        // Clean up
+        await client.close();
+      }
+    });
 
     test(
       'should preserve event data through serialization round-trip',
@@ -194,9 +191,7 @@ void main() {
           final client = EventBusClient(
             localEventBus: eventBus,
             serverUrl: 'http://test-server',
-            eventRegistry: {
-              'TestEventA': TestEventA.fromJson,
-            },
+            eventRegistry: {'TestEventA': TestEventA.fromJson},
             pollingInterval: const Duration(milliseconds: 50),
             httpClient: mockClient,
           );
@@ -251,88 +246,83 @@ void main() {
       },
     );
 
-    test(
-      'should handle events with null optional fields',
-      () async {
-        final random = Random(44);
+    test('should handle events with null optional fields', () async {
+      final random = Random(44);
 
-        for (var i = 0; i < 100; i++) {
-          final eventBus = EventBus();
-          final receivedEvents = <TestEventB>[];
+      for (var i = 0; i < 100; i++) {
+        final eventBus = EventBus();
+        final receivedEvents = <TestEventB>[];
 
-          eventBus.on<TestEventB>().listen(receivedEvents.add);
+        eventBus.on<TestEventB>().listen(receivedEvents.add);
 
-          // Generate event with random null fields
-          final eventTime = DateTime.now().add(const Duration(seconds: 1));
-          final originalEvent = TestEventB(
-            aggregateId: UuidValue.generate(),
-            eventId: UuidValue.generate(),
-            occurredAt: eventTime,
-            dataB: 'test-${random.nextInt(1000)}',
-            optionalField:
-                random.nextBool() ? 'value-${random.nextInt(100)}' : null,
-          );
+        // Generate event with random null fields
+        final eventTime = DateTime.now().add(const Duration(seconds: 1));
+        final originalEvent = TestEventB(
+          aggregateId: UuidValue.generate(),
+          eventId: UuidValue.generate(),
+          occurredAt: eventTime,
+          dataB: 'test-${random.nextInt(1000)}',
+          optionalField: random.nextBool()
+              ? 'value-${random.nextInt(100)}'
+              : null,
+        );
 
-          // Mock client
-          final mockClient = MockClient((request) async {
-            if (request.url.path.endsWith('/events') &&
-                request.method == 'GET') {
-              final since = request.url.queryParameters['since'];
-              final sinceTimestamp = DateTime.parse(since!);
+        // Mock client
+        final mockClient = MockClient((request) async {
+          if (request.url.path.endsWith('/events') && request.method == 'GET') {
+            final since = request.url.queryParameters['since'];
+            final sinceTimestamp = DateTime.parse(since!);
 
-              // Only return event if it's after the since timestamp
-              final events = originalEvent.occurredAt.isAfter(sinceTimestamp)
-                  ? [_eventToStoredEventJson(originalEvent)]
-                  : <Map<String, dynamic>>[];
+            // Only return event if it's after the since timestamp
+            final events = originalEvent.occurredAt.isAfter(sinceTimestamp)
+                ? [_eventToStoredEventJson(originalEvent)]
+                : <Map<String, dynamic>>[];
 
-              return http.Response(
-                jsonEncode(events),
-                200,
-                headers: {'content-type': 'application/json'},
-              );
-            }
-            return http.Response('Not Found', 404);
-          });
+            return http.Response(
+              jsonEncode(events),
+              200,
+              headers: {'content-type': 'application/json'},
+            );
+          }
+          return http.Response('Not Found', 404);
+        });
 
-          final client = EventBusClient(
-            localEventBus: eventBus,
-            serverUrl: 'http://test-server',
-            eventRegistry: {
-              'TestEventB': TestEventB.fromJson,
-            },
-            pollingInterval: const Duration(milliseconds: 50),
-            httpClient: mockClient,
-          );
+        final client = EventBusClient(
+          localEventBus: eventBus,
+          serverUrl: 'http://test-server',
+          eventRegistry: {'TestEventB': TestEventB.fromJson},
+          pollingInterval: const Duration(milliseconds: 50),
+          httpClient: mockClient,
+        );
 
-          // Wait for polling
-          await Future<void>.delayed(const Duration(milliseconds: 150));
+        // Wait for polling
+        await Future<void>.delayed(const Duration(milliseconds: 150));
 
-          // Verify event was received
-          expect(
-            receivedEvents.length,
-            equals(1),
-            reason: 'Iteration $i: event should be received',
-          );
+        // Verify event was received
+        expect(
+          receivedEvents.length,
+          equals(1),
+          reason: 'Iteration $i: event should be received',
+        );
 
-          final receivedEvent = receivedEvents.first;
+        final receivedEvent = receivedEvents.first;
 
-          // Verify fields match including null handling
-          expect(
-            receivedEvent.dataB,
-            equals(originalEvent.dataB),
-            reason: 'Iteration $i: dataB should match',
-          );
-          expect(
-            receivedEvent.optionalField,
-            equals(originalEvent.optionalField),
-            reason: 'Iteration $i: optionalField should match (null or value)',
-          );
+        // Verify fields match including null handling
+        expect(
+          receivedEvent.dataB,
+          equals(originalEvent.dataB),
+          reason: 'Iteration $i: dataB should match',
+        );
+        expect(
+          receivedEvent.optionalField,
+          equals(originalEvent.optionalField),
+          reason: 'Iteration $i: optionalField should match (null or value)',
+        );
 
-          // Clean up
-          await client.close();
-        }
-      },
-    );
+        // Clean up
+        await client.close();
+      }
+    });
   });
 }
 
