@@ -148,6 +148,12 @@ jobs:
   dynamodb-packages:
     needs: inventory
     runs-on: ubuntu-latest
+    env:
+      SSG_LOCAL_DYNAMO_ENDPOINT: http://127.0.0.1:8000
+      AWS_ACCESS_KEY_ID: local-test-key
+      AWS_SECRET_ACCESS_KEY: local-test-secret
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_EC2_METADATA_DISABLED: 'true'
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.inventory.outputs.dynamodb) }}

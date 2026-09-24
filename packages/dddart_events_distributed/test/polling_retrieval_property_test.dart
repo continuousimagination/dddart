@@ -16,6 +16,106 @@ import 'package:http/testing.dart';
 import 'package:test/test.dart';
 
 void main() {
+  group('Controlled polling lifecycle', () {
+    test(
+      'slow overlapping ticks deliver each event exactly once and advance cursor',
+      () async {
+        final harness = _ControlledPolling();
+        addTearDown(harness.close);
+        harness.timer.fire();
+        await _drain();
+        harness.timer.fire();
+        harness.timer.fire();
+        await _drain();
+        final first = harness.event(1);
+        harness.respondAll([first]);
+        await _drain();
+        expect(harness.received, hasLength(1));
+        expect(harness.received.single.eventId, first.eventId);
+        expect(harness.maximumActive, 1);
+        expect(harness.requests, hasLength(1));
+
+        final second = harness.event(2);
+        harness.timer.fire();
+        await _drain();
+        expect(
+          DateTime.parse(harness.requests.last.uri.queryParameters['since']!),
+          first.occurredAt.add(const Duration(microseconds: 1)),
+        );
+        harness.respondAll([second]);
+        await _drain();
+        expect(harness.received.map((event) => event.eventId), [
+          first.eventId,
+          second.eventId,
+        ]);
+        expect(harness.maximumActive, 1);
+      },
+    );
+
+    test(
+      'close waits for the active poll and rejects late delivery and new work',
+      () async {
+        final harness = _ControlledPolling();
+        addTearDown(harness.close);
+        harness.timer.fire();
+        await _drain();
+        var completed = false;
+        final closing = harness.client.close();
+        expect(identical(closing, harness.client.close()), isTrue);
+        unawaited(closing.then((_) => completed = true));
+        await _drain();
+        expect(completed, isFalse);
+        expect(harness.transport.closes, 1);
+        expect(harness.timer.isActive, isFalse);
+        expect(
+          () => harness.client.publish(harness.event(3)),
+          throwsStateError,
+        );
+        harness.timer.fire();
+        expect(harness.requests, hasLength(1));
+        harness.respondAll([harness.event(1)]);
+        await closing;
+        expect(harness.received, isEmpty);
+        expect(harness.bus.isClosed, isTrue);
+        await harness.client.close();
+        expect(harness.transport.closes, 1);
+      },
+    );
+
+    for (final failure in ['status', 'malformed', 'transport']) {
+      test(
+        '$failure failure releases the poll slot for later delivery',
+        () async {
+          final harness = _ControlledPolling();
+          addTearDown(harness.close);
+          harness.timer.fire();
+          await _drain();
+          final response = harness.requests.single.response;
+          if (failure == 'transport') {
+            response.completeError(http.ClientException('synthetic failure'));
+          } else {
+            response.complete(
+              http.Response(
+                failure == 'malformed' ? '{' : '[]',
+                failure == 'status' ? 503 : 200,
+              ),
+            );
+          }
+          await _drain();
+          expect(harness.received, isEmpty);
+          expect(harness.requests, hasLength(1));
+          harness.timer.fire();
+          await _drain();
+          final later = harness.event(2);
+          harness.respondAll([later]);
+          await _drain();
+          expect(harness.received, hasLength(1));
+          expect(harness.received.single.eventId, later.eventId);
+          expect(harness.maximumActive, 1);
+        },
+      );
+    }
+  });
   group('Property 4: Polling retrieves new events', () {
     test('should retrieve all events since last timestamp', () async {
       final random = Random(42);
@@ -392,6 +492,105 @@ Map<String, dynamic> _eventToStoredEventJson(TestDomainEvent event) {
 }
 
 // Test implementations
+
+Future<void> _drain() => Future<void>.delayed(Duration.zero);
+
+class _ControlledTimer implements Timer {
+  _ControlledTimer(this.callback);
+  final void Function(Timer) callback;
+  @override
+  bool isActive = true;
+  @override
+  int tick = 0;
+  void fire() {
+    if (!isActive) return;
+    tick++;
+    callback(this);
+  }
+
+  @override
+  void cancel() => isActive = false;
+}
+
+class _PendingPoll {
+  _PendingPoll(this.uri);
+  final Uri uri;
+  final response = Completer<http.Response>();
+}
+
+class _PollTransport extends MockClient {
+  _PollTransport(super.handler);
+  int closes = 0;
+  @override
+  void close() {
+    closes++;
+    super.close();
+  }
+}
+
+class _ControlledPolling {
+  _ControlledPolling() {
+    bus.on<TestDomainEvent>().listen(received.add);
+    transport = _PollTransport((request) async {
+      final pending = _PendingPoll(request.url);
+      requests.add(pending);
+      active++;
+      maximumActive = max(maximumActive, active);
+      try {
+        return await pending.response.future;
+      } finally {
+        active--;
+      }
+    });
+    client = runZoned(
+      () => EventBusClient(
+        localEventBus: bus,
+        serverUrl: 'http://synthetic.invalid',
+        eventRegistry: {'TestDomainEvent': TestDomainEvent.fromJson},
+        initialTimestamp: DateTime.utc(2026),
+        httpClient: transport,
+      ),
+      zoneSpecification: ZoneSpecification(
+        createPeriodicTimer: (self, parent, zone, duration, callback) {
+          return timer = _ControlledTimer(zone.bindUnaryCallback(callback));
+        },
+      ),
+    );
+  }
+  final bus = EventBus();
+  final received = <TestDomainEvent>[];
+  final requests = <_PendingPoll>[];
+  late final _PollTransport transport;
+  late final EventBusClient client;
+  late final _ControlledTimer timer;
+  int active = 0;
+  int maximumActive = 0;
+  TestDomainEvent event(int sequence) => TestDomainEvent(
+    aggregateId: UuidValue.fromString('00000000-0000-4000-8000-000000000001'),
+    eventId: UuidValue.fromString(
+      '00000000-0000-4000-8000-${sequence.toString().padLeft(12, '0')}',
+    ),
+    occurredAt: DateTime.utc(2026, 1, 1, 0, 0, sequence),
+    data: 'synthetic-$sequence',
+  );
+  void respondAll(List<TestDomainEvent> events) {
+    for (final request in requests) {
+      if (!request.response.isCompleted) {
+        request.response.complete(
+          http.Response(
+            jsonEncode(events.map(_eventToStoredEventJson).toList()),
+            200,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> close() async {
+    respondAll([]);
+    await client.close();
+  }
+}
 
 /// Test DomainEvent for property testing.
 class TestDomainEvent extends DomainEvent {

@@ -10,6 +10,20 @@ Future<void> main() async {
   final inventory = loadInventory(repositoryRoot);
 
   validateInventoryShape(inventory);
+  final workflow = File(
+    '$repositoryRoot/.github/workflows/test.yml',
+  ).readAsStringSync();
+  final dynamoJob = workflow
+      .split('  dynamodb-packages:\n')[1]
+      .split('  mysql-packages:\n')[0];
+  final dynamoPort = RegExp(r'- (\d+):8000').firstMatch(dynamoJob)!.group(1);
+  _expect(
+    dynamoJob.contains(
+      'SSG_LOCAL_DYNAMO_ENDPOINT: http://127.0.0.1:$dynamoPort',
+    ),
+    'Dynamo package CI binds conditional integration '
+    'to its declared local service',
+  );
   final restExample = inventory.examples['dddart_repository_rest_example']!;
   const restClosure = {
     'dddart',
