@@ -92,10 +92,7 @@ void main() {
     });
 
     test('should handle nullable enum fields', () {
-      const player = TestPlayer(
-        name: 'Alice',
-        role: PlayerRole.admin,
-      );
+      const player = TestPlayer(name: 'Alice', role: PlayerRole.admin);
 
       final serializer = TestPlayerJsonSerializer();
       final json = serializer.toJson(player);

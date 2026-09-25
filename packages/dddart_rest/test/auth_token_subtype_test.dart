@@ -194,10 +194,7 @@ void main() {
 
         expect(refreshed.refreshToken, issued.refreshToken);
         expect(claimsLoaderCalls, ['custom-user', 'custom-user']);
-        expect(
-          inMemoryRepository.getAllSync().single,
-          same(storedAfterIssue),
-        );
+        expect(inMemoryRepository.getAllSync().single, same(storedAfterIssue));
 
         await handler.revoke(issued.refreshToken);
         final storedAfterRevoke = inMemoryRepository.getAllSync().single;
@@ -250,24 +247,25 @@ void main() {
         const deviceCodeLifecycle = CustomDeviceCodeLifecycle();
         final inMemoryRepository =
             InMemoryDeviceCodeRepository<CustomDeviceCode>(
-          lifecycle: deviceCodeLifecycle,
-        );
+              lifecycle: deviceCodeLifecycle,
+            );
         final DeviceCodeRepository<CustomDeviceCode> deviceCodeRepository =
             inMemoryRepository;
         final Repository<CustomDeviceCode> repository = deviceCodeRepository;
         expect(repository, same(inMemoryRepository));
         final endpoints =
             AuthEndpoints<StandardClaims, RefreshToken, CustomDeviceCode>(
-          authHandler: authHandler,
-          deviceCodeRepository: deviceCodeRepository,
-          deviceCodeLifecycle: deviceCodeLifecycle,
-          userValidator: (username, password) async {
-            if (username == 'custom-user' && password == 'correct-password') {
-              return 'custom-user-id';
-            }
-            return null;
-          },
-        );
+              authHandler: authHandler,
+              deviceCodeRepository: deviceCodeRepository,
+              deviceCodeLifecycle: deviceCodeLifecycle,
+              userValidator: (username, password) async {
+                if (username == 'custom-user' &&
+                    password == 'correct-password') {
+                  return 'custom-user-id';
+                }
+                return null;
+              },
+            );
 
         final createResponse = await endpoints.handleDeviceCode(
           Request(
@@ -276,8 +274,9 @@ void main() {
             body: jsonEncode({'client_id': 'custom-client'}),
           ),
         );
-        final createJson = jsonDecode(await createResponse.readAsString())
-            as Map<String, dynamic>;
+        final createJson =
+            jsonDecode(await createResponse.readAsString())
+                as Map<String, dynamic>;
         final storedAfterCreate = inMemoryRepository.getAllSync().single;
 
         expect(createResponse.statusCode, 200);
@@ -295,11 +294,10 @@ void main() {
           Request(
             'POST',
             Uri.parse('http://localhost/auth/device/verify'),
-            body: 'user_code=${storedAfterCreate.userCode}'
+            body:
+                'user_code=${storedAfterCreate.userCode}'
                 '&username=custom-user&password=correct-password',
-            headers: {
-              'content-type': 'application/x-www-form-urlencoded',
-            },
+            headers: {'content-type': 'application/x-www-form-urlencoded'},
           ),
         );
         final storedAfterApproval = inMemoryRepository.getAllSync().single;
@@ -351,15 +349,10 @@ void main() {
         expect(consumed.updatedAt, consumedAt);
 
         final serializer = CustomDeviceCodeJsonSerializer();
-        final restored = serializer.deserialize(
-          serializer.serialize(consumed),
-        );
+        final restored = serializer.deserialize(serializer.serialize(consumed));
 
         expect(restored, isA<CustomDeviceCode>());
-        expect(
-          restored.verificationChannel,
-          consumed.verificationChannel,
-        );
+        expect(restored.verificationChannel, consumed.verificationChannel);
         expect(restored.id, consumed.id);
         expect(restored.deviceCode, consumed.deviceCode);
         expect(restored.userCode, consumed.userCode);

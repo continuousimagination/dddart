@@ -17,71 +17,68 @@ import 'package:test/test.dart';
 
 void main() {
   group('Property 10: Disabled forwarding prevents automatic POST', () {
-    test(
-      'should not POST events when autoForward is disabled',
-      () async {
-        final random = Random(42);
+    test('should not POST events when autoForward is disabled', () async {
+      final random = Random(42);
 
-        for (var i = 0; i < 100; i++) {
-          final eventBus = EventBus();
-          var postCount = 0;
+      for (var i = 0; i < 100; i++) {
+        final eventBus = EventBus();
+        var postCount = 0;
 
-          // Mock client that counts POST requests
-          final mockClient = MockClient((request) async {
-            if (request.url.path.endsWith('/events')) {
-              if (request.method == 'POST') {
-                postCount++;
-                return http.Response(
-                  jsonEncode({
-                    'id': 'test-id',
-                    'createdAt': DateTime.now().toIso8601String(),
-                  }),
-                  201,
-                  headers: {'content-type': 'application/json'},
-                );
-              } else if (request.method == 'GET') {
-                // Return empty for polling
-                return http.Response(
-                  jsonEncode([]),
-                  200,
-                  headers: {'content-type': 'application/json'},
-                );
-              }
+        // Mock client that counts POST requests
+        final mockClient = MockClient((request) async {
+          if (request.url.path.endsWith('/events')) {
+            if (request.method == 'POST') {
+              postCount++;
+              return http.Response(
+                jsonEncode({
+                  'id': 'test-id',
+                  'createdAt': DateTime.now().toIso8601String(),
+                }),
+                201,
+                headers: {'content-type': 'application/json'},
+              );
+            } else if (request.method == 'GET') {
+              // Return empty for polling
+              return http.Response(
+                jsonEncode([]),
+                200,
+                headers: {'content-type': 'application/json'},
+              );
             }
-            return http.Response('Not Found', 404);
-          });
-
-          // Create client with autoForward disabled (default)
-          final client = EventBusClient(
-            localEventBus: eventBus,
-            serverUrl: 'http://test-server',
-            eventRegistry: {},
-            pollingInterval: const Duration(seconds: 10), // Long interval
-            httpClient: mockClient,
-          );
-
-          // Generate and publish random events
-          final eventCount = 1 + random.nextInt(10);
-          for (var j = 0; j < eventCount; j++) {
-            final event = _generateRandomTestEvent(random);
-            eventBus.publish(event);
           }
+          return http.Response('Not Found', 404);
+        });
 
-          // Wait to ensure no forwarding happens
-          await Future<void>.delayed(const Duration(milliseconds: 100));
+        // Create client with autoForward disabled (default)
+        final client = EventBusClient(
+          localEventBus: eventBus,
+          serverUrl: 'http://test-server',
+          eventRegistry: {},
+          pollingInterval: const Duration(seconds: 10), // Long interval
+          httpClient: mockClient,
+        );
 
-          // Verify no POST requests were made
-          expect(
-            postCount,
-            equals(0),
-            reason: 'Iteration $i: no POST requests should be made',
-          );
-
-          // Clean up
-          await client.close();
+        // Generate and publish random events
+        final eventCount = 1 + random.nextInt(10);
+        for (var j = 0; j < eventCount; j++) {
+          final event = _generateRandomTestEvent(random);
+          eventBus.publish(event);
         }
-      },
-    );
+
+        // Wait to ensure no forwarding happens
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+
+        // Verify no POST requests were made
+        expect(
+          postCount,
+          equals(0),
+          reason: 'Iteration $i: no POST requests should be made',
+        );
+
+        // Clean up
+        await client.close();
+      }
+    });
 
     test(
       'should not POST events when autoForward is omitted (defaults to false)',
@@ -208,9 +205,7 @@ void main() {
           final client = EventBusClient(
             localEventBus: eventBus,
             serverUrl: 'http://test-server',
-            eventRegistry: {
-              'TestEvent': TestEvent.fromJson,
-            },
+            eventRegistry: {'TestEvent': TestEvent.fromJson},
             pollingInterval: const Duration(milliseconds: 50),
             httpClient: mockClient,
           );

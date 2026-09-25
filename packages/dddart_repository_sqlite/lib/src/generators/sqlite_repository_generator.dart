@@ -19,10 +19,7 @@ import 'package:source_gen/source_gen.dart';
 /// The builder uses [SharedPartBuilder] to generate `.sqlite_repository.g.part`
 /// files for classes annotated with [@GenerateSqliteRepository].
 Builder sqliteRepositoryBuilder(BuilderOptions options) {
-  return SharedPartBuilder(
-    [SqliteRepositoryGenerator()],
-    'sqlite_repository',
-  );
+  return SharedPartBuilder([SqliteRepositoryGenerator()], 'sqlite_repository');
 }
 
 /// Generator for SQLite repository implementations.
@@ -47,7 +44,18 @@ class SqliteRepositoryGenerator
     }
 
     final classElement = element;
-    final className = classElement.name;
+    final className = classElement.name!;
+    if (classElement.allSupertypes.any(
+      (type) =>
+          type.element.name == 'VersionedAggregateRoot' &&
+          type.element.library.uri.toString() ==
+              'package:dddart/src/versioned_aggregate_root.dart',
+    )) {
+      throw InvalidGenerationSourceError(
+        'This backend does not support conditional persistence for versioned roots.',
+        element: element,
+      );
+    }
 
     // Validate class extends AggregateRoot
     if (!_extendsAggregateRoot(classElement)) {
@@ -68,6 +76,21 @@ class SqliteRepositoryGenerator
     // Extract configuration from annotation
     final tableName = _extractTableName(annotation, className);
     final customInterface = _extractImplementsInterface(annotation);
+    if (customInterface != null &&
+        [
+          customInterface.element,
+          ...customInterface.allSupertypes.map((type) => type.element),
+        ].any(
+          (type) =>
+              type.name == 'ConditionalRepository' &&
+              type.library.uri.toString() ==
+                  'package:dddart/src/conditional_repository.dart',
+        )) {
+      throw InvalidGenerationSourceError(
+        'This backend does not support conditional repository interfaces.',
+        element: element,
+      );
+    }
 
     // Analyze object graph to generate table definitions
     final tables = _analyzeObjectGraph(classElement, tableName);
@@ -144,7 +167,7 @@ class SqliteRepositoryGenerator
 
   /// Validates that a class has the @Serializable annotation.
   bool _hasSerializableAnnotation(ClassElement element) {
-    return element.metadata.any((annotation) {
+    return element.metadata.annotations.any((annotation) {
       final value = annotation.computeConstantValue();
       if (value == null) return false;
       final typeName = value.type?.element?.name;
@@ -180,11 +203,11 @@ class SqliteRepositoryGenerator
 
     // Get methods from all superinterfaces (including Repository<T>)
     for (final supertype in interfaceType.allSupertypes) {
-      final supertypeName = supertype.element.name;
+      final supertypeName = supertype.element.name!;
       // Skip Object and system classes
       if (supertypeName == 'Object' ||
           supertypeName.startsWith('_') ||
-          supertype.element.library.name.startsWith('dart.')) {
+          supertype.element.library.isInSdk) {
         continue;
       }
       methods.addAll(supertype.methods);
@@ -234,7 +257,7 @@ class SqliteRepositoryGenerator
       } catch (e) {
         if (e is UnsupportedError) {
           throw InvalidGenerationSourceError(
-            'Unsupported collection type in field "${field.name}":\n${e.message}',
+            'Unsupported collection type in field "${field.name!}":\n${e.message}',
             element: field,
           );
         }
@@ -243,7 +266,7 @@ class SqliteRepositoryGenerator
 
       final collectionInfo = collectionAnalyzer.analyzeCollection(field);
       if (collectionInfo != null) {
-        _collectionFields[field.name] = collectionInfo;
+        _collectionFields[field.name!] = collectionInfo;
       }
     }
 
@@ -259,7 +282,7 @@ class SqliteRepositoryGenerator
       // Use the provided table name for the aggregate root, snake_case for others
       final tableName = classElement == aggregateRoot
           ? aggregateTableName
-          : _toSnakeCase(classElement.name);
+          : _toSnakeCase(classElement.name!);
 
       final tableDef = _generateTableDefinition(
         classElement,
@@ -268,7 +291,7 @@ class SqliteRepositoryGenerator
         dialect,
         tableName,
       );
-      tables[classElement.name] = tableDef;
+      tables[classElement.name!] = tableDef;
     }
 
     // Add parent foreign keys to entity tables
@@ -340,17 +363,18 @@ class SqliteRepositoryGenerator
         // Store the mapping from entity class to field name
         // (use the first field name if entity is in multiple collections)
         if (!_entityToFieldName.containsKey(entityClass.name)) {
-          _entityToFieldName[entityClass.name] = field.name;
+          _entityToFieldName[entityClass.name!] = field.name!;
         }
 
         // This is an entity in a collection - add parent FK
-        final entityTable = tables[entityClass.name];
+        final entityTable = tables[entityClass.name!];
         if (entityTable != null) {
           final fkColumnName = '${aggregateTableName.replaceAll('_', '')}_id';
 
           // Check if FK column already exists (entity used in multiple collections)
-          final fkExists =
-              entityTable.columns.any((c) => c.name == fkColumnName);
+          final fkExists = entityTable.columns.any(
+            (c) => c.name == fkColumnName,
+          );
 
           if (!fkExists) {
             // Add foreign key column
@@ -380,7 +404,7 @@ class SqliteRepositoryGenerator
               isAggregateRoot: false,
             );
 
-            tables[entityClass.name] = updatedTable;
+            tables[entityClass.name!] = updatedTable;
           }
         }
       }
@@ -399,7 +423,7 @@ class SqliteRepositoryGenerator
 
       if (!seenFields.contains(field.name)) {
         fields.add(field);
-        seenFields.add(field.name);
+        seenFields.add(field.name!);
       }
     }
 
@@ -415,7 +439,7 @@ class SqliteRepositoryGenerator
 
         if (!seenFields.contains(field.name)) {
           fields.add(field);
-          seenFields.add(field.name);
+          seenFields.add(field.name!);
         }
       }
 
@@ -445,7 +469,7 @@ class SqliteRepositoryGenerator
       if (field.isStatic) continue;
 
       final fieldType = field.type;
-      final fieldName = field.name;
+      final fieldName = field.name!;
 
       // Handle List<T> - these become separate tables with FKs
       if (fieldType.isDartCoreList) {
@@ -457,13 +481,14 @@ class SqliteRepositoryGenerator
       final referencedClass = _getReferencedClass(fieldType);
       if (referencedClass != null && _analyzer.isValueObject(referencedClass)) {
         // Special case: UuidValue should be stored as BLOB, not embedded
-        if (referencedClass.name == 'UuidValue') {
+        if (referencedClass.name! == 'UuidValue') {
           final column = ColumnDefinition(
             name: fieldName,
             sqlType: 'BLOB',
             dartType: 'UuidValue',
-            isNullable:
-                fieldType.nullabilitySuffix.toString().contains('question'),
+            isNullable: fieldType.nullabilitySuffix.toString().contains(
+              'question',
+            ),
             isPrimaryKey: fieldName == 'id',
             isForeignKey: false,
           );
@@ -492,8 +517,9 @@ class SqliteRepositoryGenerator
           name: '${fieldName}_id',
           sqlType: 'BLOB',
           dartType: 'UuidValue',
-          isNullable:
-              fieldType.nullabilitySuffix.toString().contains('question'),
+          isNullable: fieldType.nullabilitySuffix.toString().contains(
+            'question',
+          ),
           isPrimaryKey: false,
           isForeignKey: true,
         );
@@ -501,13 +527,14 @@ class SqliteRepositoryGenerator
 
         // Add foreign key constraint
         final cascadeAction = _analyzer.isAggregateRoot(referencedClass)
-            ? CascadeAction.restrict // Don't cascade across aggregates
+            ? CascadeAction
+                  .restrict // Don't cascade across aggregates
             : CascadeAction.cascade; // Cascade within aggregate
 
         foreignKeys.add(
           ForeignKeyDefinition(
             columnName: '${fieldName}_id',
-            referencedTable: _toSnakeCase(referencedClass.name),
+            referencedTable: _toSnakeCase(referencedClass.name!),
             referencedColumn: 'id',
             onDelete: cascadeAction,
           ),
@@ -525,8 +552,9 @@ class SqliteRepositoryGenerator
             name: fieldName,
             sqlType: sqlType,
             dartType: dartTypeName,
-            isNullable:
-                fieldType.nullabilitySuffix.toString().contains('question'),
+            isNullable: fieldType.nullabilitySuffix.toString().contains(
+              'question',
+            ),
             isPrimaryKey: fieldName == 'id',
             isForeignKey: false,
           ),
@@ -551,7 +579,7 @@ class SqliteRepositoryGenerator
 
     return TableDefinition(
       tableName: tableName,
-      className: classElement.name,
+      className: classElement.name!,
       columns: columns,
       foreignKeys: foreignKeys,
       isAggregateRoot: _analyzer.isAggregateRoot(classElement),
@@ -580,10 +608,11 @@ class SqliteRepositoryGenerator
       if (sqlType != null) {
         columns.add(
           ColumnDefinition(
-            name: '${prefix}_${field.name}',
+            name: '${prefix}_${field.name!}',
             sqlType: sqlType,
             dartType: dartTypeName,
-            isNullable: isNullable ||
+            isNullable:
+                isNullable ||
                 fieldType.nullabilitySuffix.toString().contains('question'),
             isPrimaryKey: false,
             isForeignKey: false,
@@ -705,8 +734,9 @@ class SqliteRepositoryGenerator
 
     buffer.writeln('  /// Creates all tables for this aggregate.');
     buffer.writeln('  ///');
-    buffer
-        .writeln('  /// This method should be called once during application');
+    buffer.writeln(
+      '  /// This method should be called once during application',
+    );
     buffer.writeln('  /// initialization to ensure all required tables exist.');
     buffer.writeln('  ///');
     buffer.writeln(
@@ -734,8 +764,9 @@ class SqliteRepositoryGenerator
       final collectionInfo = entry.value;
       final junctionTableName = '${tableName}_$fieldName';
 
-      buffer
-          .writeln('      // Create junction table for collection: $fieldName');
+      buffer.writeln(
+        '      // Create junction table for collection: $fieldName',
+      );
       buffer.writeln('      await _connection.execute(');
       buffer.writeln("        '''");
       buffer.writeln(
@@ -765,10 +796,7 @@ class SqliteRepositoryGenerator
     // Add columns
     final columnDefs = <String>[];
     for (final column in table.columns) {
-      final parts = <String>[
-        '"${column.name}"',
-        column.sqlType,
-      ];
+      final parts = <String>['"${column.name}"', column.sqlType];
 
       if (column.isPrimaryKey) {
         parts.add('PRIMARY KEY');
@@ -855,8 +883,9 @@ class SqliteRepositoryGenerator
     switch (collectionInfo.elementKind) {
       case ElementKind.primitive:
         // Single value column for primitives
-        final elementTypeName =
-            collectionInfo.elementType.getDisplayString(withNullability: false);
+        final elementTypeName = collectionInfo.elementType.getDisplayString(
+          withNullability: false,
+        );
         final sqlType =
             typeMapper.getSqlType(elementTypeName, dialect) ?? 'TEXT';
         // Check if element type is nullable
@@ -877,17 +906,19 @@ class SqliteRepositoryGenerator
               // Skip static fields, synthetic fields, and the props getter
               if (field.isStatic ||
                   field.isSynthetic ||
-                  field.name == 'props') {
+                  field.name! == 'props') {
                 continue;
               }
-              final fieldTypeName =
-                  field.type.getDisplayString(withNullability: false);
+              final fieldTypeName = field.type.getDisplayString(
+                withNullability: false,
+              );
               final sqlType =
                   typeMapper.getSqlType(fieldTypeName, dialect) ?? 'TEXT';
-              final isNullable =
-                  field.type.nullabilitySuffix.toString().contains('question');
+              final isNullable = field.type.nullabilitySuffix
+                  .toString()
+                  .contains('question');
               columnDefs.add(
-                '  "${field.name}" $sqlType${isNullable ? '' : ' NOT NULL'}',
+                '  "${field.name!}" $sqlType${isNullable ? '' : ' NOT NULL'}',
               );
             }
           }
@@ -909,8 +940,8 @@ class SqliteRepositoryGenerator
             for (final field in allFields) {
               // Skip static fields, id, and props getter
               if (field.isStatic ||
-                  field.name == 'id' ||
-                  field.name == 'props') {
+                  field.name! == 'id' ||
+                  field.name! == 'props') {
                 continue;
               }
 
@@ -926,7 +957,7 @@ class SqliteRepositoryGenerator
                         .toString()
                         .contains('question');
                     columnDefs.add(
-                      '  "${field.name}" BLOB${isNullable ? '' : ' NOT NULL'}',
+                      '  "${field.name!}" BLOB${isNullable ? '' : ' NOT NULL'}',
                     );
                     continue;
                   }
@@ -938,16 +969,17 @@ class SqliteRepositoryGenerator
                         valueField.name == 'props') {
                       continue;
                     }
-                    final valueFieldTypeName = valueField.type
-                        .getDisplayString(withNullability: false);
+                    final valueFieldTypeName = valueField.type.getDisplayString(
+                      withNullability: false,
+                    );
                     final sqlType =
                         typeMapper.getSqlType(valueFieldTypeName, dialect) ??
-                            'TEXT';
+                        'TEXT';
                     final isNullable = valueField.type.nullabilitySuffix
                         .toString()
                         .contains('question');
                     columnDefs.add(
-                      '  "${field.name}_${valueField.name}" $sqlType${isNullable ? '' : ' NOT NULL'}',
+                      '  "${field.name!}_${valueField.name}" $sqlType${isNullable ? '' : ' NOT NULL'}',
                     );
                   }
                   continue;
@@ -955,14 +987,16 @@ class SqliteRepositoryGenerator
               }
 
               // Regular field (not a value object)
-              final fieldTypeName =
-                  field.type.getDisplayString(withNullability: false);
+              final fieldTypeName = field.type.getDisplayString(
+                withNullability: false,
+              );
               final sqlType =
                   typeMapper.getSqlType(fieldTypeName, dialect) ?? 'TEXT';
-              final isNullable =
-                  field.type.nullabilitySuffix.toString().contains('question');
+              final isNullable = field.type.nullabilitySuffix
+                  .toString()
+                  .contains('question');
               columnDefs.add(
-                '  "${field.name}" $sqlType${isNullable ? '' : ' NOT NULL'}',
+                '  "${field.name!}" $sqlType${isNullable ? '' : ' NOT NULL'}',
               );
             }
           }
@@ -1118,7 +1152,7 @@ class SqliteRepositoryGenerator
       if (collectionInfo.elementKind == ElementKind.entity) {
         if (collectionInfo.elementType is InterfaceType) {
           final interfaceType = collectionInfo.elementType as InterfaceType;
-          final className = interfaceType.element.name;
+          final className = interfaceType.element.name!;
           collectionEntityClasses.add(className);
         }
       }
@@ -1174,6 +1208,9 @@ class SqliteRepositoryGenerator
     final buffer = StringBuffer();
     buffer.writeln('  @override');
     buffer.writeln('  Future<void> save($className aggregate) async {');
+    buffer.writeln('    if (aggregate is VersionedAggregateRoot) {');
+    buffer.writeln('      throw const RepositoryCapabilityException();');
+    buffer.writeln('    }');
     buffer.writeln('    await _connection.transaction(() async {');
     buffer.writeln('      try {');
     buffer.writeln('        // Serialize aggregate to JSON');
@@ -1187,14 +1224,15 @@ class SqliteRepositoryGenerator
       if (collectionInfo.elementKind == ElementKind.entity) {
         if (collectionInfo.elementType is InterfaceType) {
           final interfaceType = collectionInfo.elementType as InterfaceType;
-          final className = interfaceType.element.name;
+          final className = interfaceType.element.name!;
           collectionEntityClasses.add(className);
         }
       }
     }
 
-    final allEntityTables =
-        tables.values.where((t) => t.tableName != tableName).toList();
+    final allEntityTables = tables.values
+        .where((t) => t.tableName != tableName)
+        .toList();
     final entityTables = allEntityTables
         .where((t) => !collectionEntityClasses.contains(t.className))
         .toList();
@@ -1352,7 +1390,7 @@ class SqliteRepositoryGenerator
         // Extract the entity class name from the element type
         if (collectionInfo.elementType is InterfaceType) {
           final interfaceType = collectionInfo.elementType as InterfaceType;
-          final className = interfaceType.element.name;
+          final className = interfaceType.element.name!;
           collectionEntityClasses.add(className);
         }
       }
@@ -1806,8 +1844,9 @@ class SqliteRepositoryGenerator
         buffer.writeln('      // Add entity fields');
         buffer.writeln('      if (value is Map<String, dynamic>) {');
         buffer.writeln('        // Flatten nested value objects in the entity');
-        buffer
-            .writeln('        final flattened = _flattenForTable(value, []);');
+        buffer.writeln(
+          '        final flattened = _flattenForTable(value, []);',
+        );
         buffer.writeln('        final columns = [');
         buffer.writeln("          '$parentFkColumn',");
         buffer.writeln("          'map_key',");
@@ -1852,8 +1891,9 @@ class SqliteRepositoryGenerator
     );
 
     // Generate ORDER BY clause for lists
-    final orderByClause =
-        collectionInfo.kind == CollectionKind.list ? ' ORDER BY position' : '';
+    final orderByClause = collectionInfo.kind == CollectionKind.list
+        ? ' ORDER BY position'
+        : '';
 
     buffer.writeln('    final rows = await _connection.query(');
     buffer.writeln(
@@ -1881,17 +1921,11 @@ class SqliteRepositoryGenerator
     // Generate load logic based on collection kind
     switch (collectionInfo.kind) {
       case CollectionKind.list:
-        buffer.writeln(
-          _generateListLoadLogic(collectionInfo),
-        );
+        buffer.writeln(_generateListLoadLogic(collectionInfo));
       case CollectionKind.set:
-        buffer.writeln(
-          _generateSetLoadLogic(collectionInfo),
-        );
+        buffer.writeln(_generateSetLoadLogic(collectionInfo));
       case CollectionKind.map:
-        buffer.writeln(
-          _generateMapLoadLogic(collectionInfo),
-        );
+        buffer.writeln(_generateMapLoadLogic(collectionInfo));
     }
 
     buffer.writeln('  }');
@@ -2251,12 +2285,15 @@ class SqliteRepositoryGenerator
 
   /// Generates a method signature from a MethodElement.
   String _generateMethodSignature(MethodElement method) {
-    final returnType =
-        method.returnType.getDisplayString(withNullability: true);
-    final params = method.parameters.map((p) {
-      final type = p.type.getDisplayString(withNullability: true);
-      return '$type ${p.name}';
-    }).join(', ');
+    final returnType = method.returnType.getDisplayString(
+      withNullability: true,
+    );
+    final params = method.formalParameters
+        .map((p) {
+          final type = p.type.getDisplayString(withNullability: true);
+          return '$type ${p.name}';
+        })
+        .join(', ');
 
     return '$returnType ${method.name}($params)';
   }

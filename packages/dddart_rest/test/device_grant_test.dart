@@ -8,158 +8,170 @@ import 'package:test/test.dart';
 
 void main() {
   group('single-use client-bound device grants', () {
-    test('in-memory atomic consume enforces every eligibility predicate',
-        () async {
-      const lifecycle = StandardDeviceCodeLifecycle();
-      final repository = InMemoryDeviceCodeRepository<DeviceCode>(
-        lifecycle: lifecycle,
-      );
-      final now = DateTime.now();
-      final missingUser = DeviceCode(
-        id: UuidValue.generate(),
-        deviceCode: 'missing-user',
-        userCode: 'MISS-USER',
-        clientId: 'owner-client',
-        expiresAt: now.add(const Duration(minutes: 1)),
-        status: DeviceCodeStatus.approved,
-        createdAt: now,
-        updatedAt: now,
-      );
-      final expired = DeviceCode(
-        id: UuidValue.generate(),
-        deviceCode: 'expired-code',
-        userCode: 'EXPR-CODE',
-        clientId: 'owner-client',
-        expiresAt: now.subtract(const Duration(seconds: 1)),
-        userId: 'device-user',
-        status: DeviceCodeStatus.approved,
-        createdAt: now.subtract(const Duration(minutes: 10)),
-        updatedAt: now,
-      );
-      await repository.save(missingUser);
-      await repository.save(expired);
+    test(
+      'in-memory atomic consume enforces every eligibility predicate',
+      () async {
+        const lifecycle = StandardDeviceCodeLifecycle();
+        final repository = InMemoryDeviceCodeRepository<DeviceCode>(
+          lifecycle: lifecycle,
+        );
+        final now = DateTime.now();
+        final missingUser = DeviceCode(
+          id: UuidValue.generate(),
+          deviceCode: 'missing-user',
+          userCode: 'MISS-USER',
+          clientId: 'owner-client',
+          expiresAt: now.add(const Duration(minutes: 1)),
+          status: DeviceCodeStatus.approved,
+          createdAt: now,
+          updatedAt: now,
+        );
+        final expired = DeviceCode(
+          id: UuidValue.generate(),
+          deviceCode: 'expired-code',
+          userCode: 'EXPR-CODE',
+          clientId: 'owner-client',
+          expiresAt: now.subtract(const Duration(seconds: 1)),
+          userId: 'device-user',
+          status: DeviceCodeStatus.approved,
+          createdAt: now.subtract(const Duration(minutes: 10)),
+          updatedAt: now,
+        );
+        await repository.save(missingUser);
+        await repository.save(expired);
 
-      expect(
-        await repository.consumeApproved(
-          deviceCode: missingUser.deviceCode,
-          clientId: missingUser.clientId,
-          consumedAt: now,
-        ),
-        isNull,
-      );
-      expect(
-        await repository.consumeApproved(
-          deviceCode: expired.deviceCode,
-          clientId: expired.clientId,
-          consumedAt: now,
-        ),
-        isNull,
-      );
-      expect(
-        await repository.consumeApproved(
-          deviceCode: expired.deviceCode,
+        expect(
+          await repository.consumeApproved(
+            deviceCode: missingUser.deviceCode,
+            clientId: missingUser.clientId,
+            consumedAt: now,
+          ),
+          isNull,
+        );
+        expect(
+          await repository.consumeApproved(
+            deviceCode: expired.deviceCode,
+            clientId: expired.clientId,
+            consumedAt: now,
+          ),
+          isNull,
+        );
+        expect(
+          await repository.consumeApproved(
+            deviceCode: expired.deviceCode,
+            clientId: 'other-client',
+            consumedAt: now,
+          ),
+          isNull,
+        );
+        expect(await repository.getById(missingUser.id), same(missingUser));
+        expect(await repository.getById(expired.id), same(expired));
+      },
+    );
+
+    test(
+      'a different client receives invalid_grant without consuming',
+      () async {
+        final fixture = _DeviceGrantFixture();
+        final approved = await fixture.seedApprovedCode();
+
+        final mismatchResponse = await fixture.redeem(
+          approved.deviceCode,
           clientId: 'other-client',
-          consumedAt: now,
-        ),
-        isNull,
-      );
-      expect(await repository.getById(missingUser.id), same(missingUser));
-      expect(await repository.getById(expired.id), same(expired));
-    });
+        );
+        final mismatchJson =
+            jsonDecode(await mismatchResponse.readAsString())
+                as Map<String, dynamic>;
 
-    test('a different client receives invalid_grant without consuming',
-        () async {
-      final fixture = _DeviceGrantFixture();
-      final approved = await fixture.seedApprovedCode();
+        expect(mismatchResponse.statusCode, 400);
+        expect(mismatchJson['error'], 'invalid_grant');
+        expect(
+          (await fixture.deviceCodes.findByDeviceCode(
+            approved.deviceCode,
+          ))?.status,
+          DeviceCodeStatus.approved,
+        );
+        expect(fixture.refreshTokens.getAllSync(), isEmpty);
 
-      final mismatchResponse = await fixture.redeem(
-        approved.deviceCode,
-        clientId: 'other-client',
-      );
-      final mismatchJson = jsonDecode(await mismatchResponse.readAsString())
-          as Map<String, dynamic>;
-
-      expect(mismatchResponse.statusCode, 400);
-      expect(mismatchJson['error'], 'invalid_grant');
-      expect(
-        (await fixture.deviceCodes.findByDeviceCode(approved.deviceCode))
-            ?.status,
-        DeviceCodeStatus.approved,
-      );
-      expect(fixture.refreshTokens.getAllSync(), isEmpty);
-
-      final ownerResponse = await fixture.redeem(
-        approved.deviceCode,
-        clientId: approved.clientId,
-      );
-
-      expect(ownerResponse.statusCode, 200);
-      expect(
-        (await fixture.deviceCodes.findByDeviceCode(approved.deviceCode))
-            ?.status,
-        DeviceCodeStatus.consumed,
-      );
-      expect(fixture.refreshTokens.getAllSync(), hasLength(1));
-    });
-
-    test('an approved grant returns tokens once and then invalid_grant',
-        () async {
-      final fixture = _DeviceGrantFixture();
-      final approved = await fixture.seedApprovedCode();
-
-      final firstResponse = await fixture.redeem(
-        approved.deviceCode,
-        clientId: approved.clientId,
-      );
-      final firstJson = jsonDecode(await firstResponse.readAsString())
-          as Map<String, dynamic>;
-
-      expect(firstResponse.statusCode, 200);
-      expect(firstJson['access_token'], isA<String>());
-      expect(firstJson['refresh_token'], isA<String>());
-      expect(
-        (await fixture.deviceCodes.findByDeviceCode(approved.deviceCode))
-            ?.status,
-        DeviceCodeStatus.consumed,
-      );
-      expect(fixture.refreshTokens.getAllSync(), hasLength(1));
-
-      final replayResponse = await fixture.redeem(
-        approved.deviceCode,
-        clientId: approved.clientId,
-      );
-      final replayJson = jsonDecode(await replayResponse.readAsString())
-          as Map<String, dynamic>;
-
-      expect(replayResponse.statusCode, 400);
-      expect(replayJson['error'], 'invalid_grant');
-      expect(fixture.refreshTokens.getAllSync(), hasLength(1));
-
-      await fixture.deviceCodes.save(
-        DeviceCode(
-          id: approved.id,
-          deviceCode: approved.deviceCode,
-          userCode: approved.userCode,
+        final ownerResponse = await fixture.redeem(
+          approved.deviceCode,
           clientId: approved.clientId,
-          expiresAt: DateTime.now().subtract(const Duration(minutes: 1)),
-          userId: approved.userId,
-          status: DeviceCodeStatus.consumed,
-          createdAt: approved.createdAt,
-          updatedAt: DateTime.now(),
-        ),
-      );
-      final replayAfterExpiry = await fixture.redeem(
-        approved.deviceCode,
-        clientId: approved.clientId,
-      );
-      final replayAfterExpiryJson = jsonDecode(
-        await replayAfterExpiry.readAsString(),
-      ) as Map<String, dynamic>;
+        );
 
-      expect(replayAfterExpiry.statusCode, 400);
-      expect(replayAfterExpiryJson['error'], 'invalid_grant');
-      expect(fixture.refreshTokens.getAllSync(), hasLength(1));
-    });
+        expect(ownerResponse.statusCode, 200);
+        expect(
+          (await fixture.deviceCodes.findByDeviceCode(
+            approved.deviceCode,
+          ))?.status,
+          DeviceCodeStatus.consumed,
+        );
+        expect(fixture.refreshTokens.getAllSync(), hasLength(1));
+      },
+    );
+
+    test(
+      'an approved grant returns tokens once and then invalid_grant',
+      () async {
+        final fixture = _DeviceGrantFixture();
+        final approved = await fixture.seedApprovedCode();
+
+        final firstResponse = await fixture.redeem(
+          approved.deviceCode,
+          clientId: approved.clientId,
+        );
+        final firstJson =
+            jsonDecode(await firstResponse.readAsString())
+                as Map<String, dynamic>;
+
+        expect(firstResponse.statusCode, 200);
+        expect(firstJson['access_token'], isA<String>());
+        expect(firstJson['refresh_token'], isA<String>());
+        expect(
+          (await fixture.deviceCodes.findByDeviceCode(
+            approved.deviceCode,
+          ))?.status,
+          DeviceCodeStatus.consumed,
+        );
+        expect(fixture.refreshTokens.getAllSync(), hasLength(1));
+
+        final replayResponse = await fixture.redeem(
+          approved.deviceCode,
+          clientId: approved.clientId,
+        );
+        final replayJson =
+            jsonDecode(await replayResponse.readAsString())
+                as Map<String, dynamic>;
+
+        expect(replayResponse.statusCode, 400);
+        expect(replayJson['error'], 'invalid_grant');
+        expect(fixture.refreshTokens.getAllSync(), hasLength(1));
+
+        await fixture.deviceCodes.save(
+          DeviceCode(
+            id: approved.id,
+            deviceCode: approved.deviceCode,
+            userCode: approved.userCode,
+            clientId: approved.clientId,
+            expiresAt: DateTime.now().subtract(const Duration(minutes: 1)),
+            userId: approved.userId,
+            status: DeviceCodeStatus.consumed,
+            createdAt: approved.createdAt,
+            updatedAt: DateTime.now(),
+          ),
+        );
+        final replayAfterExpiry = await fixture.redeem(
+          approved.deviceCode,
+          clientId: approved.clientId,
+        );
+        final replayAfterExpiryJson =
+            jsonDecode(await replayAfterExpiry.readAsString())
+                as Map<String, dynamic>;
+
+        expect(replayAfterExpiry.statusCode, 400);
+        expect(replayAfterExpiryJson['error'], 'invalid_grant');
+        expect(fixture.refreshTokens.getAllSync(), hasLength(1));
+      },
+    );
 
     test('two simultaneous redemptions have exactly one winner', () async {
       final innerRepository = InMemoryDeviceCodeRepository<DeviceCode>(
@@ -182,10 +194,13 @@ void main() {
       final statusCodes =
           responses.map((response) => response.statusCode).toList()..sort();
       expect(statusCodes, [200, 400]);
-      final losingBody = jsonDecode(
-        responseBodies[
-            responses.indexWhere((response) => response.statusCode == 400)],
-      ) as Map<String, dynamic>;
+      final losingBody =
+          jsonDecode(
+                responseBodies[responses.indexWhere(
+                  (response) => response.statusCode == 400,
+                )],
+              )
+              as Map<String, dynamic>;
       expect(losingBody['error'], 'invalid_grant');
       expect(barrierRepository.deviceCodeLookupCount, 2);
       expect(barrierRepository.successfulConsumptions, 1);
@@ -201,10 +216,11 @@ void main() {
 
 final class _DeviceGrantFixture {
   _DeviceGrantFixture({DeviceCodeRepository<DeviceCode>? repository})
-      : deviceCodes = repository ??
-            InMemoryDeviceCodeRepository<DeviceCode>(
-              lifecycle: const StandardDeviceCodeLifecycle(),
-            ) {
+    : deviceCodes =
+          repository ??
+          InMemoryDeviceCodeRepository<DeviceCode>(
+            lifecycle: const StandardDeviceCodeLifecycle(),
+          ) {
     authHandler = JwtAuthHandler<StandardClaims, RefreshToken>(
       secret: 'test-secret-key-for-device-grants',
       refreshTokenRepository: refreshTokens,

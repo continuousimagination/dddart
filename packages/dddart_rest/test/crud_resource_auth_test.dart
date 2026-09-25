@@ -89,10 +89,7 @@ class MockRepository implements Repository<TestUser> {
 
 // Mock auth handler for testing
 class MockAuthHandler implements AuthenticationHandler<String> {
-  MockAuthHandler({
-    this.shouldAuthenticate = true,
-    this.errorMessage,
-  });
+  MockAuthHandler({this.shouldAuthenticate = true, this.errorMessage});
   final bool shouldAuthenticate;
   final String? errorMessage;
   AuthenticationResult<String>? lastResult;
@@ -124,12 +121,7 @@ Request createRequest({
   String? body,
 }) {
   final uri = Uri.parse('http://localhost:8080$path');
-  return Request(
-    method,
-    uri,
-    headers: headers,
-    body: body,
-  );
+  return Request(method, uri, headers: headers, body: body);
 }
 
 void main() {
@@ -167,8 +159,10 @@ void main() {
       final request = createRequest(path: '/users/${testUser.id}');
 
       // Act
-      final response =
-          await resource.handleGetById(request, testUser.id.toString());
+      final response = await resource.handleGetById(
+        request,
+        testUser.id.toString(),
+      );
 
       // Assert
       expect(response.statusCode, equals(401));
@@ -191,8 +185,10 @@ void main() {
       final request = createRequest(path: '/users/${testUser.id}');
 
       // Act
-      final response =
-          await resource.handleGetById(request, testUser.id.toString());
+      final response = await resource.handleGetById(
+        request,
+        testUser.id.toString(),
+      );
 
       // Assert
       expect(response.statusCode, equals(200));
@@ -237,8 +233,10 @@ void main() {
       );
 
       // Act
-      final response =
-          await resource.handleUpdate(request, testUser.id.toString());
+      final response = await resource.handleUpdate(
+        request,
+        testUser.id.toString(),
+      );
 
       // Assert
       expect(response.statusCode, equals(401));
@@ -260,8 +258,10 @@ void main() {
       );
 
       // Act
-      final response =
-          await resource.handleDelete(request, testUser.id.toString());
+      final response = await resource.handleDelete(
+        request,
+        testUser.id.toString(),
+      );
 
       // Assert
       expect(response.statusCode, equals(401));
@@ -305,23 +305,27 @@ void main() {
       expect(receivedAuthResult, same(authHandler.lastResult));
     });
 
-    test('resource without auth handler allows unauthenticated access',
-        () async {
-      // Arrange
-      final resource = CrudResource<TestUser, dynamic>(
-        path: '/users',
-        repository: repository,
-        serializer: serializer,
-      );
-      await repository.save(testUser);
-      final request = createRequest(path: '/users/${testUser.id}');
+    test(
+      'resource without auth handler allows unauthenticated access',
+      () async {
+        // Arrange
+        final resource = CrudResource<TestUser, dynamic>(
+          path: '/users',
+          repository: repository,
+          serializer: serializer,
+        );
+        await repository.save(testUser);
+        final request = createRequest(path: '/users/${testUser.id}');
 
-      // Act
-      final response =
-          await resource.handleGetById(request, testUser.id.toString());
+        // Act
+        final response = await resource.handleGetById(
+          request,
+          testUser.id.toString(),
+        );
 
-      // Assert
-      expect(response.statusCode, equals(200));
-    });
+        // Assert
+        expect(response.statusCode, equals(200));
+      },
+    );
   });
 }

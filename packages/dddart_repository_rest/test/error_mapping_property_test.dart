@@ -51,7 +51,7 @@ void main() {
       }
     });
 
-    test('RFC 7807 detail is preserved for every mapped category', () async {
+    test('RFC 7807 detail is redacted for every mapped category', () async {
       const statusCodes = [401, 403, 404, 408, 409, 422, 500, 504];
 
       for (final statusCode in statusCodes) {
@@ -66,7 +66,10 @@ void main() {
           }),
         );
 
-        expect(exception.message, detail);
+        expect(exception.type, _expectedType(statusCode));
+        expect(exception.message, isNot(contains(detail)));
+        expect(exception.toString(), isNot(contains(detail)));
+        expect(exception.cause, isNull);
       }
     });
   });
@@ -79,7 +82,7 @@ RepositoryExceptionType _expectedType(int statusCode) {
     404 => RepositoryExceptionType.notFound,
     408 || 504 => RepositoryExceptionType.timeout,
     409 => RepositoryExceptionType.duplicate,
-    422 => RepositoryExceptionType.constraint,
+    400 || 412 || 422 => RepositoryExceptionType.constraint,
     >= 500 => RepositoryExceptionType.connection,
     _ => RepositoryExceptionType.unknown,
   };

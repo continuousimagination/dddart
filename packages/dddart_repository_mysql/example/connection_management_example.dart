@@ -110,10 +110,7 @@ Future<void> _demonstrateSingleConnectionReuse() async {
 }
 
 /// Helper function to create and save an order.
-Future<void> _createAndSaveOrder(
-  OrderMysqlRepository repo,
-  int index,
-) async {
+Future<void> _createAndSaveOrder(OrderMysqlRepository repo, int index) async {
   final order = Order(
     customerName: 'Customer $index',
     shippingAddress: Address(

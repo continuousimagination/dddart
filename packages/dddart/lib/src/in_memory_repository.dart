@@ -1,7 +1,9 @@
 import 'package:dddart/src/aggregate_root.dart';
+import 'package:dddart/src/conditional_repository_exception.dart';
 import 'package:dddart/src/repository.dart';
 import 'package:dddart/src/repository_exception.dart';
 import 'package:dddart/src/uuid_value.dart';
+import 'package:dddart/src/versioned_aggregate_root.dart';
 import 'package:logging/logging.dart';
 
 /// In-memory implementation of [Repository] for testing purposes.
@@ -99,6 +101,15 @@ import 'package:logging/logging.dart';
 /// * [AggregateRoot] - The base class for aggregate roots
 /// * [RepositoryException] - Exception thrown by repository operations
 class InMemoryRepository<T extends AggregateRoot> implements Repository<T> {
+  /// Creates ordinary storage; versioned roots require conditional storage.
+  InMemoryRepository() {
+    // The reified type argument is checked before storage can be used.
+    // ignore: literal_only_boolean_expressions
+    if (<T>[] is List<VersionedAggregateRoot>) {
+      throw const RepositoryCapabilityException();
+    }
+  }
+
   /// Logger instance for repository operations.
   final Logger _logger = Logger('dddart.repository');
 
@@ -125,6 +136,9 @@ class InMemoryRepository<T extends AggregateRoot> implements Repository<T> {
 
   @override
   Future<void> save(T aggregate) async {
+    if (aggregate is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
     try {
       _logger.fine('Saving $T with ID: ${aggregate.id}');
       _storage[aggregate.id] = aggregate;

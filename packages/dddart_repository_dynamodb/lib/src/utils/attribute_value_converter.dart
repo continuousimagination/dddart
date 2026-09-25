@@ -35,9 +35,7 @@ class AttributeValueConverter {
     } else if (value is num) {
       return AttributeValue(n: value.toString());
     } else if (value is List) {
-      return AttributeValue(
-        l: value.map(jsonToAttributeValue).toList(),
-      );
+      return AttributeValue(l: value.map(jsonToAttributeValue).toList());
     } else if (value is Map<String, dynamic>) {
       return AttributeValue(m: jsonMapToAttributeMap(value));
     } else {
@@ -78,9 +76,7 @@ class AttributeValueConverter {
     } else if (attr.m != null) {
       return attributeMapToJsonMap(attr.m!);
     } else {
-      throw ArgumentError(
-        'Unsupported AttributeValue format: $attr',
-      );
+      throw ArgumentError('Unsupported AttributeValue format: $attr');
     }
   }
 
@@ -97,9 +93,7 @@ class AttributeValueConverter {
   static Map<String, AttributeValue> jsonMapToAttributeMap(
     Map<String, dynamic> json,
   ) {
-    return json.map(
-      (key, value) => MapEntry(key, jsonToAttributeValue(value)),
-    );
+    return json.map((key, value) => MapEntry(key, jsonToAttributeValue(value)));
   }
 
   /// Converts a DynamoDB AttributeValue map to JSON map.

@@ -126,6 +126,7 @@ class MockAuthorizationHandler
   String? errorMessage;
 
   // Track which methods were called
+  bool readCalled = false;
   bool createCalled = false;
   bool updateCalled = false;
   bool deleteCalled = false;
@@ -136,6 +137,19 @@ class MockAuthorizationHandler
   UuidValue? lastAggregateId;
   Map<String, String>? lastQueryParams;
   AuthenticationResult<TestClaims>? lastAuthResult;
+
+  @override
+  Future<AuthorizationResult> authorizeRead(
+    UuidValue id,
+    AuthenticationResult<TestClaims> authResult,
+  ) async {
+    readCalled = true;
+    lastAggregateId = id;
+    lastAuthResult = authResult;
+    return shouldAuthorize
+        ? AuthorizationResult.allow()
+        : AuthorizationResult.deny(errorMessage ?? 'Access denied');
+  }
 
   @override
   Future<AuthorizationResult> authorizeCreate(
@@ -225,12 +239,7 @@ Request createRequest({
   String? body,
 }) {
   final uri = Uri.parse('http://localhost:8080$path');
-  return Request(
-    method,
-    uri,
-    headers: headers,
-    body: body,
-  );
+  return Request(method, uri, headers: headers, body: body);
 }
 
 void main() {
@@ -354,44 +363,46 @@ void main() {
         }
       });
 
-      test('RFC 7807 error response format for authorization failures',
-          () async {
-        // Arrange
-        authzHandler.shouldAuthorize = false;
-        authzHandler.errorMessage = 'Custom authorization error message';
+      test(
+        'RFC 7807 error response format for authorization failures',
+        () async {
+          // Arrange
+          authzHandler.shouldAuthorize = false;
+          authzHandler.errorMessage = 'Custom authorization error message';
 
-        final resource = CrudResource<TestUser, TestClaims>(
-          path: '/users',
-          repository: repository,
-          serializer: serializer,
-          authenticationHandler: authHandler,
-          authorizationHandler: authzHandler,
-        );
+          final resource = CrudResource<TestUser, TestClaims>(
+            path: '/users',
+            repository: repository,
+            serializer: serializer,
+            authenticationHandler: authHandler,
+            authorizationHandler: authzHandler,
+          );
 
-        final requestBody = serializer.serialize(testUser);
-        final request = createRequest(
-          method: 'POST',
-          headers: {'content-type': 'application/json'},
-          body: requestBody,
-        );
+          final requestBody = serializer.serialize(testUser);
+          final request = createRequest(
+            method: 'POST',
+            headers: {'content-type': 'application/json'},
+            body: requestBody,
+          );
 
-        // Act
-        final response = await resource.handleCreate(request);
+          // Act
+          final response = await resource.handleCreate(request);
 
-        // Assert
-        expect(response.statusCode, equals(403));
-        expect(
-          response.headers['Content-Type'],
-          equals('application/problem+json'),
-        );
+          // Assert
+          expect(response.statusCode, equals(403));
+          expect(
+            response.headers['Content-Type'],
+            equals('application/problem+json'),
+          );
 
-        final bodyString = await response.readAsString();
-        final body = jsonDecode(bodyString);
-        expect(body['type'], equals('about:blank'));
-        expect(body['title'], equals('Forbidden'));
-        expect(body['status'], equals(403));
-        expect(body['detail'], equals('Custom authorization error message'));
-      });
+          final bodyString = await response.readAsString();
+          final body = jsonDecode(bodyString);
+          expect(body['type'], equals('about:blank'));
+          expect(body['title'], equals('Forbidden'));
+          expect(body['status'], equals(403));
+          expect(body['detail'], equals('Custom authorization error message'));
+        },
+      );
 
       test('authorization is skipped when no handler provided', () async {
         // Arrange
@@ -493,8 +504,10 @@ void main() {
         );
 
         // Act
-        final response =
-            await resource.handleUpdate(request, testUser.id.toString());
+        final response = await resource.handleUpdate(
+          request,
+          testUser.id.toString(),
+        );
 
         // Assert
         expect(response.statusCode, equals(200));
@@ -537,8 +550,10 @@ void main() {
         );
 
         // Act
-        final response =
-            await resource.handleUpdate(request, testUser.id.toString());
+        final response = await resource.handleUpdate(
+          request,
+          testUser.id.toString(),
+        );
 
         // Assert
         expect(response.statusCode, equals(403));
@@ -548,56 +563,60 @@ void main() {
         expect(savedUser.name, equals('John Doe'));
       });
 
-      test('RFC 7807 error response format for authorization failures',
-          () async {
-        // Arrange
-        await repository.save(testUser);
-        authzHandler.shouldAuthorize = false;
-        authzHandler.errorMessage = 'Custom update authorization error';
+      test(
+        'RFC 7807 error response format for authorization failures',
+        () async {
+          // Arrange
+          await repository.save(testUser);
+          authzHandler.shouldAuthorize = false;
+          authzHandler.errorMessage = 'Custom update authorization error';
 
-        final resource = CrudResource<TestUser, TestClaims>(
-          path: '/users',
-          repository: repository,
-          serializer: serializer,
-          authenticationHandler: authHandler,
-          authorizationHandler: authzHandler,
-        );
+          final resource = CrudResource<TestUser, TestClaims>(
+            path: '/users',
+            repository: repository,
+            serializer: serializer,
+            authenticationHandler: authHandler,
+            authorizationHandler: authzHandler,
+          );
 
-        final updatedUser = TestUser(
-          id: testUser.id,
-          name: 'Updated Name',
-          email: testUser.email,
-          ownerId: testUser.ownerId,
-          createdAt: testUser.createdAt,
-          updatedAt: DateTime.now(),
-        );
+          final updatedUser = TestUser(
+            id: testUser.id,
+            name: 'Updated Name',
+            email: testUser.email,
+            ownerId: testUser.ownerId,
+            createdAt: testUser.createdAt,
+            updatedAt: DateTime.now(),
+          );
 
-        final requestBody = serializer.serialize(updatedUser);
-        final request = createRequest(
-          method: 'PUT',
-          path: '/users/${testUser.id}',
-          headers: {'content-type': 'application/json'},
-          body: requestBody,
-        );
+          final requestBody = serializer.serialize(updatedUser);
+          final request = createRequest(
+            method: 'PUT',
+            path: '/users/${testUser.id}',
+            headers: {'content-type': 'application/json'},
+            body: requestBody,
+          );
 
-        // Act
-        final response =
-            await resource.handleUpdate(request, testUser.id.toString());
+          // Act
+          final response = await resource.handleUpdate(
+            request,
+            testUser.id.toString(),
+          );
 
-        // Assert
-        expect(response.statusCode, equals(403));
-        expect(
-          response.headers['Content-Type'],
-          equals('application/problem+json'),
-        );
+          // Assert
+          expect(response.statusCode, equals(403));
+          expect(
+            response.headers['Content-Type'],
+            equals('application/problem+json'),
+          );
 
-        final bodyString = await response.readAsString();
-        final body = jsonDecode(bodyString);
-        expect(body['type'], equals('about:blank'));
-        expect(body['title'], equals('Forbidden'));
-        expect(body['status'], equals(403));
-        expect(body['detail'], equals('Custom update authorization error'));
-      });
+          final bodyString = await response.readAsString();
+          final body = jsonDecode(bodyString);
+          expect(body['type'], equals('about:blank'));
+          expect(body['title'], equals('Forbidden'));
+          expect(body['status'], equals(403));
+          expect(body['detail'], equals('Custom update authorization error'));
+        },
+      );
 
       test('authorization is skipped when no handler provided', () async {
         // Arrange
@@ -629,8 +648,10 @@ void main() {
         );
 
         // Act
-        final response =
-            await resource.handleUpdate(request, testUser.id.toString());
+        final response = await resource.handleUpdate(
+          request,
+          testUser.id.toString(),
+        );
 
         // Assert
         expect(response.statusCode, equals(200));
@@ -688,8 +709,10 @@ void main() {
         );
 
         // Act
-        final response =
-            await resource.handleDelete(request, testUser.id.toString());
+        final response = await resource.handleDelete(
+          request,
+          testUser.id.toString(),
+        );
 
         // Assert
         expect(response.statusCode, equals(204));
@@ -724,8 +747,10 @@ void main() {
         );
 
         // Act
-        final response =
-            await resource.handleDelete(request, testUser.id.toString());
+        final response = await resource.handleDelete(
+          request,
+          testUser.id.toString(),
+        );
 
         // Assert
         expect(response.statusCode, equals(403));
@@ -735,44 +760,48 @@ void main() {
         expect(savedUser.id, equals(testUser.id));
       });
 
-      test('RFC 7807 error response format for authorization failures',
-          () async {
-        // Arrange
-        await repository.save(testUser);
-        authzHandler.shouldAuthorize = false;
-        authzHandler.errorMessage = 'Custom delete authorization error';
+      test(
+        'RFC 7807 error response format for authorization failures',
+        () async {
+          // Arrange
+          await repository.save(testUser);
+          authzHandler.shouldAuthorize = false;
+          authzHandler.errorMessage = 'Custom delete authorization error';
 
-        final resource = CrudResource<TestUser, TestClaims>(
-          path: '/users',
-          repository: repository,
-          serializer: serializer,
-          authenticationHandler: authHandler,
-          authorizationHandler: authzHandler,
-        );
+          final resource = CrudResource<TestUser, TestClaims>(
+            path: '/users',
+            repository: repository,
+            serializer: serializer,
+            authenticationHandler: authHandler,
+            authorizationHandler: authzHandler,
+          );
 
-        final request = createRequest(
-          method: 'DELETE',
-          path: '/users/${testUser.id}',
-        );
+          final request = createRequest(
+            method: 'DELETE',
+            path: '/users/${testUser.id}',
+          );
 
-        // Act
-        final response =
-            await resource.handleDelete(request, testUser.id.toString());
+          // Act
+          final response = await resource.handleDelete(
+            request,
+            testUser.id.toString(),
+          );
 
-        // Assert
-        expect(response.statusCode, equals(403));
-        expect(
-          response.headers['Content-Type'],
-          equals('application/problem+json'),
-        );
+          // Assert
+          expect(response.statusCode, equals(403));
+          expect(
+            response.headers['Content-Type'],
+            equals('application/problem+json'),
+          );
 
-        final bodyString = await response.readAsString();
-        final body = jsonDecode(bodyString);
-        expect(body['type'], equals('about:blank'));
-        expect(body['title'], equals('Forbidden'));
-        expect(body['status'], equals(403));
-        expect(body['detail'], equals('Custom delete authorization error'));
-      });
+          final bodyString = await response.readAsString();
+          final body = jsonDecode(bodyString);
+          expect(body['type'], equals('about:blank'));
+          expect(body['title'], equals('Forbidden'));
+          expect(body['status'], equals(403));
+          expect(body['detail'], equals('Custom delete authorization error'));
+        },
+      );
 
       test('authorization is skipped when no handler provided', () async {
         // Arrange
@@ -792,8 +821,10 @@ void main() {
         );
 
         // Act
-        final response =
-            await resource.handleDelete(request, testUser.id.toString());
+        final response = await resource.handleDelete(
+          request,
+          testUser.id.toString(),
+        );
 
         // Assert
         expect(response.statusCode, equals(204));
@@ -825,9 +856,7 @@ void main() {
           },
         );
 
-        final request = createRequest(
-          path: '/users?ownerId=user-123',
-        );
+        final request = createRequest(path: '/users?ownerId=user-123');
 
         // Act
         await resource.handleQuery(request);
@@ -855,9 +884,7 @@ void main() {
           },
         );
 
-        final request = createRequest(
-          path: '/users?ownerId=user-123',
-        );
+        final request = createRequest(path: '/users?ownerId=user-123');
 
         // Act
         final response = await resource.handleQuery(request);
@@ -889,9 +916,7 @@ void main() {
           },
         );
 
-        final request = createRequest(
-          path: '/users?ownerId=user-123',
-        );
+        final request = createRequest(path: '/users?ownerId=user-123');
 
         // Act
         final response = await resource.handleQuery(request);
@@ -900,48 +925,48 @@ void main() {
         expect(response.statusCode, equals(403));
       });
 
-      test('RFC 7807 error response format for authorization failures',
-          () async {
-        // Arrange
-        authzHandler.shouldAuthorize = false;
-        authzHandler.errorMessage = 'Custom query authorization error';
+      test(
+        'RFC 7807 error response format for authorization failures',
+        () async {
+          // Arrange
+          authzHandler.shouldAuthorize = false;
+          authzHandler.errorMessage = 'Custom query authorization error';
 
-        final resource = CrudResource<TestUser, TestClaims>(
-          path: '/users',
-          repository: repository,
-          serializer: serializer,
-          authenticationHandler: authHandler,
-          authorizationHandler: authzHandler,
-          queryHandlers: {
-            'ownerId': (repo, params, skip, take, authResult) async {
-              return QueryResult<TestUser>([testUser], totalCount: 1);
+          final resource = CrudResource<TestUser, TestClaims>(
+            path: '/users',
+            repository: repository,
+            serializers: {'application/json': serializer},
+            authenticationHandler: authHandler,
+            authorizationHandler: authzHandler,
+            queryHandlers: {
+              'ownerId': (repo, params, skip, take, authResult) async {
+                return QueryResult<TestUser>([testUser], totalCount: 1);
+              },
             },
-          },
-        );
+          );
 
-        final request = createRequest(
-          path: '/users?ownerId=user-123',
-        );
+          final request = createRequest(path: '/users?ownerId=user-123');
 
-        // Act
-        final response = await resource.handleQuery(request);
+          // Act
+          final response = await resource.handleQuery(request);
 
-        // Assert
-        expect(response.statusCode, equals(403));
-        expect(
-          response.headers['Content-Type'],
-          equals('application/problem+json'),
-        );
+          // Assert
+          expect(response.statusCode, equals(403));
+          expect(
+            response.headers['Content-Type'],
+            equals('application/problem+json'),
+          );
 
-        final bodyString = await response.readAsString();
-        final body = jsonDecode(bodyString);
-        expect(body['type'], equals('about:blank'));
-        expect(body['title'], equals('Forbidden'));
-        expect(body['status'], equals(403));
-        expect(body['detail'], equals('Custom query authorization error'));
-      });
+          final bodyString = await response.readAsString();
+          final body = jsonDecode(bodyString);
+          expect(body['type'], equals('about:blank'));
+          expect(body['title'], equals('Forbidden'));
+          expect(body['status'], equals(403));
+          expect(body['detail'], equals('Custom query authorization error'));
+        },
+      );
 
-      test('authorization is skipped for unfiltered queries', () async {
+      test('authorization is applied to unfiltered queries', () async {
         // Arrange
         final inMemoryRepo = InMemoryRepository<TestUser>();
         await inMemoryRepo.save(testUser);
@@ -964,7 +989,7 @@ void main() {
 
         // Assert
         expect(response.statusCode, equals(200));
-        expect(authzHandler.queryCalled, isFalse);
+        expect(authzHandler.queryCalled, isTrue);
       });
 
       test('authorization is skipped when no handler provided', () async {
@@ -982,9 +1007,7 @@ void main() {
           },
         );
 
-        final request = createRequest(
-          path: '/users?ownerId=user-123',
-        );
+        final request = createRequest(path: '/users?ownerId=user-123');
 
         // Act
         final response = await resource.handleQuery(request);
@@ -996,29 +1019,16 @@ void main() {
     });
 
     group('Authorization without Authentication', () {
-      test('authorization is skipped when authentication handler not provided',
-          () async {
-        // Arrange
-        final resource = CrudResource<TestUser, TestClaims>(
-          path: '/users',
-          repository: repository,
-          serializer: serializer,
-          // No authenticationHandler provided
-          authorizationHandler: authzHandler,
+      test('configured authorization requires authentication', () {
+        expect(
+          () => CrudResource<TestUser, TestClaims>(
+            path: '/users',
+            repository: repository,
+            serializers: {'application/json': serializer},
+            authorizationHandler: authzHandler,
+          ),
+          throwsArgumentError,
         );
-
-        final requestBody = serializer.serialize(testUser);
-        final request = createRequest(
-          method: 'POST',
-          headers: {'content-type': 'application/json'},
-          body: requestBody,
-        );
-
-        // Act
-        final response = await resource.handleCreate(request);
-
-        // Assert
-        expect(response.statusCode, equals(201));
         expect(authzHandler.createCalled, isFalse);
       });
     });

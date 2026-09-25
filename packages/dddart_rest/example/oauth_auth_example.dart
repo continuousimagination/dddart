@@ -55,21 +55,21 @@ class CognitoClaims {
   final String? cognitoUsername;
 
   Map<String, dynamic> toJson() => {
-        'sub': sub,
-        'email': email,
-        if (name != null) 'name': name,
-        'cognito:groups': cognitoGroups,
-        if (cognitoUsername != null) 'cognito:username': cognitoUsername,
-      };
+    'sub': sub,
+    'email': email,
+    if (name != null) 'name': name,
+    'cognito:groups': cognitoGroups,
+    if (cognitoUsername != null) 'cognito:username': cognitoUsername,
+  };
 
   factory CognitoClaims.fromJson(Map<String, dynamic> json) => CognitoClaims(
-        sub: json['sub'] as String,
-        email: json['email'] as String,
-        name: json['name'] as String?,
-        cognitoGroups:
-            (json['cognito:groups'] as List?)?.cast<String>() ?? const [],
-        cognitoUsername: json['cognito:username'] as String?,
-      );
+    sub: json['sub'] as String,
+    email: json['email'] as String,
+    name: json['name'] as String?,
+    cognitoGroups:
+        (json['cognito:groups'] as List?)?.cast<String>() ?? const [],
+    cognitoUsername: json['cognito:username'] as String?,
+  );
 }
 
 // Simple serializer for User
@@ -187,8 +187,10 @@ void main() async {
   // Register public health check
   server.addRoute('GET', '/health', (Request request) async {
     return Response.ok(
-      jsonEncode(
-          {'status': 'healthy', 'timestamp': DateTime.now().toIso8601String()}),
+      jsonEncode({
+        'status': 'healthy',
+        'timestamp': DateTime.now().toIso8601String(),
+      }),
       headers: {'Content-Type': 'application/json'},
     );
   });
@@ -200,7 +202,8 @@ void main() async {
   print('No login endpoints - users authenticate through Cognito.\n');
   print('To test:');
   print(
-      '1. Get a JWT from Cognito (use AWS Amplify, Cognito SDK, or device flow)');
+    '1. Get a JWT from Cognito (use AWS Amplify, Cognito SDK, or device flow)',
+  );
   print('2. Make requests with the JWT:\n');
   print('curl http://localhost:8080/users?me \\');
   print('  -H "Authorization: Bearer <cognito_jwt_token>"');

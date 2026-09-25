@@ -1,10 +1,10 @@
 # Unaddressed framework defects
 
-Snapshot: 2026-08-10, after the authentication fixes and the
-QueryableRepository/DynamoDB cleanup were merged.
+Snapshot: 2026-09-24, integrating the authentication and
+QueryableRepository/DynamoDB cleanup with the explicit conditional capability.
 
-This register contains the 6 implementation defects that remain. Resolved
-entries are removed once their completion tests pass. It is not an exhaustive
+This register contains 5 deferred defects or legacy limitations. Resolved
+entries retain their bounded test evidence below. It is not an exhaustive
 issue tracker; source and executable tests remain authoritative.
 
 Suggested priorities are provisional:
@@ -19,11 +19,10 @@ Suggested priorities are provisional:
 
 - **EVENT-001** through **EVENT-004**: the distributed-events feature remains a
   work in progress.
-- **REST-004**: accepted as a low-current-priority limitation. The existing
-  `If-Match` check can detect a change persisted before validation when that
-  change produces a different ETag, but it does not make the later repository
-  save atomic.
-- **AUTH-002**: revisit the authorization contract later.
+- **REST-004**: legacy repositories remain unconditional. Legacy GET ETags are
+  representation validators, not atomic write authority. Conditional mutation
+  headers now refuse rather than using the former read/check/save sequence;
+  only the separate opted-in conditional capability provides atomic writes.
 
 ## Summary
 
@@ -33,8 +32,7 @@ Suggested priorities are provisional:
 | EVENT-002 | P2 | Distributed events | POST ingestion ignores its server and cannot safely support a custom stored-event subtype. |
 | EVENT-003 | P1 | Distributed events | `autoForward` can forward a remotely polled event back to the server. |
 | EVENT-004 | P1 | Distributed events | Polling advances its cursor before an event is successfully reconstructed and published. |
-| REST-004 | P3 | REST server | ETag validation is a non-atomic read/check/save sequence. |
-| AUTH-002 | P1 | Authorization | Item GET and unfiltered collection GET bypass `AuthorizationHandler`. |
+| REST-004 | P3 | REST server | Legacy repositories and GET validators do not provide atomic writes. |
 
 ## Confirmed generator and persistence defects
 
@@ -92,27 +90,32 @@ Suggested priorities are provisional:
 
 ## REST, authentication, and authorization defects
 
-### REST-004 — ETag checks are not atomic writes
+### REST-004 — legacy validators do not provide atomic writes
 
-- **Evidence:** `handleUpdate()` loads the current aggregate, compares the ETag,
-  and later calls ordinary `repository.save()` as a separate operation.
-- **Impact:** two concurrent writers can both pass the comparison and overwrite
-  one another. `If-Match` is also optional, so unconditional updates remain
-  possible by design.
-- **Current disposition:** accepted as a documented, low-current-priority
-  limitation while dddart does not target high-contention multi-writer use.
-- **Done when:** a repository-level conditional write/version contract makes the
-  compare-and-save atomic and a concurrency test proves only one stale writer
-  succeeds. Until then, public documentation must describe ETags as a
-  best-effort stale-update check rather than an atomic concurrency guarantee.
+- **Historical evidence:** the legacy ETag check used a separate read/check/save
+  sequence. Concurrent writers could both pass and overwrite one another.
+- **Current boundary:** `CrudResource` rejects conditional mutation headers with
+  a capability error before repository access; ordinary non-versioned writes
+  remain unconditional. Legacy GET validators do not turn these writes atomic.
+- **Separate capability:** `ConditionalCrudResource` uses required explicit
+  preconditions and versioned repositories. Its race tests prove one accepted
+  mutation for competing preconditions. This does not add conditional support
+  to MongoDB/MySQL/SQLite or the legacy repository interface.
+- **Disposition:** preserve this legacy limitation; do not describe best-effort
+  ETags as atomic protection or restore the unsafe sequential fallback.
 
-### AUTH-002 — authorization is not applied to two read paths
+## Resolved read-authorization defect
 
-- **Evidence:** `AuthorizationHandler` is invoked for create, update, delete, and
-  filtered queries. `GET /resource/<id>` and unfiltered collection GET do not
-  invoke it.
-- **Impact:** an authenticated caller can read objects or whole collections that
-  operation-level policy would otherwise deny.
-- **Done when:** read authorization hooks cover both paths, or the framework
-  requires an explicit policy that disables those routes. Tests should prove a
-  denied identity cannot read either form.
+### AUTH-002 — item and collection reads authorize before storage
+
+- **Resolution:** ordinary item GET invokes `authorizeRead`; filtered and
+  unfiltered collections invoke `authorizeQuery` before their explicit handler.
+  No repository enumeration fallback exists. Conditional item GET uses the same
+  request-local authentication/authorization pipeline; collections are unsupported.
+- **Evidence:** `packages/dddart_rest/test/u10/read_and_identity_contract_test.dart`
+  asserts denial before repository access and before the explicit unfiltered
+  collection handler. `test/u10/conditional_race_test.dart` in that package proves
+  refreshed authoritative claims can deny a previously permitted read without
+  another repository call, and overlapping requests keep their own principals.
+- **Limit:** this resolves the missing read hooks, not every application policy,
+  token revocation strategy, or the deferred event and legacy-write limitations.

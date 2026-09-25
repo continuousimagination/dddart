@@ -24,10 +24,7 @@ library;
 /// - [implements]: Custom repository interface to implement
 class GenerateMysqlRepository {
   /// Creates a repository generation annotation.
-  const GenerateMysqlRepository({
-    this.tableName,
-    this.implements,
-  });
+  const GenerateMysqlRepository({this.tableName, this.implements});
 
   /// Custom table name for the aggregate root.
   ///

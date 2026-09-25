@@ -341,46 +341,48 @@ void main() {
       expect(connection, isNotNull);
     });
 
-    test('should allow multiple repositories to share one connection',
-        () async {
-      // Arrange
-      final testServer = await createMultiResourceTestServer(
-        resources: {
-          '/users': CrudResource<TestUser, void>(
-            path: '/users',
-            repository: InMemoryRepository<TestUser>(),
-            serializer: TestUserJsonSerializer(),
-          ),
-          '/accounts': CrudResource<TestAccount, void>(
-            path: '/accounts',
-            repository: InMemoryRepository<TestAccount>(),
-            serializer: TestAccountJsonSerializer(),
-          ),
-        },
-        port: 8770,
-      );
+    test(
+      'should allow multiple repositories to share one connection',
+      () async {
+        // Arrange
+        final testServer = await createMultiResourceTestServer(
+          resources: {
+            '/users': CrudResource<TestUser, void>(
+              path: '/users',
+              repository: InMemoryRepository<TestUser>(),
+              serializer: TestUserJsonSerializer(),
+            ),
+            '/accounts': CrudResource<TestAccount, void>(
+              path: '/accounts',
+              repository: InMemoryRepository<TestAccount>(),
+              serializer: TestAccountJsonSerializer(),
+            ),
+          },
+          port: 8770,
+        );
 
-      final connection = RestConnection(baseUrl: testServer.baseUrl);
-      final userRepo = TestUserRestRepository(connection);
-      final accountRepo = TestAccountRestRepository(connection);
+        final connection = RestConnection(baseUrl: testServer.baseUrl);
+        final userRepo = TestUserRestRepository(connection);
+        final accountRepo = TestAccountRestRepository(connection);
 
-      // Act - Use both repositories
-      final user = generateRandomTestUser();
-      final account = generateRandomTestAccount();
+        // Act - Use both repositories
+        final user = generateRandomTestUser();
+        final account = generateRandomTestAccount();
 
-      await userRepo.save(user);
-      await accountRepo.save(account);
+        await userRepo.save(user);
+        await accountRepo.save(account);
 
-      // Assert - Both operations succeed
-      final retrievedUser = await userRepo.getById(user.id);
-      final retrievedAccount = await accountRepo.getById(account.id);
+        // Assert - Both operations succeed
+        final retrievedUser = await userRepo.getById(user.id);
+        final retrievedAccount = await accountRepo.getById(account.id);
 
-      expect(retrievedUser.id, equals(user.id));
-      expect(retrievedAccount.id, equals(account.id));
+        expect(retrievedUser.id, equals(user.id));
+        expect(retrievedAccount.id, equals(account.id));
 
-      // Cleanup
-      connection.dispose();
-      await testServer.stop();
-    });
+        // Cleanup
+        connection.dispose();
+        await testServer.stop();
+      },
+    );
   });
 }

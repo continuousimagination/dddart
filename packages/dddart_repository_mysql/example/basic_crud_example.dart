@@ -86,13 +86,17 @@ Future<void> main() async {
     final retrievedOrder = await orderRepo.getById(order.id);
     print('   ✓ Order retrieved');
     print('   Customer: ${retrievedOrder.customerName}');
-    print('   Shipping: ${retrievedOrder.shippingAddress.city}, '
-        '${retrievedOrder.shippingAddress.state}');
+    print(
+      '   Shipping: ${retrievedOrder.shippingAddress.city}, '
+      '${retrievedOrder.shippingAddress.state}',
+    );
     print('   Items: ${retrievedOrder.items.length}');
     for (var i = 0; i < retrievedOrder.items.length; i++) {
       final item = retrievedOrder.items[i];
-      print('     ${i + 1}. ${item.productName} x${item.quantity} '
-          '@ \$${item.unitPrice.amount}');
+      print(
+        '     ${i + 1}. ${item.productName} x${item.quantity} '
+        '@ \$${item.unitPrice.amount}',
+      );
     }
     print(
       '   Total: \$${retrievedOrder.totalAmount.amount.toStringAsFixed(2)}\n',

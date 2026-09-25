@@ -3,12 +3,17 @@ targets:
     builders:
       dddart_events_distributed:event_registry:
         enabled: true
+      # This registry fixture owns its explicit fromJson factory, not a JSON
+      # serializer part. Its generated output is the standalone event registry.
+      dddart_json:json_serializable:
+        generate_for:
+          exclude:
+            - test/u10/registry_events.dart
 
 builders:
   event_registry:
     import: "package:dddart_events_distributed/src/generators/event_registry_generator.dart"
     builder_factories: ["eventRegistryBuilder"]
-    build_extensions: {".dart": [".event_registry.g.part"]}
+    build_extensions: {".dart": [".event_registry.g.dart"]}
     auto_apply: dependents
-    build_to: cache
-    applies_builders: ["source_gen|combining_builder"]
+    build_to: source

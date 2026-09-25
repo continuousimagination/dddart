@@ -63,15 +63,21 @@ Future<void> main() async {
     print('Order ID: ${order.id}');
     print('Customer: ${order.customerName}');
     print('Total: \$${order.totalAmount.amount} ${order.totalAmount.currency}');
-    print('Shipping: ${order.shippingAddress.street}, '
-        '${order.shippingAddress.city}, ${order.shippingAddress.country}');
-    print('Billing: ${order.billingAddress.street}, '
-        '${order.billingAddress.city}, ${order.billingAddress.country}');
+    print(
+      'Shipping: ${order.shippingAddress.street}, '
+      '${order.shippingAddress.city}, ${order.shippingAddress.country}',
+    );
+    print(
+      'Billing: ${order.billingAddress.street}, '
+      '${order.billingAddress.city}, ${order.billingAddress.country}',
+    );
     print('Items: ${order.items.length}');
     for (var i = 0; i < order.items.length; i++) {
       final item = order.items[i];
-      print('  ${i + 1}. ${item.productName} x${item.quantity} '
-          '@ \$${item.unitPrice.amount} ${item.unitPrice.currency}');
+      print(
+        '  ${i + 1}. ${item.productName} x${item.quantity} '
+        '@ \$${item.unitPrice.amount} ${item.unitPrice.currency}',
+      );
     }
 
     // Save the order (multi-table transaction)
@@ -84,13 +90,17 @@ Future<void> main() async {
     print('Order ID: ${retrievedOrder.id}');
     print('Customer: ${retrievedOrder.customerName}');
     print('Status: ${retrievedOrder.status}');
-    print('Total: \$${retrievedOrder.totalAmount.amount} '
-        '${retrievedOrder.totalAmount.currency}');
+    print(
+      'Total: \$${retrievedOrder.totalAmount.amount} '
+      '${retrievedOrder.totalAmount.currency}',
+    );
     print('Items retrieved: ${retrievedOrder.items.length}');
     for (var i = 0; i < retrievedOrder.items.length; i++) {
       final item = retrievedOrder.items[i];
-      print('  ${i + 1}. ${item.productName} x${item.quantity} '
-          '@ \$${item.unitPrice.amount} ${item.unitPrice.currency}');
+      print(
+        '  ${i + 1}. ${item.productName} x${item.quantity} '
+        '@ \$${item.unitPrice.amount} ${item.unitPrice.currency}',
+      );
     }
 
     // Demonstrate value object embedding
@@ -101,7 +111,8 @@ Future<void> main() async {
     print('  shippingAddress_street: ${retrievedOrder.shippingAddress.street}');
     print('  shippingAddress_city: ${retrievedOrder.shippingAddress.city}');
     print(
-        '  shippingAddress_country: ${retrievedOrder.shippingAddress.country}');
+      '  shippingAddress_country: ${retrievedOrder.shippingAddress.country}',
+    );
     print('  billingAddress_street: ${retrievedOrder.billingAddress.street}');
     print('  billingAddress_city: ${retrievedOrder.billingAddress.city}');
     print('  billingAddress_country: ${retrievedOrder.billingAddress.country}');

@@ -13,9 +13,7 @@ void main() {
     });
 
     test('should export GenerateDynamoRepository with parameters', () {
-      const annotation = GenerateDynamoRepository(
-        tableName: 'test_table',
-      );
+      const annotation = GenerateDynamoRepository(tableName: 'test_table');
       expect(annotation.tableName, equals('test_table'));
     });
 

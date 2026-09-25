@@ -7,9 +7,9 @@ import 'package:dddart_rest_client/src/oauth_callback_strategy.dart';
 import 'package:dddart_rest_client/src/pkce_generator.dart';
 import 'package:http/http.dart' as http;
 
-/// Authenticates a client through Amazon Cognito's OAuth authorization flow.
+/// Native Cognito OAuth provider with credentials stored in a local file.
 class CognitoAuthProvider implements AuthProvider {
-  /// Creates a Cognito authentication provider.
+  /// Creates a provider with an optional callback strategy and HTTP client.
   CognitoAuthProvider({
     required this.cognitoDomain,
     required this.clientId,
@@ -22,22 +22,22 @@ class CognitoAuthProvider implements AuthProvider {
         scopes = scopes ?? ['openid', 'email', 'profile'],
         _httpClient = httpClient ?? http.Client();
 
-  /// Base URL of the Cognito hosted UI.
+  /// Cognito hosted-UI domain used for authorization and token exchange.
   final String cognitoDomain;
 
-  /// OAuth client identifier registered with Cognito.
+  /// OAuth application client identifier.
   final String clientId;
 
-  /// Local path used to persist credentials.
+  /// Native path to the persisted credentials file.
   final String credentialsPath;
 
-  /// Strategy that receives the OAuth redirect callback.
+  /// Strategy that receives the authorization callback.
   final OAuthCallbackStrategy callbackStrategy;
 
   /// OAuth scopes requested during login.
   final List<String> scopes;
 
-  /// Optional sink for user-facing status messages.
+  /// Optional sink for user-facing login instructions.
   final void Function(String message)? onOutput;
   final http.Client _httpClient;
 
@@ -175,8 +175,8 @@ class CognitoAuthProvider implements AuthProvider {
 
   /// Deletes the current Cognito user account.
   ///
-  /// This permanently deletes the user from AWS Cognito using the DeleteUser
-  /// API. The user must have a valid access token.
+  /// Permanently deletes the user from Cognito using the DeleteUser API.
+  /// The user must have a valid access token to delete their account.
   ///
   /// After successful deletion, local credentials are automatically cleared.
   ///
@@ -188,7 +188,7 @@ class CognitoAuthProvider implements AuthProvider {
     final accessToken = await getAccessToken();
 
     // Call Cognito's DeleteUser API
-    // This endpoint uses the region-specific API URL, not the hosted UI URL.
+    // This uses the regional endpoint rather than the hosted-UI domain.
     final response = await _httpClient.post(
       Uri.parse('https://cognito-idp.${_extractRegion()}.amazonaws.com/'),
       headers: {
@@ -252,7 +252,7 @@ class CognitoAuthProvider implements AuthProvider {
     throw AuthenticationException('Not authenticated. Run login command.');
   }
 
-  /// Returns the Cognito subject from the current ID token.
+  /// Returns the subject claim from the current ID token.
   Future<String> getCognitoSub() async {
     final claims = await getIdTokenClaims();
     final sub = claims['sub'] as String?;
@@ -262,7 +262,7 @@ class CognitoAuthProvider implements AuthProvider {
     return sub;
   }
 
-  /// Decodes and returns the claims in the current ID token.
+  /// Decodes the current ID token payload without independently verifying it.
   Future<Map<String, dynamic>> getIdTokenClaims() async {
     final idToken = await getIdToken();
     final parts = idToken.split('.');

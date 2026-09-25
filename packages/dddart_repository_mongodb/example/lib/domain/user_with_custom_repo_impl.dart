@@ -37,8 +37,9 @@ class UserWithCustomRepoMongoRepository
   @override
   Future<List<UserWithCustomRepo>> findByLastName(String lastName) async {
     try {
-      final docs =
-          await _collection.find(where.eq('lastName', lastName)).toList();
+      final docs = await _collection
+          .find(where.eq('lastName', lastName))
+          .toList();
 
       return docs.map((doc) {
         // Convert MongoDB _id back to id field for deserialization

@@ -1,812 +1,266 @@
-import 'dart:convert';
-
 import 'package:dddart/dddart.dart';
 import 'package:dddart_json/dddart_json.dart';
 import 'package:dddart_rest/src/authentication_handler.dart';
 import 'package:dddart_rest/src/authentication_result.dart';
 import 'package:dddart_rest/src/authorization_handler.dart';
-import 'package:dddart_rest/src/error_mapper.dart';
 import 'package:dddart_rest/src/etag_generator.dart';
+import 'package:dddart_rest/src/http_resource.dart';
 import 'package:dddart_rest/src/query_handler.dart';
-import 'package:dddart_rest/src/response_builder.dart';
+import 'package:dddart_rest/src/resource_pipeline.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:shelf/shelf.dart';
 
-/// Main class that handles HTTP CRUD operations for an aggregate root.
+/// Ordinary repository HTTP CRUD over the shared authenticated request pipeline.
 ///
-/// CrudResource combines configuration (repository, JSON serializer, query handlers)
-/// with request handling logic for standard CRUD operations. Each instance is
-/// configured for a specific aggregate type and can be registered with an HTTP server.
-///
-/// Generic over [T] (aggregate type) and optional [TClaims] (authentication claims type).
-/// When [authenticationHandler] is provided, all CRUD operations require authentication.
-///
-/// Example without authentication:
-/// ```dart
-/// final userResource = CrudResource<User, void>(
-///   path: '/users',
-///   repository: userRepository,
-///   serializer: jsonSerializer,
-/// );
-/// ```
-///
-/// Example with authentication:
-/// ```dart
-/// final userResource = CrudResource<User, UserClaims>(
-///   path: '/users',
-///   repository: userRepository,
-///   serializer: jsonSerializer,
-///   authenticationHandler: jwtAuthHandler,
-/// );
-/// ```
-class CrudResource<T extends AggregateRoot, TClaims> {
-  /// Creates a CrudResource with the specified configuration
-  ///
-  /// Parameters:
-  /// - [path]: The base path for this resource (e.g., '/users')
-  /// - [repository]: Repository instance for persistence operations
-  /// - [serializer]: JSON serializer for request and response bodies
-  /// - [authenticationHandler]: Optional authentication handler. When provided, all CRUD operations require authentication
-  /// - [authorizationHandler]: Optional authorization handler. When provided, operations are authorized after authentication
-  /// - [collectionHandler]: Optional handler for unfiltered collection retrieval
-  /// - [queryHandlers]: Map of query parameter names to handler functions
-  /// - [customExceptionHandlers]: Map of exception types to error response handlers
-  /// - [defaultSkip]: Default skip value for pagination (defaults to 0)
-  /// - [defaultTake]: Default take value for pagination (defaults to 50)
-  /// - [maxTake]: Maximum allowed take value to prevent excessive queries (defaults to 100)
-  /// - [etagStrategy]: Strategy for generating ETags (defaults to timestamp)
-  /// - [preCreate]: Optional callback to modify aggregate before creation (e.g., set fields from auth context)
-  ///
-  /// Throws [ArgumentError] if:
-  /// - [path] is null or empty
+/// GET validators describe representations, not atomic write support. Conditional
+/// mutation headers and versioned roots require ConditionalCrudResource instead.
+class CrudResource<T extends AggregateRoot, TClaims> implements HttpResource {
+  /// Freezes trusted resource configuration; both auth handlers may be absent,
+  /// but authorization alone and versioned root registrations are refused.
   CrudResource({
     required this.path,
     required this.repository,
-    required this.serializer,
+    JsonSerializer<T>? serializer,
+    Map<String, Serializer<T>>? serializers,
+    this.collectionHandler,
     this.authenticationHandler,
     this.authorizationHandler,
-    this.collectionHandler,
-    this.queryHandlers = const {},
-    this.customExceptionHandlers = const {},
+    Map<String, QueryHandler<T>> queryHandlers = const {},
+    Map<Type, Response Function(Object)> customExceptionHandlers = const {},
     this.defaultSkip = 0,
     this.defaultTake = 50,
     this.maxTake = 100,
     ETagStrategy etagStrategy = ETagStrategy.timestamp,
     this.preCreate,
-  }) {
-    // Validate path is not null or empty
-    if (path.isEmpty) {
-      throw ArgumentError('path cannot be empty');
+  }) : serializers = _configureSerializers(serializer, serializers),
+       queryHandlers = Map.unmodifiable(queryHandlers),
+       customExceptionHandlers = Map.unmodifiable(customExceptionHandlers) {
+    // Reified generic type check prevents a legacy view of versioned state.
+    // ignore: literal_only_boolean_expressions
+    if (<T>[] is List<VersionedAggregateRoot>) {
+      throw const RepositoryCapabilityException();
     }
-
-    // Initialize ETag generator
+    _pipeline = ResourcePipeline(
+      path: path,
+      serializers: this.serializers,
+      authenticationHandler: authenticationHandler,
+      authorizationHandler: authorizationHandler,
+      customExceptionHandlers: this.customExceptionHandlers,
+      jsonContract: serializer != null,
+    );
     _etagGenerator = ETagGenerator<T>(
       strategy: etagStrategy,
-      serializer: etagStrategy == ETagStrategy.contentHash ? serializer : null,
+      serializer: etagStrategy == ETagStrategy.contentHash
+          ? this.serializers.values.first
+          : null,
     );
   }
-
-  /// The base path for this resource (e.g., '/users')
+  @override
   final String path;
 
-  /// Repository instance for persistence operations
-  ///
-  /// All repositories implement Repository<T> interface with getById, save, deleteById methods
+  /// Ordinary persistence contract, deliberately separate from conditional CRUD.
   final Repository<T> repository;
 
-  /// JSON serializer used for all request and success response bodies.
-  final JsonSerializer<T> serializer;
+  /// Immutable configured media types/codecs.
+  final Map<String, Serializer<T>> serializers;
 
-  /// Optional authentication handler
-  ///
-  /// When provided, all CRUD operations will require authentication.
-  /// The handler is invoked before any repository operations.
-  /// If authentication fails, a 401 Unauthorized response is returned.
-  final AuthenticationHandler<TClaims>? authenticationHandler;
-
-  /// Optional authorization handler
-  ///
-  /// When provided, operations are authorized after authentication succeeds.
-  /// The handler is invoked after authentication but before executing the operation.
-  /// If authorization fails, a 403 Forbidden response is returned.
-  final AuthorizationHandler<T, TClaims>? authorizationHandler;
-
-  /// Optional handler for unfiltered collection retrieval.
-  ///
-  /// The handler owns datastore-side selection, ordering, pagination, and the
-  /// accurate total count. It receives an empty query-parameter map, normalized
-  /// pagination values, and the current authentication result.
+  /// Explicit unfiltered query; pagination belongs to the datastore adapter.
   final QueryHandler<T>? collectionHandler;
 
-  /// Map of query parameter names to handler functions
-  ///
-  /// Key: the query parameter name (e.g., 'firstName')
-  /// Value: the handler function to invoke when that parameter is present
-  /// Note: The same handler can be registered multiple times for backward compatibility
+  /// Canonical JSON codec for resources configured through the JSON constructor.
+  JsonSerializer<T> get serializer {
+    final value = serializers['application/json'];
+    if (value is! JsonSerializer<T>) {
+      throw StateError('This legacy resource has no JSON serializer');
+    }
+    return value;
+  }
+
+  static Map<String, Serializer<A>> _configureSerializers<
+    A extends AggregateRoot
+  >(JsonSerializer<A>? serializer, Map<String, Serializer<A>>? serializers) {
+    if ((serializer == null) == (serializers == null)) {
+      throw ArgumentError('Provide exactly one serializer or serializers map');
+    }
+    return Map.unmodifiable(
+      serializer == null ? serializers! : {'application/json': serializer},
+    );
+  }
+
+  /// Trusted optional authenticator.
+  final AuthenticationHandler<TClaims>? authenticationHandler;
+
+  /// Trusted optional operation policy.
+  final AuthorizationHandler<T, TClaims>? authorizationHandler;
+
+  /// Legacy collection query extensions.
   final Map<String, QueryHandler<T>> queryHandlers;
 
-  /// Map of custom exception types to error response handlers
-  ///
-  /// These handlers supplement the built-in error handling for framework exceptions
-  /// Key: the exception type (e.g., MyCustomException)
-  /// Value: function that converts the exception to an HTTP Response
-  /// Note: Built-in handlers for RepositoryException, DeserializationException, etc. are always active
+  /// Trusted custom exception responses.
   final Map<Type, Response Function(Object)> customExceptionHandlers;
 
-  /// Default skip value for pagination (defaults to 0)
+  /// Default pagination offset.
   final int defaultSkip;
 
-  /// Default take value for pagination (defaults to 50)
+  /// Default pagination size.
   final int defaultTake;
 
-  /// Maximum allowed take value to prevent excessive queries (defaults to 100)
+  /// Maximum pagination size.
   final int maxTake;
 
-  /// Optional callback to modify aggregate before creation
-  ///
-  /// This callback is invoked after deserialization but before authorization and saving.
-  /// It receives the deserialized aggregate and authentication result, and returns
-  /// a potentially modified aggregate.
-  ///
-  /// Common use cases:
-  /// - Setting fields from authentication context (e.g., userId, cognitoSub)
-  /// - Adding audit fields (e.g., createdBy)
-  /// - Applying default values based on user context
-  ///
-  /// Example:
-  /// ```dart
-  /// preCreate: (player, authResult) {
-  ///   return Player(
-  ///     ...player,
-  ///     cognitoSub: authResult?.claims?.sub,
-  ///   );
-  /// }
-  /// ```
-  final T Function(T aggregate, AuthenticationResult<TClaims>? authResult)?
-      preCreate;
-
-  /// ResponseBuilder instance for creating HTTP responses
-  late final ResponseBuilder<T> _responseBuilder = ResponseBuilder<T>();
-
-  /// ETag generator for conditional request checks
+  /// Optional transformation before legacy create authorization/persistence.
+  final T Function(T, AuthenticationResult<TClaims>?)? preCreate;
+  late final ResourcePipeline<T, TClaims> _pipeline;
   late final ETagGenerator<T> _etagGenerator;
 
-  /// Logger instance for REST API request/response logging
-  final Logger _logger = Logger('dddart.rest');
+  void _ordinary(T value) {
+    if (value is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
+  }
 
-  /// Authenticates a request if auth handler is configured
-  ///
-  /// Returns null if authentication succeeds or auth handler is not configured.
-  /// Returns a 401 Response if authentication fails.
-  ///
-  /// Parameters:
-  /// - [request]: The HTTP request to authenticate
-  ///
-  /// Returns: null if authenticated or no auth required, 401 Response if auth fails
-  Future<({Response? response, AuthenticationResult<TClaims>? authResult})>
-      _authenticate(
+  void _unconditional(Request request) {
+    if (request.headers.keys.any(
+      (name) =>
+          name.toLowerCase().startsWith('if-') || name.toLowerCase() == 'range',
+    )) {
+      throw const RepositoryCapabilityException();
+    }
+  }
+
+  @override
+  Future<Response> handleGetById(Request request, String id) =>
+      _pipeline.run(request, 'Retrieving', (principal) async {
+        final uuid = UuidValue.fromString(id);
+        final denied = await _pipeline.authorize(
+          principal,
+          (policy, auth) => policy.authorizeRead(uuid, auth),
+          includeMessage: false,
+        );
+        if (denied != null) return denied;
+        final representation = _pipeline.select(request.headers['accept']);
+        final value = await repository.getById(uuid);
+        _ordinary(value);
+        return _pipeline.respond(
+          value,
+          representation,
+          expectedId: uuid,
+          etag: () => _etagGenerator.generate(value),
+        );
+      });
+  @override
+  Future<Response> handleQuery(
     Request request,
-  ) async {
-    if (authenticationHandler == null) {
-      return (response: null, authResult: null);
-    }
-
-    final authResult = await authenticationHandler!.authenticate(request);
-    if (!authResult.isAuthenticated) {
-      final response = _responseBuilder.unauthorized(
-        authResult.errorMessage ?? 'Authentication required',
-      );
-      return (response: response, authResult: null);
-    }
-
-    return (response: null, authResult: authResult);
-  }
-
-  /// Handles GET /resource/:id
-  ///
-  /// Parses the ID, calls repository.getById(), and returns a JSON aggregate.
-  /// The Accept header must allow JSON when it is present.
-  ///
-  /// Includes an ETag header for use in later conditional requests.
-  ///
-  /// If auth handler is configured, authenticates the request first.
-  ///
-  /// Parameters:
-  /// - [request]: The HTTP request
-  /// - [id]: The ID string from the URL path
-  ///
-  /// Returns: A Response with status 200 and serialized aggregate, or error response
-  Future<Response> handleGetById(Request request, String id) async {
-    _logger.info('GET /$path/$id - Retrieving $T');
-    try {
-      final negotiationError = _validateAcceptHeader(request.headers['accept']);
-      if (negotiationError != null) {
-        _logger.fine('GET /$path/$id - ${negotiationError.statusCode}');
-        return negotiationError;
-      }
-
-      // Authenticate if handler is configured
-      final authCheck = await _authenticate(request);
-      if (authCheck.response != null) {
-        _logger.fine('GET /$path/$id - ${authCheck.response!.statusCode}');
-        return authCheck.response!;
-      }
-
-      final uuid = UuidValue.fromString(id);
-      final aggregate = await repository.getById(uuid);
-
-      // Generate ETag for the aggregate
-      final etag = _etagGenerator.generate(aggregate);
-
-      final response = _responseBuilder.ok(
-        aggregate,
-        serializer,
-        etag: etag,
-      );
-      _logger.fine('GET /$path/$id - ${response.statusCode}');
-      return response;
-    } catch (e, stackTrace) {
-      return _handleException(e, stackTrace);
-    }
-  }
-
-  /// Handles GET /resource with optional query parameters and pagination
-  ///
-  /// - No query params: invokes [collectionHandler], or returns 400 if absent
-  /// - One query param: looks up and invokes corresponding query handler
-  /// - Multiple query params: returns 400 error
-  ///
-  /// If auth handler is configured, authenticates the request first and passes
-  /// auth result to query handlers.
-  /// If authorization handler is configured, authorizes filtered queries after authentication.
-  ///
-  /// Parameters:
-  /// - [request]: The HTTP request
-  ///
-  /// Returns: A Response with status 200 and serialized array, or error response
-  Future<Response> handleQuery(Request request) async {
-    final queryString =
-        request.url.query.isEmpty ? '' : '?${request.url.query}';
-    _logger.info('GET /$path$queryString - Querying $T');
-    try {
-      final negotiationError = _validateAcceptHeader(request.headers['accept']);
-      if (negotiationError != null) {
-        _logger.fine(
-          'GET /$path$queryString - ${negotiationError.statusCode}',
-        );
-        return negotiationError;
-      }
-
-      // Authenticate if handler is configured
-      final authCheck = await _authenticate(request);
-      if (authCheck.response != null) {
-        _logger
-            .fine('GET /$path$queryString - ${authCheck.response!.statusCode}');
-        return authCheck.response!;
-      }
-
-      final queryParams = request.url.queryParameters;
-      final pagination = _parsePagination(queryParams);
-
-      // Remove pagination params for handler matching
-      final filterParams = Map<String, String>.from(queryParams)
-        ..remove('skip')
-        ..remove('take');
-
-      // Authorize filtered queries if handler is configured
-      if (filterParams.isNotEmpty &&
-          authorizationHandler != null &&
-          authCheck.authResult != null) {
-        final authzResult = await authorizationHandler!.authorizeQuery(
-          filterParams,
-          authCheck.authResult!,
-        );
-        if (!authzResult.isAuthorized) {
-          final response = Response(
-            403,
-            headers: {'Content-Type': 'application/problem+json'},
-            body: jsonEncode({
-              'type': 'about:blank',
-              'title': 'Forbidden',
-              'status': 403,
-              'detail': authzResult.errorMessage ?? 'Access denied',
-            }),
-          );
-          _logger.fine('GET /$path$queryString - ${response.statusCode}');
-          return response;
-        }
-      }
-
-      QueryResult<T> result;
-
-      if (filterParams.isEmpty) {
-        final handler = collectionHandler;
-        if (handler == null) {
-          final response = _responseBuilder.badRequest(
-            'Unfiltered collection retrieval is unsupported for this resource. '
-            'Configure a collectionHandler.',
-          );
-          _logger.fine('GET /$path$queryString - ${response.statusCode}');
-          return response;
-        }
-
-        result = await handler(
-          repository,
-          const <String, String>{},
-          pagination.skip,
-          pagination.take,
-          authCheck.authResult,
-        );
-      } else if (filterParams.length > 1) {
-        // Multiple filters not allowed
-        final response = _responseBuilder.badRequest(
-          'Cannot combine multiple query parameters. Use only one filter at a time.',
-        );
-        _logger.fine('GET /$path$queryString - ${response.statusCode}');
-        return response;
-      } else {
-        // Single filter - look up handler
-        final paramName = filterParams.keys.first;
-        final handler = queryHandlers[paramName];
-
-        if (handler == null) {
-          final response = _responseBuilder.badRequest(
-            'Unsupported query parameter: $paramName',
-          );
-          _logger.fine('GET /$path$queryString - ${response.statusCode}');
-          return response;
-        }
-
-        result = await handler(
-          repository,
-          filterParams,
-          pagination.skip,
-          pagination.take,
-          authCheck.authResult,
-        );
-      }
-
-      final response = _responseBuilder.okList(
-        result.items,
-        serializer,
-        totalCount: result.totalCount,
-      );
-      _logger.fine('GET /$path$queryString - ${response.statusCode}');
-      return response;
-    } catch (e, stackTrace) {
-      return _handleException(e, stackTrace);
-    }
-  }
-
-  /// Handles POST /resource
-  ///
-  /// Deserializes a JSON request body, calls repository.save(), and returns the
-  /// created aggregate as JSON. Content-Type must be application/json and the
-  /// Accept header must allow JSON.
-  ///
-  /// Includes an ETag header for use in later conditional requests.
-  ///
-  /// If auth handler is configured, authenticates the request first.
-  /// If authorization handler is configured, authorizes the request after authentication.
-  ///
-  /// Parameters:
-  /// - [request]: The HTTP request
-  ///
-  /// Returns: A Response with status 201 and serialized aggregate, or error response
-  Future<Response> handleCreate(Request request) async {
-    _logger.info('POST /$path - Creating $T');
-    try {
-      final negotiationError = _validateAcceptHeader(request.headers['accept']);
-      if (negotiationError != null) {
-        _logger.fine('POST /$path - ${negotiationError.statusCode}');
-        return negotiationError;
-      }
-
-      final contentTypeError =
-          _validateJsonContentType(request.headers['content-type']);
-      if (contentTypeError != null) {
-        _logger.fine('POST /$path - ${contentTypeError.statusCode}');
-        return contentTypeError;
-      }
-
-      // Authenticate if handler is configured
-      final authCheck = await _authenticate(request);
-      if (authCheck.response != null) {
-        _logger.fine('POST /$path - ${authCheck.response!.statusCode}');
-        return authCheck.response!;
-      }
-
-      final body = await request.readAsString();
-      T aggregate;
-      try {
-        aggregate = serializer.deserialize(body);
-      } catch (e) {
-        _logger.warning('POST /$path - Deserialization failed: $e');
-        rethrow;
-      }
-
-      // Apply preCreate callback if configured
-      if (preCreate != null) {
-        aggregate = preCreate!(aggregate, authCheck.authResult);
-      }
-
-      // Authorize if handler is configured
-      if (authorizationHandler != null && authCheck.authResult != null) {
-        final authzResult = await authorizationHandler!.authorizeCreate(
-          aggregate,
-          authCheck.authResult!,
-        );
-        if (!authzResult.isAuthorized) {
-          final response = Response(
-            403,
-            headers: {'Content-Type': 'application/problem+json'},
-            body: jsonEncode({
-              'type': 'about:blank',
-              'title': 'Forbidden',
-              'status': 403,
-              'detail': authzResult.errorMessage ?? 'Access denied',
-            }),
-          );
-          _logger.fine('POST /$path - ${response.statusCode}');
-          return response;
-        }
-      }
-
-      await repository.save(aggregate);
-
-      // Generate ETag for the created aggregate
-      final etag = _etagGenerator.generate(aggregate);
-
-      final response = _responseBuilder.created(
-        aggregate,
-        serializer,
-        etag: etag,
-      );
-      _logger.fine('POST /$path - ${response.statusCode}');
-      return response;
-    } catch (e, stackTrace) {
-      return _handleException(e, stackTrace);
-    }
-  }
-
-  /// Handles PUT /resource/:id
-  ///
-  /// Deserializes a JSON request body, calls repository.save(), and returns the
-  /// updated aggregate as JSON. Content-Type must be application/json and the
-  /// Accept header must allow JSON.
-  ///
-  /// The route ID is authoritative and must match the deserialized aggregate
-  /// ID. A mismatch returns 400 before authorization, ETag lookup, or saving.
-  ///
-  /// Supports best-effort stale-update detection via the If-Match header:
-  /// - If If-Match header is present, validates ETag before updating
-  /// - If ETag doesn't match, returns 412 Precondition Failed
-  /// - If If-Match is not present, update proceeds without validation
-  ///
-  /// The ETag read/comparison and [Repository.save] are separate operations.
-  /// Overlapping updates can both pass validation before either save completes;
-  /// this is not an atomic conditional-write guarantee.
-  ///
-  /// Includes ETag header in response.
-  ///
-  /// If auth handler is configured, authenticates the request first.
-  /// If authorization handler is configured, authorizes the request after authentication.
-  ///
-  /// Parameters:
-  /// - [request]: The HTTP request
-  /// - [id]: The ID string from the URL path
-  ///
-  /// Returns: A Response with status 200 and serialized aggregate, or error response
-  Future<Response> handleUpdate(Request request, String id) async {
-    _logger.info('PUT /$path/$id - Updating $T');
-    try {
-      final negotiationError = _validateAcceptHeader(request.headers['accept']);
-      if (negotiationError != null) {
-        _logger.fine('PUT /$path/$id - ${negotiationError.statusCode}');
-        return negotiationError;
-      }
-
-      final contentTypeError =
-          _validateJsonContentType(request.headers['content-type']);
-      if (contentTypeError != null) {
-        _logger.fine('PUT /$path/$id - ${contentTypeError.statusCode}');
-        return contentTypeError;
-      }
-
-      // Authenticate if handler is configured
-      final authCheck = await _authenticate(request);
-      if (authCheck.response != null) {
-        _logger.fine('PUT /$path/$id - ${authCheck.response!.statusCode}');
-        return authCheck.response!;
-      }
-
-      final body = await request.readAsString();
-      T aggregate;
-      try {
-        aggregate = serializer.deserialize(body);
-      } catch (e) {
-        _logger.warning('PUT /$path/$id - Deserialization failed: $e');
-        rethrow;
-      }
-
-      final uuid = UuidValue.fromString(id);
-      if (aggregate.id != uuid) {
-        final response = _responseBuilder.badRequest(
-          'Route ID $uuid does not match request body ID ${aggregate.id}.',
-        );
-        _logger.fine('PUT /$path/$id - ${response.statusCode} (ID mismatch)');
-        return response;
-      }
-
-      // Check If-Match before saving. This read/check is not atomic with save.
-      final ifMatch = request.headers['if-match'];
-      if (ifMatch != null) {
-        // Fetch current aggregate to validate ETag
-        final currentAggregate = await repository.getById(uuid);
-        final currentETag = _etagGenerator.generate(currentAggregate);
-
-        if (ifMatch != currentETag) {
-          // ETag mismatch - return 412 Precondition Failed
-          final response = Response(
-            412,
-            headers: {
-              'Content-Type': 'application/problem+json',
-              'ETag': currentETag,
-            },
-            body: jsonEncode({
-              'type': 'about:blank',
-              'title': 'Precondition Failed',
-              'status': 412,
-              'detail': 'The provided ETag does not match the current resource '
-                  'state. Fetch the current representation before retrying.',
-            }),
-          );
-          _logger
-              .fine('PUT /$path/$id - ${response.statusCode} (ETag mismatch)');
-          return response;
-        }
-      }
-
-      // Authorize if handler is configured
-      if (authorizationHandler != null && authCheck.authResult != null) {
-        final authzResult = await authorizationHandler!.authorizeUpdate(
-          aggregate,
-          authCheck.authResult!,
-        );
-        if (!authzResult.isAuthorized) {
-          final response = Response(
-            403,
-            headers: {'Content-Type': 'application/problem+json'},
-            body: jsonEncode({
-              'type': 'about:blank',
-              'title': 'Forbidden',
-              'status': 403,
-              'detail': authzResult.errorMessage ?? 'Access denied',
-            }),
-          );
-          _logger.fine('PUT /$path/$id - ${response.statusCode}');
-          return response;
-        }
-      }
-
-      await repository.save(aggregate);
-
-      // Generate ETag for the updated aggregate
-      final etag = _etagGenerator.generate(aggregate);
-
-      final response = _responseBuilder.ok(
-        aggregate,
-        serializer,
-        etag: etag,
-      );
-      _logger.fine('PUT /$path/$id - ${response.statusCode}');
-      return response;
-    } catch (e, stackTrace) {
-      return _handleException(e, stackTrace);
-    }
-  }
-
-  /// Handles DELETE /resource/:id
-  ///
-  /// Parses ID, calls repository.deleteById(), returns 204 No Content
-  ///
-  /// If auth handler is configured, authenticates the request first.
-  /// If authorization handler is configured, authorizes the request after authentication.
-  ///
-  /// Parameters:
-  /// - [request]: The HTTP request
-  /// - [id]: The ID string from the URL path
-  ///
-  /// Returns: A Response with status 204, or error response
-  Future<Response> handleDelete(Request request, String id) async {
-    _logger.info('DELETE /$path/$id - Deleting $T');
-    try {
-      final negotiationError = _validateAcceptHeader(request.headers['accept']);
-      if (negotiationError != null) {
-        _logger.fine('DELETE /$path/$id - ${negotiationError.statusCode}');
-        return negotiationError;
-      }
-
-      // Authenticate if handler is configured
-      final authCheck = await _authenticate(request);
-      if (authCheck.response != null) {
-        _logger.fine('DELETE /$path/$id - ${authCheck.response!.statusCode}');
-        return authCheck.response!;
-      }
-
-      final uuid = UuidValue.fromString(id);
-
-      // Authorize if handler is configured
-      if (authorizationHandler != null && authCheck.authResult != null) {
-        final authzResult = await authorizationHandler!.authorizeDelete(
-          uuid,
-          authCheck.authResult!,
-        );
-        if (!authzResult.isAuthorized) {
-          final response = Response(
-            403,
-            headers: {'Content-Type': 'application/problem+json'},
-            body: jsonEncode({
-              'type': 'about:blank',
-              'title': 'Forbidden',
-              'status': 403,
-              'detail': authzResult.errorMessage ?? 'Access denied',
-            }),
-          );
-          _logger.fine('DELETE /$path/$id - ${response.statusCode}');
-          return response;
-        }
-      }
-
-      await repository.deleteById(uuid);
-      final response = _responseBuilder.noContent();
-      _logger.fine('DELETE /$path/$id - ${response.statusCode}');
-      return response;
-    } catch (e, stackTrace) {
-      return _handleException(e, stackTrace);
-    }
-  }
-
-  /// Validates that the client accepts the stock JSON response representation.
-  Response? _validateAcceptHeader(String? acceptHeader) {
-    if (acceptHeader == null || acceptHeader.trim().isEmpty) {
-      return null;
-    }
-
-    var selectedSpecificity = -1;
-    var selectedQuality = 0.0;
-
-    for (final part in acceptHeader.split(',')) {
-      final segments = part.trim().split(';');
-      final mediaType = segments.first.trim().toLowerCase();
-      final specificity = switch (mediaType) {
-        'application/json' => 2,
-        'application/*' => 1,
-        '*/*' => 0,
-        _ => null,
-      };
-      if (specificity == null) continue;
-
-      var quality = 1.0;
-
-      for (var i = 1; i < segments.length; i++) {
-        final parameter = segments[i].trim();
-        final separator = parameter.indexOf('=');
-        if (separator == -1) continue;
-        final name = parameter.substring(0, separator).trim().toLowerCase();
-        if (name == 'q') {
-          quality =
-              double.tryParse(parameter.substring(separator + 1).trim()) ?? 0;
-          if (quality < 0 || quality > 1) quality = 0;
-          break;
-        }
-      }
-
-      if (specificity > selectedSpecificity) {
-        selectedSpecificity = specificity;
-        selectedQuality = quality;
-      } else if (specificity == selectedSpecificity &&
-          quality > selectedQuality) {
-        selectedQuality = quality;
-      }
-    }
-
-    if (selectedQuality > 0) return null;
-
-    return _responseBuilder.notAcceptable(
-      'Accept header does not allow application/json: $acceptHeader',
+  ) => _pipeline.run(request, 'Querying', (principal) async {
+    final parameters = request.url.queryParameters;
+    var skip = int.tryParse(parameters['skip'] ?? '') ?? defaultSkip;
+    var take = int.tryParse(parameters['take'] ?? '') ?? defaultTake;
+    if (skip < 0) skip = 0;
+    if (take < 0) take = defaultTake;
+    if (take > maxTake) take = maxTake;
+    final filters = Map<String, String>.from(parameters)
+      ..remove('skip')
+      ..remove('take');
+    final denied = await _pipeline.authorize(
+      principal,
+      (policy, auth) => policy.authorizeQuery(filters, auth),
     );
-  }
-
-  /// Validates the JSON media type required for POST and PUT request bodies.
-  Response? _validateJsonContentType(String? contentTypeHeader) {
-    if (contentTypeHeader == null || contentTypeHeader.trim().isEmpty) {
-      return _responseBuilder.unsupportedMediaType(
-        'Content-Type application/json is required.',
+    if (denied != null) return denied;
+    final representation = _pipeline.select(request.headers['accept']);
+    QueryResult<T> result;
+    if (filters.isEmpty) {
+      final handler = collectionHandler;
+      if (handler == null) {
+        return ResourcePipeline.problem(
+          400,
+          'Bad Request',
+          'Unfiltered collection retrieval is unsupported for this resource. '
+              'Configure a collectionHandler.',
+        );
+      }
+      result = await handler(repository, const {}, skip, take, principal);
+    } else if (filters.length > 1) {
+      return ResourcePipeline.problem(
+        400,
+        'Bad Request',
+        'Cannot combine multiple query parameters. Use only one filter at a time.',
       );
+    } else {
+      final name = filters.keys.first;
+      final handler = queryHandlers[name];
+      if (handler == null) {
+        return ResourcePipeline.problem(
+          400,
+          'Bad Request',
+          'Unsupported query parameter: $name',
+        );
+      }
+      result = await handler(repository, filters, skip, take, principal);
     }
-
-    final contentType = _extractMediaType(contentTypeHeader).toLowerCase();
-    if (contentType == 'application/json') {
-      return null;
+    for (final value in result.items) {
+      _ordinary(value);
     }
-
-    return _responseBuilder.unsupportedMediaType(
-      'Content-Type $contentType is not supported. '
-      'Supported type: application/json',
+    return _pipeline.respondList(
+      result.items,
+      representation,
+      totalCount: result.totalCount,
     );
-  }
-
-  /// Handles exceptions by checking custom handlers first, then falling back to ErrorMapper
-  ///
-  /// Parameters:
-  /// - [error]: The exception that was thrown
-  /// - [stackTrace]: The stack trace associated with the exception
-  ///
-  /// Returns: A Response with appropriate status code and error body
-  Response _handleException(Object error, StackTrace stackTrace) {
-    _logger.severe('Exception during request handling', error, stackTrace);
-
-    // Check custom handlers first
-    final customHandler = customExceptionHandlers[error.runtimeType];
-    if (customHandler != null) {
-      return customHandler(error);
-    }
-
-    // Fall back to built-in ErrorMapper
-    return ErrorMapper.mapException(error, stackTrace);
-  }
-
-  /// Extracts media type from Content-Type header, removing charset and other parameters
-  ///
-  /// Example: "application/json; charset=utf-8" -> "application/json"
-  ///
-  /// Parameters:
-  /// - [contentType]: The Content-Type header value
-  ///
-  /// Returns: The media type without parameters
-  String _extractMediaType(String contentType) {
-    return contentType.split(';').first.trim();
-  }
-
-  /// Parses pagination parameters from query string
-  ///
-  /// Extracts skip and take parameters, applies defaults, and enforces maxTake limit.
-  /// Edge cases:
-  /// - Negative skip is treated as zero
-  /// - Negative take is treated as defaultTake
-  /// - Zero take is preserved for the selected collection handler
-  /// - Take values exceeding maxTake are capped at maxTake
-  ///
-  /// Parameters:
-  /// - [queryParams]: The query parameters from the request
-  ///
-  /// Returns: A _PaginationParams object with skip and take values
-  _PaginationParams _parsePagination(Map<String, String> queryParams) {
-    var skip = int.tryParse(queryParams['skip'] ?? '') ?? defaultSkip;
-    var take = int.tryParse(queryParams['take'] ?? '') ?? defaultTake;
-
-    // Handle negative skip - treat as zero
-    if (skip < 0) {
-      skip = 0;
-    }
-
-    // Handle negative take - treat as defaultTake
-    if (take < 0) {
-      take = defaultTake;
-    }
-
-    // Enforce maxTake limit
-    if (take > maxTake) {
-      take = maxTake;
-    }
-
-    return _PaginationParams(skip, take);
-  }
-}
-
-/// Internal class to hold pagination parameters
-class _PaginationParams {
-  _PaginationParams(this.skip, this.take);
-  final int skip;
-  final int take;
+  });
+  @override
+  Future<Response> handleCreate(Request request) =>
+      _pipeline.run(request, 'Creating', (principal) async {
+        var value = await _pipeline.deserialize(request);
+        _ordinary(value);
+        if (preCreate != null) {
+          value = preCreate!(value, principal);
+          _ordinary(value);
+        }
+        final denied = await _pipeline.authorize(
+          principal,
+          (policy, auth) => policy.authorizeCreate(value, auth),
+        );
+        if (denied != null) return denied;
+        final representation = _pipeline.select(request.headers['accept']);
+        _unconditional(request);
+        await _pipeline.persist(() => repository.save(value));
+        return _pipeline.respond(
+          value,
+          representation,
+          status: 201,
+          etag: () => _etagGenerator.generate(value),
+        );
+      });
+  @override
+  Future<Response> handleUpdate(Request request, String id) =>
+      _pipeline.run(request, 'Updating', (principal) async {
+        final uuid = UuidValue.fromString(id);
+        final value = await _pipeline.deserialize(request);
+        _ordinary(value);
+        if (value.id != uuid) {
+          throw ArgumentError('Path and body aggregate identities must agree');
+        }
+        final denied = await _pipeline.authorize(
+          principal,
+          (policy, auth) => policy.authorizeUpdate(value, auth),
+        );
+        if (denied != null) return denied;
+        final representation = _pipeline.select(request.headers['accept']);
+        _unconditional(request);
+        await _pipeline.persist(() => repository.save(value));
+        return _pipeline.respond(value, representation, expectedId: uuid);
+      });
+  @override
+  Future<Response> handleDelete(Request request, String id) =>
+      _pipeline.run(request, 'Deleting', (principal) async {
+        final uuid = UuidValue.fromString(id);
+        final denied = await _pipeline.authorize(
+          principal,
+          (policy, auth) => policy.authorizeDelete(uuid, auth),
+        );
+        if (denied != null) return denied;
+        _unconditional(request);
+        _pipeline.select(request.headers['accept']);
+        await _pipeline.persist(() => repository.deleteById(uuid));
+        return Response(204);
+      });
 }

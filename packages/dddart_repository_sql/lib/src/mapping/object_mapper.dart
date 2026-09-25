@@ -84,11 +84,7 @@ class ObjectMapper {
   }
 
   /// Sets a value in a nested map structure using a dot-separated path.
-  void _setNestedValue(
-    Map<String, dynamic> map,
-    String path,
-    Object? value,
-  ) {
+  void _setNestedValue(Map<String, dynamic> map, String path, Object? value) {
     final parts = path.split('_');
 
     if (parts.length == 1) {

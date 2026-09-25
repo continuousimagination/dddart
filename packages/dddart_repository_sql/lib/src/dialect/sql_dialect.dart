@@ -48,10 +48,7 @@ abstract class SqlDialect {
   String insertOrReplace(String tableName, List<String> columns);
 
   /// Generates SELECT with JOINs statement.
-  String selectWithJoins(
-    TableDefinition rootTable,
-    List<JoinClause> joins,
-  );
+  String selectWithJoins(TableDefinition rootTable, List<JoinClause> joins);
 
   /// Generates DELETE statement.
   String delete(String tableName);

@@ -28,10 +28,7 @@ class SimpleUser extends AggregateRoot {
 /// Simple test address for architecture verification.
 @Serializable()
 class SimpleAddress extends Value {
-  const SimpleAddress({
-    required this.street,
-    required this.city,
-  });
+  const SimpleAddress({required this.street, required this.city});
 
   final String street;
   final String city;
@@ -44,10 +41,7 @@ void main() {
   group('Three-Package Architecture Tests', () {
     test('JsonSerializer service class works for AggregateRoot', () {
       // Create a test user
-      final user = SimpleUser(
-        name: 'John Doe',
-        email: 'john@example.com',
-      );
+      final user = SimpleUser(name: 'John Doe', email: 'john@example.com');
 
       // Test serialization using the service class
       final serializer = SimpleUserJsonSerializer();
@@ -71,10 +65,7 @@ void main() {
 
     test('JsonSerializer service class works for Value objects', () {
       // Create a test address
-      const address = SimpleAddress(
-        street: '123 Main St',
-        city: 'Anytown',
-      );
+      const address = SimpleAddress(street: '123 Main St', city: 'Anytown');
 
       // Test serialization using the service class
       final serializer = SimpleAddressJsonSerializer();
@@ -92,10 +83,7 @@ void main() {
     });
 
     test('Static convenience methods work', () {
-      final user = SimpleUser(
-        name: 'Jane Doe',
-        email: 'jane@example.com',
-      );
+      final user = SimpleUser(name: 'Jane Doe', email: 'jane@example.com');
 
       // Test static encode method
       final json = SimpleUserJsonSerializer.encode(user);

@@ -43,6 +43,19 @@ final class ValidationFailure implements Exception {
   String toString() => message;
 }
 
+bool canRegenerateExampleOutput({
+  required bool ignored,
+  required bool tracked,
+  required bool declared,
+  required bool sourceDeclaresOutput,
+  required String contents,
+}) =>
+    ignored ||
+    (tracked &&
+        declared &&
+        sourceDeclaresOutput &&
+        contents.startsWith('// GENERATED CODE - DO NOT MODIFY BY HAND\n'));
+
 final class PackagePolicy {
   PackagePolicy({
     required this.name,
@@ -85,11 +98,7 @@ final class ExampleGenerationPolicy {
     return ExampleGenerationPolicy(
       action: _requiredString(json, 'action'),
       builders: _stringSet(json, 'builders', required: false),
-      disabledBuilders: _stringSet(
-        json,
-        'disabledBuilders',
-        required: false,
-      ),
+      disabledBuilders: _stringSet(json, 'disabledBuilders', required: false),
       outputs: _stringSet(json, 'outputs', required: false),
     );
   }
@@ -203,12 +212,14 @@ final class ExamplePolicy {
       generation: ExampleGenerationPolicy.fromJson(
         _objectMap(json['generation'], 'generation'),
       ),
-      entrypoints: _objectList(json, 'entrypoints')
-          .map(ExampleEntrypointPolicy.fromJson)
-          .toList(growable: false),
-      sourceOverrides: _objectList(json, 'sourceOverrides')
-          .map(ExampleSourcePolicy.fromJson)
-          .toList(growable: false),
+      entrypoints: _objectList(
+        json,
+        'entrypoints',
+      ).map(ExampleEntrypointPolicy.fromJson).toList(growable: false),
+      sourceOverrides: _objectList(
+        json,
+        'sourceOverrides',
+      ).map(ExampleSourcePolicy.fromJson).toList(growable: false),
       externalService: ExampleServicePolicy.fromJson(
         _objectMap(json['externalService'], 'externalService'),
       ),
@@ -296,9 +307,10 @@ final class TestTagPolicy {
           : ServicePolicy.fromJson(_objectMap(serviceJson, 'service')),
       ciEnvironment: environmentJson == null
           ? const {}
-          : _objectMap(environmentJson, 'ciEnvironment').map(
-              (key, value) => MapEntry(key, value.toString()),
-            ),
+          : _objectMap(
+              environmentJson,
+              'ciEnvironment',
+            ).map((key, value) => MapEntry(key, value.toString())),
     );
   }
 
@@ -318,23 +330,32 @@ final class ValidationInventory {
     required this.examples,
     required this.workspaceExemptions,
     required this.testTagPolicies,
+    this.fixtures = const {},
   });
 
   factory ValidationInventory.fromJson(Map<String, Object?> json) {
-    final packageList = _objectList(json, 'packages')
-        .map(PackagePolicy.fromJson)
-        .toList(growable: false);
-    final exampleList = _objectList(json, 'examples')
-        .map(ExamplePolicy.fromJson)
-        .toList(growable: false);
-    final exemptionList = _objectList(json, 'workspaceExemptions')
-        .map(WorkspaceExemption.fromJson)
-        .toList(growable: false);
-    final testTagList = _objectList(json, 'testTagPolicies')
-        .map(TestTagPolicy.fromJson)
-        .toList(growable: false);
+    final packageList = _objectList(
+      json,
+      'packages',
+    ).map(PackagePolicy.fromJson).toList(growable: false);
+    final fixtureList = json.containsKey('fixtures')
+        ? _objectList(json, 'fixtures').map(PackagePolicy.fromJson).toList()
+        : <PackagePolicy>[];
+    final exampleList = _objectList(
+      json,
+      'examples',
+    ).map(ExamplePolicy.fromJson).toList(growable: false);
+    final exemptionList = _objectList(
+      json,
+      'workspaceExemptions',
+    ).map(WorkspaceExemption.fromJson).toList(growable: false);
+    final testTagList = _objectList(
+      json,
+      'testTagPolicies',
+    ).map(TestTagPolicy.fromJson).toList(growable: false);
 
     return ValidationInventory(
+      fixtures: {for (final fixture in fixtureList) fixture.name: fixture},
       schemaVersion: _requiredInt(json, 'schemaVersion'),
       packages: {for (final package in packageList) package.name: package},
       examples: {for (final example in exampleList) example.name: example},
@@ -347,6 +368,7 @@ final class ValidationInventory {
 
   final int schemaVersion;
   final Map<String, PackagePolicy> packages;
+  final Map<String, PackagePolicy> fixtures;
   final Map<String, ExamplePolicy> examples;
   final Map<String, WorkspaceExemption> workspaceExemptions;
   final List<TestTagPolicy> testTagPolicies;
@@ -360,9 +382,7 @@ final class WorkspacePackage {
 }
 
 ValidationInventory loadInventory(String repositoryRoot) {
-  final file = File(
-    '$repositoryRoot/tool/validation/inventory.json',
-  );
+  final file = File('$repositoryRoot/tool/validation/inventory.json');
   if (!file.existsSync()) {
     throw ValidationFailure('Validation inventory is missing: ${file.path}');
   }
@@ -441,7 +461,18 @@ void validateInventoryShape(ValidationInventory inventory) {
   }
 
   final packagePaths = <String>{};
-  for (final package in inventory.packages.values) {
+  final generationOwners = {...inventory.packages, ...inventory.fixtures};
+  for (final fixture in inventory.fixtures.values) {
+    if (inventory.packages.containsKey(fixture.name) ||
+        inventory.workspaceExemptions.containsKey(fixture.name) ||
+        fixture.generationAction != 'required') {
+      throw ValidationFailure(
+        'Private fixture ${fixture.name} must be separately generated '
+        'and validated.',
+      );
+    }
+  }
+  for (final package in generationOwners.values) {
     if (!packagePaths.add(package.path)) {
       throw ValidationFailure('Duplicate package path: ${package.path}.');
     }
@@ -456,16 +487,18 @@ void validateInventoryShape(ValidationInventory inventory) {
         '${package.generationAction}.',
       );
     }
-    final unknownAllowed = package.allowedLocalPackages
-        .difference(inventory.packages.keys.toSet());
+    final unknownAllowed = package.allowedLocalPackages.difference(
+      generationOwners.keys.toSet(),
+    );
     if (unknownAllowed.isNotEmpty) {
       throw ValidationFailure(
         '${package.name} allows unknown local packages: '
         '${_sorted(unknownAllowed)}.',
       );
     }
-    final unknownPrerequisites = package.generationPrerequisites
-        .difference(inventory.packages.keys.toSet());
+    final unknownPrerequisites = package.generationPrerequisites.difference(
+      generationOwners.keys.toSet(),
+    );
     if (unknownPrerequisites.isNotEmpty) {
       throw ValidationFailure(
         '${package.name} has unknown generation prerequisites: '
@@ -478,12 +511,22 @@ void validateInventoryShape(ValidationInventory inventory) {
       );
     }
     for (final prerequisite in package.generationPrerequisites) {
-      if (inventory.packages[prerequisite]!.generationAction != 'required') {
+      if (generationOwners[prerequisite]!.generationAction != 'required') {
         throw ValidationFailure(
           '${package.name} generation prerequisite $prerequisite is not '
           'marked generation: required.',
         );
       }
+    }
+  }
+
+  for (final package in inventory.packages.values) {
+    if (package.allowedLocalPackages
+        .intersection(inventory.fixtures.keys.toSet())
+        .isNotEmpty) {
+      throw ValidationFailure(
+        '${package.name} cannot publish private fixture dependencies.',
+      );
     }
   }
 
@@ -708,8 +751,9 @@ void validateInventoryShape(ValidationInventory inventory) {
         '${example.name} runs an external service in CI without a testTag.',
       );
     }
-    if (example.entrypoints
-            .any((entrypoint) => entrypoint.action == 'service') &&
+    if (example.entrypoints.any(
+          (entrypoint) => entrypoint.action == 'service',
+        ) &&
         service.kind == 'none') {
       throw ValidationFailure(
         '${example.name} has service entrypoints without a service policy.',
@@ -739,8 +783,9 @@ void validateInventoryShape(ValidationInventory inventory) {
         'Test-tag policy ${policy.tag} has no justification.',
       );
     }
-    final unknownPackages =
-        policy.packages.difference(inventory.packages.keys.toSet());
+    final unknownPackages = policy.packages.difference(
+      inventory.packages.keys.toSet(),
+    );
     if (unknownPackages.isNotEmpty) {
       throw ValidationFailure(
         'Test-tag policy ${policy.tag} names unknown packages: '
@@ -792,7 +837,7 @@ void validateInventoryShape(ValidationInventory inventory) {
 void _validateRelativePolicyPath(String exampleName, String path) {
   if (path.startsWith('/') ||
       path.contains(r'\') ||
-      RegExp(r'^[a-zA-Z]:').hasMatch(path) ||
+      RegExp('^[a-zA-Z]:').hasMatch(path) ||
       path == '.' ||
       path.split('/').any((segment) => segment.isEmpty || segment == '..')) {
     throw ValidationFailure(
@@ -803,7 +848,7 @@ void _validateRelativePolicyPath(String exampleName, String path) {
 
 Set<String> parseDeclaredServiceTags(String dartTestYaml) {
   return RegExp(
-    r'^  (requires-[a-z0-9-]+):',
+    '^  (requires-[a-z0-9-]+):',
     multiLine: true,
   ).allMatches(dartTestYaml).map((match) => match.group(1)!).toSet();
 }
@@ -815,7 +860,7 @@ Set<String> parseUsedServiceTags(Iterable<String> dartSources) {
     multiLine: true,
     dotAll: true,
   );
-  final tagValues = RegExp(r'''['"](requires-[a-z0-9-]+)['"]''');
+  final tagValues = RegExp('''['"](requires-[a-z0-9-]+)['"]''');
   for (final source in dartSources) {
     for (final listMatch in tagLists.allMatches(source)) {
       for (final tagMatch in tagValues.allMatches(listMatch.group(1)!)) {
@@ -853,12 +898,7 @@ Future<void> stagePublishedPackage({
   archive.parent.createSync(recursive: true);
   final archiveResult = await Process.run(
     Platform.resolvedExecutable,
-    [
-      'pub',
-      'publish',
-      '--skip-validation',
-      '--to-archive=$archivePath',
-    ],
+    ['pub', 'publish', '--skip-validation', '--to-archive=$archivePath'],
     workingDirectory: sourceDirectory,
     environment: withoutGitRepositoryEnvironment(
       additions: const {'CI': 'true'},
@@ -873,10 +913,12 @@ Future<void> stagePublishedPackage({
     );
   }
 
-  final extractResult = await Process.run(
-    'tar',
-    ['-xzf', archivePath, '-C', destinationDirectory],
-  );
+  final extractResult = await Process.run('tar', [
+    '-xzf',
+    archivePath,
+    '-C',
+    destinationDirectory,
+  ]);
   if (extractResult.exitCode != 0) {
     throw ValidationFailure(
       'Could not extract Pub archive for $sourceDirectory '
@@ -928,6 +970,7 @@ void validateWorkspaceCoverage({
   };
   final classifiedNames = <String>{
     ...inventory.packages.keys,
+    ...inventory.fixtures.keys,
     ...inventory.examples.values
         .where((example) => example.resolution == 'workspace')
         .map((example) => example.name),
@@ -942,7 +985,10 @@ void validateWorkspaceCoverage({
     );
   }
 
-  for (final policy in inventory.packages.values) {
+  for (final policy in [
+    ...inventory.packages.values,
+    ...inventory.fixtures.values,
+  ]) {
     _validateWorkspacePath(
       repositoryRoot: repositoryRoot,
       expectedRelativePath: policy.path,
@@ -1006,7 +1052,8 @@ void validateConfiguredClosures({
     if (!_sameSet(actual, package.allowedLocalPackages)) {
       throw ValidationFailure(
         '${package.name} local dependency closure drifted. Expected '
-        '${_sorted(package.allowedLocalPackages)}; resolved ${_sorted(actual)}.',
+        '${_sorted(package.allowedLocalPackages)}; '
+        'resolved ${_sorted(actual)}.',
       );
     }
   }
@@ -1119,8 +1166,10 @@ bool isMarkedPublishable(String pubspecContents) {
   if (match == null) {
     return true;
   }
-  final value =
-      match.group(1)!.trim().replaceAll(RegExp(r'''^['"]|['"]$'''), '');
+  final value = match
+      .group(1)!
+      .trim()
+      .replaceAll(RegExp(r'''^['"]|['"]$'''), '');
   return value != 'none';
 }
 
@@ -1144,7 +1193,8 @@ void _validateWorkspacePath({
   final actual = Directory(workspacePackage.path).absolute.path;
   if (actual != expected) {
     throw ValidationFailure(
-      '${workspacePackage.name} path drifted: expected $expected, found $actual.',
+      '${workspacePackage.name} path drifted: '
+      'expected $expected, found $actual.',
     );
   }
 }
@@ -1165,10 +1215,7 @@ Map<String, Object?> _objectMap(Object? value, String context) {
   return value.map((key, value) => MapEntry(key.toString(), value));
 }
 
-List<Map<String, Object?>> _objectList(
-  Map<String, Object?> json,
-  String key,
-) {
+List<Map<String, Object?>> _objectList(Map<String, Object?> json, String key) {
   final value = json[key];
   if (value is! List) {
     throw ValidationFailure('$key must be a JSON array.');

@@ -27,7 +27,8 @@ class OrderWithCustomRepoMysqlRepository
   Future<List<OrderWithCustomRepo>> findByCustomerName(
     String customerName,
   ) async {
-    final sql = '''
+    final sql =
+        '''
       SELECT $_selectColumns FROM $tableName
       WHERE customerName = ?
       ORDER BY createdAt DESC
@@ -56,7 +57,8 @@ class OrderWithCustomRepoMysqlRepository
     double minAmount,
   ) async {
     // First, get all orders
-    final sql = '''
+    final sql =
+        '''
       SELECT $_selectColumns FROM $tableName
       ORDER BY createdAt DESC
     ''';

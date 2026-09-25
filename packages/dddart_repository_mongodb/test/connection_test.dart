@@ -205,10 +205,7 @@ void main() {
           databaseName: 'testdb',
         );
 
-        expect(
-          () => connection.database,
-          throwsA(isA<StateError>()),
-        );
+        expect(() => connection.database, throwsA(isA<StateError>()));
       });
 
       test('should throw StateError with descriptive message', () {
@@ -254,10 +251,7 @@ void main() {
 
     test('should create exception with cause', () {
       final cause = Exception('Original error');
-      final exception = MongoRepositoryException(
-        'Test error',
-        cause: cause,
-      );
+      final exception = MongoRepositoryException('Test error', cause: cause);
 
       expect(exception.message, equals('Test error'));
       expect(exception.cause, equals(cause));
@@ -284,10 +278,7 @@ void main() {
 
     test('should format toString with cause', () {
       final cause = Exception('Original error');
-      final exception = MongoRepositoryException(
-        'Test error',
-        cause: cause,
-      );
+      final exception = MongoRepositoryException('Test error', cause: cause);
       final string = exception.toString();
 
       expect(string, contains('MongoRepositoryException: Test error'));

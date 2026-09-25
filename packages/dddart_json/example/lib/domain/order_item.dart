@@ -52,10 +52,6 @@ class OrderItem extends Value {
 
   /// Create a copy with updated price
   OrderItem withPrice(Money newPrice) {
-    return OrderItem(
-      product: product,
-      quantity: quantity,
-      unitPrice: newPrice,
-    );
+    return OrderItem(product: product, quantity: quantity, unitPrice: newPrice);
   }
 }

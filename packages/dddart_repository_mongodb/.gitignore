@@ -16,3 +16,6 @@ coverage/
 *.iml
 *.ipr
 *.iws
+
+# Reviewed tracked consumer artifacts must remain visible to Pub.
+!/example/pubspec.lock

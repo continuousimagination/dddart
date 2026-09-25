@@ -90,18 +90,18 @@ class UserClaims {
   final List<String> roles;
 
   Map<String, dynamic> toJson() => {
-        'userId': userId,
-        'username': username,
-        'email': email,
-        'roles': roles,
-      };
+    'userId': userId,
+    'username': username,
+    'email': email,
+    'roles': roles,
+  };
 
   factory UserClaims.fromJson(Map<String, dynamic> json) => UserClaims(
-        userId: json['userId'] as String,
-        username: json['username'] as String,
-        email: json['email'] as String,
-        roles: (json['roles'] as List?)?.cast<String>() ?? const [],
-      );
+    userId: json['userId'] as String,
+    username: json['username'] as String,
+    email: json['email'] as String,
+    roles: (json['roles'] as List?)?.cast<String>() ?? const [],
+  );
 }
 
 // Simple serializer for User
@@ -208,7 +208,10 @@ void main() async {
   server.addRoute('POST', '/auth/logout', authEndpoints.handleLogout);
   server.addRoute('POST', '/auth/device', authEndpoints.handleDeviceCode);
   server.addRoute(
-      'GET', '/auth/device/verify', authEndpoints.handleDeviceVerify);
+    'GET',
+    '/auth/device/verify',
+    authEndpoints.handleDeviceVerify,
+  );
   server.addRoute('POST', '/auth/token', authEndpoints.handleToken);
 
   // Register protected user resource
@@ -236,8 +239,10 @@ void main() async {
   // Register public health check
   server.addRoute('GET', '/health', (Request request) async {
     return Response.ok(
-      jsonEncode(
-          {'status': 'healthy', 'timestamp': DateTime.now().toIso8601String()}),
+      jsonEncode({
+        'status': 'healthy',
+        'timestamp': DateTime.now().toIso8601String(),
+      }),
       headers: {'Content-Type': 'application/json'},
     );
   });

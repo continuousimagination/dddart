@@ -9,10 +9,11 @@ import 'package:source_gen/source_gen.dart';
 import 'package:test/test.dart';
 
 void main() {
-  test('preserves generic, positional, named, and default parameters',
-      () async {
-    final library = await resolveSource(
-      '''
+  test(
+    'preserves generic, positional, named, and default parameters',
+    () async {
+      final library = await resolveSource(
+        '''
 library signature_fixture;
 
 import 'package:dddart/dddart.dart';
@@ -42,44 +43,47 @@ class Report extends AggregateRoot {
   Report({super.id, super.createdAt, super.updatedAt});
 }
 ''',
-      (resolver) async =>
-          (await resolver.findLibraryByName('signature_fixture'))!,
-    );
-    final aggregate = library.topLevelElements
-        .whereType<ClassElement>()
-        .firstWhere((element) => element.name == 'Report');
-    final annotation = aggregate.metadata.firstWhere(
-      (metadata) =>
-          metadata.computeConstantValue()?.type?.element?.name ==
-          'GenerateDynamoRepository',
-    );
+        (resolver) async =>
+            (await resolver.findLibraryByName('signature_fixture'))!,
+        readAllSourcesFromFilesystem: true,
+      );
+      final aggregate = library.children.whereType<ClassElement>().firstWhere(
+        (element) => element.name == 'Report',
+      );
+      final annotation = aggregate.metadata.annotations.firstWhere(
+        (metadata) =>
+            metadata.computeConstantValue()?.type?.element?.name ==
+            'GenerateDynamoRepository',
+      );
 
-    final output = DynamoRepositoryGenerator().generateForAnnotatedElement(
-      aggregate,
-      ConstantReader(annotation.computeConstantValue()),
-      _StubBuildStep(),
-    );
+      final output = DynamoRepositoryGenerator().generateForAnnotatedElement(
+        aggregate,
+        ConstantReader(annotation.computeConstantValue()),
+        _StubBuildStep(),
+      );
 
-    expect(
-      output,
-      contains(
-        'Future<R> transform<R extends Object?>(R value, '
-        '[int retries = 3, bool? verbose]);',
-      ),
-    );
-    expect(
-      output,
-      contains(
-        'Future<List<Report>> search({required String term, '
-        'int offset = 0, String? cursor});',
-      ),
-    );
-  });
+      expect(
+        output,
+        contains(
+          'Future<R> transform<R extends Object?>(R value, '
+          '[int retries = 3, bool? verbose]);',
+        ),
+      );
+      expect(
+        output,
+        contains(
+          'Future<List<Report>> search({required String term, '
+          'int offset = 0, String? cursor});',
+        ),
+      );
+    },
+  );
 
-  test('emits each custom read once and prefers the most-derived method',
-      () async {
-    final library = await resolveSource(
-      '''
+  test(
+    'emits each custom read once and prefers the most-derived method',
+    () async {
+      final library = await resolveSource(
+        '''
 library read_fixture;
 
 import 'package:dddart/dddart.dart';
@@ -109,41 +113,40 @@ class Report extends AggregateRoot {
   Report({super.id, super.createdAt, super.updatedAt});
 }
 ''',
-      (resolver) async => (await resolver.findLibraryByName('read_fixture'))!,
-    );
-    final aggregate = library.topLevelElements
-        .whereType<ClassElement>()
-        .firstWhere((element) => element.name == 'Report');
-    final annotation = aggregate.metadata.firstWhere(
-      (metadata) =>
-          metadata.computeConstantValue()?.type?.element?.name ==
-          'GenerateDynamoRepository',
-    );
+        (resolver) async => (await resolver.findLibraryByName('read_fixture'))!,
+        readAllSourcesFromFilesystem: true,
+      );
+      final aggregate = library.children.whereType<ClassElement>().firstWhere(
+        (element) => element.name == 'Report',
+      );
+      final annotation = aggregate.metadata.annotations.firstWhere(
+        (metadata) =>
+            metadata.computeConstantValue()?.type?.element?.name ==
+            'GenerateDynamoRepository',
+      );
 
-    final output = DynamoRepositoryGenerator().generateForAnnotatedElement(
-      aggregate,
-      ConstantReader(annotation.computeConstantValue()),
-      _StubBuildStep(),
-    );
+      final output = DynamoRepositoryGenerator().generateForAnnotatedElement(
+        aggregate,
+        ConstantReader(annotation.computeConstantValue()),
+        _StubBuildStep(),
+      );
 
-    expect(
-      _occurrenceCount(output, 'Future<List<Report>> getAll();'),
-      1,
-    );
-    expect(output, isNot(contains('Future<Iterable<Report>> getAll();')));
-    expect(
-      _occurrenceCount(
-        output,
-        'Future<List<Report>> scanPage({required int limit});',
-      ),
-      1,
-    );
-    expect(
-      _occurrenceCount(output, 'Future<Report?> findBySlug(String slug);'),
-      1,
-    );
-    expect(output, isNot(contains('_connection.client.scan')));
-  });
+      expect(_occurrenceCount(output, 'Future<List<Report>> getAll();'), 1);
+      expect(output, isNot(contains('Future<Iterable<Report>> getAll();')));
+      expect(
+        _occurrenceCount(
+          output,
+          'Future<List<Report>> scanPage({required int limit});',
+        ),
+        1,
+      );
+      expect(
+        _occurrenceCount(output, 'Future<Report?> findBySlug(String slug);'),
+        1,
+      );
+      expect(output, isNot(contains('_connection.client.scan')));
+    },
+  );
 }
 
 int _occurrenceCount(String source, String value) =>

@@ -107,12 +107,7 @@ Request createRequest({
   String? body,
 }) {
   final uri = Uri.parse('http://localhost:8080$path');
-  return Request(
-    method,
-    uri,
-    headers: headers,
-    body: body,
-  );
+  return Request(method, uri, headers: headers, body: body);
 }
 
 void main() {
@@ -156,25 +151,30 @@ void main() {
   });
 
   group('CrudResource Logging - Request Logging', () {
-    test('logs GET request at INFO level with method, path, and aggregate type',
-        () async {
-      // Arrange
-      await repository.save(testUser);
-      final request = createRequest(
-        path: '/users/${testUser.id}',
-        headers: {'accept': 'application/json'},
-      );
+    test(
+      'logs GET request at INFO level with method, path, and aggregate type',
+      () async {
+        // Arrange
+        await repository.save(testUser);
+        final request = createRequest(
+          path: '/users/${testUser.id}',
+          headers: {'accept': 'application/json'},
+        );
 
-      // Act
-      await resource.handleGetById(request, testUser.id.toString());
+        // Act
+        await resource.handleGetById(request, testUser.id.toString());
 
-      // Assert
-      final infoLogs = logRecords.where((r) => r.level == Level.INFO).toList();
-      expect(infoLogs.length, equals(1));
-      expect(infoLogs[0].message, contains('GET'));
-      expect(infoLogs[0].message, contains('/users/${testUser.id}'));
-      expect(infoLogs[0].message, contains('TestUser'));
-    });
+        // Assert
+        final infoLogs = logRecords
+            .where((r) => r.level == Level.INFO)
+            .toList();
+        expect(infoLogs.length, equals(1));
+        expect(infoLogs[0].message, contains('GET'));
+        expect(infoLogs[0].message, contains('/users'));
+        expect(infoLogs[0].message, isNot(contains(testUser.id.toString())));
+        expect(infoLogs[0].message, contains('TestUser'));
+      },
+    );
 
     test('logs POST request at INFO level', () async {
       // Arrange
@@ -222,7 +222,8 @@ void main() {
       final infoLogs = logRecords.where((r) => r.level == Level.INFO).toList();
       expect(infoLogs.length, equals(1));
       expect(infoLogs[0].message, contains('PUT'));
-      expect(infoLogs[0].message, contains('/users/${testUser.id}'));
+      expect(infoLogs[0].message, contains('/users'));
+      expect(infoLogs[0].message, isNot(contains(testUser.id.toString())));
       expect(infoLogs[0].message, contains('TestUser'));
     });
 
@@ -241,144 +242,171 @@ void main() {
       final infoLogs = logRecords.where((r) => r.level == Level.INFO).toList();
       expect(infoLogs.length, equals(1));
       expect(infoLogs[0].message, contains('DELETE'));
-      expect(infoLogs[0].message, contains('/users/${testUser.id}'));
+      expect(infoLogs[0].message, contains('/users'));
+      expect(infoLogs[0].message, isNot(contains(testUser.id.toString())));
       expect(infoLogs[0].message, contains('TestUser'));
     });
 
-    test('logs query request at INFO level with query string', () async {
-      // Arrange
-      final inMemoryRepo = InMemoryRepository<TestUser>();
-      await inMemoryRepo.save(testUser);
+    test(
+      'logs query request at INFO level with query presence, without raw values',
+      () async {
+        // Arrange
+        final inMemoryRepo = InMemoryRepository<TestUser>();
+        await inMemoryRepo.save(testUser);
 
-      final inMemoryResource = CrudResource<TestUser, dynamic>(
-        path: 'users',
-        repository: inMemoryRepo,
-        serializer: serializer,
-        collectionHandler: (repo, params, skip, take, authResult) async {
-          final items = (repo as InMemoryRepository<TestUser>).getAllSync();
-          return QueryResult(
-            items.skip(skip).take(take).toList(),
-            totalCount: items.length,
-          );
-        },
-      );
+        final inMemoryResource = CrudResource<TestUser, dynamic>(
+          path: 'users',
+          repository: inMemoryRepo,
+          serializer: serializer,
+          collectionHandler: (repo, params, skip, take, authResult) async {
+            final items = (repo as InMemoryRepository<TestUser>).getAllSync();
+            return QueryResult(
+              items.skip(skip).take(take).toList(),
+              totalCount: items.length,
+            );
+          },
+        );
 
-      final request = createRequest(path: '/users?skip=0&take=10');
+        final request = createRequest(path: '/users?skip=0&take=10');
 
-      // Act
-      await inMemoryResource.handleQuery(request);
+        // Act
+        await inMemoryResource.handleQuery(request);
 
-      // Assert
-      final infoLogs = logRecords.where((r) => r.level == Level.INFO).toList();
-      expect(infoLogs.length, equals(1));
-      expect(infoLogs[0].message, contains('GET'));
-      expect(infoLogs[0].message, contains('/users'));
-      expect(infoLogs[0].message, contains('skip=0&take=10'));
-    });
+        // Assert
+        final infoLogs = logRecords
+            .where((r) => r.level == Level.INFO)
+            .toList();
+        expect(infoLogs.length, equals(1));
+        expect(infoLogs[0].message, contains('GET'));
+        expect(infoLogs[0].message, contains('/users'));
+        expect(infoLogs[0].message, contains('?[query]'));
+        expect(infoLogs[0].message, isNot(contains('skip=0&take=10')));
+      },
+    );
   });
 
   group('CrudResource Logging - Response Logging', () {
-    test('logs successful GET response at FINE level with status code',
-        () async {
-      // Arrange
-      await repository.save(testUser);
-      final request = createRequest(
-        path: '/users/${testUser.id}',
-        headers: {'accept': 'application/json'},
-      );
+    test(
+      'logs successful GET response at FINE level with status code',
+      () async {
+        // Arrange
+        await repository.save(testUser);
+        final request = createRequest(
+          path: '/users/${testUser.id}',
+          headers: {'accept': 'application/json'},
+        );
 
-      // Act
-      await resource.handleGetById(request, testUser.id.toString());
+        // Act
+        await resource.handleGetById(request, testUser.id.toString());
 
-      // Assert
-      final fineLogs = logRecords.where((r) => r.level == Level.FINE).toList();
-      expect(fineLogs.length, equals(1));
-      expect(fineLogs[0].message, contains('200'));
-    });
+        // Assert
+        final fineLogs = logRecords
+            .where((r) => r.level == Level.FINE)
+            .toList();
+        expect(fineLogs.length, equals(1));
+        expect(fineLogs[0].message, contains('200'));
+      },
+    );
 
-    test('logs successful POST response at FINE level with status code',
-        () async {
-      // Arrange
-      final newUser = TestUser(
-        id: UuidValue.generate(),
-        name: 'New User',
-        email: 'new@example.com',
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
+    test(
+      'logs successful POST response at FINE level with status code',
+      () async {
+        // Arrange
+        final newUser = TestUser(
+          id: UuidValue.generate(),
+          name: 'New User',
+          email: 'new@example.com',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
 
-      final requestBody = serializer.serialize(newUser);
-      final request = createRequest(
-        method: 'POST',
-        headers: {'content-type': 'application/json'},
-        body: requestBody,
-      );
+        final requestBody = serializer.serialize(newUser);
+        final request = createRequest(
+          method: 'POST',
+          headers: {'content-type': 'application/json'},
+          body: requestBody,
+        );
 
-      // Act
-      await resource.handleCreate(request);
+        // Act
+        await resource.handleCreate(request);
 
-      // Assert
-      final fineLogs = logRecords.where((r) => r.level == Level.FINE).toList();
-      expect(fineLogs.length, equals(1));
-      expect(fineLogs[0].message, contains('201'));
-    });
+        // Assert
+        final fineLogs = logRecords
+            .where((r) => r.level == Level.FINE)
+            .toList();
+        expect(fineLogs.length, equals(1));
+        expect(fineLogs[0].message, contains('201'));
+      },
+    );
 
-    test('logs successful PUT response at FINE level with status code',
-        () async {
-      // Arrange
-      await repository.save(testUser);
-      final requestBody = serializer.serialize(testUser);
-      final request = createRequest(
-        method: 'PUT',
-        path: '/users/${testUser.id}',
-        headers: {'content-type': 'application/json'},
-        body: requestBody,
-      );
+    test(
+      'logs successful PUT response at FINE level with status code',
+      () async {
+        // Arrange
+        await repository.save(testUser);
+        final requestBody = serializer.serialize(testUser);
+        final request = createRequest(
+          method: 'PUT',
+          path: '/users/${testUser.id}',
+          headers: {'content-type': 'application/json'},
+          body: requestBody,
+        );
 
-      // Act
-      await resource.handleUpdate(request, testUser.id.toString());
+        // Act
+        await resource.handleUpdate(request, testUser.id.toString());
 
-      // Assert
-      final fineLogs = logRecords.where((r) => r.level == Level.FINE).toList();
-      expect(fineLogs.length, equals(1));
-      expect(fineLogs[0].message, contains('200'));
-    });
+        // Assert
+        final fineLogs = logRecords
+            .where((r) => r.level == Level.FINE)
+            .toList();
+        expect(fineLogs.length, equals(1));
+        expect(fineLogs[0].message, contains('200'));
+      },
+    );
 
-    test('logs successful DELETE response at FINE level with status code',
-        () async {
-      // Arrange
-      await repository.save(testUser);
-      final request = createRequest(
-        method: 'DELETE',
-        path: '/users/${testUser.id}',
-      );
+    test(
+      'logs successful DELETE response at FINE level with status code',
+      () async {
+        // Arrange
+        await repository.save(testUser);
+        final request = createRequest(
+          method: 'DELETE',
+          path: '/users/${testUser.id}',
+        );
 
-      // Act
-      await resource.handleDelete(request, testUser.id.toString());
+        // Act
+        await resource.handleDelete(request, testUser.id.toString());
 
-      // Assert
-      final fineLogs = logRecords.where((r) => r.level == Level.FINE).toList();
-      expect(fineLogs.length, equals(1));
-      expect(fineLogs[0].message, contains('204'));
-    });
+        // Assert
+        final fineLogs = logRecords
+            .where((r) => r.level == Level.FINE)
+            .toList();
+        expect(fineLogs.length, equals(1));
+        expect(fineLogs[0].message, contains('204'));
+      },
+    );
 
-    test('logs 415 response at FINE level for unsupported media type',
-        () async {
-      // Arrange
-      final request = createRequest(
-        method: 'POST',
-        headers: {'content-type': 'application/xml'},
-        body: '<user><name>Test</name></user>',
-      );
+    test(
+      'logs 415 response at FINE level for unsupported media type',
+      () async {
+        // Arrange
+        final request = createRequest(
+          method: 'POST',
+          headers: {'content-type': 'application/xml'},
+          body: '<user><name>Test</name></user>',
+        );
 
-      // Act
-      await resource.handleCreate(request);
+        // Act
+        await resource.handleCreate(request);
 
-      // Assert
-      final fineLogs = logRecords.where((r) => r.level == Level.FINE).toList();
-      expect(fineLogs.length, equals(1));
-      expect(fineLogs[0].message, contains('415'));
-    });
+        // Assert
+        final fineLogs = logRecords
+            .where((r) => r.level == Level.FINE)
+            .toList();
+        expect(fineLogs.length, equals(1));
+        expect(fineLogs[0].message, contains('415'));
+      },
+    );
 
     test('logs 400 response at FINE level for bad request', () async {
       // Arrange
@@ -389,8 +417,9 @@ void main() {
         serializer: serializer,
       );
 
-      final request =
-          createRequest(path: '/users?name=John&email=john@example.com');
+      final request = createRequest(
+        path: '/users?name=John&email=john@example.com',
+      );
 
       // Act
       await inMemoryResource.handleQuery(request);
@@ -421,8 +450,9 @@ void main() {
       await failingResource.handleCreate(request);
 
       // Assert
-      final warningLogs =
-          logRecords.where((r) => r.level == Level.WARNING).toList();
+      final warningLogs = logRecords
+          .where((r) => r.level == Level.WARNING)
+          .toList();
       expect(warningLogs.length, equals(1));
       expect(warningLogs[0].message, contains('Deserialization failed'));
     });
@@ -446,13 +476,14 @@ void main() {
       await failingResource.handleUpdate(request, testUser.id.toString());
 
       // Assert
-      final warningLogs =
-          logRecords.where((r) => r.level == Level.WARNING).toList();
+      final warningLogs = logRecords
+          .where((r) => r.level == Level.WARNING)
+          .toList();
       expect(warningLogs.length, equals(1));
       expect(warningLogs[0].message, contains('Deserialization failed'));
     });
 
-    test('warning log includes error details', () async {
+    test('warning log excludes raw exception details', () async {
       // Arrange
       final failingResource = CrudResource<TestUser, dynamic>(
         path: 'users',
@@ -470,14 +501,16 @@ void main() {
       await failingResource.handleCreate(request);
 
       // Assert
-      final warningLogs =
-          logRecords.where((r) => r.level == Level.WARNING).toList();
-      expect(warningLogs[0].message, contains('FormatException'));
+      final warningLogs = logRecords
+          .where((r) => r.level == Level.WARNING)
+          .toList();
+      expect(warningLogs[0].message, isNot(contains('FormatException')));
+      expect(warningLogs[0].error, isNull);
     });
   });
 
   group('CrudResource Logging - Exception Handling', () {
-    test('logs exception at SEVERE level with error and stack trace', () async {
+    test('logs safe exception signal at SEVERE level', () async {
       // Arrange
       const nonExistentId = '987fcdeb-51a2-43f7-b123-456789abcdef';
       final request = createRequest(path: '/users/$nonExistentId');
@@ -486,15 +519,16 @@ void main() {
       await resource.handleGetById(request, nonExistentId);
 
       // Assert
-      final severeLogs =
-          logRecords.where((r) => r.level == Level.SEVERE).toList();
+      final severeLogs = logRecords
+          .where((r) => r.level == Level.SEVERE)
+          .toList();
       expect(severeLogs.length, equals(1));
       expect(
         severeLogs[0].message,
         contains('Exception during request handling'),
       );
-      expect(severeLogs[0].error, isNotNull);
-      expect(severeLogs[0].stackTrace, isNotNull);
+      expect(severeLogs[0].error, isNull);
+      expect(severeLogs[0].stackTrace, isNull);
     });
 
     test('logs RepositoryException at SEVERE level', () async {
@@ -506,10 +540,11 @@ void main() {
       await resource.handleGetById(request, nonExistentId);
 
       // Assert
-      final severeLogs =
-          logRecords.where((r) => r.level == Level.SEVERE).toList();
+      final severeLogs = logRecords
+          .where((r) => r.level == Level.SEVERE)
+          .toList();
       expect(severeLogs.length, equals(1));
-      expect(severeLogs[0].error, isA<RepositoryException>());
+      expect(severeLogs[0].error, isNull);
     });
 
     test('logs ArgumentError at SEVERE level for invalid UUID', () async {
@@ -520,13 +555,14 @@ void main() {
       await resource.handleGetById(request, 'invalid-id');
 
       // Assert
-      final severeLogs =
-          logRecords.where((r) => r.level == Level.SEVERE).toList();
+      final severeLogs = logRecords
+          .where((r) => r.level == Level.SEVERE)
+          .toList();
       expect(severeLogs.length, equals(1));
-      expect(severeLogs[0].error, isA<ArgumentError>());
+      expect(severeLogs[0].error, isNull);
     });
 
-    test('stack trace is included in SEVERE log', () async {
+    test('raw stack trace is excluded from SEVERE log', () async {
       // Arrange
       const nonExistentId = '987fcdeb-51a2-43f7-b123-456789abcdef';
       final request = createRequest(path: '/users/$nonExistentId');
@@ -535,10 +571,10 @@ void main() {
       await resource.handleGetById(request, nonExistentId);
 
       // Assert
-      final severeLogs =
-          logRecords.where((r) => r.level == Level.SEVERE).toList();
-      expect(severeLogs[0].stackTrace, isNotNull);
-      expect(severeLogs[0].stackTrace.toString(), isNotEmpty);
+      final severeLogs = logRecords
+          .where((r) => r.level == Level.SEVERE)
+          .toList();
+      expect(severeLogs[0].stackTrace, isNull);
     });
   });
 
@@ -563,8 +599,10 @@ void main() {
       final request = createRequest(path: '/users/${testUser.id}');
 
       // Act & Assert - should not throw
-      final response =
-          await resource.handleGetById(request, testUser.id.toString());
+      final response = await resource.handleGetById(
+        request,
+        testUser.id.toString(),
+      );
       expect(response.statusCode, equals(200));
     });
   });

@@ -62,10 +62,7 @@ void main() {
         final repo = SimpleProductMysqlRepository(helper!.connection);
         await repo.createTables();
 
-        final product = SimpleProduct(
-          name: 'Test Product',
-          price: 99.99,
-        );
+        final product = SimpleProduct(name: 'Test Product', price: 99.99);
 
         // Save
         await repo.save(product);
@@ -82,10 +79,7 @@ void main() {
         final repo = SimpleProductMysqlRepository(helper!.connection);
         await repo.createTables();
 
-        final product = SimpleProduct(
-          name: 'Original',
-          price: 50,
-        );
+        final product = SimpleProduct(name: 'Original', price: 50);
 
         // Save initial version
         await repo.save(product);
@@ -111,10 +105,7 @@ void main() {
         final repo = SimpleProductMysqlRepository(helper!.connection);
         await repo.createTables();
 
-        final product = SimpleProduct(
-          name: 'To Delete',
-          price: 10,
-        );
+        final product = SimpleProduct(name: 'To Delete', price: 10);
 
         // Save
         await repo.save(product);
@@ -139,24 +130,26 @@ void main() {
         );
       });
 
-      test('should throw RepositoryException.notFound for non-existent ID',
-          () async {
-        final repo = SimpleProductMysqlRepository(helper!.connection);
-        await repo.createTables();
+      test(
+        'should throw RepositoryException.notFound for non-existent ID',
+        () async {
+          final repo = SimpleProductMysqlRepository(helper!.connection);
+          await repo.createTables();
 
-        final nonExistentId = UuidValue.generate();
+          final nonExistentId = UuidValue.generate();
 
-        expect(
-          () => repo.getById(nonExistentId),
-          throwsA(
-            isA<RepositoryException>().having(
-              (e) => e.type,
-              'type',
-              RepositoryExceptionType.notFound,
+          expect(
+            () => repo.getById(nonExistentId),
+            throwsA(
+              isA<RepositoryException>().having(
+                (e) => e.type,
+                'type',
+                RepositoryExceptionType.notFound,
+              ),
             ),
-          ),
-        );
-      });
+          );
+        },
+      );
     });
 
     group('complex object graphs with entities', () {
@@ -185,13 +178,15 @@ void main() {
         final productNames = retrieved.items.map((i) => i.productName).toList();
         expect(productNames, containsAll(['Widget', 'Gadget']));
 
-        final widget =
-            retrieved.items.firstWhere((i) => i.productName == 'Widget');
+        final widget = retrieved.items.firstWhere(
+          (i) => i.productName == 'Widget',
+        );
         expect(widget.quantity, equals(2));
         expect(widget.unitPrice, equals(10.0));
 
-        final gadget =
-            retrieved.items.firstWhere((i) => i.productName == 'Gadget');
+        final gadget = retrieved.items.firstWhere(
+          (i) => i.productName == 'Gadget',
+        );
         expect(gadget.quantity, equals(1));
         expect(gadget.unitPrice, equals(25.0));
       });
@@ -202,9 +197,7 @@ void main() {
 
         final order = Order(
           customerName: 'Jane Doe',
-          items: [
-            OrderItem(productName: 'Item1', quantity: 1, unitPrice: 10),
-          ],
+          items: [OrderItem(productName: 'Item1', quantity: 1, unitPrice: 10)],
         );
         await repo.save(order);
 
@@ -233,10 +226,7 @@ void main() {
         final repo = OrderMysqlRepository(helper!.connection);
         await repo.createTables();
 
-        final order = Order(
-          customerName: 'Empty Order',
-          items: [],
-        );
+        final order = Order(customerName: 'Empty Order', items: []);
 
         await repo.save(order);
 
@@ -332,32 +322,34 @@ void main() {
     });
 
     group('foreign key CASCADE DELETE', () {
-      test('should cascade delete entities when aggregate is deleted',
-          () async {
-        final repo = OrderMysqlRepository(helper!.connection);
-        await repo.createTables();
+      test(
+        'should cascade delete entities when aggregate is deleted',
+        () async {
+          final repo = OrderMysqlRepository(helper!.connection);
+          await repo.createTables();
 
-        final order = Order(
-          customerName: 'Test Customer',
-          items: [
-            OrderItem(productName: 'Item1', quantity: 1, unitPrice: 10),
-            OrderItem(productName: 'Item2', quantity: 2, unitPrice: 20),
-          ],
-        );
+          final order = Order(
+            customerName: 'Test Customer',
+            items: [
+              OrderItem(productName: 'Item1', quantity: 1, unitPrice: 10),
+              OrderItem(productName: 'Item2', quantity: 2, unitPrice: 20),
+            ],
+          );
 
-        await repo.save(order);
+          await repo.save(order);
 
-        // Verify items exist in database
-        final itemCount = await helper!.countRows('order_item');
-        expect(itemCount, equals(2));
+          // Verify items exist in database
+          final itemCount = await helper!.countRows('order_item');
+          expect(itemCount, equals(2));
 
-        // Delete order
-        await repo.deleteById(order.id);
+          // Delete order
+          await repo.deleteById(order.id);
 
-        // Verify items were cascade deleted
-        final itemCountAfter = await helper!.countRows('order_item');
-        expect(itemCountAfter, equals(0));
-      });
+          // Verify items were cascade deleted
+          final itemCountAfter = await helper!.countRows('order_item');
+          expect(itemCountAfter, equals(0));
+        },
+      );
 
       test('should not affect other aggregates when deleting one', () async {
         final repo = OrderMysqlRepository(helper!.connection);
@@ -365,16 +357,12 @@ void main() {
 
         final order1 = Order(
           customerName: 'Customer 1',
-          items: [
-            OrderItem(productName: 'Item1', quantity: 1, unitPrice: 10),
-          ],
+          items: [OrderItem(productName: 'Item1', quantity: 1, unitPrice: 10)],
         );
 
         final order2 = Order(
           customerName: 'Customer 2',
-          items: [
-            OrderItem(productName: 'Item2', quantity: 2, unitPrice: 20),
-          ],
+          items: [OrderItem(productName: 'Item2', quantity: 2, unitPrice: 20)],
         );
 
         await repo.save(order1);

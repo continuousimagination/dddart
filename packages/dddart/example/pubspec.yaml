@@ -13,3 +13,4 @@ dependencies:
 
 dev_dependencies:
   lints: ^3.0.0
+  very_good_analysis: ^6.0.0

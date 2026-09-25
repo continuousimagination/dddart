@@ -1280,3 +1280,76 @@ MIT License - see LICENSE file for details.
 ## Contributing
 
 Contributions are welcome! Please read the contributing guidelines before submitting PRs.
+
+## Shared model bindings and point-read configuration
+
+Use `aggregateType`, `serializerType`, and `generatedBaseName` on an adapter-owned
+marker to consume an aggregate and its public generated JSON serializer from a
+separately built shared package. The same compatibility and construction rules
+as the REST binding apply; generated serializer types in the same build target
+must not be guessed or privately imported. Existing aggregate annotations remain
+supported.
+
+Generated constructors retain the positional `DynamoConnection` and add named
+`tableName` and `readConsistency` options. The default is the annotation's table
+and `DynamoReadConsistency.eventual`; select `DynamoReadConsistency.strong` for
+strongly consistent point reads. Table overrides are trusted application
+configuration and validated before use; an aggregate never chooses its table.
+
+`DynamoConnection(httpClient: client, ...)` borrows the injected HTTP transport.
+Disposal does not close that borrowed client; callers own its lifecycle. The SDK
+owns/closes a transport it creates internally. Generated operations make one SDK
+call per write and never replay it. Keep injected transports free of automatic
+write retries. Pinned-SDK fixtures cover lost responses, timeouts and provider
+failures by counting actual transport sends.
+
+Supply scoped temporary credentials explicitly in managed runtimes. The current
+SDK's fallback resolves environment/shared-file credentials, not a complete
+role/SSO credential chain. Typed repository failures expose safe static messages
+and preserve uncertainty without reflecting provider data or raw causes.
+
+Custom interface signatures preserve imported types inside nested callbacks.
+Primitive, null, and publicly imported enum defaults are emitted from resolved
+values; library-private constant names never leak into the adapter. Record-valued
+signatures and unsupported object defaults fail with a targeted generation error.
+
+## Atomic conditional repositories
+
+Set `conditionalWrites: true` on `GenerateDynamoRepository` for a
+`VersionedAggregateRoot`. External bindings still require the separately built
+public `JsonSerializer<T>`; custom interfaces must implement
+`ConditionalRepository<T>`. Ordinary mode rejects versioned roots and conditional
+interfaces, and its generated save rejects widened versioned inputs before I/O.
+
+The generated adapter extends `DynamoConditionalRepository<T>`. It accepts the
+trusted connection and optional table-name override; all point reads are strong.
+Create uses `WritePrecondition.absent()` with revision zero. Update requires the
+proposal's positive revision through `WritePrecondition.atRevision(...)`. Each
+save sends one atomic conditional `PutItem` and returns an independent accepted
+snapshot with the next revision, even when content is unchanged. It never reads
+to authorize a write or rereads to manufacture its accepted result.
+
+The codec must provide stable canonical JSON with `id`, bounded integer
+`revision`, `createdAt` and `updatedAt`, and reconstruct independent objects.
+Encoding/reconstruction/metadata/content checks happen before mutation. Provider
+condition failures produce `PreconditionFailedException`; other provider failures
+retain safe classifications without exposing response bodies or causes.
+
+Delete requires a positive expected revision and atomically replaces the live
+item with only `id`, the next revision, and `__dddart_retired: true`. That key is
+reserved and rejected in model/serializer data. Retired reads are not found;
+retired identities cannot be recreated. Do not physically delete tombstones or
+reset revisions during ordinary operation. Restored old data must use a fresh
+resource/table/API namespace after old access and admitted work are fenced.
+
+Use a dedicated trusted table mapping. Never configure a legacy writable
+repository on the same table; administrative/raw provider access is outside this
+repository contract. Connections and injected transports retain their existing
+owner/disposal rules. The adapter configures no retries; do not inject a retrying
+transport. Local emulator checks are separate from real AWS/IAM verification.
+
+Custom conditional ports may add query methods or redeclare CRUD with its exact
+canonical signature, including through generic parent interfaces. Optional
+preconditions, extra CRUD parameters, changed parameter/return types and generic
+CRUD methods are rejected at generation with the affected member named; they
+never produce an adapter with an incompatible inherited implementation.

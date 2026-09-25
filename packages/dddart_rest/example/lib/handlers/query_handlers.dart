@@ -79,10 +79,7 @@ Future<QueryResult<User>> firstNameQueryHandler(
   // Return QueryResult with both the paginated items and total count
   // The total count is used for the X-Total-Count response header,
   // allowing clients to implement pagination UI (e.g., "Showing 1-10 of 25")
-  return QueryResult<User>(
-    page.items,
-    totalCount: page.totalCount,
-  );
+  return QueryResult<User>(page.items, totalCount: page.totalCount);
 }
 
 /// Query handler for filtering users by email
@@ -137,8 +134,5 @@ Future<QueryResult<User>> emailQueryHandler(
 
   // Return QueryResult
   // For unique fields, totalCount will typically be 0 (not found) or 1 (found)
-  return QueryResult<User>(
-    page.items,
-    totalCount: page.totalCount,
-  );
+  return QueryResult<User>(page.items, totalCount: page.totalCount);
 }

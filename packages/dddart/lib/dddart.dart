@@ -24,6 +24,7 @@ library dddart;
 /// ```dart
 /// import 'package:logging/logging.dart';
 /// import 'package:dddart/dddart.dart';
+/// import 'package:dddart/dddart_io.dart';
 ///
 /// void main() {
 ///   // Enable console logging for all DDDart components
@@ -56,12 +57,17 @@ export 'package:logging/logging.dart' show Level, Logger;
 
 // Export all public classes
 export 'src/aggregate_root.dart';
+export 'src/conditional_repository.dart';
+export 'src/conditional_repository_exception.dart';
 export 'src/domain_event.dart';
 export 'src/entity.dart';
 export 'src/event_bus.dart';
-export 'src/file_log_handler.dart';
+export 'src/in_memory_conditional_repository.dart';
 export 'src/in_memory_repository.dart';
 export 'src/repository.dart';
 export 'src/repository_exception.dart';
+export 'src/revision.dart';
 export 'src/uuid_value.dart';
 export 'src/value.dart';
+export 'src/versioned_aggregate_root.dart';
+export 'src/write_precondition.dart';

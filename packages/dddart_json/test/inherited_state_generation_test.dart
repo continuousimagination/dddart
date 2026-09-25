@@ -3,17 +3,20 @@ import 'dart:io';
 import 'package:test/test.dart';
 
 void main() {
-  test(
-    'generation rejects inherited state without a named super-formal chain',
-    () async {
-      final packageRoot = _findPackageRoot();
-      final packagesRoot = packageRoot.parent;
-      final fixture = Directory.systemTemp.createTempSync(
-        'dddart_json_inherited_state_failure_',
-      );
-      addTearDown(() => fixture.deleteSync(recursive: true));
+  for (final duplicate in [false, true]) {
+    test(
+      duplicate
+          ? 'generation rejects duplicate inherited application state'
+          : 'generation rejects inherited state without a named super-formal chain',
+      () async {
+        final packageRoot = _findPackageRoot();
+        final packagesRoot = packageRoot.parent;
+        final fixture = Directory.systemTemp.createTempSync(
+          'dddart_json_inherited_state_failure_',
+        );
+        addTearDown(() => fixture.deleteSync(recursive: true));
 
-      File('${fixture.path}/pubspec.yaml').writeAsStringSync('''
+        File('${fixture.path}/pubspec.yaml').writeAsStringSync('''
 name: dddart_json_inherited_state_failure
 publish_to: none
 
@@ -34,9 +37,9 @@ dependency_overrides:
     path: ${packagesRoot.path}/dddart_serialization
 ''');
 
-      final libDirectory = Directory('${fixture.path}/lib')..createSync();
-      File('${libDirectory.path}/model.dart').writeAsStringSync(
-        '''
+        final libDirectory = Directory('${fixture.path}/lib')..createSync();
+        File('${libDirectory.path}/model.dart').writeAsStringSync(
+          '''
 import 'dart:convert';
 
 import 'package:dddart/dddart.dart';
@@ -58,42 +61,45 @@ class MissingInheritedPath extends InheritedStateBase {
 
   final String childState;
 
+${duplicate ? '  @override\n  final String baseState = "duplicate";' : ''}
+
   @override
   List<Object?> get props => [baseState, childState];
 }
 '''
-            .replaceFirst(
-          '__GENERATED_PART_DIRECTIVE__',
-          "part 'model.g.dart';",
-        ),
-      );
+              .replaceFirst(
+                '__GENERATED_PART_DIRECTIVE__',
+                "part 'model.g.dart';",
+              ),
+        );
 
-      await _expectDartSuccess(fixture, ['pub', 'get', '--offline']);
+        await _expectDartSuccess(fixture, ['pub', 'get', '--offline']);
 
-      final result = await _runDart(
-        fixture,
-        [
+        final result = await _runDart(fixture, [
           'run',
           'build_runner',
           'build',
           '--delete-conflicting-outputs',
-        ],
-      );
-      final output = '${result.stdout}\n${result.stderr}';
+        ]);
+        final output = '${result.stdout}\n${result.stderr}';
 
-      expect(result.exitCode, isNot(0), reason: output);
-      expect(
-        output,
-        contains(
-          'Cannot generate JSON serializer for MissingInheritedPath: '
-          'inherited application field "baseState" has no reconstruction '
-          "path through MissingInheritedPath's unnamed constructor and named "
-          'super-parameter chain.',
-        ),
-      );
-    },
-    timeout: const Timeout(Duration(minutes: 2)),
-  );
+        expect(result.exitCode, isNot(0), reason: output);
+        expect(
+          output,
+          contains(
+            duplicate
+                ? 'application field "baseState" is declared more than once '
+                      'in its superclass chain.'
+                : 'Cannot generate JSON serializer for MissingInheritedPath: '
+                      'inherited application field "baseState" has no reconstruction '
+                      "path through MissingInheritedPath's unnamed constructor and named "
+                      'super-parameter chain.',
+          ),
+        );
+      },
+      timeout: const Timeout(Duration(minutes: 2)),
+    );
+  }
 }
 
 Directory _findPackageRoot() {
@@ -117,10 +123,7 @@ Future<ProcessResult> _runDart(
     Platform.resolvedExecutable,
     arguments,
     workingDirectory: workingDirectory.path,
-    environment: {
-      ...Platform.environment,
-      'CI': 'true',
-    },
+    environment: {...Platform.environment, 'CI': 'true'},
   );
 }
 

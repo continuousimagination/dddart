@@ -10,10 +10,7 @@ part 'money.g.dart';
 @Serializable()
 class Money extends Value {
   /// Creates a new Money value object.
-  const Money({
-    required this.amount,
-    required this.currency,
-  });
+  const Money({required this.amount, required this.currency});
 
   /// The monetary amount.
   final double amount;

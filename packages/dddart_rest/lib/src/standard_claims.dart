@@ -11,11 +11,7 @@ part 'standard_claims.g.dart';
 @JwtSerializable()
 class StandardClaims {
   /// Creates standard claims
-  const StandardClaims({
-    required this.sub,
-    this.email,
-    this.name,
-  });
+  const StandardClaims({required this.sub, this.email, this.name});
 
   /// Creates standard claims from JSON
   factory StandardClaims.fromJson(Map<String, dynamic> json) {

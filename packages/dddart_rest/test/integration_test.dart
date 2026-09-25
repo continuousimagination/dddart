@@ -80,8 +80,10 @@ Future<HttpResponse> makeRequest({
 }) async {
   final client = io.HttpClient();
   try {
-    final request =
-        await client.openUrl(method, Uri.parse('http://localhost:$port$path'));
+    final request = await client.openUrl(
+      method,
+      Uri.parse('http://localhost:$port$path'),
+    );
 
     // Add headers
     if (headers != null) {
@@ -143,12 +145,12 @@ void main() {
     late HttpServer server;
     late InMemoryRepository<TestUser> repository;
     late TestUserSerializer serializer;
-    const port = 8081;
+    late int port;
 
     setUp(() async {
       repository = InMemoryRepository<TestUser>();
       serializer = TestUserSerializer();
-      server = HttpServer(port: port);
+      server = HttpServer(port: 0);
 
       server.registerResource(
         CrudResource<TestUser, dynamic>(
@@ -160,6 +162,7 @@ void main() {
       );
 
       await server.start();
+      port = server.boundPort!;
     });
 
     tearDown(() async {
@@ -290,12 +293,12 @@ void main() {
     late HttpServer server;
     late InMemoryRepository<TestUser> repository;
     late TestUserSerializer serializer;
-    const port = 8082;
+    late int port;
 
     setUp(() async {
       repository = InMemoryRepository<TestUser>();
       serializer = TestUserSerializer();
-      server = HttpServer(port: port);
+      server = HttpServer(port: 0);
 
       // Register custom query handler
       server.registerResource(
@@ -307,8 +310,8 @@ void main() {
           queryHandlers: {
             'name': (repo, params, skip, take, authResult) async {
               final name = params['name']!;
-              final allUsers =
-                  (repo as InMemoryRepository<TestUser>).getAllSync();
+              final allUsers = (repo as InMemoryRepository<TestUser>)
+                  .getAllSync();
               final filtered = allUsers.where((u) => u.name == name).toList();
               return QueryResult(
                 filtered.skip(skip).take(take).toList(),
@@ -322,6 +325,7 @@ void main() {
       );
 
       await server.start();
+      port = server.boundPort!;
     });
 
     tearDown(() async {
@@ -394,12 +398,12 @@ void main() {
     late HttpServer server;
     late InMemoryRepository<TestUser> repository;
     late TestUserSerializer jsonSerializer;
-    const port = 8083;
+    late int port;
 
     setUp(() async {
       repository = InMemoryRepository<TestUser>();
       jsonSerializer = TestUserSerializer();
-      server = HttpServer(port: port);
+      server = HttpServer(port: 0);
 
       server.registerResource(
         CrudResource<TestUser, dynamic>(
@@ -410,6 +414,7 @@ void main() {
       );
 
       await server.start();
+      port = server.boundPort!;
     });
 
     tearDown(() async {
@@ -501,7 +506,11 @@ void main() {
 
       final acceptError = jsonDecode(unsupportedAcceptResponse.body);
       expect(acceptError['title'], equals('Not Acceptable'));
-      expect(acceptError['detail'], contains('application/xml'));
+      expect(acceptError['detail'], equals('Invalid request data'));
+      expect(
+        unsupportedAcceptResponse.body,
+        isNot(contains('application/xml')),
+      );
     });
   });
 
@@ -509,12 +518,12 @@ void main() {
     late HttpServer server;
     late InMemoryRepository<TestUser> repository;
     late TestUserSerializer serializer;
-    const port = 8084;
+    late int port;
 
     setUp(() async {
       repository = InMemoryRepository<TestUser>();
       serializer = TestUserSerializer();
-      server = HttpServer(port: port);
+      server = HttpServer(port: 0);
 
       server.registerResource(
         CrudResource<TestUser, dynamic>(
@@ -525,8 +534,8 @@ void main() {
           queryHandlers: {
             'name': (repo, params, skip, take, authResult) async {
               final name = params['name']!;
-              final allUsers =
-                  (repo as InMemoryRepository<TestUser>).getAllSync();
+              final allUsers = (repo as InMemoryRepository<TestUser>)
+                  .getAllSync();
               final filtered = allUsers.where((u) => u.name == name).toList();
               return QueryResult(
                 filtered.skip(skip).take(take).toList(),
@@ -538,6 +547,7 @@ void main() {
       );
 
       await server.start();
+      port = server.boundPort!;
     });
 
     tearDown(() async {
@@ -657,12 +667,12 @@ void main() {
     late HttpServer server;
     late TestRepository repository;
     late TestUserSerializer serializer;
-    const port = 8085;
+    late int port;
 
     setUp(() async {
       repository = TestRepository();
       serializer = TestUserSerializer();
-      server = HttpServer(port: port);
+      server = HttpServer(port: 0);
 
       server.registerResource(
         CrudResource<TestUser, dynamic>(
@@ -687,6 +697,7 @@ void main() {
       );
 
       await server.start();
+      port = server.boundPort!;
     });
 
     tearDown(() async {
@@ -751,12 +762,12 @@ void main() {
     late HttpServer server;
     late InMemoryRepository<TestUser> repository;
     late TestUserSerializer serializer;
-    const port = 8086;
+    late int port;
 
     setUp(() async {
       repository = InMemoryRepository<TestUser>();
       serializer = TestUserSerializer();
-      server = HttpServer(port: port);
+      server = HttpServer(port: 0);
 
       server.registerResource(
         CrudResource<TestUser, dynamic>(
@@ -767,8 +778,8 @@ void main() {
           queryHandlers: {
             'name': (repo, params, skip, take, authResult) async {
               final name = params['name']!;
-              final allUsers =
-                  (repo as InMemoryRepository<TestUser>).getAllSync();
+              final allUsers = (repo as InMemoryRepository<TestUser>)
+                  .getAllSync();
               final filtered = allUsers.where((u) => u.name == name).toList();
               return QueryResult(
                 filtered.skip(skip).take(take).toList(),
@@ -782,6 +793,7 @@ void main() {
       );
 
       await server.start();
+      port = server.boundPort!;
     });
 
     tearDown(() async {

@@ -24,10 +24,11 @@ void main() {
     // **Feature: mysql-repository, Property 10: Schema generation completeness**
     // **Validates: Requirements 4.1**
     group('Property 10: Schema generation completeness', () {
-      test('should generate tables for aggregate root and all entities',
-          () async {
-        final library = await resolveSource(
-          '''
+      test(
+        'should generate tables for aggregate root and all entities',
+        () async {
+          final library = await resolveSource(
+            '''
 library test;
 
 import 'package:dddart/dddart.dart';
@@ -54,30 +55,32 @@ class Order extends AggregateRoot {
   final List<Payment> payments;
 }
 ''',
-          (resolver) async => (await resolver.findLibraryByName('test'))!,
-        );
+            (resolver) async => (await resolver.findLibraryByName('test'))!,
+            readAllSourcesFromFilesystem: true,
+          );
 
-        final classElement = library.topLevelElements
-            .whereType<ClassElement>()
-            .firstWhere((e) => e.name == 'Order');
+          final classElement = library.children
+              .whereType<ClassElement>()
+              .firstWhere((e) => e.name == 'Order');
 
-        final annotation = classElement.metadata.firstWhere(
-          (a) =>
-              a.computeConstantValue()?.type?.element?.name ==
-              'GenerateMysqlRepository',
-        );
+          final annotation = classElement.metadata.annotations.firstWhere(
+            (a) =>
+                a.computeConstantValue()?.type?.element?.name ==
+                'GenerateMysqlRepository',
+          );
 
-        final generated = generator.generateForAnnotatedElement(
-          classElement,
-          ConstantReader(annotation.computeConstantValue()),
-          _mockBuildStep(),
-        );
+          final generated = generator.generateForAnnotatedElement(
+            classElement,
+            ConstantReader(annotation.computeConstantValue()),
+            _mockBuildStep(),
+          );
 
-        // Verify all tables are created
-        expect(generated, contains('CREATE TABLE IF NOT EXISTS order'));
-        expect(generated, contains('CREATE TABLE IF NOT EXISTS order_item'));
-        expect(generated, contains('CREATE TABLE IF NOT EXISTS payment'));
-      });
+          // Verify all tables are created
+          expect(generated, contains('CREATE TABLE IF NOT EXISTS order'));
+          expect(generated, contains('CREATE TABLE IF NOT EXISTS order_item'));
+          expect(generated, contains('CREATE TABLE IF NOT EXISTS payment'));
+        },
+      );
     });
 
     // **Feature: mysql-repository, Property 11: Schema creation idempotence**
@@ -106,13 +109,14 @@ class Container extends AggregateRoot {
 }
 ''',
           (resolver) async => (await resolver.findLibraryByName('test'))!,
+          readAllSourcesFromFilesystem: true,
         );
 
-        final classElement = library.topLevelElements
+        final classElement = library.children
             .whereType<ClassElement>()
             .firstWhere((e) => e.name == 'Container');
 
-        final annotation = classElement.metadata.firstWhere(
+        final annotation = classElement.metadata.annotations.firstWhere(
           (a) =>
               a.computeConstantValue()?.type?.element?.name ==
               'GenerateMysqlRepository',
@@ -125,8 +129,9 @@ class Container extends AggregateRoot {
         );
 
         // Count occurrences of CREATE TABLE
-        final createTableCount =
-            'CREATE TABLE IF NOT EXISTS'.allMatches(generated).length;
+        final createTableCount = 'CREATE TABLE IF NOT EXISTS'
+            .allMatches(generated)
+            .length;
 
         // Should have at least 2 tables (aggregate + entity)
         expect(createTableCount, greaterThanOrEqualTo(2));
@@ -142,10 +147,11 @@ class Container extends AggregateRoot {
     // **Feature: mysql-repository, Property 12: Entity foreign key constraints**
     // **Validates: Requirements 4.3**
     group('Property 12: Entity foreign key constraints', () {
-      test('should add CASCADE foreign keys from entities to aggregate',
-          () async {
-        final library = await resolveSource(
-          '''
+      test(
+        'should add CASCADE foreign keys from entities to aggregate',
+        () async {
+          final library = await resolveSource(
+            '''
 library test;
 
 import 'package:dddart/dddart.dart';
@@ -165,30 +171,32 @@ class Invoice extends AggregateRoot {
   final List<LineItem> lineItems;
 }
 ''',
-          (resolver) async => (await resolver.findLibraryByName('test'))!,
-        );
+            (resolver) async => (await resolver.findLibraryByName('test'))!,
+            readAllSourcesFromFilesystem: true,
+          );
 
-        final classElement = library.topLevelElements
-            .whereType<ClassElement>()
-            .firstWhere((e) => e.name == 'Invoice');
+          final classElement = library.children
+              .whereType<ClassElement>()
+              .firstWhere((e) => e.name == 'Invoice');
 
-        final annotation = classElement.metadata.firstWhere(
-          (a) =>
-              a.computeConstantValue()?.type?.element?.name ==
-              'GenerateMysqlRepository',
-        );
+          final annotation = classElement.metadata.annotations.firstWhere(
+            (a) =>
+                a.computeConstantValue()?.type?.element?.name ==
+                'GenerateMysqlRepository',
+          );
 
-        final generated = generator.generateForAnnotatedElement(
-          classElement,
-          ConstantReader(annotation.computeConstantValue()),
-          _mockBuildStep(),
-        );
+          final generated = generator.generateForAnnotatedElement(
+            classElement,
+            ConstantReader(annotation.computeConstantValue()),
+            _mockBuildStep(),
+          );
 
-        // Verify foreign key with CASCADE
-        expect(generated, contains('FOREIGN KEY'));
-        expect(generated, contains('REFERENCES `invoice`'));
-        expect(generated, contains('ON DELETE CASCADE'));
-      });
+          // Verify foreign key with CASCADE
+          expect(generated, contains('FOREIGN KEY'));
+          expect(generated, contains('REFERENCES `invoice`'));
+          expect(generated, contains('ON DELETE CASCADE'));
+        },
+      );
     });
 
     // **Feature: mysql-repository, Property 13: Value object embedding**
@@ -218,13 +226,14 @@ class Customer extends AggregateRoot {
 }
 ''',
           (resolver) async => (await resolver.findLibraryByName('test'))!,
+          readAllSourcesFromFilesystem: true,
         );
 
-        final classElement = library.topLevelElements
+        final classElement = library.children
             .whereType<ClassElement>()
             .firstWhere((e) => e.name == 'Customer');
 
-        final annotation = classElement.metadata.firstWhere(
+        final annotation = classElement.metadata.annotations.firstWhere(
           (a) =>
               a.computeConstantValue()?.type?.element?.name ==
               'GenerateMysqlRepository',
@@ -274,13 +283,14 @@ class Task extends AggregateRoot {
 }
 ''',
           (resolver) async => (await resolver.findLibraryByName('test'))!,
+          readAllSourcesFromFilesystem: true,
         );
 
-        final classElement = library.topLevelElements
+        final classElement = library.children
             .whereType<ClassElement>()
             .firstWhere((e) => e.name == 'Task');
 
-        final annotation = classElement.metadata.firstWhere(
+        final annotation = classElement.metadata.annotations.firstWhere(
           (a) =>
               a.computeConstantValue()?.type?.element?.name ==
               'GenerateMysqlRepository',
@@ -325,13 +335,14 @@ class Product extends AggregateRoot {
 }
 ''',
           (resolver) async => (await resolver.findLibraryByName('test'))!,
+          readAllSourcesFromFilesystem: true,
         );
 
-        final classElement = library.topLevelElements
+        final classElement = library.children
             .whereType<ClassElement>()
             .firstWhere((e) => e.name == 'Product');
 
-        final annotation = classElement.metadata.firstWhere(
+        final annotation = classElement.metadata.annotations.firstWhere(
           (a) =>
               a.computeConstantValue()?.type?.element?.name ==
               'GenerateMysqlRepository',
@@ -367,13 +378,14 @@ class SimpleAggregate extends AggregateRoot {
 }
 ''',
           (resolver) async => (await resolver.findLibraryByName('test'))!,
+          readAllSourcesFromFilesystem: true,
         );
 
-        final classElement = library.topLevelElements
+        final classElement = library.children
             .whereType<ClassElement>()
             .firstWhere((e) => e.name == 'SimpleAggregate');
 
-        final annotation = classElement.metadata.firstWhere(
+        final annotation = classElement.metadata.annotations.firstWhere(
           (a) =>
               a.computeConstantValue()?.type?.element?.name ==
               'GenerateMysqlRepository',
@@ -407,13 +419,14 @@ class Entity1 extends AggregateRoot {
 }
 ''',
           (resolver) async => (await resolver.findLibraryByName('test'))!,
+          readAllSourcesFromFilesystem: true,
         );
 
-        final classElement = library.topLevelElements
+        final classElement = library.children
             .whereType<ClassElement>()
             .firstWhere((e) => e.name == 'Entity1');
 
-        final annotation = classElement.metadata.firstWhere(
+        final annotation = classElement.metadata.annotations.firstWhere(
           (a) =>
               a.computeConstantValue()?.type?.element?.name ==
               'GenerateMysqlRepository',
@@ -446,6 +459,6 @@ BuildStep _mockBuildStep() {
 class _StubBuildStep implements BuildStep {
   @override
   dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
-        'BuildStep method called in test - this should not happen',
-      );
+    'BuildStep method called in test - this should not happen',
+  );
 }

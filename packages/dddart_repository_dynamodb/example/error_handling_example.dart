@@ -108,10 +108,7 @@ Future<void> main() async {
 }
 
 /// Gets a user by ID, returning null if not found.
-Future<User?> _getUserOrNull(
-  UserDynamoRepository repo,
-  UuidValue id,
-) async {
+Future<User?> _getUserOrNull(UserDynamoRepository repo, UuidValue id) async {
   try {
     return await repo.getById(id);
   } on RepositoryException catch (e) {

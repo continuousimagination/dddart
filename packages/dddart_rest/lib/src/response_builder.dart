@@ -11,6 +11,9 @@ import 'package:shelf/shelf.dart';
 /// and error responses in RFC 7807 Problem Details format.
 ///
 /// All methods handle serialization and set appropriate Content-Type headers.
+/// Optional validators describe representations; they do not enforce atomic
+/// persistence. Omit validators on transformed PUT responses. Conditional CRUD
+/// returns accepted revision metadata in the body and strong ETags only on GET.
 class ResponseBuilder<T extends AggregateRoot> {
   /// Builds a 200 OK response with serialized body
   ///
@@ -19,7 +22,7 @@ class ResponseBuilder<T extends AggregateRoot> {
   /// Parameters:
   /// - [aggregate]: The aggregate root to serialize and return
   /// - [serializer]: The serializer to use for converting the aggregate
-  /// - [etag]: Optional ETag response validator
+  /// - [etag]: Optional representation validator, not a write precondition
   ///
   /// Returns: A [Response] with status 200 and serialized body
   ///
@@ -31,19 +34,12 @@ class ResponseBuilder<T extends AggregateRoot> {
   ///   etag: '"2024-01-15T10:30:00.000Z"',
   /// );
   /// ```
-  Response ok(
-    T aggregate,
-    JsonSerializer<T> serializer, {
-    String? etag,
-  }) {
+  Response ok(T aggregate, JsonSerializer<T> serializer, {String? etag}) {
     final headers = {'Content-Type': 'application/json'};
     if (etag != null) {
       headers['ETag'] = etag;
     }
-    return Response.ok(
-      serializer.serialize(aggregate),
-      headers: headers,
-    );
+    return Response.ok(serializer.serialize(aggregate), headers: headers);
   }
 
   /// Builds a 201 Created response with serialized body
@@ -53,7 +49,7 @@ class ResponseBuilder<T extends AggregateRoot> {
   /// Parameters:
   /// - [aggregate]: The newly created aggregate root to serialize and return
   /// - [serializer]: The serializer to use for converting the aggregate
-  /// - [etag]: Optional ETag response validator
+  /// - [etag]: Optional representation validator, not a write precondition
   ///
   /// Returns: A [Response] with status 201 and serialized body
   ///
@@ -65,11 +61,7 @@ class ResponseBuilder<T extends AggregateRoot> {
   ///   etag: '"2024-01-15T10:30:00.000Z"',
   /// );
   /// ```
-  Response created(
-    T aggregate,
-    JsonSerializer<T> serializer, {
-    String? etag,
-  }) {
+  Response created(T aggregate, JsonSerializer<T> serializer, {String? etag}) {
     final headers = {'Content-Type': 'application/json'};
     if (etag != null) {
       headers['ETag'] = etag;
@@ -114,10 +106,7 @@ class ResponseBuilder<T extends AggregateRoot> {
 
     final jsonList = aggregates.map(serializer.toJson).toList();
 
-    return Response.ok(
-      jsonEncode(jsonList),
-      headers: headers,
-    );
+    return Response.ok(jsonEncode(jsonList), headers: headers);
   }
 
   /// Builds a 204 No Content response

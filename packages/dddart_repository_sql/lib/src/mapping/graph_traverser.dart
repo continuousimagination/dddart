@@ -4,10 +4,7 @@ class GraphTraverser {
   const GraphTraverser();
 
   /// Traverses an object graph depth-first.
-  void traverse(
-    Object root,
-    void Function(Object node, int depth) visitor,
-  ) {
+  void traverse(Object root, void Function(Object node, int depth) visitor) {
     _traverseRecursive(root, visitor, 0, <Object>{});
   }
 

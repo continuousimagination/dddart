@@ -57,8 +57,9 @@ class MysqlDialect implements SqlDialect {
       );
     }
 
-    final bytes =
-        value is Uint8List ? value : Uint8List.fromList(value as List<int>);
+    final bytes = value is Uint8List
+        ? value
+        : Uint8List.fromList(value as List<int>);
 
     if (bytes.length != 16) {
       throw ArgumentError(
@@ -68,7 +69,8 @@ class MysqlDialect implements SqlDialect {
 
     // Convert 16 bytes back to UUID string format
     final hex = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-    final uuidString = '${hex.substring(0, 8)}-${hex.substring(8, 12)}-'
+    final uuidString =
+        '${hex.substring(0, 8)}-${hex.substring(8, 12)}-'
         '${hex.substring(12, 16)}-${hex.substring(16, 20)}-'
         '${hex.substring(20, 32)}';
 
@@ -104,9 +106,7 @@ class MysqlDialect implements SqlDialect {
         // Parse it as UTC explicitly
         return DateTime.parse('${value}Z').toUtc();
       } catch (e) {
-        throw ArgumentError(
-          'Invalid DateTime string format: $value',
-        );
+        throw ArgumentError('Invalid DateTime string format: $value');
       }
     }
 
@@ -123,10 +123,7 @@ class MysqlDialect implements SqlDialect {
     // Add columns
     final columnDefs = <String>[];
     for (final column in table.columns) {
-      final parts = <String>[
-        '`${column.name}`',
-        column.sqlType,
-      ];
+      final parts = <String>['`${column.name}`', column.sqlType];
 
       if (column.isPrimaryKey) {
         parts.add('PRIMARY KEY');
@@ -178,8 +175,9 @@ class MysqlDialect implements SqlDialect {
   String insertOrReplace(String tableName, List<String> columns) {
     final placeholders = List.filled(columns.length, '?').join(', ');
     final escapedColumns = columns.map((col) => '`$col`').toList();
-    final updateClauses =
-        escapedColumns.map((col) => '$col = VALUES($col)').join(', ');
+    final updateClauses = escapedColumns
+        .map((col) => '$col = VALUES($col)')
+        .join(', ');
 
     return 'INSERT INTO `$tableName` (${escapedColumns.join(', ')}) '
         'VALUES ($placeholders) '
@@ -187,10 +185,7 @@ class MysqlDialect implements SqlDialect {
   }
 
   @override
-  String selectWithJoins(
-    TableDefinition rootTable,
-    List<JoinClause> joins,
-  ) {
+  String selectWithJoins(TableDefinition rootTable, List<JoinClause> joins) {
     final buffer = StringBuffer();
 
     // Build column list with table prefixes

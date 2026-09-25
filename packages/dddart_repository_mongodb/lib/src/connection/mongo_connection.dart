@@ -93,13 +93,13 @@ class MongoConnection {
 
     final username =
         parsedUri.userInfo.isNotEmpty && parsedUri.userInfo.contains(':')
-            ? Uri.decodeComponent(parsedUri.userInfo.split(':')[0])
-            : null;
+        ? Uri.decodeComponent(parsedUri.userInfo.split(':')[0])
+        : null;
 
     final password =
         parsedUri.userInfo.isNotEmpty && parsedUri.userInfo.contains(':')
-            ? Uri.decodeComponent(parsedUri.userInfo.split(':')[1])
-            : null;
+        ? Uri.decodeComponent(parsedUri.userInfo.split(':')[1])
+        : null;
 
     final queryParams = parsedUri.queryParameters;
     final tls = queryParams['tls']?.toLowerCase() == 'true';

@@ -660,3 +660,11 @@ See the `example/` directory for complete examples:
 ## License
 
 MIT License - see LICENSE file for details.
+
+## Portable client entry
+
+Import `package:dddart_rest_client/dddart_rest_client_core.dart` for `AuthProvider`,
+`AuthenticationException`, and `RestClient` on VM or web. Native login/storage
+providers remain available through `dddart_rest_client.dart`. REST repository
+connections use the portable entry and do not import native providers merely to
+consume the authentication interface.

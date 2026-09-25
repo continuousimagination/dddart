@@ -98,9 +98,9 @@ class ConsumerAggregateRepository
 }
 '''
             .replaceFirst(
-          '__GENERATED_PART_DIRECTIVE__',
-          "part 'model.g.dart';",
-        ),
+              '__GENERATED_PART_DIRECTIVE__',
+              "part 'model.g.dart';",
+            ),
       );
 
       final binDirectory = Directory('${fixture.path}/bin')..createSync();
@@ -119,15 +119,12 @@ void main() {
 ''');
 
       await _expectDartSuccess(fixture, ['pub', 'get', '--offline']);
-      await _expectDartSuccess(
-        fixture,
-        [
-          'run',
-          'build_runner',
-          'build',
-          '--delete-conflicting-outputs',
-        ],
-      );
+      await _expectDartSuccess(fixture, [
+        'run',
+        'build_runner',
+        'build',
+        '--delete-conflicting-outputs',
+      ]);
 
       final generatedFile = File('${libDirectory.path}/model.g.dart');
       expect(generatedFile.existsSync(), isTrue);
@@ -161,16 +158,13 @@ void main() {
 
       await _expectDartSuccess(fixture, ['analyze', '--fatal-infos']);
       Directory('${fixture.path}/build').createSync();
-      await _expectDartSuccess(
-        fixture,
-        [
-          'compile',
-          'kernel',
-          'bin/main.dart',
-          '-o',
-          'build/main.dill',
-        ],
-      );
+      await _expectDartSuccess(fixture, [
+        'compile',
+        'kernel',
+        'bin/main.dart',
+        '-o',
+        'build/main.dill',
+      ]);
     },
     timeout: const Timeout(Duration(minutes: 3)),
   );
@@ -181,9 +175,9 @@ Directory _findPackageRoot() {
   while (current.parent.path != current.path) {
     final pubspec = File('${current.path}/pubspec.yaml');
     if (pubspec.existsSync() &&
-        pubspec
-            .readAsStringSync()
-            .contains('name: dddart_repository_dynamodb\n')) {
+        pubspec.readAsStringSync().contains(
+          'name: dddart_repository_dynamodb\n',
+        )) {
       return current;
     }
     current = current.parent;
@@ -204,10 +198,7 @@ Future<void> _expectDartSuccess(
     Platform.resolvedExecutable,
     arguments,
     workingDirectory: workingDirectory.path,
-    environment: {
-      ...Platform.environment,
-      'CI': 'true',
-    },
+    environment: {...Platform.environment, 'CI': 'true'},
   );
 
   expect(

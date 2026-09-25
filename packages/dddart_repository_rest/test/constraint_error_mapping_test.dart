@@ -40,7 +40,12 @@ void main() {
               .having(
                 (error) => error.message,
                 'message',
-                'Email must be unique',
+                'Request validation failed',
+              )
+              .having(
+                (error) => error.toString(),
+                'safe diagnostic',
+                isNot(contains('Email must be unique')),
               ),
         ),
       );

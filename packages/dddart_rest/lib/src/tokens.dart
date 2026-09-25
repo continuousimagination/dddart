@@ -34,9 +34,9 @@ class Tokens {
 
   /// Converts to JSON for API responses
   Map<String, dynamic> toJson() => {
-        'access_token': accessToken,
-        'refresh_token': refreshToken,
-        'expires_in': expiresIn,
-        'token_type': tokenType,
-      };
+    'access_token': accessToken,
+    'refresh_token': refreshToken,
+    'expires_in': expiresIn,
+    'token_type': tokenType,
+  };
 }

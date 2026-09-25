@@ -4,17 +4,83 @@ import 'dart:io';
 import 'validation_core.dart';
 
 Future<void> main() async {
-  final repositoryRoot =
-      File.fromUri(Platform.script).parent.parent.parent.absolute.path;
+  final repositoryRoot = File.fromUri(
+    Platform.script,
+  ).parent.parent.parent.absolute.path;
   final inventory = loadInventory(repositoryRoot);
 
   validateInventoryShape(inventory);
+  final workflow = File(
+    '$repositoryRoot/.github/workflows/test.yml',
+  ).readAsStringSync();
+  final dynamoJob = workflow
+      .split('  dynamodb-packages:\n')[1]
+      .split('  mysql-packages:\n')[0];
+  final dynamoPort = RegExp(r'- (\d+):8000').firstMatch(dynamoJob)!.group(1);
+  _expect(
+    dynamoJob.contains(
+      'SSG_LOCAL_DYNAMO_ENDPOINT: http://127.0.0.1:$dynamoPort',
+    ),
+    'Dynamo package CI binds conditional integration '
+    'to its declared local service',
+  );
+  final restExample = inventory.examples['dddart_repository_rest_example']!;
+  const restClosure = {
+    'dddart',
+    'dddart_serialization',
+    'dddart_json',
+    'dddart_rest_client',
+    'dddart_repository_rest',
+    'dddart_rest',
+  };
+  _expect(
+    _sameSet(restExample.allowedLocalPackages, restClosure),
+    'REST example admits exactly the portable protocol dependency closure',
+  );
+  validateExampleDependencyGraph(
+    jsonText: _exampleGraph(
+      exampleName: restExample.name,
+      localPackages: restClosure,
+      localSource: 'root',
+    ),
+    policy: restExample,
+    intendedPublicPackages: inventory.packages.keys.toSet(),
+  );
+  _expectFailure(
+    () => validateExampleDependencyGraph(
+      jsonText: _exampleGraph(
+        exampleName: restExample.name,
+        localPackages: {...restClosure, 'dddart_repository_dynamodb'},
+        localSource: 'root',
+      ),
+      policy: restExample,
+      intendedPublicPackages: inventory.packages.keys.toSet(),
+    ),
+    'portable REST protocol dependency does not permit storage backends',
+  );
+  _expect(
+    inventory.packages.length == 15,
+    'private fixtures do not inflate the public package inventory',
+  );
+  _expect(
+    inventory.fixtures.keys.single == 'dddart_shared_model_fixture',
+    'the shared model is explicitly validated as a private fixture',
+  );
+  _expect(
+    inventory.fixtures.values.single.generationAction == 'required',
+    'private shared model generation is mandatory',
+  );
+  _expect(
+    inventory.workspaceExemptions.isEmpty,
+    'private fixtures cannot be disguised as validation exemptions',
+  );
   _expect(
     inventory.packages.isNotEmpty,
     'the shared inventory declares public packages',
   );
 
   final expandedInventory = ValidationInventory(
+    fixtures: inventory.fixtures,
     schemaVersion: inventory.schemaVersion,
     packages: {
       ...inventory.packages,
@@ -31,6 +97,50 @@ Future<void> main() async {
     testTagPolicies: inventory.testTagPolicies,
   );
   validateInventoryShape(expandedInventory);
+  _expect(
+    canRegenerateExampleOutput(
+      ignored: false,
+      tracked: true,
+      declared: true,
+      sourceDeclaresOutput: true,
+      contents: '// GENERATED CODE - DO NOT MODIFY BY HAND\n',
+    ),
+    'declared tracked generated examples can be regenerated',
+  );
+  for (final unsafe in [
+    (
+      tracked: false,
+      declared: true,
+      text: '// GENERATED CODE - DO NOT MODIFY BY HAND\n',
+    ),
+    (
+      tracked: true,
+      declared: false,
+      text: '// GENERATED CODE - DO NOT MODIFY BY HAND\n',
+    ),
+    (tracked: true, declared: true, text: 'handwritten source'),
+  ]) {
+    _expect(
+      !canRegenerateExampleOutput(
+        ignored: false,
+        tracked: unsafe.tracked,
+        declared: unsafe.declared,
+        sourceDeclaresOutput: true,
+        contents: unsafe.text,
+      ),
+      'unowned or handwritten output cannot be removed',
+    );
+  }
+  _expect(
+    !canRegenerateExampleOutput(
+      ignored: false,
+      tracked: true,
+      declared: true,
+      sourceDeclaresOutput: false,
+      contents: '// GENERATED CODE - DO NOT MODIFY BY HAND\n',
+    ),
+    'a tracked generated output needs its owning source part directive',
+  );
 
   _expect(
     _sameSet(
@@ -44,8 +154,8 @@ Future<void> main() async {
   _expect(
     _sameSet(
       parseUsedServiceTags([
-        "@Tags(['requires-mongo', 'property-test'])\n"
-            "test('works', () {}, tags: ['requires-mysql']);",
+        "@Tags(['requires-mongo', 'property-test'])\n",
+        "test('works', () {}, tags: ['requires-mysql']);",
       ]),
       {'requires-mongo', 'requires-mysql'},
     ),
@@ -141,10 +251,7 @@ Future<void> main() async {
   final forbiddenConsumer = _consumerGraph(
     consumerName: 'mysql_consumer',
     target: mysql.name,
-    localPackages: {
-      ...mysql.allowedLocalPackages,
-      'dddart_repository_mongodb',
-    },
+    localPackages: {...mysql.allowedLocalPackages, 'dddart_repository_mongodb'},
   );
   _expectFailure(
     () => validateConsumerDependencyGraph(
@@ -291,10 +398,7 @@ Future<void> main() async {
       'GIT_INDEX_FILE': '/wrong/index',
       'GIT_CONFIG_COUNT': '1',
     },
-    additions: const {
-      'CI': 'true',
-      'GIT_PREFIX': 'must-not-be-restored',
-    },
+    additions: const {'CI': 'true', 'GIT_PREFIX': 'must-not-be-restored'},
   );
   _expect(
     sanitizedEnvironment['PATH'] == '/test/bin' &&
@@ -328,34 +432,33 @@ Future<void> _testPublishArchiveStaging() async {
     File('$source/.gitignore').writeAsStringSync(
       '/tracked_ignored.dart\n/generated.g.dart\n!generated.g.dart\n',
     );
-    File('$source/tracked_ignored.dart').writeAsStringSync(
-      'void ignored() {}\n',
-    );
-    File('$source/generated.g.dart').writeAsStringSync(
-      'void published() {}\n',
-    );
+    File(
+      '$source/tracked_ignored.dart',
+    ).writeAsStringSync('void ignored() {}\n');
+    File('$source/generated.g.dart').writeAsStringSync('void published() {}\n');
     File('$source/visible.txt').writeAsStringSync('visible\n');
-    File('$source/lib/override/.gitignore').writeAsStringSync(
-      'git_only.dart\n',
-    );
-    File('$source/lib/override/.pubignore').writeAsStringSync(
-      'pub_only.dart\n',
-    );
-    File('$source/lib/override/git_only.dart').writeAsStringSync(
-      'void includedByPubignore() {}\n',
-    );
-    File('$source/lib/override/pub_only.dart').writeAsStringSync(
-      'void excludedByPubignore() {}\n',
-    );
+    File(
+      '$source/lib/override/.gitignore',
+    ).writeAsStringSync('git_only.dart\n');
+    File(
+      '$source/lib/override/.pubignore',
+    ).writeAsStringSync('pub_only.dart\n');
+    File(
+      '$source/lib/override/git_only.dart',
+    ).writeAsStringSync('void includedByPubignore() {}\n');
+    File(
+      '$source/lib/override/pub_only.dart',
+    ).writeAsStringSync('void excludedByPubignore() {}\n');
     _runFixtureGit(source, const ['init', '--quiet']);
     _runFixtureGit(source, const ['add', '-f', '.']);
-    _runFixtureGit(
-      source,
-      const ['ls-files', '--error-unmatch', 'tracked_ignored.dart'],
-    );
-    File('$source/visible_untracked.dart').writeAsStringSync(
-      'void visibleUntracked() {}\n',
-    );
+    _runFixtureGit(source, const [
+      'ls-files',
+      '--error-unmatch',
+      'tracked_ignored.dart',
+    ]);
+    File(
+      '$source/visible_untracked.dart',
+    ).writeAsStringSync('void visibleUntracked() {}\n');
 
     await stagePublishedPackage(
       sourceDirectory: source,
@@ -439,8 +542,9 @@ String _exampleGraph({
       {
         'name': exampleName,
         'source': 'root',
-        'directDependencies':
-            localPackages.difference(devLocalPackages).toList(),
+        'directDependencies': localPackages
+            .difference(devLocalPackages)
+            .toList(),
         'devDependencies': devLocalPackages.toList(),
       },
       for (final package in localPackages)
@@ -458,6 +562,7 @@ ValidationInventory _inventoryWithExample(
   ExamplePolicy example,
 ) {
   return ValidationInventory(
+    fixtures: inventory.fixtures,
     schemaVersion: inventory.schemaVersion,
     packages: inventory.packages,
     examples: {...inventory.examples, example.name: example},

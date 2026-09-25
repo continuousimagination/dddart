@@ -96,6 +96,18 @@ Installs git hooks for the repository. Run this after cloning the repository.
 
 ## Git Hooks
 
+### Tracked generated sources and lockfiles
+
+The root and package `.gitignore` files name exact exceptions for committed generated consumer
+parts and reproducible lockfiles. They remain in Git and in the package archive
+where Pub includes them; untracked generated outputs and caches remain ignored.
+Do not untrack these artifacts or ignore publish warnings to pass validation.
+Required example generation binds each tracked output to its declared owner,
+source part directive and generated header, records before/after blob identities,
+and verifies that regeneration did not modify the handwritten input.
+Run the complete strict publish dry-run from a reviewed, clean committed tree;
+a pending merge's dirty-tree warning is not a successful publication check.
+
 ### Pre-Push Hook
 
 The pre-push hook runs automatically before every `git push` to catch issues before they reach CI.

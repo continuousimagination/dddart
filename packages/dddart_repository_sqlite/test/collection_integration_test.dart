@@ -38,13 +38,11 @@ void main() {
 
       test('should create junction tables for primitive collections', () async {
         // Verify all junction tables were created
+        expect(await helper.tableExists('test_primitive_collections'), isTrue);
         expect(
-          await helper.tableExists('test_primitive_collections'),
-          isTrue,
-        );
-        expect(
-          await helper
-              .tableExists('test_primitive_collections_favoriteNumbers'),
+          await helper.tableExists(
+            'test_primitive_collections_favoriteNumbers',
+          ),
           isTrue,
         );
         expect(
@@ -104,11 +102,7 @@ void main() {
           name: 'Score Test',
           favoriteNumbers: [],
           tags: {},
-          scoresByGame: {
-            'chess': 1200,
-            'go': 800,
-            'poker': 500,
-          },
+          scoresByGame: {'chess': 1200, 'go': 800, 'poker': 500},
         );
 
         await repo.save(aggregate);
@@ -116,11 +110,7 @@ void main() {
 
         expect(
           loaded.scoresByGame,
-          equals({
-            'chess': 1200,
-            'go': 800,
-            'poker': 500,
-          }),
+          equals({'chess': 1200, 'go': 800, 'poker': 500}),
         );
       });
 
@@ -218,23 +208,25 @@ void main() {
         await repo.createTables();
       });
 
-      test('should create junction tables with flattened value fields',
-          () async {
-        // Verify junction tables exist
-        expect(await helper.tableExists('test_value_collections'), isTrue);
-        expect(
-          await helper.tableExists('test_value_collections_payments'),
-          isTrue,
-        );
-        expect(
-          await helper.tableExists('test_value_collections_addresses'),
-          isTrue,
-        );
-        expect(
-          await helper.tableExists('test_value_collections_pricesByProduct'),
-          isTrue,
-        );
-      });
+      test(
+        'should create junction tables with flattened value fields',
+        () async {
+          // Verify junction tables exist
+          expect(await helper.tableExists('test_value_collections'), isTrue);
+          expect(
+            await helper.tableExists('test_value_collections_payments'),
+            isTrue,
+          );
+          expect(
+            await helper.tableExists('test_value_collections_addresses'),
+            isTrue,
+          );
+          expect(
+            await helper.tableExists('test_value_collections_pricesByProduct'),
+            isTrue,
+          );
+        },
+      );
 
       test('should save and load List<Money> correctly', () async {
         final aggregate = TestValueCollections(
@@ -283,14 +275,8 @@ void main() {
         final loaded = await repo.getById(aggregate.id);
 
         expect(loaded.addresses, hasLength(2));
-        expect(
-          loaded.addresses.any((a) => a.street == '123 Main St'),
-          isTrue,
-        );
-        expect(
-          loaded.addresses.any((a) => a.street == '456 Oak Ave'),
-          isTrue,
-        );
+        expect(loaded.addresses.any((a) => a.street == '123 Main St'), isTrue);
+        expect(loaded.addresses.any((a) => a.street == '456 Oak Ave'), isTrue);
       });
 
       test('should save and load Map<String, Money> correctly', () async {
@@ -359,14 +345,8 @@ void main() {
         final loaded = await repo.getById(aggregate.id);
 
         expect(loaded.uniqueItems, hasLength(2));
-        expect(
-          loaded.uniqueItems.any((i) => i.name == 'Item 1'),
-          isTrue,
-        );
-        expect(
-          loaded.uniqueItems.any((i) => i.name == 'Item 2'),
-          isTrue,
-        );
+        expect(loaded.uniqueItems.any((i) => i.name == 'Item 1'), isTrue);
+        expect(loaded.uniqueItems.any((i) => i.name == 'Item 2'), isTrue);
       });
 
       test('should save and load Map<String, Entity> correctly', () async {
@@ -376,10 +356,7 @@ void main() {
         final aggregate = TestEntityCollections(
           name: 'Entity Map Test',
           uniqueItems: {},
-          itemsByCategory: {
-            'electronics': electronics,
-            'books': books,
-          },
+          itemsByCategory: {'electronics': electronics, 'books': books},
         );
 
         await repo.save(aggregate);
@@ -430,9 +407,7 @@ void main() {
       });
 
       test('should treat null collections as empty on save', () async {
-        final aggregate = TestNullableCollections(
-          name: 'Null Test',
-        );
+        final aggregate = TestNullableCollections(name: 'Null Test');
 
         await repo.save(aggregate);
 
@@ -452,9 +427,7 @@ void main() {
       });
 
       test('should return empty collections (not null) on load', () async {
-        final aggregate = TestNullableCollections(
-          name: 'Empty Return Test',
-        );
+        final aggregate = TestNullableCollections(name: 'Empty Return Test');
 
         await repo.save(aggregate);
         final loaded = await repo.getById(aggregate.id);
@@ -517,8 +490,9 @@ void main() {
 
     group('Complex Scenarios', () {
       test('should handle aggregate with multiple collection types', () async {
-        final primitiveRepo =
-            TestPrimitiveCollectionsSqliteRepository(connection);
+        final primitiveRepo = TestPrimitiveCollectionsSqliteRepository(
+          connection,
+        );
         await primitiveRepo.createTables();
 
         final aggregate = TestPrimitiveCollections(
@@ -537,8 +511,9 @@ void main() {
       });
 
       test('should handle large collections', () async {
-        final primitiveRepo =
-            TestPrimitiveCollectionsSqliteRepository(connection);
+        final primitiveRepo = TestPrimitiveCollectionsSqliteRepository(
+          connection,
+        );
         await primitiveRepo.createTables();
 
         final largeList = List.generate(100, (i) => i);
@@ -563,8 +538,9 @@ void main() {
       });
 
       test('should handle multiple aggregates with collections', () async {
-        final primitiveRepo =
-            TestPrimitiveCollectionsSqliteRepository(connection);
+        final primitiveRepo = TestPrimitiveCollectionsSqliteRepository(
+          connection,
+        );
         await primitiveRepo.createTables();
 
         final aggregate1 = TestPrimitiveCollections(

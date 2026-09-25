@@ -21,10 +21,7 @@ class UserWithCustomRepoDynamoRepository
       await _connection.client.createTable(
         tableName: tableName,
         keySchema: [
-          KeySchemaElement(
-            attributeName: 'id',
-            keyType: KeyType.hash,
-          ),
+          KeySchemaElement(attributeName: 'id', keyType: KeyType.hash),
         ],
         attributeDefinitions: [
           AttributeDefinition(
@@ -44,14 +41,8 @@ class UserWithCustomRepoDynamoRepository
           GlobalSecondaryIndex(
             indexName: emailIndexName,
             keySchema: [
-              KeySchemaElement(
-                attributeName: 'email',
-                keyType: KeyType.hash,
-              ),
-              KeySchemaElement(
-                attributeName: 'id',
-                keyType: KeyType.range,
-              ),
+              KeySchemaElement(attributeName: 'email', keyType: KeyType.hash),
+              KeySchemaElement(attributeName: 'id', keyType: KeyType.range),
             ],
             projection: Projection(projectionType: ProjectionType.all),
           ),
@@ -62,10 +53,7 @@ class UserWithCustomRepoDynamoRepository
                 attributeName: 'lastName',
                 keyType: KeyType.hash,
               ),
-              KeySchemaElement(
-                attributeName: 'email',
-                keyType: KeyType.range,
-              ),
+              KeySchemaElement(attributeName: 'email', keyType: KeyType.range),
             ],
             projection: Projection(projectionType: ProjectionType.all),
           ),
@@ -84,9 +72,7 @@ class UserWithCustomRepoDynamoRepository
         tableName: tableName,
         indexName: emailIndexName,
         keyConditionExpression: 'email = :email',
-        expressionAttributeValues: {
-          ':email': AttributeValue(s: email),
-        },
+        expressionAttributeValues: {':email': AttributeValue(s: email)},
         limit: 1,
       );
 
@@ -107,21 +93,14 @@ class UserWithCustomRepoDynamoRepository
     String lastName, {
     required int limit,
   }) async {
-    RangeError.checkValueInInterval(
-      limit,
-      1,
-      maxLastNameResults,
-      'limit',
-    );
+    RangeError.checkValueInInterval(limit, 1, maxLastNameResults, 'limit');
 
     try {
       final response = await _connection.client.query(
         tableName: tableName,
         indexName: lastNameIndexName,
         keyConditionExpression: 'lastName = :lastName',
-        expressionAttributeValues: {
-          ':lastName': AttributeValue(s: lastName),
-        },
+        expressionAttributeValues: {':lastName': AttributeValue(s: lastName)},
         limit: limit,
         scanIndexForward: true,
       );

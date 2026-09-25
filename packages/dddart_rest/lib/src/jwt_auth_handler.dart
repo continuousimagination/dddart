@@ -16,9 +16,8 @@ import 'package:shelf/shelf.dart';
 /// Returning `null` means the user is missing, disabled, or otherwise no longer
 /// eligible to receive tokens. Implementations should read authoritative
 /// application state on every call rather than caching claim snapshots.
-typedef ApplicationClaimsLoader<TClaims> = Future<TClaims?> Function(
-  String userId,
-);
+typedef ApplicationClaimsLoader<TClaims> =
+    Future<TClaims?> Function(String userId);
 
 /// Handles JWT authentication for self-hosted mode
 ///
@@ -56,9 +55,9 @@ class JwtAuthHandler<TClaims, TRefreshToken extends RefreshToken>
     this.audience,
     this.accessTokenDuration = const Duration(minutes: 15),
     this.refreshTokenDuration = const Duration(days: 7),
-  })  : _claimsLoader = claimsLoader,
-        _parseClaimsFromJson = parseClaimsFromJson,
-        _claimsToJson = claimsToJson;
+  }) : _claimsLoader = claimsLoader,
+       _parseClaimsFromJson = parseClaimsFromJson,
+       _claimsToJson = claimsToJson;
 
   /// Secret key for signing JWTs
   final String secret;
@@ -140,10 +139,7 @@ class JwtAuthHandler<TClaims, TRefreshToken extends RefreshToken>
       // Parse claims using provided callback
       final claims = _parseClaimsFromJson(jwt.payload as Map<String, dynamic>);
 
-      return AuthenticationResult.success(
-        userId: userId,
-        claims: claims,
-      );
+      return AuthenticationResult.success(userId: userId, claims: claims);
     } catch (e) {
       return AuthenticationResult.failure('Invalid token: $e');
     }
@@ -161,10 +157,7 @@ class JwtAuthHandler<TClaims, TRefreshToken extends RefreshToken>
   ///   deviceInfo: 'CLI v1.0',
   /// );
   /// ```
-  Future<Tokens> issueTokens(
-    String userId, {
-    String? deviceInfo,
-  }) async {
+  Future<Tokens> issueTokens(String userId, {String? deviceInfo}) async {
     // Load and sign authoritative application claims before persisting a
     // refresh token. A missing or disabled user therefore receives no tokens.
     final accessToken = await _issueAccessToken(userId);
@@ -205,8 +198,9 @@ class JwtAuthHandler<TClaims, TRefreshToken extends RefreshToken>
   /// ```
   Future<Tokens> refresh(String refreshTokenString) async {
     // Look up refresh token in repository
-    final refreshToken =
-        await refreshTokenRepository.findByToken(refreshTokenString);
+    final refreshToken = await refreshTokenRepository.findByToken(
+      refreshTokenString,
+    );
     if (refreshToken == null) {
       throw Exception('Invalid refresh token');
     }
@@ -242,8 +236,9 @@ class JwtAuthHandler<TClaims, TRefreshToken extends RefreshToken>
   /// await authHandler.revoke('refresh-token-string');
   /// ```
   Future<void> revoke(String refreshTokenString) async {
-    final refreshToken =
-        await refreshTokenRepository.findByToken(refreshTokenString);
+    final refreshToken = await refreshTokenRepository.findByToken(
+      refreshTokenString,
+    );
 
     if (refreshToken == null) {
       return;

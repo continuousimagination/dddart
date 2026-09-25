@@ -56,8 +56,8 @@ class EventBusClient {
     DateTime? initialTimestamp,
     http.Client? httpClient,
     String? authToken,
-  })  : _httpClient = httpClient ?? http.Client(),
-        _authToken = authToken {
+  }) : _httpClient = httpClient ?? http.Client(),
+       _authToken = authToken {
     _lastTimestamp = initialTimestamp ?? DateTime.now().toUtc();
     _logger.info('EventBusClient starting with lastTimestamp: $_lastTimestamp');
 
@@ -98,6 +98,10 @@ class EventBusClient {
   /// Timer for periodic polling.
   Timer? _pollingTimer;
 
+  Future<void>? _activePoll;
+  Future<void>? _closing;
+  bool _closed = false;
+
   /// Subscription to local EventBus for forwarding.
   StreamSubscription<DomainEvent>? _subscription;
 
@@ -111,10 +115,13 @@ class EventBusClient {
 
   /// Polls server for new events.
   Future<void> _poll() async {
+    if (_closed || _activePoll != null) return;
+    final completion = Completer<void>();
+    _activePoll = completion.future;
     try {
-      final url = Uri.parse('$serverUrl/events').replace(
-        queryParameters: {'since': _lastTimestamp.toIso8601String()},
-      );
+      final url = Uri.parse(
+        '$serverUrl/events',
+      ).replace(queryParameters: {'since': _lastTimestamp.toIso8601String()});
 
       _logger.finest('Polling: $url');
 
@@ -125,6 +132,7 @@ class EventBusClient {
       }
 
       final response = await _httpClient.get(url, headers: headers);
+      if (_closed) return;
 
       if (response.statusCode == 200) {
         final eventsJson = jsonDecode(response.body) as List;
@@ -137,13 +145,17 @@ class EventBusClient {
         }
 
         for (final eventJson in eventsJson) {
+          if (_closed) return;
           await _processEvent(eventJson as Map<String, dynamic>);
         }
       } else {
         _logger.warning('Poll failed: ${response.statusCode}');
       }
     } catch (e, stackTrace) {
-      _logger.severe('Poll error', e, stackTrace);
+      if (!_closed) _logger.severe('Poll error', e, stackTrace);
+    } finally {
+      _activePoll = null;
+      completion.complete();
     }
   }
 
@@ -151,8 +163,9 @@ class EventBusClient {
   Future<void> _processEvent(Map<String, dynamic> storedEventJson) async {
     try {
       final eventType = storedEventJson['eventType'] as String;
-      final eventDataJson = jsonDecode(storedEventJson['eventJson'] as String)
-          as Map<String, dynamic>;
+      final eventDataJson =
+          jsonDecode(storedEventJson['eventJson'] as String)
+              as Map<String, dynamic>;
       final timestamp = DateTime.parse(storedEventJson['createdAt'] as String);
 
       // Update last timestamp to be after this event to avoid re-processing
@@ -170,6 +183,7 @@ class EventBusClient {
       }
 
       final event = factory(eventDataJson);
+      if (_closed) return;
 
       // Publish to local bus
       localEventBus.publish(event);
@@ -181,6 +195,7 @@ class EventBusClient {
 
   /// Forwards local event to server.
   Future<void> _forwardEvent(DomainEvent event) async {
+    if (_closed) return;
     try {
       // Convert DomainEvent to StoredEvent for transmission
       final storedEventJson = _domainEventToStoredEvent(event);
@@ -250,6 +265,9 @@ class EventBusClient {
 
   /// Publishes event to local bus (and optionally forwards to server).
   void publish(DomainEvent event) {
+    if (_closed) {
+      throw StateError('Cannot publish event: EventBusClient is closed');
+    }
     localEventBus.publish(event);
   }
 
@@ -260,14 +278,21 @@ class EventBusClient {
 
   /// Closes the client and releases resources.
   ///
-  /// Cancels the polling timer, event subscription, closes the HTTP client,
-  /// and closes the local EventBus.
-  /// After calling close(), no more events can be published or received.
-  Future<void> close() async {
+  /// Stops new work immediately, cancels the timer and forwarding subscription,
+  /// closes the HTTP client, waits for the active poll to settle, then closes
+  /// the local EventBus. Late poll responses are discarded. An injected HTTP
+  /// client must settle pending requests when closed or otherwise complete them.
+  /// Repeated calls share the same completion. Already-published stream events
+  /// may drain before completion; no events are delivered after completion.
+  Future<void> close() => _closing ??= _close();
+
+  Future<void> _close() async {
+    _closed = true;
     _logger.info('EventBusClient closing');
     _pollingTimer?.cancel();
     await _subscription?.cancel();
     _httpClient.close();
+    await _activePoll;
     await localEventBus.close();
   }
 }

@@ -41,61 +41,67 @@ void main() {
     });
 
     group('Custom Query Methods', () {
-      test('findByCustomerId should return orders for a specific customer',
-          () async {
-        // Arrange - Create orders for different customers
-        final customer1Id = generateRandomCustomerId();
-        final customer2Id = generateRandomCustomerId();
+      test(
+        'findByCustomerId should return orders for a specific customer',
+        () async {
+          // Arrange - Create orders for different customers
+          final customer1Id = generateRandomCustomerId();
+          final customer2Id = generateRandomCustomerId();
 
-        final order1 = TestOrder(
-          orderNumber: generateRandomOrderNumber(),
-          customerId: customer1Id,
-          total: 100,
-        );
-        final order2 = TestOrder(
-          orderNumber: generateRandomOrderNumber(),
-          customerId: customer1Id,
-          total: 200,
-        );
-        final order3 = TestOrder(
-          orderNumber: generateRandomOrderNumber(),
-          customerId: customer2Id,
-          total: 300,
-        );
+          final order1 = TestOrder(
+            orderNumber: generateRandomOrderNumber(),
+            customerId: customer1Id,
+            total: 100,
+          );
+          final order2 = TestOrder(
+            orderNumber: generateRandomOrderNumber(),
+            customerId: customer1Id,
+            total: 200,
+          );
+          final order3 = TestOrder(
+            orderNumber: generateRandomOrderNumber(),
+            customerId: customer2Id,
+            total: 300,
+          );
 
-        // Save all orders
-        await orderRepository.save(order1);
-        await orderRepository.save(order2);
-        await orderRepository.save(order3);
+          // Save all orders
+          await orderRepository.save(order1);
+          await orderRepository.save(order2);
+          await orderRepository.save(order3);
 
-        // Act - Find orders by customer1Id
-        final customer1Orders =
-            await orderRepository.findByCustomerId(customer1Id);
+          // Act - Find orders by customer1Id
+          final customer1Orders = await orderRepository.findByCustomerId(
+            customer1Id,
+          );
 
-        // Assert
-        expect(customer1Orders.length, equals(2));
-        expect(
-          customer1Orders.every((o) => o.customerId == customer1Id),
-          isTrue,
-        );
-        expect(
-          customer1Orders.map((o) => o.id).toSet(),
-          containsAll([order1.id, order2.id]),
-        );
-      });
+          // Assert
+          expect(customer1Orders.length, equals(2));
+          expect(
+            customer1Orders.every((o) => o.customerId == customer1Id),
+            isTrue,
+          );
+          expect(
+            customer1Orders.map((o) => o.id).toSet(),
+            containsAll([order1.id, order2.id]),
+          );
+        },
+      );
 
-      test('findByCustomerId should return empty list when no orders found',
-          () async {
-        // Arrange
-        final nonExistentCustomerId = generateRandomCustomerId();
+      test(
+        'findByCustomerId should return empty list when no orders found',
+        () async {
+          // Arrange
+          final nonExistentCustomerId = generateRandomCustomerId();
 
-        // Act
-        final orders =
-            await orderRepository.findByCustomerId(nonExistentCustomerId);
+          // Act
+          final orders = await orderRepository.findByCustomerId(
+            nonExistentCustomerId,
+          );
 
-        // Assert
-        expect(orders, isEmpty);
-      });
+          // Assert
+          expect(orders, isEmpty);
+        },
+      );
 
       test('findByOrderNumber should return order when it exists', () async {
         // Arrange
@@ -117,42 +123,46 @@ void main() {
         expect(found.total, equals(150.0));
       });
 
-      test('findByOrderNumber should return null when order does not exist',
-          () async {
-        // Act
-        final found = await orderRepository.findByOrderNumber('NON-EXISTENT');
+      test(
+        'findByOrderNumber should return null when order does not exist',
+        () async {
+          // Act
+          final found = await orderRepository.findByOrderNumber('NON-EXISTENT');
 
-        // Assert
-        expect(found, isNull);
-      });
+          // Assert
+          expect(found, isNull);
+        },
+      );
 
-      test('findByOrderNumber should handle multiple orders correctly',
-          () async {
-        // Arrange - Create multiple orders
-        final order1 = TestOrder(
-          orderNumber: 'ORD-111111',
-          customerId: generateRandomCustomerId(),
-          total: 100,
-        );
-        final order2 = TestOrder(
-          orderNumber: 'ORD-222222',
-          customerId: generateRandomCustomerId(),
-          total: 200,
-        );
+      test(
+        'findByOrderNumber should handle multiple orders correctly',
+        () async {
+          // Arrange - Create multiple orders
+          final order1 = TestOrder(
+            orderNumber: 'ORD-111111',
+            customerId: generateRandomCustomerId(),
+            total: 100,
+          );
+          final order2 = TestOrder(
+            orderNumber: 'ORD-222222',
+            customerId: generateRandomCustomerId(),
+            total: 200,
+          );
 
-        await orderRepository.save(order1);
-        await orderRepository.save(order2);
+          await orderRepository.save(order1);
+          await orderRepository.save(order2);
 
-        // Act - Find each order by its order number
-        final found1 = await orderRepository.findByOrderNumber('ORD-111111');
-        final found2 = await orderRepository.findByOrderNumber('ORD-222222');
+          // Act - Find each order by its order number
+          final found1 = await orderRepository.findByOrderNumber('ORD-111111');
+          final found2 = await orderRepository.findByOrderNumber('ORD-222222');
 
-        // Assert
-        expect(found1, isNotNull);
-        expect(found1!.id, equals(order1.id));
-        expect(found2, isNotNull);
-        expect(found2!.id, equals(order2.id));
-      });
+          // Assert
+          expect(found1, isNotNull);
+          expect(found1!.id, equals(order1.id));
+          expect(found2, isNotNull);
+          expect(found2!.id, equals(order2.id));
+        },
+      );
     });
 
     group('Protected Members Accessibility', () {
@@ -179,8 +189,9 @@ void main() {
         await orderRepository.save(order);
 
         // Custom method uses _serializer internally
-        final found =
-            await orderRepository.findByOrderNumber(order.orderNumber);
+        final found = await orderRepository.findByOrderNumber(
+          order.orderNumber,
+        );
 
         // If _serializer wasn't accessible, findByOrderNumber would fail
         expect(found, isNotNull);
@@ -221,21 +232,23 @@ void main() {
     });
 
     group('Base CRUD Operations', () {
-      test('custom repository should support basic save and retrieve',
-          () async {
-        // Arrange
-        final order = generateRandomTestOrder();
+      test(
+        'custom repository should support basic save and retrieve',
+        () async {
+          // Arrange
+          final order = generateRandomTestOrder();
 
-        // Act
-        await orderRepository.save(order);
-        final retrieved = await orderRepository.getById(order.id);
+          // Act
+          await orderRepository.save(order);
+          final retrieved = await orderRepository.getById(order.id);
 
-        // Assert
-        expect(retrieved.id, equals(order.id));
-        expect(retrieved.orderNumber, equals(order.orderNumber));
-        expect(retrieved.customerId, equals(order.customerId));
-        expect(retrieved.total, equals(order.total));
-      });
+          // Assert
+          expect(retrieved.id, equals(order.id));
+          expect(retrieved.orderNumber, equals(order.orderNumber));
+          expect(retrieved.customerId, equals(order.customerId));
+          expect(retrieved.total, equals(order.total));
+        },
+      );
 
       test('custom repository should support delete', () async {
         // Arrange
@@ -325,9 +338,7 @@ class CustomTestServer {
 /// - Standard CRUD endpoints for orders
 /// - Custom query endpoint: GET /orders?customerId=xxx
 /// - Custom query endpoint: GET /orders?orderNumber=xxx
-Future<CustomTestServer> createCustomQueryTestServer({
-  int port = 8771,
-}) async {
+Future<CustomTestServer> createCustomQueryTestServer({int port = 8771}) async {
   // In-memory storage for orders
   final orders = <String, TestOrder>{};
   final serializer = TestOrderJsonSerializer();

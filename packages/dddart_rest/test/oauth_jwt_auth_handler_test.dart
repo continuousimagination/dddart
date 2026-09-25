@@ -20,10 +20,7 @@ void main() {
 
     setUpAll(() {
       JsonWebKey keyPairWithId() {
-        final generatedKey = JsonWebKey.generate(
-          'RS256',
-          keyBitLength: 2048,
-        );
+        final generatedKey = JsonWebKey.generate('RS256', keyBitLength: 2048);
         return JsonWebKey.fromCryptoKeys(
           publicKey: generatedKey.cryptoKeyPair.publicKey,
           privateKey: generatedKey.cryptoKeyPair.privateKey,
@@ -37,18 +34,13 @@ void main() {
         publicKey: signingKey.cryptoKeyPair.publicKey,
         keyId: keyId,
       );
-      jwksBody = jsonEncode(
-        JsonWebKeySet.fromKeys([verificationKey]).toJson(),
-      );
+      jwksBody = jsonEncode(JsonWebKeySet.fromKeys([verificationKey]).toJson());
     });
 
     int epochSeconds(DateTime value) =>
         value.millisecondsSinceEpoch ~/ Duration.millisecondsPerSecond;
 
-    String signToken(
-      Map<String, dynamic> claims, {
-      JsonWebKey? key,
-    }) {
+    String signToken(Map<String, dynamic> claims, {JsonWebKey? key}) {
       final builder = JsonWebSignatureBuilder()
         ..jsonContent = claims
         ..setProtectedHeader('typ', 'JWT')
@@ -137,38 +129,40 @@ void main() {
 
     test('rejects a token whose not-before time is in the future', () async {
       final result = await authenticate(
-        validClaims(
-          notBefore: DateTime.now().add(const Duration(minutes: 2)),
-        ),
+        validClaims(notBefore: DateTime.now().add(const Duration(minutes: 2))),
       );
 
       expect(result.isAuthenticated, isFalse);
       expect(result.errorMessage, 'Token is not yet valid');
     });
 
-    test('accepts an expired token inside the configured skew window',
-        () async {
-      final result = await authenticate(
-        validClaims(
-          expiresAt: DateTime.now().subtract(const Duration(seconds: 30)),
-        ),
-        clockSkewTolerance: const Duration(minutes: 1),
-      );
+    test(
+      'accepts an expired token inside the configured skew window',
+      () async {
+        final result = await authenticate(
+          validClaims(
+            expiresAt: DateTime.now().subtract(const Duration(seconds: 30)),
+          ),
+          clockSkewTolerance: const Duration(minutes: 1),
+        );
 
-      expect(result.isAuthenticated, isTrue);
-    });
+        expect(result.isAuthenticated, isTrue);
+      },
+    );
 
-    test('accepts a future not-before time inside the configured skew window',
-        () async {
-      final result = await authenticate(
-        validClaims(
-          notBefore: DateTime.now().add(const Duration(seconds: 30)),
-        ),
-        clockSkewTolerance: const Duration(minutes: 1),
-      );
+    test(
+      'accepts a future not-before time inside the configured skew window',
+      () async {
+        final result = await authenticate(
+          validClaims(
+            notBefore: DateTime.now().add(const Duration(seconds: 30)),
+          ),
+          clockSkewTolerance: const Duration(minutes: 1),
+        );
 
-      expect(result.isAuthenticated, isTrue);
-    });
+        expect(result.isAuthenticated, isTrue);
+      },
+    );
 
     test('preserves issuer error precedence over expiration', () async {
       final result = await authenticate(
@@ -194,16 +188,18 @@ void main() {
       expect(result.errorMessage, 'Invalid token audience');
     });
 
-    test('preserves signature validation and does not expose the token',
-        () async {
-      final claims = validClaims();
-      final token = signToken(claims, key: alternateSigningKey);
-      final result = await authenticate(claims, key: alternateSigningKey);
+    test(
+      'preserves signature validation and does not expose the token',
+      () async {
+        final claims = validClaims();
+        final token = signToken(claims, key: alternateSigningKey);
+        final result = await authenticate(claims, key: alternateSigningKey);
 
-      expect(result.isAuthenticated, isFalse);
-      expect(result.errorMessage, 'Invalid token signature');
-      expect(result.errorMessage, isNot(contains(token)));
-    });
+        expect(result.isAuthenticated, isFalse);
+        expect(result.errorMessage, 'Invalid token signature');
+        expect(result.errorMessage, isNot(contains(token)));
+      },
+    );
 
     test('accepts a valid token without optional time claims', () async {
       final result = await authenticate({

@@ -74,179 +74,159 @@ void main() {
       },
     );
 
-    test(
-      'should handle nullable authorization fields correctly',
-      () {
-        final random = Random(44);
+    test('should handle nullable authorization fields correctly', () {
+      final random = Random(44);
 
-        for (var i = 0; i < 100; i++) {
-          // Randomly include or exclude authorization fields
-          final includeUserId = random.nextBool();
-          final includeTenantId = random.nextBool();
-          final includeSessionId = random.nextBool();
+      for (var i = 0; i < 100; i++) {
+        // Randomly include or exclude authorization fields
+        final includeUserId = random.nextBool();
+        final includeTenantId = random.nextBool();
+        final includeSessionId = random.nextBool();
 
-          final storedEvent = StoredEvent(
-            id: UuidValue.generate(),
-            createdAt: DateTime.now(),
-            aggregateId: UuidValue.generate(),
-            eventType: 'TestEvent',
-            eventJson: '{"data":"test"}',
-            userId: includeUserId ? 'user-${random.nextInt(1000)}' : null,
-            tenantId: includeTenantId ? 'tenant-${random.nextInt(100)}' : null,
-            sessionId:
-                includeSessionId ? 'session-${random.nextInt(10000)}' : null,
-          );
+        final storedEvent = StoredEvent(
+          id: UuidValue.generate(),
+          createdAt: DateTime.now(),
+          aggregateId: UuidValue.generate(),
+          eventType: 'TestEvent',
+          eventJson: '{"data":"test"}',
+          userId: includeUserId ? 'user-${random.nextInt(1000)}' : null,
+          tenantId: includeTenantId ? 'tenant-${random.nextInt(100)}' : null,
+          sessionId: includeSessionId
+              ? 'session-${random.nextInt(10000)}'
+              : null,
+        );
 
-          // Serialize and deserialize
-          final json = storedEvent.toJson();
-          final deserialized = StoredEvent.fromJson(json);
+        // Serialize and deserialize
+        final json = storedEvent.toJson();
+        final deserialized = StoredEvent.fromJson(json);
 
-          // Verify nullable fields are preserved correctly
-          expect(
-            deserialized.userId,
-            equals(storedEvent.userId),
-            reason: 'Iteration $i: userId should be preserved (null or value)',
-          );
-          expect(
-            deserialized.tenantId,
-            equals(storedEvent.tenantId),
-            reason:
-                'Iteration $i: tenantId should be preserved (null or value)',
-          );
-          expect(
-            deserialized.sessionId,
-            equals(storedEvent.sessionId),
-            reason:
-                'Iteration $i: sessionId should be preserved (null or value)',
-          );
-        }
-      },
-    );
+        // Verify nullable fields are preserved correctly
+        expect(
+          deserialized.userId,
+          equals(storedEvent.userId),
+          reason: 'Iteration $i: userId should be preserved (null or value)',
+        );
+        expect(
+          deserialized.tenantId,
+          equals(storedEvent.tenantId),
+          reason: 'Iteration $i: tenantId should be preserved (null or value)',
+        );
+        expect(
+          deserialized.sessionId,
+          equals(storedEvent.sessionId),
+          reason: 'Iteration $i: sessionId should be preserved (null or value)',
+        );
+      }
+    });
 
-    test(
-      'should preserve StoredEvent created from DomainEvent',
-      () {
-        final random = Random(45);
+    test('should preserve StoredEvent created from DomainEvent', () {
+      final random = Random(45);
 
-        for (var i = 0; i < 100; i++) {
-          // Generate random test event
-          final testEvent = _generateRandomTestEvent(random);
+      for (var i = 0; i < 100; i++) {
+        // Generate random test event
+        final testEvent = _generateRandomTestEvent(random);
 
-          // Create StoredEvent from DomainEvent
-          final storedEvent = StoredEvent.fromDomainEvent(testEvent);
+        // Create StoredEvent from DomainEvent
+        final storedEvent = StoredEvent.fromDomainEvent(testEvent);
 
-          // Serialize and deserialize
-          final json = storedEvent.toJson();
-          final deserialized = StoredEvent.fromJson(json);
+        // Serialize and deserialize
+        final json = storedEvent.toJson();
+        final deserialized = StoredEvent.fromJson(json);
 
-          // Verify event data is preserved
-          expect(
-            deserialized.id,
-            equals(testEvent.eventId),
-            reason: 'Iteration $i: eventId should become StoredEvent id',
-          );
-          expect(
-            deserialized.createdAt.millisecondsSinceEpoch,
-            equals(testEvent.occurredAt.millisecondsSinceEpoch),
-            reason: 'Iteration $i: occurredAt should become createdAt',
-          );
-          expect(
-            deserialized.aggregateId,
-            equals(testEvent.aggregateId),
-            reason: 'Iteration $i: aggregateId should be preserved',
-          );
-          expect(
-            deserialized.eventType,
-            equals('TestDomainEvent'),
-            reason: 'Iteration $i: eventType should be class name',
-          );
+        // Verify event data is preserved
+        expect(
+          deserialized.id,
+          equals(testEvent.eventId),
+          reason: 'Iteration $i: eventId should become StoredEvent id',
+        );
+        expect(
+          deserialized.createdAt.millisecondsSinceEpoch,
+          equals(testEvent.occurredAt.millisecondsSinceEpoch),
+          reason: 'Iteration $i: occurredAt should become createdAt',
+        );
+        expect(
+          deserialized.aggregateId,
+          equals(testEvent.aggregateId),
+          reason: 'Iteration $i: aggregateId should be preserved',
+        );
+        expect(
+          deserialized.eventType,
+          equals('TestDomainEvent'),
+          reason: 'Iteration $i: eventType should be class name',
+        );
 
-          // Verify authorization fields extracted from context
-          expect(
-            deserialized.userId,
-            equals(testEvent.context['userId']),
-            reason: 'Iteration $i: userId should be extracted from context',
-          );
-          expect(
-            deserialized.tenantId,
-            equals(testEvent.context['tenantId']),
-            reason: 'Iteration $i: tenantId should be extracted from context',
-          );
-          expect(
-            deserialized.sessionId,
-            equals(testEvent.context['sessionId']),
-            reason: 'Iteration $i: sessionId should be extracted from context',
-          );
-        }
-      },
-    );
+        // Verify authorization fields extracted from context
+        expect(
+          deserialized.userId,
+          equals(testEvent.context['userId']),
+          reason: 'Iteration $i: userId should be extracted from context',
+        );
+        expect(
+          deserialized.tenantId,
+          equals(testEvent.context['tenantId']),
+          reason: 'Iteration $i: tenantId should be extracted from context',
+        );
+        expect(
+          deserialized.sessionId,
+          equals(testEvent.context['sessionId']),
+          reason: 'Iteration $i: sessionId should be extracted from context',
+        );
+      }
+    });
 
-    test(
-      'should handle edge case values correctly',
-      () {
-        final edgeCases = [
-          (
-            'Empty strings',
-            '',
-            '',
-            '{}',
-          ),
-          (
-            'Very long strings',
-            'user-${'a' * 1000}',
-            'tenant-${'b' * 1000}',
-            '{"data":"${'c' * 1000}"}',
-          ),
-          (
-            'Special characters',
-            'user-\n\t\r"\'\\',
-            'tenant-\n\t\r"\'\\',
-            '{"data":"test\n\t\r"}',
-          ),
-          (
-            'Unicode characters',
-            'user-测试',
-            'tenant-тест',
-            '{"data":"tëst"}',
-          ),
-        ];
+    test('should handle edge case values correctly', () {
+      final edgeCases = [
+        ('Empty strings', '', '', '{}'),
+        (
+          'Very long strings',
+          'user-${'a' * 1000}',
+          'tenant-${'b' * 1000}',
+          '{"data":"${'c' * 1000}"}',
+        ),
+        (
+          'Special characters',
+          'user-\n\t\r"\'\\',
+          'tenant-\n\t\r"\'\\',
+          '{"data":"test\n\t\r"}',
+        ),
+        ('Unicode characters', 'user-测试', 'tenant-тест', '{"data":"tëst"}'),
+      ];
 
-        for (var i = 0; i < edgeCases.length; i++) {
-          final (description, userId, tenantId, eventJson) = edgeCases[i];
+      for (var i = 0; i < edgeCases.length; i++) {
+        final (description, userId, tenantId, eventJson) = edgeCases[i];
 
-          final storedEvent = StoredEvent(
-            id: UuidValue.generate(),
-            createdAt: DateTime.now(),
-            aggregateId: UuidValue.generate(),
-            eventType: 'EdgeCaseEvent',
-            eventJson: eventJson,
-            userId: userId,
-            tenantId: tenantId,
-          );
+        final storedEvent = StoredEvent(
+          id: UuidValue.generate(),
+          createdAt: DateTime.now(),
+          aggregateId: UuidValue.generate(),
+          eventType: 'EdgeCaseEvent',
+          eventJson: eventJson,
+          userId: userId,
+          tenantId: tenantId,
+        );
 
-          // Serialize and deserialize
-          final json = storedEvent.toJson();
-          final deserialized = StoredEvent.fromJson(json);
+        // Serialize and deserialize
+        final json = storedEvent.toJson();
+        final deserialized = StoredEvent.fromJson(json);
 
-          // Verify edge cases are handled
-          expect(
-            deserialized.userId,
-            equals(userId),
-            reason: '$description: userId should be preserved',
-          );
-          expect(
-            deserialized.tenantId,
-            equals(tenantId),
-            reason: '$description: tenantId should be preserved',
-          );
-          expect(
-            deserialized.eventJson,
-            equals(eventJson),
-            reason: '$description: eventJson should be preserved',
-          );
-        }
-      },
-    );
+        // Verify edge cases are handled
+        expect(
+          deserialized.userId,
+          equals(userId),
+          reason: '$description: userId should be preserved',
+        );
+        expect(
+          deserialized.tenantId,
+          equals(tenantId),
+          reason: '$description: tenantId should be preserved',
+        );
+        expect(
+          deserialized.eventJson,
+          equals(eventJson),
+          reason: '$description: eventJson should be preserved',
+        );
+      }
+    });
   });
 }
 

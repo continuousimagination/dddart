@@ -35,6 +35,13 @@ import 'package:dddart_rest/src/authorization_result.dart';
 /// }
 /// ```
 abstract class AuthorizationHandler<TAggregate extends AggregateRoot, TClaims> {
+  /// Authorizes an item read before the resource loads the aggregate.
+  /// Implementations must make an explicit authorization decision.
+  Future<AuthorizationResult> authorizeRead(
+    UuidValue id,
+    AuthenticationResult<TClaims> authResult,
+  );
+
   /// Authorizes a CREATE operation
   ///
   /// [aggregate] is the new aggregate being created
@@ -79,8 +86,7 @@ abstract class AuthorizationHandler<TAggregate extends AggregateRoot, TClaims> {
   /// [queryParams] are the query parameters from the request
   /// [authResult] contains the authenticated user's identity and claims
   ///
-  /// Note: This is called for filtered queries (e.g., ?cognitoSub=X).
-  /// Unfiltered list queries typically don't require authorization.
+  /// Called for every collection query, including empty/pagination-only filters.
   ///
   /// Returns [AuthorizationResult.allow] if authorized,
   /// or [AuthorizationResult.deny] with an error message if not authorized

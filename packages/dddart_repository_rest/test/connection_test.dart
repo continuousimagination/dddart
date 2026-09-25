@@ -70,9 +70,7 @@ void main() {
   group('RestConnection', () {
     group('constructor', () {
       test('should create connection with required baseUrl', () {
-        final connection = RestConnection(
-          baseUrl: 'https://api.example.com',
-        );
+        final connection = RestConnection(baseUrl: 'https://api.example.com');
 
         expect(connection.baseUrl, equals('https://api.example.com'));
         expect(connection.authProvider, isNull);
@@ -117,37 +115,27 @@ void main() {
 
     group('baseUrl storage', () {
       test('should store base URL correctly', () {
-        final connection = RestConnection(
-          baseUrl: 'https://api.example.com',
-        );
+        final connection = RestConnection(baseUrl: 'https://api.example.com');
 
         expect(connection.baseUrl, equals('https://api.example.com'));
       });
 
       test('should store different base URLs correctly', () {
-        final connection1 = RestConnection(
-          baseUrl: 'https://api1.example.com',
-        );
-        final connection2 = RestConnection(
-          baseUrl: 'https://api2.example.com',
-        );
+        final connection1 = RestConnection(baseUrl: 'https://api1.example.com');
+        final connection2 = RestConnection(baseUrl: 'https://api2.example.com');
 
         expect(connection1.baseUrl, equals('https://api1.example.com'));
         expect(connection2.baseUrl, equals('https://api2.example.com'));
       });
 
       test('should store base URL with port', () {
-        final connection = RestConnection(
-          baseUrl: 'http://localhost:8080',
-        );
+        final connection = RestConnection(baseUrl: 'http://localhost:8080');
 
         expect(connection.baseUrl, equals('http://localhost:8080'));
       });
 
       test('should store base URL without trailing slash', () {
-        final connection = RestConnection(
-          baseUrl: 'https://api.example.com',
-        );
+        final connection = RestConnection(baseUrl: 'https://api.example.com');
 
         expect(connection.baseUrl, equals('https://api.example.com'));
         expect(connection.baseUrl.endsWith('/'), isFalse);
@@ -156,9 +144,7 @@ void main() {
 
     group('authentication', () {
       test('should have hasAuth false when no auth provider', () {
-        final connection = RestConnection(
-          baseUrl: 'https://api.example.com',
-        );
+        final connection = RestConnection(baseUrl: 'https://api.example.com');
 
         expect(connection.authProvider != null, isFalse);
       });
@@ -184,18 +170,14 @@ void main() {
       });
 
       test('should provide HTTP client when no auth provider', () {
-        final connection = RestConnection(
-          baseUrl: 'https://api.example.com',
-        );
+        final connection = RestConnection(baseUrl: 'https://api.example.com');
 
         expect(connection.client, isA<http.Client>());
         expect(connection.client, isNot(isA<RestClient>()));
       });
 
       test('should provide basic HTTP client when no auth configured', () {
-        final connection = RestConnection(
-          baseUrl: 'https://api.example.com',
-        );
+        final connection = RestConnection(baseUrl: 'https://api.example.com');
 
         final client = connection.client;
         expect(client, isA<http.Client>());
@@ -216,9 +198,7 @@ void main() {
 
     group('httpClient', () {
       test('should provide HTTP client', () {
-        final connection = RestConnection(
-          baseUrl: 'https://api.example.com',
-        );
+        final connection = RestConnection(baseUrl: 'https://api.example.com');
 
         expect(connection.client, isA<http.Client>());
       });
@@ -265,24 +245,28 @@ void main() {
         expect(mockClient.isClosed, isTrue);
       });
 
-      test('authenticated connection uses and closes its single owned client',
-          () async {
-        final ownedClient = RecordingHttpClient();
-        final connection = RestConnection(
-          baseUrl: 'https://api.example.com',
-          authProvider: MockAuthProvider(),
-          httpClient: ownedClient,
-        );
+      test(
+        'authenticated connection uses and closes its single owned client',
+        () async {
+          final ownedClient = RecordingHttpClient();
+          final connection = RestConnection(
+            baseUrl: 'https://api.example.com',
+            authProvider: MockAuthProvider(),
+            httpClient: ownedClient,
+          );
 
-        await connection.client.get(Uri.parse('https://api.example.com/ping'));
+          await connection.client.get(
+            Uri.parse('https://api.example.com/ping'),
+          );
 
-        expect(ownedClient.requestCount, 1);
-        expect(ownedClient.closeCount, 0);
+          expect(ownedClient.requestCount, 1);
+          expect(ownedClient.closeCount, 0);
 
-        connection.dispose();
+          connection.dispose();
 
-        expect(ownedClient.closeCount, 1);
-      });
+          expect(ownedClient.closeCount, 1);
+        },
+      );
 
       test('should be safe to call dispose multiple times', () {
         final mockClient = MockHttpClient();
@@ -301,9 +285,7 @@ void main() {
 
     group('connection sharing', () {
       test('should allow multiple repositories to share same connection', () {
-        final connection = RestConnection(
-          baseUrl: 'https://api.example.com',
-        );
+        final connection = RestConnection(baseUrl: 'https://api.example.com');
 
         // Simulate multiple repositories using the same connection
         final httpClient1 = connection.client;
@@ -365,17 +347,13 @@ void main() {
 
     group('different configurations', () {
       test('should support HTTP URLs', () {
-        final connection = RestConnection(
-          baseUrl: 'http://localhost:8080',
-        );
+        final connection = RestConnection(baseUrl: 'http://localhost:8080');
 
         expect(connection.baseUrl, equals('http://localhost:8080'));
       });
 
       test('should support HTTPS URLs', () {
-        final connection = RestConnection(
-          baseUrl: 'https://api.example.com',
-        );
+        final connection = RestConnection(baseUrl: 'https://api.example.com');
 
         expect(connection.baseUrl, equals('https://api.example.com'));
       });
@@ -389,17 +367,13 @@ void main() {
       });
 
       test('should support localhost URLs', () {
-        final connection = RestConnection(
-          baseUrl: 'http://localhost:3000',
-        );
+        final connection = RestConnection(baseUrl: 'http://localhost:3000');
 
         expect(connection.baseUrl, equals('http://localhost:3000'));
       });
 
       test('should support IP address URLs', () {
-        final connection = RestConnection(
-          baseUrl: 'http://192.168.1.100:8080',
-        );
+        final connection = RestConnection(baseUrl: 'http://192.168.1.100:8080');
 
         expect(connection.baseUrl, equals('http://192.168.1.100:8080'));
       });

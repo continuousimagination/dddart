@@ -6,9 +6,7 @@ void main() {
   final event = CustomStoredEvent(
     id: UuidValue.fromString('11111111-1111-4111-8111-111111111111'),
     createdAt: DateTime.utc(2026),
-    aggregateId: UuidValue.fromString(
-      '22222222-2222-4222-8222-222222222222',
-    ),
+    aggregateId: UuidValue.fromString('22222222-2222-4222-8222-222222222222'),
     eventType: 'ExampleEvent',
     eventJson: '{"example":true}',
     tenantId: 'tenant-1',

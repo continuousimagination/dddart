@@ -27,9 +27,7 @@ class TestOrderRestRepository extends TestOrderRestRepositoryBase {
     } on RepositoryException {
       rethrow;
     } catch (e) {
-      throw RepositoryException(
-        'Failed to find orders by customer ID: $e',
-      );
+      throw RepositoryException('Failed to find orders by customer ID: $e');
     }
   }
 
@@ -56,9 +54,7 @@ class TestOrderRestRepository extends TestOrderRestRepositoryBase {
     } on RepositoryException {
       rethrow;
     } catch (e) {
-      throw RepositoryException(
-        'Failed to find order by order number: $e',
-      );
+      throw RepositoryException('Failed to find order by order number: $e');
     }
   }
 }

@@ -79,9 +79,7 @@ class EventHttpEndpoints<T extends StoredEvent> {
         _logger.warning('GET /events: missing "since" parameter');
         return Response(
           400,
-          body: jsonEncode({
-            'error': 'Missing required parameter: since',
-          }),
+          body: jsonEncode({'error': 'Missing required parameter: since'}),
           headers: {'Content-Type': 'application/json'},
         );
       }
@@ -180,9 +178,7 @@ class EventHttpEndpoints<T extends StoredEvent> {
         _logger.warning('POST /events: invalid JSON body');
         return Response(
           400,
-          body: jsonEncode({
-            'error': 'Invalid JSON format',
-          }),
+          body: jsonEncode({'error': 'Invalid JSON format'}),
           headers: {'Content-Type': 'application/json'},
         );
       }
@@ -195,9 +191,7 @@ class EventHttpEndpoints<T extends StoredEvent> {
         _logger.warning('POST /events: deserialization failed', e);
         return Response(
           400,
-          body: jsonEncode({
-            'error': 'Invalid event data',
-          }),
+          body: jsonEncode({'error': 'Invalid event data'}),
           headers: {'Content-Type': 'application/json'},
         );
       }
@@ -234,19 +228,14 @@ class EventHttpEndpoints<T extends StoredEvent> {
 /// any associated error message.
 class AuthResult {
   /// Creates an authentication result.
-  const AuthResult({
-    required this.isAuthenticated,
-    this.errorMessage,
-  });
+  const AuthResult({required this.isAuthenticated, this.errorMessage});
 
   /// Creates a successful authentication result.
   factory AuthResult.success() => const AuthResult(isAuthenticated: true);
 
   /// Creates a failed authentication result with an error message.
-  factory AuthResult.failure(String errorMessage) => AuthResult(
-        isAuthenticated: false,
-        errorMessage: errorMessage,
-      );
+  factory AuthResult.failure(String errorMessage) =>
+      AuthResult(isAuthenticated: false, errorMessage: errorMessage);
 
   /// Whether the authentication succeeded.
   final bool isAuthenticated;

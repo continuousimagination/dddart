@@ -11,20 +11,16 @@ void main() {
 
     group('flattenValueObject', () {
       test('should flatten simple value object with prefixed columns', () {
-        final valueObjectJson = {
-          'amount': 100.0,
-          'currency': 'USD',
-        };
+        final valueObjectJson = {'amount': 100.0, 'currency': 'USD'};
 
-        final flattened =
-            mapper.flattenValueObject('totalAmount', valueObjectJson);
+        final flattened = mapper.flattenValueObject(
+          'totalAmount',
+          valueObjectJson,
+        );
 
         expect(
           flattened,
-          equals({
-            'totalAmount_amount': 100.0,
-            'totalAmount_currency': 'USD',
-          }),
+          equals({'totalAmount_amount': 100.0, 'totalAmount_currency': 'USD'}),
         );
       });
 
@@ -35,8 +31,10 @@ void main() {
           'country': 'USA',
         };
 
-        final flattened =
-            mapper.flattenValueObject('shippingAddress', valueObjectJson);
+        final flattened = mapper.flattenValueObject(
+          'shippingAddress',
+          valueObjectJson,
+        );
 
         expect(
           flattened,
@@ -52,10 +50,7 @@ void main() {
         final valueObjectJson = {
           'amount': 100.0,
           'currency': 'USD',
-          'metadata': {
-            'source': 'payment',
-            'timestamp': 1234567890,
-          },
+          'metadata': {'source': 'payment', 'timestamp': 1234567890},
         };
 
         final flattened = mapper.flattenValueObject('price', valueObjectJson);
@@ -72,20 +67,16 @@ void main() {
       });
 
       test('should handle null values in value objects', () {
-        final valueObjectJson = {
-          'amount': 100.0,
-          'currency': null,
-        };
+        final valueObjectJson = {'amount': 100.0, 'currency': null};
 
-        final flattened =
-            mapper.flattenValueObject('totalAmount', valueObjectJson);
+        final flattened = mapper.flattenValueObject(
+          'totalAmount',
+          valueObjectJson,
+        );
 
         expect(
           flattened,
-          equals({
-            'totalAmount_amount': 100.0,
-            'totalAmount_currency': null,
-          }),
+          equals({'totalAmount_amount': 100.0, 'totalAmount_currency': null}),
         );
       });
 
@@ -132,13 +123,7 @@ void main() {
 
         final reconstructed = mapper.reconstructValueObject('totalAmount', row);
 
-        expect(
-          reconstructed,
-          equals({
-            'amount': 100.0,
-            'currency': 'USD',
-          }),
-        );
+        expect(reconstructed, equals({'amount': 100.0, 'currency': 'USD'}));
       });
 
       test('should reconstruct nested value objects', () {
@@ -149,8 +134,10 @@ void main() {
           'shippingAddress_country': 'USA',
         };
 
-        final reconstructed =
-            mapper.reconstructValueObject('shippingAddress', row);
+        final reconstructed = mapper.reconstructValueObject(
+          'shippingAddress',
+          row,
+        );
 
         expect(
           reconstructed,
@@ -178,10 +165,7 @@ void main() {
           equals({
             'amount': 100.0,
             'currency': 'USD',
-            'metadata': {
-              'source': 'payment',
-              'timestamp': 1234567890,
-            },
+            'metadata': {'source': 'payment', 'timestamp': 1234567890},
           }),
         );
       });
@@ -195,20 +179,11 @@ void main() {
 
         final reconstructed = mapper.reconstructValueObject('totalAmount', row);
 
-        expect(
-          reconstructed,
-          equals({
-            'amount': 100.0,
-            'currency': null,
-          }),
-        );
+        expect(reconstructed, equals({'amount': 100.0, 'currency': null}));
       });
 
       test('should return empty map when no matching columns found', () {
-        final row = {
-          'id': 'order-123',
-          'status': 'pending',
-        };
+        final row = {'id': 'order-123', 'status': 'pending'};
 
         final reconstructed = mapper.reconstructValueObject('totalAmount', row);
 
@@ -226,13 +201,7 @@ void main() {
 
         final reconstructed = mapper.reconstructValueObject('totalAmount', row);
 
-        expect(
-          reconstructed,
-          equals({
-            'amount': 100.0,
-            'currency': 'USD',
-          }),
-        );
+        expect(reconstructed, equals({'amount': 100.0, 'currency': 'USD'}));
       });
 
       test('should handle various data types when reconstructing', () {
@@ -261,16 +230,10 @@ void main() {
 
     group('round-trip', () {
       test('should preserve data through flatten and reconstruct cycle', () {
-        final original = {
-          'amount': 100.0,
-          'currency': 'USD',
-        };
+        final original = {'amount': 100.0, 'currency': 'USD'};
 
         final flattened = mapper.flattenValueObject('totalAmount', original);
-        final row = {
-          'id': 'order-123',
-          ...flattened,
-        };
+        final row = {'id': 'order-123', ...flattened};
         final reconstructed = mapper.reconstructValueObject('totalAmount', row);
 
         expect(reconstructed, equals(original));
@@ -284,10 +247,7 @@ void main() {
         };
 
         final flattened = mapper.flattenValueObject('address', original);
-        final row = {
-          'id': 'order-123',
-          ...flattened,
-        };
+        final row = {'id': 'order-123', ...flattened};
         final reconstructed = mapper.reconstructValueObject('address', row);
 
         expect(reconstructed, equals(original));
@@ -297,33 +257,21 @@ void main() {
         final original = {
           'amount': 100.0,
           'currency': 'USD',
-          'metadata': {
-            'source': 'payment',
-            'timestamp': 1234567890,
-          },
+          'metadata': {'source': 'payment', 'timestamp': 1234567890},
         };
 
         final flattened = mapper.flattenValueObject('price', original);
-        final row = {
-          'id': 'order-123',
-          ...flattened,
-        };
+        final row = {'id': 'order-123', ...flattened};
         final reconstructed = mapper.reconstructValueObject('price', row);
 
         expect(reconstructed, equals(original));
       });
 
       test('should preserve null values through round-trip', () {
-        final original = {
-          'amount': 100.0,
-          'currency': null,
-        };
+        final original = {'amount': 100.0, 'currency': null};
 
         final flattened = mapper.flattenValueObject('totalAmount', original);
-        final row = {
-          'id': 'order-123',
-          ...flattened,
-        };
+        final row = {'id': 'order-123', ...flattened};
         final reconstructed = mapper.reconstructValueObject('totalAmount', row);
 
         expect(reconstructed, equals(original));

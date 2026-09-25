@@ -56,12 +56,7 @@ Request createRequest({
   String? body,
 }) {
   final uri = Uri.parse('http://localhost:8080$path');
-  return Request(
-    method,
-    uri,
-    headers: headers,
-    body: body,
-  );
+  return Request(method, uri, headers: headers, body: body);
 }
 
 Future<QueryResult<TestUser>> pagedCollectionHandler(
@@ -198,13 +193,7 @@ void main() {
         serializer: serializer,
         collectionHandler: (repo, params, skip, take, authResult) {
           handlerCalls++;
-          return pagedCollectionHandler(
-            repo,
-            params,
-            skip,
-            take,
-            authResult,
-          );
+          return pagedCollectionHandler(repo, params, skip, take, authResult);
         },
       );
 
@@ -290,8 +279,10 @@ void main() {
       );
 
       // Act
-      final response =
-          await resource.handleGetById(request, testUser.id.toString());
+      final response = await resource.handleGetById(
+        request,
+        testUser.id.toString(),
+      );
 
       // Assert
       expect(response.statusCode, equals(200));

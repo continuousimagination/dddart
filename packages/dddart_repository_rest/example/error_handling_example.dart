@@ -226,11 +226,7 @@ Future<void> demonstrateValidation(UserRestRepository repository) async {
     if (!email.contains('@')) {
       print('   ✓ Caught invalid email before API call');
     } else {
-      final user = User(
-        firstName: 'Test',
-        lastName: 'User',
-        email: email,
-      );
+      final user = User(firstName: 'Test', lastName: 'User', email: email);
       await repository.save(user);
     }
   } catch (e) {
@@ -241,10 +237,7 @@ Future<void> demonstrateValidation(UserRestRepository repository) async {
   print('2. Null Safety');
   User? nullableUser;
   try {
-    nullableUser = await findUserSafely(
-      repository,
-      UuidValue.generate(),
-    );
+    nullableUser = await findUserSafely(repository, UuidValue.generate());
     if (nullableUser != null) {
       print('   User: ${nullableUser.fullName}');
     } else {
@@ -259,9 +252,7 @@ Future<void> demonstrateValidation(UserRestRepository repository) async {
 Future<void> main() async {
   print('=== Error Handling Example ===\n');
 
-  final connection = RestConnection(
-    baseUrl: 'http://localhost:8080',
-  );
+  final connection = RestConnection(baseUrl: 'http://localhost:8080');
 
   final repository = UserRestRepository(connection);
 

@@ -33,8 +33,9 @@ class SecurityUtils {
 
     // If lengths differ, still compare to maintain constant time
     // Use the longer length to ensure we always do the same amount of work
-    final length =
-        bytesA.length > bytesB.length ? bytesA.length : bytesB.length;
+    final length = bytesA.length > bytesB.length
+        ? bytesA.length
+        : bytesB.length;
 
     var result = bytesA.length ^ bytesB.length;
 
@@ -141,10 +142,7 @@ class SecurityUtils {
   /// ```
   static String generateSecureRandom([int length = 32]) {
     final random = Random.secure();
-    final bytes = List<int>.generate(
-      length,
-      (_) => random.nextInt(256),
-    );
+    final bytes = List<int>.generate(length, (_) => random.nextInt(256));
     return base64Url.encode(bytes);
   }
 }

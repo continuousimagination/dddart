@@ -101,8 +101,10 @@ Future<void> main() async {
 
     for (final order in orders) {
       await orderRepo.save(order);
-      print('   ✓ Saved: ${order.customerName} - '
-          '\$${order.totalAmount.amount.toStringAsFixed(2)}');
+      print(
+        '   ✓ Saved: ${order.customerName} - '
+        '\$${order.totalAmount.amount.toStringAsFixed(2)}',
+      );
     }
     print('');
 
@@ -111,10 +113,14 @@ Future<void> main() async {
     final aliceOrders = await orderRepo.findByCustomerName('Alice Johnson');
     print('   ✓ Found ${aliceOrders.length} orders for Alice Johnson:');
     for (final order in aliceOrders) {
-      print('     - Order ${order.id}: '
-          '\$${order.totalAmount.amount.toStringAsFixed(2)}');
-      print('       Shipping to: ${order.shippingAddress.city}, '
-          '${order.shippingAddress.state}');
+      print(
+        '     - Order ${order.id}: '
+        '\$${order.totalAmount.amount.toStringAsFixed(2)}',
+      );
+      print(
+        '       Shipping to: ${order.shippingAddress.city}, '
+        '${order.shippingAddress.state}',
+      );
     }
     print('');
 
@@ -123,8 +129,10 @@ Future<void> main() async {
     final highValueOrders = await orderRepo.findByMinimumAmount(200);
     print('   ✓ Found ${highValueOrders.length} orders >= \$200.00:');
     for (final order in highValueOrders) {
-      print('     - ${order.customerName}: '
-          '\$${order.totalAmount.amount.toStringAsFixed(2)}');
+      print(
+        '     - ${order.customerName}: '
+        '\$${order.totalAmount.amount.toStringAsFixed(2)}',
+      );
     }
     print('');
 

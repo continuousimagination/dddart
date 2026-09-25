@@ -18,10 +18,7 @@ import 'package:source_gen/source_gen.dart';
 /// `.mongo_repository.g.part` fragments. The combining builder merges those
 /// fragments into each owning library's declared `*.g.dart` part.
 Builder mongoRepositoryBuilder(BuilderOptions options) {
-  return SharedPartBuilder(
-    [MongoRepositoryGenerator()],
-    'mongo_repository',
-  );
+  return SharedPartBuilder([MongoRepositoryGenerator()], 'mongo_repository');
 }
 
 /// Generator for MongoDB repository implementations.
@@ -46,7 +43,18 @@ class MongoRepositoryGenerator
     }
 
     final classElement = element;
-    final className = classElement.name;
+    final className = classElement.name!;
+    if (classElement.allSupertypes.any(
+      (type) =>
+          type.element.name == 'VersionedAggregateRoot' &&
+          type.element.library.uri.toString() ==
+              'package:dddart/src/versioned_aggregate_root.dart',
+    )) {
+      throw InvalidGenerationSourceError(
+        'This backend does not support conditional persistence for versioned roots.',
+        element: element,
+      );
+    }
 
     // Task 4.2: Validate class extends AggregateRoot
     if (!_extendsAggregateRoot(classElement)) {
@@ -67,6 +75,21 @@ class MongoRepositoryGenerator
     // Task 4.3: Extract configuration from annotation
     final collectionName = _extractCollectionName(annotation, className);
     final customInterface = _extractImplementsInterface(annotation);
+    if (customInterface != null &&
+        [
+          customInterface.element,
+          ...customInterface.allSupertypes.map((type) => type.element),
+        ].any(
+          (type) =>
+              type.name == 'ConditionalRepository' &&
+              type.library.uri.toString() ==
+                  'package:dddart/src/conditional_repository.dart',
+        )) {
+      throw InvalidGenerationSourceError(
+        'This backend does not support conditional repository interfaces.',
+        element: element,
+      );
+    }
 
     // Task 4.4: Determine what to generate based on interface analysis
     if (customInterface == null) {
@@ -131,7 +154,7 @@ class MongoRepositoryGenerator
 
   /// Validates that a class has the @Serializable annotation.
   bool _hasSerializableAnnotation(ClassElement element) {
-    return element.metadata.any((annotation) {
+    return element.metadata.annotations.any((annotation) {
       final value = annotation.computeConstantValue();
       if (value == null) return false;
       final typeName = value.type?.element?.name;
@@ -172,11 +195,11 @@ class MongoRepositoryGenerator
     // Get methods from all superinterfaces (including Repository<T>)
     // but exclude Object and system classes
     for (final supertype in interfaceType.allSupertypes) {
-      final supertypeName = supertype.element.name;
+      final supertypeName = supertype.element.name!;
       // Skip Object and system classes
       if (supertypeName == 'Object' ||
           supertypeName.startsWith('_') ||
-          supertype.element.library.name.startsWith('dart.')) {
+          supertype.element.library.isInSdk) {
         continue;
       }
       methods.addAll(supertype.methods);
@@ -243,8 +266,9 @@ class MongoRepositoryGenerator
     buffer.writeln('  /// The collection name for $className aggregates.');
     buffer.writeln("  String get collectionName => '$collectionName';");
     buffer.writeln();
-    buffer
-        .writeln('  /// Gets the MongoDB collection for this aggregate type.');
+    buffer.writeln(
+      '  /// Gets the MongoDB collection for this aggregate type.',
+    );
     buffer.writeln(
       '  DbCollection get _collection => _database.collection(collectionName);',
     );
@@ -310,6 +334,9 @@ class MongoRepositoryGenerator
     return '''
   @override
   Future<void> save($className aggregate) async {
+    if (aggregate is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
     try {
       final doc = _serializer.toJson(aggregate);
       
@@ -453,8 +480,9 @@ class MongoRepositoryGenerator
     buffer.writeln('  /// The collection name for $className aggregates.');
     buffer.writeln("  String get collectionName => '$collectionName';");
     buffer.writeln();
-    buffer
-        .writeln('  /// Gets the MongoDB collection for this aggregate type.');
+    buffer.writeln(
+      '  /// Gets the MongoDB collection for this aggregate type.',
+    );
     buffer.writeln(
       '  DbCollection get _collection => _database.collection(collectionName);',
     );
@@ -496,12 +524,15 @@ class MongoRepositoryGenerator
   ///
   /// Includes return type, method name, and parameters with types.
   String _generateMethodSignature(MethodElement method) {
-    final returnType =
-        method.returnType.getDisplayString(withNullability: true);
-    final params = method.parameters.map((p) {
-      final type = p.type.getDisplayString(withNullability: true);
-      return '$type ${p.name}';
-    }).join(', ');
+    final returnType = method.returnType.getDisplayString(
+      withNullability: true,
+    );
+    final params = method.formalParameters
+        .map((p) {
+          final type = p.type.getDisplayString(withNullability: true);
+          return '$type ${p.name}';
+        })
+        .join(', ');
 
     return '$returnType ${method.name}($params)';
   }

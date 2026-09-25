@@ -24,10 +24,7 @@ library;
 /// - [implements]: Custom repository interface to implement
 class GenerateSqliteRepository {
   /// Creates a repository generation annotation.
-  const GenerateSqliteRepository({
-    this.tableName,
-    this.implements,
-  });
+  const GenerateSqliteRepository({this.tableName, this.implements});
 
   /// Custom table name for the aggregate root.
   ///

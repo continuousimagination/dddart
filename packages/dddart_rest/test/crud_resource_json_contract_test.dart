@@ -43,7 +43,7 @@ class _TestUserSerializer extends TestJsonSerializer<_TestUser> {
 
 class _CountingRepository implements Repository<_TestUser> {
   _CountingRepository([Iterable<_TestUser> initial = const []])
-      : _items = {for (final item in initial) item.id: item};
+    : _items = {for (final item in initial) item.id: item};
 
   final Map<UuidValue, _TestUser> _items;
   int getByIdCalls = 0;
@@ -95,6 +95,15 @@ class _CountingAuthenticationHandler implements AuthenticationHandler<String> {
 class _CountingAuthorizationHandler
     implements AuthorizationHandler<_TestUser, String> {
   int calls = 0;
+
+  @override
+  Future<AuthorizationResult> authorizeRead(
+    UuidValue aggregateId,
+    AuthenticationResult<String> authResult,
+  ) async {
+    calls++;
+    return AuthorizationResult.allow();
+  }
 
   @override
   Future<AuthorizationResult> authorizeCreate(
@@ -163,116 +172,126 @@ void main() {
     serializer = _TestUserSerializer();
   });
 
-  test('missing, wildcard, JSON, and positive JSON ranges select JSON',
-      () async {
-    final acceptHeaders = <String?>[
-      null,
-      '*/*',
-      'application/*',
-      'application/json',
-      'application/xml, application/json;q=0.25',
-      'application/*;q=0, application/json;q=0.25',
-    ];
+  test(
+    'missing, wildcard, JSON, and positive JSON ranges select JSON',
+    () async {
+      final acceptHeaders = <String?>[
+        null,
+        '*/*',
+        'application/*',
+        'application/json',
+        'application/xml, application/json;q=0.25',
+        'application/*;q=0, application/json;q=0.25',
+      ];
 
-    for (final accept in acceptHeaders) {
-      final repository = _CountingRepository([user]);
-      final resource = CrudResource<_TestUser, void>(
-        path: '/users',
-        repository: repository,
-        serializer: serializer,
-      );
-      final response = await resource.handleGetById(
-        _request(
-          'GET',
-          '/users/$id',
-          headers: accept == null ? null : {'accept': accept},
-        ),
-        id.toString(),
-      );
-
-      expect(response.statusCode, 200, reason: 'Accept: $accept');
-      expect(response.headers['Content-Type'], 'application/json');
-      expect(jsonDecode(await response.readAsString()), isA<Map>());
-    }
-  });
-
-  test('unsupported or excluded JSON returns 406 before every CRUD effect',
-      () async {
-    final cases = <(String, String)>[
-      ('unsupported', 'application/xml'),
-      ('zero quality', 'application/json;q=0'),
-      ('specific exclusion', 'application/json;q=0, */*;q=1'),
-    ];
-
-    for (final (description, accept) in cases) {
-      for (final operation in ['get', 'query', 'create', 'update', 'delete']) {
+      for (final accept in acceptHeaders) {
         final repository = _CountingRepository([user]);
-        final authentication = _CountingAuthenticationHandler();
-        final resource = CrudResource<_TestUser, String>(
+        final resource = CrudResource<_TestUser, void>(
           path: '/users',
           repository: repository,
           serializer: serializer,
-          authenticationHandler: authentication,
+        );
+        final response = await resource.handleGetById(
+          _request(
+            'GET',
+            '/users/$id',
+            headers: accept == null ? null : {'accept': accept},
+          ),
+          id.toString(),
         );
 
-        late Response response;
-        switch (operation) {
-          case 'get':
-            response = await resource.handleGetById(
-              _request('GET', '/users/$id', headers: {'accept': accept}),
-              id.toString(),
-            );
-          case 'query':
-            response = await resource.handleQuery(
-              _request('GET', '/users', headers: {'accept': accept}),
-            );
-          case 'create':
-            response = await resource.handleCreate(
-              _request(
-                'POST',
-                '/users',
-                headers: {
-                  'accept': accept,
-                  'content-type': 'application/json',
-                },
-                body: serializer.serialize(user),
-              ),
-            );
-          case 'update':
-            response = await resource.handleUpdate(
-              _request(
-                'PUT',
-                '/users/$id',
-                headers: {
-                  'accept': accept,
-                  'content-type': 'application/json',
-                  'if-match': '"stale"',
-                },
-                body: serializer.serialize(user),
-              ),
-              id.toString(),
-            );
-          case 'delete':
-            response = await resource.handleDelete(
-              _request('DELETE', '/users/$id', headers: {'accept': accept}),
-              id.toString(),
-            );
-        }
-
-        expect(
-          response.statusCode,
-          406,
-          reason: '$description Accept on $operation',
-        );
-        expect(response.headers['Content-Type'], 'application/problem+json');
-        expect(authentication.calls, 0);
-        expect(repository.getByIdCalls, 0);
-        expect(repository.getAllCalls, 0);
-        expect(repository.saveCalls, 0);
-        expect(repository.deleteCalls, 0);
+        expect(response.statusCode, 200, reason: 'Accept: $accept');
+        expect(response.headers['Content-Type'], 'application/json');
+        expect(jsonDecode(await response.readAsString()), isA<Map>());
       }
-    }
-  });
+    },
+  );
+
+  test(
+    'unsupported or excluded JSON returns 406 before every CRUD effect',
+    () async {
+      final cases = <(String, String)>[
+        ('unsupported', 'application/xml'),
+        ('zero quality', 'application/json;q=0'),
+        ('specific exclusion', 'application/json;q=0, */*;q=1'),
+      ];
+
+      for (final (description, accept) in cases) {
+        for (final operation in [
+          'get',
+          'query',
+          'create',
+          'update',
+          'delete',
+        ]) {
+          final repository = _CountingRepository([user]);
+          final authentication = _CountingAuthenticationHandler();
+          final resource = CrudResource<_TestUser, String>(
+            path: '/users',
+            repository: repository,
+            serializer: serializer,
+            authenticationHandler: authentication,
+          );
+
+          late Response response;
+          switch (operation) {
+            case 'get':
+              response = await resource.handleGetById(
+                _request('GET', '/users/$id', headers: {'accept': accept}),
+                id.toString(),
+              );
+            case 'query':
+              response = await resource.handleQuery(
+                _request('GET', '/users', headers: {'accept': accept}),
+              );
+            case 'create':
+              response = await resource.handleCreate(
+                _request(
+                  'POST',
+                  '/users',
+                  headers: {
+                    'accept': accept,
+                    'content-type': 'application/json',
+                  },
+                  body: serializer.serialize(user),
+                ),
+              );
+            case 'update':
+              response = await resource.handleUpdate(
+                _request(
+                  'PUT',
+                  '/users/$id',
+                  headers: {
+                    'accept': accept,
+                    'content-type': 'application/json',
+                    'if-match': '"stale"',
+                  },
+                  body: serializer.serialize(user),
+                ),
+                id.toString(),
+              );
+            case 'delete':
+              response = await resource.handleDelete(
+                _request('DELETE', '/users/$id', headers: {'accept': accept}),
+                id.toString(),
+              );
+          }
+
+          expect(
+            response.statusCode,
+            406,
+            reason: '$description Accept on $operation',
+          );
+          expect(response.headers['Content-Type'], 'application/problem+json');
+          expect(authentication.calls, 0);
+          expect(repository.getByIdCalls, 0);
+          expect(repository.getAllCalls, 0);
+          expect(repository.saveCalls, 0);
+          expect(repository.deleteCalls, 0);
+        }
+      }
+    },
+  );
 
   test('missing or non-JSON POST/PUT Content-Type returns 415 first', () async {
     for (final operation in ['create', 'update']) {
@@ -327,53 +346,58 @@ void main() {
     expect(response.headers['Content-Type'], 'application/json');
   });
 
-  test('PUT rejects a route/body ID mismatch before downstream effects',
-      () async {
-    final bodyId = UuidValue.fromString('987fcdeb-51a2-43f7-b123-456789abcdef');
-    final bodyUser = _TestUser(
-      id: bodyId,
-      name: 'Wrong identity',
-      createdAt: timestamp,
-      updatedAt: timestamp,
-    );
-    final repository = _CountingRepository([user]);
-    final authentication = _CountingAuthenticationHandler();
-    final authorization = _CountingAuthorizationHandler();
-    final resource = CrudResource<_TestUser, String>(
-      path: '/users',
-      repository: repository,
-      serializer: serializer,
-      authenticationHandler: authentication,
-      authorizationHandler: authorization,
-    );
+  test(
+    'PUT rejects a route/body ID mismatch before downstream effects',
+    () async {
+      final bodyId = UuidValue.fromString(
+        '987fcdeb-51a2-43f7-b123-456789abcdef',
+      );
+      final bodyUser = _TestUser(
+        id: bodyId,
+        name: 'Wrong identity',
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      );
+      final repository = _CountingRepository([user]);
+      final authentication = _CountingAuthenticationHandler();
+      final authorization = _CountingAuthorizationHandler();
+      final resource = CrudResource<_TestUser, String>(
+        path: '/users',
+        repository: repository,
+        serializer: serializer,
+        authenticationHandler: authentication,
+        authorizationHandler: authorization,
+      );
 
-    final response = await resource.handleUpdate(
-      _request(
-        'PUT',
-        '/users/$id',
-        headers: {
-          'accept': 'application/json',
-          'content-type': 'application/json',
-          'if-match': '"stale"',
-        },
-        body: serializer.serialize(bodyUser),
-      ),
-      id.toString(),
-    );
+      final response = await resource.handleUpdate(
+        _request(
+          'PUT',
+          '/users/$id',
+          headers: {
+            'accept': 'application/json',
+            'content-type': 'application/json',
+            'if-match': '"stale"',
+          },
+          body: serializer.serialize(bodyUser),
+        ),
+        id.toString(),
+      );
 
-    expect(response.statusCode, 400);
-    expect(response.headers['Content-Type'], 'application/problem+json');
-    final problem = jsonDecode(await response.readAsString()) as Map;
-    expect(problem['title'], 'Bad Request');
-    expect(problem['detail'], contains(id.toString()));
-    expect(problem['detail'], contains(bodyId.toString()));
-    expect(authentication.calls, 1);
-    expect(authorization.calls, 0);
-    expect(repository.getByIdCalls, 0);
-    expect(repository.getAllCalls, 0);
-    expect(repository.saveCalls, 0);
-    expect(repository.deleteCalls, 0);
-  });
+      expect(response.statusCode, 400);
+      expect(response.headers['Content-Type'], 'application/problem+json');
+      final problem = jsonDecode(await response.readAsString()) as Map;
+      expect(problem['title'], 'Bad Request');
+      expect(problem['detail'], 'Invalid request argument');
+      expect(problem['detail'], isNot(contains(id.toString())));
+      expect(problem['detail'], isNot(contains(bodyId.toString())));
+      expect(authentication.calls, 1);
+      expect(authorization.calls, 0);
+      expect(repository.getByIdCalls, 0);
+      expect(repository.getAllCalls, 0);
+      expect(repository.saveCalls, 0);
+      expect(repository.deleteCalls, 0);
+    },
+  );
 
   test('PUT with matching route and body IDs still updates', () async {
     final updatedUser = _TestUser(
@@ -430,9 +454,7 @@ void main() {
           );
         },
       );
-      final response = await resource.handleQuery(
-        _request('GET', '/users'),
-      );
+      final response = await resource.handleQuery(_request('GET', '/users'));
 
       expect(response.statusCode, 200);
       final body = jsonDecode(await response.readAsString());

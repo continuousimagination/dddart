@@ -165,10 +165,7 @@ void main() {
 
       final json = serializer.toJson(original);
 
-      expect(json, {
-        'value_base_name': 'base',
-        'value_child_name': 'child',
-      });
+      expect(json, {'value_base_name': 'base', 'value_child_name': 'child'});
       expect(json, isNot(contains('valueBaseName')));
 
       final restored = serializer.deserialize(jsonEncode(json));

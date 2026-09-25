@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:dddart/dddart.dart';
+import 'package:dddart/dddart_io.dart';
 
 import 'lib/user_aggregate.dart';
 import 'lib/user_registered_event.dart';

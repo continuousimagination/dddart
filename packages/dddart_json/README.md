@@ -391,3 +391,17 @@ Generated serializers are strongly typed. Ensure:
 ## Contributing
 
 This package is part of the DDDart monorepo. See the main repository for contributing guidelines.
+## Required persistent fields and safe decode errors
+
+Generated codecs retain inherited public stored fields, apply concrete generic
+type substitutions and reject duplicated inherited field declarations. Inherited
+application fields require an explicit named super-parameter reconstruction path. Root identity
+and timestamps retain their dedicated representation. If the aggregate's
+constructor declares `createdAt` or `updatedAt` required, decoding rejects a
+missing/null value instead of manufacturing a timestamp. Existing optional
+constructor timestamp defaults remain supported.
+
+Both map and JSON-text decoding report typed `DeserializationException` failures
+without echoing malformed values or raw exception text. Encoding failures are
+likewise typed and safe. This is not application validation: shared domain/value
+rules and authoritative server checks remain required.

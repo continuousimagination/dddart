@@ -68,10 +68,7 @@ void main() {
         final request = Request(
           'POST',
           Uri.parse('http://localhost/auth/login'),
-          body: jsonEncode({
-            'username': 'testuser',
-            'password': 'testpass',
-          }),
+          body: jsonEncode({'username': 'testuser', 'password': 'testpass'}),
         );
 
         final response = await authEndpoints.handleLogin(request);
@@ -96,10 +93,7 @@ void main() {
         final request = Request(
           'POST',
           Uri.parse('http://localhost/auth/login'),
-          body: jsonEncode({
-            'username': 'testuser',
-            'password': 'wrongpass',
-          }),
+          body: jsonEncode({'username': 'testuser', 'password': 'wrongpass'}),
         );
 
         final response = await authEndpoints.handleLogin(request);
@@ -117,9 +111,7 @@ void main() {
         final request = Request(
           'POST',
           Uri.parse('http://localhost/auth/login'),
-          body: jsonEncode({
-            'password': 'testpass',
-          }),
+          body: jsonEncode({'password': 'testpass'}),
         );
 
         final response = await authEndpoints.handleLogin(request);
@@ -137,9 +129,7 @@ void main() {
         final request = Request(
           'POST',
           Uri.parse('http://localhost/auth/login'),
-          body: jsonEncode({
-            'username': 'testuser',
-          }),
+          body: jsonEncode({'username': 'testuser'}),
         );
 
         final response = await authEndpoints.handleLogin(request);
@@ -150,19 +140,16 @@ void main() {
       test('should not disclose internal login errors', () async {
         final leakingEndpoints =
             AuthEndpoints<StandardClaims, RefreshToken, DeviceCode>(
-          authHandler: authHandler,
-          deviceCodeRepository: deviceCodeRepo,
-          deviceCodeLifecycle: const StandardDeviceCodeLifecycle(),
-          userValidator: (_, __) =>
-              throw Exception('sentinel-secret <script>alert(1)</script>'),
-        );
+              authHandler: authHandler,
+              deviceCodeRepository: deviceCodeRepo,
+              deviceCodeLifecycle: const StandardDeviceCodeLifecycle(),
+              userValidator: (_, __) =>
+                  throw Exception('sentinel-secret <script>alert(1)</script>'),
+            );
         final request = Request(
           'POST',
           Uri.parse('http://localhost/auth/login'),
-          body: jsonEncode({
-            'username': 'testuser',
-            'password': 'testpass',
-          }),
+          body: jsonEncode({'username': 'testuser', 'password': 'testpass'}),
         );
 
         final response = await leakingEndpoints.handleLogin(request);
@@ -181,10 +168,7 @@ void main() {
         final loginRequest = Request(
           'POST',
           Uri.parse('http://localhost/auth/login'),
-          body: jsonEncode({
-            'username': 'testuser',
-            'password': 'testpass',
-          }),
+          body: jsonEncode({'username': 'testuser', 'password': 'testpass'}),
         );
 
         final loginResponse = await authEndpoints.handleLogin(loginRequest);
@@ -196,9 +180,7 @@ void main() {
         final refreshRequest = Request(
           'POST',
           Uri.parse('http://localhost/auth/refresh'),
-          body: jsonEncode({
-            'refresh_token': refreshToken,
-          }),
+          body: jsonEncode({'refresh_token': refreshToken}),
         );
 
         final response = await authEndpoints.handleRefresh(refreshRequest);
@@ -213,95 +195,95 @@ void main() {
         expect(json['expires_in'], equals(900));
       });
 
-      test('should return access token with current application claims',
-          () async {
-        final loginResponse = await authEndpoints.handleLogin(
-          Request(
-            'POST',
-            Uri.parse('http://localhost/auth/login'),
-            body: jsonEncode({
-              'username': 'testuser',
-              'password': 'testpass',
-            }),
-          ),
-        );
-        final loginJson = jsonDecode(await loginResponse.readAsString())
-            as Map<String, dynamic>;
+      test(
+        'should return access token with current application claims',
+        () async {
+          final loginResponse = await authEndpoints.handleLogin(
+            Request(
+              'POST',
+              Uri.parse('http://localhost/auth/login'),
+              body: jsonEncode({
+                'username': 'testuser',
+                'password': 'testpass',
+              }),
+            ),
+          );
+          final loginJson =
+              jsonDecode(await loginResponse.readAsString())
+                  as Map<String, dynamic>;
 
-        currentClaims = const StandardClaims(
-          sub: 'user123',
-          email: 'current@example.com',
-          name: 'Current Name',
-        );
+          currentClaims = const StandardClaims(
+            sub: 'user123',
+            email: 'current@example.com',
+            name: 'Current Name',
+          );
 
-        final refreshResponse = await authEndpoints.handleRefresh(
-          Request(
-            'POST',
-            Uri.parse('http://localhost/auth/refresh'),
-            body: jsonEncode({
-              'refresh_token': loginJson['refresh_token'],
-            }),
-          ),
-        );
-        final refreshJson = jsonDecode(await refreshResponse.readAsString())
-            as Map<String, dynamic>;
-        final authentication = await authHandler.authenticate(
-          Request(
-            'GET',
-            Uri.parse('http://localhost/protected'),
-            headers: {
-              'authorization': 'Bearer ${refreshJson['access_token']}',
-            },
-          ),
-        );
+          final refreshResponse = await authEndpoints.handleRefresh(
+            Request(
+              'POST',
+              Uri.parse('http://localhost/auth/refresh'),
+              body: jsonEncode({'refresh_token': loginJson['refresh_token']}),
+            ),
+          );
+          final refreshJson =
+              jsonDecode(await refreshResponse.readAsString())
+                  as Map<String, dynamic>;
+          final authentication = await authHandler.authenticate(
+            Request(
+              'GET',
+              Uri.parse('http://localhost/protected'),
+              headers: {
+                'authorization': 'Bearer ${refreshJson['access_token']}',
+              },
+            ),
+          );
 
-        expect(refreshResponse.statusCode, 200);
-        expect(authentication.isAuthenticated, isTrue);
-        expect(authentication.claims?.email, 'current@example.com');
-        expect(authentication.claims?.name, 'Current Name');
-      });
+          expect(refreshResponse.statusCode, 200);
+          expect(authentication.isAuthenticated, isTrue);
+          expect(authentication.claims?.email, 'current@example.com');
+          expect(authentication.claims?.name, 'Current Name');
+        },
+      );
 
       test(
-          'should return sanitized 401 when application claims are unavailable',
-          () async {
-        final loginResponse = await authEndpoints.handleLogin(
-          Request(
-            'POST',
-            Uri.parse('http://localhost/auth/login'),
-            body: jsonEncode({
-              'username': 'testuser',
-              'password': 'testpass',
-            }),
-          ),
-        );
-        final loginJson = jsonDecode(await loginResponse.readAsString())
-            as Map<String, dynamic>;
-        currentClaims = null;
+        'should return sanitized 401 when application claims are unavailable',
+        () async {
+          final loginResponse = await authEndpoints.handleLogin(
+            Request(
+              'POST',
+              Uri.parse('http://localhost/auth/login'),
+              body: jsonEncode({
+                'username': 'testuser',
+                'password': 'testpass',
+              }),
+            ),
+          );
+          final loginJson =
+              jsonDecode(await loginResponse.readAsString())
+                  as Map<String, dynamic>;
+          currentClaims = null;
 
-        final response = await authEndpoints.handleRefresh(
-          Request(
-            'POST',
-            Uri.parse('http://localhost/auth/refresh'),
-            body: jsonEncode({
-              'refresh_token': loginJson['refresh_token'],
-            }),
-          ),
-        );
-        final body = await response.readAsString();
+          final response = await authEndpoints.handleRefresh(
+            Request(
+              'POST',
+              Uri.parse('http://localhost/auth/refresh'),
+              body: jsonEncode({'refresh_token': loginJson['refresh_token']}),
+            ),
+          );
+          final body = await response.readAsString();
 
-        expect(response.statusCode, 401);
-        expect(body, contains('Authentication failed'));
-        expect(body, isNot(contains('missing')));
-        expect(body, isNot(contains('disabled')));
-      });
+          expect(response.statusCode, 401);
+          expect(body, contains('Authentication failed'));
+          expect(body, isNot(contains('missing')));
+          expect(body, isNot(contains('disabled')));
+        },
+      );
 
       test('should return 401 for invalid refresh token', () async {
         final request = Request(
           'POST',
           Uri.parse('http://localhost/auth/refresh'),
-          body: jsonEncode({
-            'refresh_token': 'invalid-token',
-          }),
+          body: jsonEncode({'refresh_token': 'invalid-token'}),
         );
 
         final response = await authEndpoints.handleRefresh(request);
@@ -333,10 +315,7 @@ void main() {
         final loginRequest = Request(
           'POST',
           Uri.parse('http://localhost/auth/login'),
-          body: jsonEncode({
-            'username': 'testuser',
-            'password': 'testpass',
-          }),
+          body: jsonEncode({'username': 'testuser', 'password': 'testpass'}),
         );
 
         final loginResponse = await authEndpoints.handleLogin(loginRequest);
@@ -348,9 +327,7 @@ void main() {
         final logoutRequest = Request(
           'POST',
           Uri.parse('http://localhost/auth/logout'),
-          body: jsonEncode({
-            'refresh_token': refreshToken,
-          }),
+          body: jsonEncode({'refresh_token': refreshToken}),
         );
 
         final response = await authEndpoints.handleLogout(logoutRequest);
@@ -380,9 +357,7 @@ void main() {
         final request = Request(
           'POST',
           Uri.parse('http://localhost/auth/device'),
-          body: jsonEncode({
-            'client_id': 'test-cli',
-          }),
+          body: jsonEncode({'client_id': 'test-cli'}),
         );
 
         final response = await authEndpoints.handleDeviceCode(request);
@@ -437,10 +412,7 @@ void main() {
         final response = await authEndpoints.handleDeviceVerify(request);
 
         expect(response.statusCode, equals(200));
-        expect(
-          response.headers['content-type'],
-          equals('text/html'),
-        );
+        expect(response.headers['content-type'], equals('text/html'));
 
         final body = await response.readAsString();
         expect(body, contains('<form'));
@@ -454,13 +426,12 @@ void main() {
         final deviceCodeRequest = Request(
           'POST',
           Uri.parse('http://localhost/auth/device'),
-          body: jsonEncode({
-            'client_id': 'test-cli',
-          }),
+          body: jsonEncode({'client_id': 'test-cli'}),
         );
 
-        final deviceCodeResponse =
-            await authEndpoints.handleDeviceCode(deviceCodeRequest);
+        final deviceCodeResponse = await authEndpoints.handleDeviceCode(
+          deviceCodeRequest,
+        );
         final deviceCodeBody = await deviceCodeResponse.readAsString();
         final deviceCodeJson =
             jsonDecode(deviceCodeBody) as Map<String, dynamic>;
@@ -471,9 +442,7 @@ void main() {
           'POST',
           Uri.parse('http://localhost/auth/device/verify'),
           body: 'user_code=$userCode&username=testuser&password=testpass',
-          headers: {
-            'content-type': 'application/x-www-form-urlencoded',
-          },
+          headers: {'content-type': 'application/x-www-form-urlencoded'},
         );
 
         final response = await authEndpoints.handleDeviceVerify(verifyRequest);
@@ -494,13 +463,12 @@ void main() {
         final deviceCodeRequest = Request(
           'POST',
           Uri.parse('http://localhost/auth/device'),
-          body: jsonEncode({
-            'client_id': 'test-cli',
-          }),
+          body: jsonEncode({'client_id': 'test-cli'}),
         );
 
-        final deviceCodeResponse =
-            await authEndpoints.handleDeviceCode(deviceCodeRequest);
+        final deviceCodeResponse = await authEndpoints.handleDeviceCode(
+          deviceCodeRequest,
+        );
         final deviceCodeBody = await deviceCodeResponse.readAsString();
         final deviceCodeJson =
             jsonDecode(deviceCodeBody) as Map<String, dynamic>;
@@ -511,9 +479,7 @@ void main() {
           'POST',
           Uri.parse('http://localhost/auth/device/verify'),
           body: 'user_code=$userCode&username=testuser&password=wrongpass',
-          headers: {
-            'content-type': 'application/x-www-form-urlencoded',
-          },
+          headers: {'content-type': 'application/x-www-form-urlencoded'},
         );
 
         final response = await authEndpoints.handleDeviceVerify(verifyRequest);
@@ -527,12 +493,12 @@ void main() {
       test('should not reflect internal errors into HTML', () async {
         final leakingEndpoints =
             AuthEndpoints<StandardClaims, RefreshToken, DeviceCode>(
-          authHandler: authHandler,
-          deviceCodeRepository: deviceCodeRepo,
-          deviceCodeLifecycle: const StandardDeviceCodeLifecycle(),
-          userValidator: (_, __) =>
-              throw Exception('sentinel-secret <script>alert(1)</script>'),
-        );
+              authHandler: authHandler,
+              deviceCodeRepository: deviceCodeRepo,
+              deviceCodeLifecycle: const StandardDeviceCodeLifecycle(),
+              userValidator: (_, __) =>
+                  throw Exception('sentinel-secret <script>alert(1)</script>'),
+            );
         final request = Request(
           'POST',
           Uri.parse('http://localhost/auth/device/verify'),
@@ -551,57 +517,57 @@ void main() {
     });
 
     group('handleToken', () {
-      test('should return authorization_pending for pending device code',
-          () async {
-        // Create a device code
-        final deviceCodeRequest = Request(
-          'POST',
-          Uri.parse('http://localhost/auth/device'),
-          body: jsonEncode({
-            'client_id': 'test-cli',
-          }),
-        );
+      test(
+        'should return authorization_pending for pending device code',
+        () async {
+          // Create a device code
+          final deviceCodeRequest = Request(
+            'POST',
+            Uri.parse('http://localhost/auth/device'),
+            body: jsonEncode({'client_id': 'test-cli'}),
+          );
 
-        final deviceCodeResponse =
-            await authEndpoints.handleDeviceCode(deviceCodeRequest);
-        final deviceCodeBody = await deviceCodeResponse.readAsString();
-        final deviceCodeJson =
-            jsonDecode(deviceCodeBody) as Map<String, dynamic>;
-        final deviceCode = deviceCodeJson['device_code'] as String;
+          final deviceCodeResponse = await authEndpoints.handleDeviceCode(
+            deviceCodeRequest,
+          );
+          final deviceCodeBody = await deviceCodeResponse.readAsString();
+          final deviceCodeJson =
+              jsonDecode(deviceCodeBody) as Map<String, dynamic>;
+          final deviceCode = deviceCodeJson['device_code'] as String;
 
-        // Poll for tokens
-        final tokenRequest = Request(
-          'POST',
-          Uri.parse('http://localhost/auth/token'),
-          body: jsonEncode({
-            'grant_type': 'urn:ietf:params:oauth:grant-type:device_code',
-            'device_code': deviceCode,
-            'client_id': 'test-cli',
-          }),
-        );
+          // Poll for tokens
+          final tokenRequest = Request(
+            'POST',
+            Uri.parse('http://localhost/auth/token'),
+            body: jsonEncode({
+              'grant_type': 'urn:ietf:params:oauth:grant-type:device_code',
+              'device_code': deviceCode,
+              'client_id': 'test-cli',
+            }),
+          );
 
-        final response = await authEndpoints.handleToken(tokenRequest);
+          final response = await authEndpoints.handleToken(tokenRequest);
 
-        expect(response.statusCode, equals(400));
+          expect(response.statusCode, equals(400));
 
-        final body = await response.readAsString();
-        final json = jsonDecode(body) as Map<String, dynamic>;
+          final body = await response.readAsString();
+          final json = jsonDecode(body) as Map<String, dynamic>;
 
-        expect(json['error'], equals('authorization_pending'));
-      });
+          expect(json['error'], equals('authorization_pending'));
+        },
+      );
 
       test('should return tokens for approved device code', () async {
         // Create a device code
         final deviceCodeRequest = Request(
           'POST',
           Uri.parse('http://localhost/auth/device'),
-          body: jsonEncode({
-            'client_id': 'test-cli',
-          }),
+          body: jsonEncode({'client_id': 'test-cli'}),
         );
 
-        final deviceCodeResponse =
-            await authEndpoints.handleDeviceCode(deviceCodeRequest);
+        final deviceCodeResponse = await authEndpoints.handleDeviceCode(
+          deviceCodeRequest,
+        );
         final deviceCodeBody = await deviceCodeResponse.readAsString();
         final deviceCodeJson =
             jsonDecode(deviceCodeBody) as Map<String, dynamic>;
@@ -613,9 +579,7 @@ void main() {
           'POST',
           Uri.parse('http://localhost/auth/device/verify'),
           body: 'user_code=$userCode&username=testuser&password=testpass',
-          headers: {
-            'content-type': 'application/x-www-form-urlencoded',
-          },
+          headers: {'content-type': 'application/x-www-form-urlencoded'},
         );
 
         await authEndpoints.handleDeviceVerify(verifyRequest);
@@ -649,10 +613,7 @@ void main() {
         final loginRequest = Request(
           'POST',
           Uri.parse('http://localhost/auth/login'),
-          body: jsonEncode({
-            'username': 'testuser',
-            'password': 'testpass',
-          }),
+          body: jsonEncode({'username': 'testuser', 'password': 'testpass'}),
         );
 
         final loginResponse = await authEndpoints.handleLogin(loginRequest);
@@ -701,9 +662,7 @@ void main() {
         final request = Request(
           'POST',
           Uri.parse('http://localhost/auth/token'),
-          body: jsonEncode({
-            'grant_type': 'unsupported',
-          }),
+          body: jsonEncode({'grant_type': 'unsupported'}),
         );
 
         final response = await authEndpoints.handleToken(request);

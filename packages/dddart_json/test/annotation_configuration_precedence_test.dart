@@ -9,10 +9,7 @@ part 'annotation_configuration_precedence_test.g.dart';
 
 @Serializable()
 class FrameworkDefaultValue extends Value {
-  const FrameworkDefaultValue({
-    required this.displayName,
-    this.optionalNote,
-  });
+  const FrameworkDefaultValue({required this.displayName, this.optionalNote});
 
   final String displayName;
   final String? optionalNote;
@@ -21,10 +18,7 @@ class FrameworkDefaultValue extends Value {
   List<Object?> get props => [displayName, optionalNote];
 }
 
-@Serializable(
-  fieldRename: FieldRename.snake,
-  includeNullFields: true,
-)
+@Serializable(fieldRename: FieldRename.snake, includeNullFields: true)
 class AncestorConfiguredValue extends Value {
   const AncestorConfiguredValue();
 
@@ -34,10 +28,7 @@ class AncestorConfiguredValue extends Value {
 
 @Serializable(fieldRename: FieldRename.kebab)
 class ConfiguredValue extends AncestorConfiguredValue {
-  const ConfiguredValue({
-    required this.displayName,
-    this.optionalNote,
-  });
+  const ConfiguredValue({required this.displayName, this.optionalNote});
 
   final String displayName;
   final String? optionalNote;
@@ -70,8 +61,7 @@ void main() {
       );
     });
 
-    test(
-        'concrete annotation overrides framework defaults without merging '
+    test('concrete annotation overrides framework defaults without merging '
         'ancestor annotation settings', () {
       final serializer = ConfiguredValueJsonSerializer();
 
@@ -93,40 +83,39 @@ void main() {
       );
     });
 
-    test('serializer constructor configuration overrides concrete annotation',
-        () {
-      const constructorConfig = SerializationConfig(
-        fieldRename: FieldRename.snake,
-        includeNullFields: true,
-      );
-      final serializer = ConfiguredValueJsonSerializer(constructorConfig);
+    test(
+      'serializer constructor configuration overrides concrete annotation',
+      () {
+        const constructorConfig = SerializationConfig(
+          fieldRename: FieldRename.snake,
+          includeNullFields: true,
+        );
+        final serializer = ConfiguredValueJsonSerializer(constructorConfig);
 
-      final json = serializer.toJson(value);
+        final json = serializer.toJson(value);
 
-      expect(
-        json,
-        {'display_name': 'annotation', 'optional_note': null},
-      );
-      expect(
-        serializer.fromJson({
-          'display_name': 'restored',
+        expect(json, {'display_name': 'annotation', 'optional_note': null});
+        expect(
+          serializer.fromJson({
+            'display_name': 'restored',
+            'optional_note': null,
+          }),
+          const ConfiguredValue(displayName: 'restored'),
+        );
+
+        final encoded = serializer.serialize(value);
+        expect(jsonDecode(encoded), {
+          'display_name': 'annotation',
           'optional_note': null,
-        }),
-        const ConfiguredValue(displayName: 'restored'),
-      );
-
-      final encoded = serializer.serialize(value);
-      expect(
-        jsonDecode(encoded),
-        {'display_name': 'annotation', 'optional_note': null},
-      );
-      expect(
-        serializer.deserialize(
-          '{"display_name":"decoded","optional_note":null}',
-        ),
-        const ConfiguredValue(displayName: 'decoded'),
-      );
-    });
+        });
+        expect(
+          serializer.deserialize(
+            '{"display_name":"decoded","optional_note":null}',
+          ),
+          const ConfiguredValue(displayName: 'decoded'),
+        );
+      },
+    );
 
     test('operation configuration overrides serializer constructor', () {
       const constructorConfig = SerializationConfig(
@@ -140,20 +129,14 @@ void main() {
 
       expect(json, {'displayName': 'annotation'});
       expect(
-        serializer.fromJson(
-          {'displayName': 'restored'},
-          operationConfig,
-        ),
+        serializer.fromJson({'displayName': 'restored'}, operationConfig),
         const ConfiguredValue(displayName: 'restored'),
       );
 
       final encoded = serializer.serialize(value, operationConfig);
       expect(jsonDecode(encoded), {'displayName': 'annotation'});
       expect(
-        serializer.deserialize(
-          '{"displayName":"decoded"}',
-          operationConfig,
-        ),
+        serializer.deserialize('{"displayName":"decoded"}', operationConfig),
         const ConfiguredValue(displayName: 'decoded'),
       );
     });

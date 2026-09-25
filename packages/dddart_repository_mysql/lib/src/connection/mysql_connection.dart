@@ -173,7 +173,8 @@ class MysqlConnection implements SqlConnection {
 
             // Don't convert fields that are likely to be string identifiers
             // even if they contain only digits (like zipCode, phone, etc.)
-            final isLikelyStringField = columnName.contains('code') ||
+            final isLikelyStringField =
+                columnName.contains('code') ||
                 columnName.contains('zip') ||
                 columnName.contains('phone') ||
                 columnName.contains('ssn') ||
@@ -181,8 +182,9 @@ class MysqlConnection implements SqlConnection {
 
             if (!isLikelyStringField) {
               // Only convert if it looks like a pure number
-              final isNumericString =
-                  RegExp(r'^-?(?:0|[1-9]\d*)(?:\.\d+)?$').hasMatch(value);
+              final isNumericString = RegExp(
+                r'^-?(?:0|[1-9]\d*)(?:\.\d+)?$',
+              ).hasMatch(value);
 
               if (isNumericString) {
                 // Try to parse as int first (for BIGINT, INT, etc.)
@@ -290,8 +292,9 @@ class MysqlConnection implements SqlConnection {
             ? paramValue
             : Uint8List.fromList(paramValue! as List<int>);
         // Inline as UNHEX('hexstring') instead of using a parameter
-        final hexString =
-            bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+        final hexString = bytes
+            .map((b) => b.toRadixString(16).padLeft(2, '0'))
+            .join();
         return "UNHEX('$hexString')";
       }
 

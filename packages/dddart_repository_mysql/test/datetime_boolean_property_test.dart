@@ -144,37 +144,21 @@ void main() {
       test('should encode true as 1 and false as 0', () {
         // Test true
         const trueEncoded = 1; // true ? 1 : 0
-        expect(
-          trueEncoded,
-          equals(1),
-          reason: 'true should encode to 1',
-        );
+        expect(trueEncoded, equals(1), reason: 'true should encode to 1');
 
         // Test false
         const falseEncoded = 0; // false ? 1 : 0
-        expect(
-          falseEncoded,
-          equals(0),
-          reason: 'false should encode to 0',
-        );
+        expect(falseEncoded, equals(0), reason: 'false should encode to 0');
       });
 
       test('should decode 1 as true and 0 as false', () {
         // Test 1 -> true
         const decodedTrue = true; // 1 != 0
-        expect(
-          decodedTrue,
-          isTrue,
-          reason: '1 should decode to true',
-        );
+        expect(decodedTrue, isTrue, reason: '1 should decode to true');
 
         // Test 0 -> false
         const decodedFalse = false; // 0 != 0
-        expect(
-          decodedFalse,
-          isFalse,
-          reason: '0 should decode to false',
-        );
+        expect(decodedFalse, isFalse, reason: '0 should decode to false');
       });
 
       test('should decode non-zero values as true', () {

@@ -64,6 +64,7 @@ class OrderPlacedEvent extends DomainEvent {
 }
 ''',
         (resolver) async => (await resolver.findLibraryByName('test'))!,
+        readAllSourcesFromFilesystem: true,
       );
 
       final output = generator.generate(
@@ -99,6 +100,7 @@ class TestEvent extends DomainEvent {
 }
 ''',
         (resolver) async => (await resolver.findLibraryByName('test'))!,
+        readAllSourcesFromFilesystem: true,
       );
 
       final output = generator.generate(
@@ -157,6 +159,7 @@ class EventC extends DomainEvent {
 }
 ''',
         (resolver) async => (await resolver.findLibraryByName('test'))!,
+        readAllSourcesFromFilesystem: true,
       );
 
       final output = generator.generate(
@@ -173,10 +176,11 @@ class EventC extends DomainEvent {
       expect(output, contains('EventC.fromJson'));
     });
 
-    test('should ignore @Serializable classes that do not extend DomainEvent',
-        () async {
-      final library = await resolveSource(
-        '''
+    test(
+      'should ignore @Serializable classes that do not extend DomainEvent',
+      () async {
+        final library = await resolveSource(
+          '''
 library test;
 
 import 'package:dddart/dddart.dart';
@@ -198,23 +202,26 @@ class MyEvent extends DomainEvent {
   }
 }
 ''',
-        (resolver) async => (await resolver.findLibraryByName('test'))!,
-      );
+          (resolver) async => (await resolver.findLibraryByName('test'))!,
+          readAllSourcesFromFilesystem: true,
+        );
 
-      final output = generator.generate(
-        LibraryReader(library),
-        _mockBuildStep(),
-      );
+        final output = generator.generate(
+          LibraryReader(library),
+          _mockBuildStep(),
+        );
 
-      expect(output, isNotNull);
-      expect(output, contains('MyEvent'));
-      expect(output, isNot(contains('NotAnEvent')));
-    });
+        expect(output, isNotNull);
+        expect(output, contains('MyEvent'));
+        expect(output, isNot(contains('NotAnEvent')));
+      },
+    );
 
-    test('should return null when no @Serializable DomainEvents found',
-        () async {
-      final library = await resolveSource(
-        '''
+    test(
+      'should return null when no @Serializable DomainEvents found',
+      () async {
+        final library = await resolveSource(
+          '''
 library test;
 
 import 'package:dddart/dddart.dart';
@@ -230,16 +237,18 @@ class MyEvent extends DomainEvent {
   MyEvent({required super.aggregateId});
 }
 ''',
-        (resolver) async => (await resolver.findLibraryByName('test'))!,
-      );
+          (resolver) async => (await resolver.findLibraryByName('test'))!,
+          readAllSourcesFromFilesystem: true,
+        );
 
-      final output = generator.generate(
-        LibraryReader(library),
-        _mockBuildStep(),
-      );
+        final output = generator.generate(
+          LibraryReader(library),
+          _mockBuildStep(),
+        );
 
-      expect(output, isNull);
-    });
+        expect(output, isNull);
+      },
+    );
 
     test('should include documentation comments in generated code', () async {
       final library = await resolveSource(
@@ -260,6 +269,7 @@ class TestEvent extends DomainEvent {
 }
 ''',
         (resolver) async => (await resolver.findLibraryByName('test'))!,
+        readAllSourcesFromFilesystem: true,
       );
 
       final output = generator.generate(
@@ -275,10 +285,11 @@ class TestEvent extends DomainEvent {
       );
     });
 
-    test('should sort event classes alphabetically for deterministic output',
-        () async {
-      final library = await resolveSource(
-        '''
+    test(
+      'should sort event classes alphabetically for deterministic output',
+      () async {
+        final library = await resolveSource(
+          '''
 library test;
 
 import 'package:dddart/dddart.dart';
@@ -314,24 +325,26 @@ class MangoEvent extends DomainEvent {
   }
 }
 ''',
-        (resolver) async => (await resolver.findLibraryByName('test'))!,
-      );
+          (resolver) async => (await resolver.findLibraryByName('test'))!,
+          readAllSourcesFromFilesystem: true,
+        );
 
-      final output = generator.generate(
-        LibraryReader(library),
-        _mockBuildStep(),
-      );
+        final output = generator.generate(
+          LibraryReader(library),
+          _mockBuildStep(),
+        );
 
-      expect(output, isNotNull);
+        expect(output, isNotNull);
 
-      // Verify alphabetical ordering
-      final appleIndex = output!.indexOf('AppleEvent');
-      final mangoIndex = output.indexOf('MangoEvent');
-      final zebraIndex = output.indexOf('ZebraEvent');
+        // Verify alphabetical ordering
+        final appleIndex = output!.indexOf('AppleEvent');
+        final mangoIndex = output.indexOf('MangoEvent');
+        final zebraIndex = output.indexOf('ZebraEvent');
 
-      expect(appleIndex, lessThan(mangoIndex));
-      expect(mangoIndex, lessThan(zebraIndex));
-    });
+        expect(appleIndex, lessThan(mangoIndex));
+        expect(mangoIndex, lessThan(zebraIndex));
+      },
+    );
 
     test('should include proper imports in generated code', () async {
       final library = await resolveSource(
@@ -352,6 +365,7 @@ class TestEvent extends DomainEvent {
 }
 ''',
         (resolver) async => (await resolver.findLibraryByName('test'))!,
+        readAllSourcesFromFilesystem: true,
       );
 
       final output = generator.generate(
@@ -366,13 +380,16 @@ class TestEvent extends DomainEvent {
 }
 
 /// Creates a stub BuildStep for testing.
-/// Since BuildStep is sealed and we don't actually use it in the generator,
-/// we suppress the warning and return a stub instance.
+/// Supplies the defining library's path used by the generated import.
 // ignore: subtype_of_sealed_class
 BuildStep _mockBuildStep() => _StubBuildStep();
 
 // ignore: subtype_of_sealed_class
 class _StubBuildStep implements BuildStep {
+  @override
+  AssetId get inputId =>
+      AssetId('dddart_events_distributed', 'lib/events.dart');
+
   @override
   dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
 }

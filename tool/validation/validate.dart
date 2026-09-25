@@ -74,11 +74,10 @@ Future<void> main(List<String> arguments) async {
         await _validateExamples(repositoryRoot, inventory, mode);
       case 'all':
         final mode = _parseMode(arguments);
-        await _runInherited(
-          Platform.resolvedExecutable,
-          const ['pub', 'get'],
-          workingDirectory: repositoryRoot,
-        );
+        await _runInherited(Platform.resolvedExecutable, const [
+          'pub',
+          'get',
+        ], workingDirectory: repositoryRoot);
         await _checkInventory(repositoryRoot, inventory, verbose: true);
         await _validateAll(repositoryRoot, inventory, mode);
         await _validateExamples(repositoryRoot, inventory, mode);
@@ -101,7 +100,7 @@ String _repositoryRoot() {
 void _usage() {
   stderr.writeln(
     'Usage: dart tool/validation/validate.dart '
-    '<check|matrix|package NAME|consumer NAME|example-matrix|example NAME|'
+    '<check|matrix|package NAME|consumer NAME|example-matrix|example NAME| '
     'examples|all> '
     '[--mode=local|ci] [--service-kind=none|mongo|dynamodb|mysql]',
   );
@@ -159,7 +158,8 @@ PackagePolicy _packagePolicy(
   ValidationInventory inventory,
   String packageName,
 ) {
-  final policy = inventory.packages[packageName];
+  final policy =
+      inventory.packages[packageName] ?? inventory.fixtures[packageName];
   if (policy == null) {
     throw ValidationFailure(
       '$packageName is not an intended public package in the inventory.',
@@ -172,32 +172,30 @@ Future<void> _ensureWorkspaceResolution(String repositoryRoot) async {
   if (File('$repositoryRoot/.dart_tool/package_config.json').existsSync()) {
     return;
   }
-  await _runInherited(
-    Platform.resolvedExecutable,
-    const ['pub', 'get'],
-    workingDirectory: repositoryRoot,
-  );
+  await _runInherited(Platform.resolvedExecutable, const [
+    'pub',
+    'get',
+  ], workingDirectory: repositoryRoot);
 }
 
-Future<List<WorkspacePackage>> _workspacePackages(
-  String repositoryRoot,
-) async {
-  final output = await _runCapture(
-    Platform.resolvedExecutable,
-    const ['pub', 'workspace', 'list', '--json'],
-    workingDirectory: repositoryRoot,
-  );
+Future<List<WorkspacePackage>> _workspacePackages(String repositoryRoot) async {
+  final output = await _runCapture(Platform.resolvedExecutable, const [
+    'pub',
+    'workspace',
+    'list',
+    '--json',
+  ], workingDirectory: repositoryRoot);
   return parseWorkspacePackages(output);
 }
 
 Future<Map<String, Set<String>>> _workspaceDependencyGraph(
   String repositoryRoot,
 ) async {
-  final output = await _runCapture(
-    Platform.resolvedExecutable,
-    const ['pub', 'deps', '--json'],
-    workingDirectory: repositoryRoot,
-  );
+  final output = await _runCapture(Platform.resolvedExecutable, const [
+    'pub',
+    'deps',
+    '--json',
+  ], workingDirectory: repositoryRoot);
   return parseDirectDependencyGraph(output);
 }
 
@@ -227,6 +225,7 @@ Future<void> _checkInventory(
     stdout.writeln(
       'Workspace policy covers ${inventory.packages.length} intended public '
       'packages, ${inventory.examples.length} examples, and '
+      '${inventory.fixtures.length} validated private fixtures, '
       '${inventory.workspaceExemptions.length} explicitly exempt workspace '
       'members.',
     );
@@ -336,7 +335,8 @@ void _validateExamplePolicies(
       if (relativePath.endsWith('.g.dart')) {
         continue;
       }
-      final isLibraryOrTest = relativePath.startsWith('lib/') ||
+      final isLibraryOrTest =
+          relativePath.startsWith('lib/') ||
           relativePath.startsWith('test/') ||
           relativePath.contains('/lib/') ||
           relativePath.contains('/test/');
@@ -359,8 +359,9 @@ void _validateExamplePolicies(
       }
     }
 
-    final configuredEntrypoints =
-        example.entrypoints.map((entrypoint) => entrypoint.path).toSet();
+    final configuredEntrypoints = example.entrypoints
+        .map((entrypoint) => entrypoint.path)
+        .toSet();
     if (!_sameSet(discoveredEntrypoints, configuredEntrypoints)) {
       throw ValidationFailure(
         '${example.name} entrypoint accounting drifted. Discovered '
@@ -372,8 +373,8 @@ void _validateExamplePolicies(
       for (final source in example.sourceOverrides) source.path: source,
     };
     final staleOverrides = sourceOverrides.keys.toSet().difference(
-          discoveredSources,
-        );
+      discoveredSources,
+    );
     if (staleOverrides.isNotEmpty) {
       throw ValidationFailure(
         '${example.name} has stale source overrides: '
@@ -437,9 +438,21 @@ void _validateGenerationPolicies(
   String repositoryRoot,
   ValidationInventory inventory,
 ) {
-  for (final package in inventory.packages.values) {
+  for (final package in [
+    ...inventory.packages.values,
+    ...inventory.fixtures.values,
+  ]) {
     final packageDirectory = '$repositoryRoot/${package.path}';
     final pubspec = File('$packageDirectory/pubspec.yaml').readAsStringSync();
+    if (inventory.fixtures.containsKey(package.name) &&
+        !RegExp(
+          r'^publish_to:\s*none\s*$',
+          multiLine: true,
+        ).hasMatch(pubspec)) {
+      throw ValidationFailure(
+        '${package.name} fixture must remain publish_to: none.',
+      );
+    }
     final hasBuildRunner = RegExp(
       r'^\s*build_runner:',
       multiLine: true,
@@ -459,13 +472,15 @@ void _validateGenerationPolicies(
       if (!directory.existsSync()) {
         continue;
       }
-      for (final file in directory
-          .listSync(recursive: true)
-          .whereType<File>()
-          .where(
-            (file) =>
-                file.path.endsWith('.dart') && !file.path.endsWith('.g.dart'),
-          )) {
+      for (final file
+          in directory
+              .listSync(recursive: true)
+              .whereType<File>()
+              .where(
+                (file) =>
+                    file.path.endsWith('.dart') &&
+                    !file.path.endsWith('.g.dart'),
+              )) {
         if (RegExp(
           r'''^part\s+['"][^'"]+\.g\.dart['"];\s*$''',
           multiLine: true,
@@ -522,12 +537,7 @@ Future<void> _printCiMatrix(
             ? packageKinds.isEmpty
             : packageKinds.contains(serviceKind);
       })
-      .map(
-        (package) => {
-          'name': package.name,
-          'path': package.path,
-        },
-      )
+      .map((package) => {'name': package.name, 'path': package.path})
       .toList(growable: false);
   stdout.writeln(jsonEncode({'include': include}));
 }
@@ -566,12 +576,7 @@ Future<void> _printExampleCiMatrix(
             ? service.ciAction != 'run'
             : service.ciAction == 'run' && service.kind == serviceKind;
       })
-      .map(
-        (example) => {
-          'name': example.name,
-          'path': example.path,
-        },
-      )
+      .map((example) => {'name': example.name, 'path': example.path})
       .toList(growable: false);
   stdout.writeln(jsonEncode({'include': include}));
 }
@@ -603,17 +608,16 @@ Future<void> _validateExample(
   stdout.writeln('\n=== ${example.name}: example validation ===');
   final exampleDirectory = '$repositoryRoot/${example.path}';
   if (example.resolution == 'standalone') {
-    await _runInherited(
-      Platform.resolvedExecutable,
-      const ['pub', 'get'],
-      workingDirectory: exampleDirectory,
-    );
+    await _runInherited(Platform.resolvedExecutable, const [
+      'pub',
+      'get',
+    ], workingDirectory: exampleDirectory);
   }
-  final dependencyJson = await _runCapture(
-    Platform.resolvedExecutable,
-    const ['pub', 'deps', '--json'],
-    workingDirectory: exampleDirectory,
-  );
+  final dependencyJson = await _runCapture(Platform.resolvedExecutable, const [
+    'pub',
+    'deps',
+    '--json',
+  ], workingDirectory: exampleDirectory);
   validateExampleDependencyGraph(
     jsonText: dependencyJson,
     policy: example,
@@ -621,29 +625,29 @@ Future<void> _validateExample(
   );
 
   await _runExampleGeneration(exampleDirectory, example);
-  await _runInherited(
-    Platform.resolvedExecutable,
-    const ['analyze', '--fatal-infos', '.'],
-    workingDirectory: exampleDirectory,
-  );
-  await _runInherited(
-    Platform.resolvedExecutable,
-    const ['format', '--output=none', '--set-exit-if-changed', '.'],
-    workingDirectory: exampleDirectory,
-  );
+  await _runInherited(Platform.resolvedExecutable, const [
+    'analyze',
+    '--fatal-infos',
+    '.',
+  ], workingDirectory: exampleDirectory);
+  await _runInherited(Platform.resolvedExecutable, const [
+    'format',
+    '--output=none',
+    '--set-exit-if-changed',
+    '.',
+  ], workingDirectory: exampleDirectory);
 
   final testDirectory = Directory('$exampleDirectory/test');
-  final hasRunnableTests = testDirectory.existsSync() &&
+  final hasRunnableTests =
+      testDirectory.existsSync() &&
       testDirectory
           .listSync(recursive: true)
           .whereType<File>()
           .any((file) => file.path.endsWith('_test.dart'));
   if (hasRunnableTests) {
-    await _runInherited(
-      Platform.resolvedExecutable,
-      const ['test'],
-      workingDirectory: exampleDirectory,
-    );
+    await _runInherited(Platform.resolvedExecutable, const [
+      'test',
+    ], workingDirectory: exampleDirectory);
   } else {
     stdout.writeln('${example.name} has no runnable example tests.');
   }
@@ -661,28 +665,25 @@ Future<void> _validateExample(
         continue;
       }
       final outputName = entrypoint.path.replaceAll(
-        RegExp(r'[^a-zA-Z0-9]+'),
+        RegExp('[^a-zA-Z0-9]+'),
         '_',
       );
-      await _runInherited(
-        Platform.resolvedExecutable,
-        [
-          'compile',
-          'kernel',
-          entrypoint.path,
-          '-o',
-          '${compileDirectory.path}/$outputName.dill',
-        ],
-        workingDirectory: exampleDirectory,
-      );
+      await _runInherited(Platform.resolvedExecutable, [
+        'compile',
+        'kernel',
+        entrypoint.path,
+        '-o',
+        '${compileDirectory.path}/$outputName.dill',
+      ], workingDirectory: exampleDirectory);
     }
   } finally {
     compileDirectory.deleteSync(recursive: true);
   }
 
   final service = example.externalService;
-  final serviceAction =
-      mode == ValidationMode.local ? service.localAction : service.ciAction;
+  final serviceAction = mode == ValidationMode.local
+      ? service.localAction
+      : service.ciAction;
   TestTagPolicy? serviceTagPolicy;
   if (service.testTag case final testTag?) {
     serviceTagPolicy = inventory.testTagPolicies.singleWhere(
@@ -691,13 +692,12 @@ Future<void> _validateExample(
   }
   var serviceReady = false;
   for (final entrypoint in example.entrypoints) {
-    final shouldRun = entrypoint.action == 'run' ||
+    final shouldRun =
+        entrypoint.action == 'run' ||
         (entrypoint.action == 'service' && serviceAction == 'run');
     if (!shouldRun) {
       if (entrypoint.action == 'service') {
-        stdout.writeln(
-          'Compile-only ${entrypoint.path}: ${service.reason}',
-        );
+        stdout.writeln('Compile-only ${entrypoint.path}: ${service.reason}');
       }
       continue;
     }
@@ -739,15 +739,17 @@ Future<void> _runExampleGeneration(
     }
     return;
   }
-  await _runInherited(
-    Platform.resolvedExecutable,
-    const ['run', 'build_runner', 'clean'],
-    workingDirectory: exampleDirectory,
-  );
+  await _runInherited(Platform.resolvedExecutable, const [
+    'run',
+    'build_runner',
+    'clean',
+  ], workingDirectory: exampleDirectory);
   final existingOutputs = _discoverGeneratedExampleOutputs(
     exampleDirectory,
     example.name,
   );
+  final trackedBindings =
+      <String, ({String source, String sourceHash, String outputHash})>{};
   for (final output in existingOutputs) {
     final ignoreResult = await Process.run(
       'git',
@@ -756,13 +758,47 @@ Future<void> _runExampleGeneration(
       environment: withoutGitRepositoryEnvironment(),
       includeParentEnvironment: false,
     );
-    if (ignoreResult.exitCode != 0) {
+    final generated = File('$exampleDirectory/$output');
+    final sourcePath = output.replaceFirst(RegExp(r'\.g\.dart$'), '.dart');
+    final source = File('$exampleDirectory/$sourcePath');
+    final sourceDeclaresOutput =
+        FileSystemEntity.typeSync(source.path, followLinks: false) ==
+            FileSystemEntityType.file &&
+        source.readAsLinesSync().contains("part '${output.split('/').last}';");
+    final trackedResult = await Process.run(
+      'git',
+      ['ls-files', '--error-unmatch', '--', output],
+      workingDirectory: exampleDirectory,
+      environment: withoutGitRepositoryEnvironment(),
+      includeParentEnvironment: false,
+    );
+    if (!canRegenerateExampleOutput(
+      ignored: ignoreResult.exitCode == 0,
+      tracked: trackedResult.exitCode == 0,
+      declared: example.generation.outputs.contains(output),
+      sourceDeclaresOutput: sourceDeclaresOutput,
+      contents: generated.readAsStringSync(),
+    )) {
       throw ValidationFailure(
         '${example.name} generated file is not ignored and cannot be '
         'safely replaced: $output.',
       );
     }
-    final generated = File('$exampleDirectory/$output');
+    if (trackedResult.exitCode == 0) {
+      trackedBindings[output] = (
+        source: sourcePath,
+        sourceHash: (await _runCapture('git', [
+          'hash-object',
+          '--',
+          sourcePath,
+        ], workingDirectory: exampleDirectory)).trim(),
+        outputHash: (await _runCapture('git', [
+          'hash-object',
+          '--',
+          output,
+        ], workingDirectory: exampleDirectory)).trim(),
+      );
+    }
     generated.deleteSync();
   }
   final remainingOutputs = _discoverGeneratedExampleOutputs(
@@ -775,16 +811,12 @@ Future<void> _runExampleGeneration(
       '${_sorted(remainingOutputs)}.',
     );
   }
-  await _runInherited(
-    Platform.resolvedExecutable,
-    const [
-      'run',
-      'build_runner',
-      'build',
-      '--delete-conflicting-outputs',
-    ],
-    workingDirectory: exampleDirectory,
-  );
+  await _runInherited(Platform.resolvedExecutable, const [
+    'run',
+    'build_runner',
+    'build',
+    '--delete-conflicting-outputs',
+  ], workingDirectory: exampleDirectory);
   final generatedOutputs = _discoverGeneratedExampleOutputs(
     exampleDirectory,
     example.name,
@@ -794,6 +826,27 @@ Future<void> _runExampleGeneration(
       '${example.name} generated output set drifted. Expected '
       '${_sorted(example.generation.outputs)}; found '
       '${_sorted(generatedOutputs)}.',
+    );
+  }
+  for (final entry in trackedBindings.entries) {
+    final sourceHash = (await _runCapture('git', [
+      'hash-object',
+      '--',
+      entry.value.source,
+    ], workingDirectory: exampleDirectory)).trim();
+    if (sourceHash != entry.value.sourceHash) {
+      throw ValidationFailure(
+        '${example.name} generation input changed: ${entry.value.source}',
+      );
+    }
+    final outputHash = (await _runCapture('git', [
+      'hash-object',
+      '--',
+      entry.key,
+    ], workingDirectory: exampleDirectory)).trim();
+    stdout.writeln(
+      'Regenerated tracked ${example.name}/${entry.key}: '
+      '${entry.value.outputHash} -> $outputHash; source $sourceHash',
     );
   }
   for (final output in generatedOutputs) {
@@ -811,10 +864,9 @@ Set<String> _discoverGeneratedExampleOutputs(
   String exampleName,
 ) {
   final outputs = <String>{};
-  for (final entity in Directory(exampleDirectory).listSync(
-    recursive: true,
-    followLinks: false,
-  )) {
+  for (final entity in Directory(
+    exampleDirectory,
+  ).listSync(recursive: true, followLinks: false)) {
     final relativePath = entity.path.substring(exampleDirectory.length + 1);
     if (relativePath.startsWith('.dart_tool/') ||
         !relativePath.endsWith('.g.dart')) {
@@ -838,6 +890,13 @@ Future<void> _validateAll(
   ValidationMode mode,
 ) async {
   final failures = <String>[];
+  for (final fixture in inventory.fixtures.values) {
+    try {
+      await _validateFixture(repositoryRoot, fixture);
+    } on Object catch (error) {
+      failures.add('${fixture.name} private fixture validation: $error');
+    }
+  }
   for (final package in inventory.packages.values) {
     try {
       await _validatePackage(repositoryRoot, inventory, package, mode);
@@ -865,36 +924,45 @@ Future<void> _validatePackage(
 ) async {
   stdout.writeln('\n=== ${package.name}: integrated validation ===');
   for (final prerequisiteName in package.generationPrerequisites) {
-    await _runRequiredGeneration(
-      repositoryRoot,
-      _packagePolicy(inventory, prerequisiteName),
-    );
+    final fixture = inventory.fixtures[prerequisiteName];
+    if (fixture != null) {
+      await _validateFixture(repositoryRoot, fixture);
+    } else {
+      await _runRequiredGeneration(
+        repositoryRoot,
+        _packagePolicy(inventory, prerequisiteName),
+      );
+    }
   }
   await _runRequiredGeneration(repositoryRoot, package);
 
+  for (final example in inventory.examples.values.where(
+    (example) =>
+        example.owners.contains(package.name) &&
+        example.generation.action == 'required',
+  )) {
+    await _runExampleGeneration('$repositoryRoot/${example.path}', example);
+  }
+
   final packageDirectory = '$repositoryRoot/${package.path}';
-  await _runInherited(
-    Platform.resolvedExecutable,
-    const ['analyze', '--fatal-infos'],
-    workingDirectory: packageDirectory,
-  );
-  await _runInherited(
-    Platform.resolvedExecutable,
-    const [
-      'format',
-      '--output=none',
-      '--set-exit-if-changed',
-      '.',
-    ],
-    workingDirectory: packageDirectory,
-  );
+  await _runInherited(Platform.resolvedExecutable, const [
+    'analyze',
+    '--fatal-infos',
+  ], workingDirectory: packageDirectory);
+  await _runInherited(Platform.resolvedExecutable, const [
+    'format',
+    '--output=none',
+    '--set-exit-if-changed',
+    '.',
+  ], workingDirectory: packageDirectory);
 
   final tagPolicies = testPoliciesFor(inventory, package.name);
   final testArguments = <String>['test'];
   final environment = <String, String>{};
   for (final policy in tagPolicies) {
-    final action =
-        mode == ValidationMode.local ? policy.localAction : policy.ciAction;
+    final action = mode == ValidationMode.local
+        ? policy.localAction
+        : policy.ciAction;
     if (action == 'exclude') {
       stdout.writeln(
         'Excluding ${policy.tag} for ${package.name}: ${policy.reason}',
@@ -916,17 +984,35 @@ Future<void> _validatePackage(
 
   final pubspec = File('$packageDirectory/pubspec.yaml').readAsStringSync();
   if (isMarkedPublishable(pubspec)) {
-    await _runInherited(
-      Platform.resolvedExecutable,
-      const ['pub', 'publish', '--dry-run'],
-      workingDirectory: packageDirectory,
-    );
+    await _runInherited(Platform.resolvedExecutable, const [
+      'pub',
+      'publish',
+      '--dry-run',
+    ], workingDirectory: packageDirectory);
   } else {
     stdout.writeln(
       'Publish dry-run exempt for ${package.name}: pubspec.yaml sets '
       'publish_to: none.',
     );
   }
+}
+
+Future<void> _validateFixture(
+  String repositoryRoot,
+  PackagePolicy fixture,
+) async {
+  await _runRequiredGeneration(repositoryRoot, fixture);
+  final directory = '$repositoryRoot/${fixture.path}';
+  await _runInherited(Platform.resolvedExecutable, const [
+    'analyze',
+    '--fatal-infos',
+  ], workingDirectory: directory);
+  await _runInherited(Platform.resolvedExecutable, const [
+    'format',
+    '--output=none',
+    '--set-exit-if-changed',
+    '.',
+  ], workingDirectory: directory);
 }
 
 Future<void> _runRequiredGeneration(
@@ -960,10 +1046,10 @@ void _validateServiceTags(
     final testDirectory = Directory('$packageDirectory/test');
     final sources = testDirectory.existsSync()
         ? testDirectory
-            .listSync(recursive: true)
-            .whereType<File>()
-            .where((file) => file.path.endsWith('.dart'))
-            .map((file) => file.readAsStringSync())
+              .listSync(recursive: true)
+              .whereType<File>()
+              .where((file) => file.path.endsWith('.dart'))
+              .map((file) => file.readAsStringSync())
         : const <String>[];
     usedTags[package.name] = parseUsedServiceTags(sources);
   }
@@ -1006,21 +1092,18 @@ Future<void> _validateConsumer(
       'void main() {}\n',
     );
 
-    await _runInherited(
-      Platform.resolvedExecutable,
-      const ['pub', 'get'],
-      workingDirectory: consumerDirectory,
-    );
-    await _runInherited(
-      Platform.resolvedExecutable,
-      const ['analyze', '--fatal-infos'],
-      workingDirectory: consumerDirectory,
-    );
-    await _runInherited(
-      Platform.resolvedExecutable,
-      const ['run', 'bin/main.dart'],
-      workingDirectory: consumerDirectory,
-    );
+    await _runInherited(Platform.resolvedExecutable, const [
+      'pub',
+      'get',
+    ], workingDirectory: consumerDirectory);
+    await _runInherited(Platform.resolvedExecutable, const [
+      'analyze',
+      '--fatal-infos',
+    ], workingDirectory: consumerDirectory);
+    await _runInherited(Platform.resolvedExecutable, const [
+      'run',
+      'bin/main.dart',
+    ], workingDirectory: consumerDirectory);
     final dependencyJson = await _runCapture(
       Platform.resolvedExecutable,
       const ['pub', 'deps', '--json'],
@@ -1162,7 +1245,7 @@ Future<void> _runInherited(
         ? await exitCodeFuture
         : await exitCodeFuture.timeout(timeout);
   } on TimeoutException {
-    process.kill(ProcessSignal.sigterm);
+    process.kill();
     try {
       await exitCodeFuture.timeout(const Duration(seconds: 5));
     } on TimeoutException {
@@ -1182,7 +1265,7 @@ Future<void> _runInherited(
 }
 
 String _command(String executable, List<String> arguments) {
-  return ([executable, ...arguments]).join(' ');
+  return [executable, ...arguments].join(' ');
 }
 
 String _sorted(Iterable<String> values) {

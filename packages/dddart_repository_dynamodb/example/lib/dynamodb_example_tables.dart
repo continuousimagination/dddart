@@ -50,10 +50,7 @@ Future<void> ensureDynamoTable({
   );
 }
 
-Future<bool> _tableExists(
-  DynamoConnection connection,
-  String tableName,
-) async {
+Future<bool> _tableExists(DynamoConnection connection, String tableName) async {
   try {
     await connection.client.describeTable(tableName: tableName);
     return true;

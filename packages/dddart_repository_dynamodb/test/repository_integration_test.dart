@@ -65,10 +65,7 @@ void main() {
     group('CRUD operations', () {
       test('should save and retrieve an aggregate', () async {
         final repo = TestUserDynamoRepository(helper.connection);
-        final user = TestUser(
-          name: 'John Doe',
-          email: 'john@example.com',
-        );
+        final user = TestUser(name: 'John Doe', email: 'john@example.com');
 
         // Save
         await repo.save(user);
@@ -83,10 +80,7 @@ void main() {
 
       test('should update an existing aggregate', () async {
         final repo = TestUserDynamoRepository(helper.connection);
-        final user = TestUser(
-          name: 'Jane Doe',
-          email: 'jane@example.com',
-        );
+        final user = TestUser(name: 'Jane Doe', email: 'jane@example.com');
 
         // Save initial version
         await repo.save(user);
@@ -110,10 +104,7 @@ void main() {
 
       test('should delete an aggregate by ID', () async {
         final repo = TestUserDynamoRepository(helper.connection);
-        final user = TestUser(
-          name: 'Bob Smith',
-          email: 'bob@example.com',
-        );
+        final user = TestUser(name: 'Bob Smith', email: 'bob@example.com');
 
         // Save
         await repo.save(user);
@@ -138,25 +129,26 @@ void main() {
         );
       });
 
-      test('should throw RepositoryException.notFound for non-existent ID',
-          () async {
-        final repo = TestUserDynamoRepository(helper.connection);
-        final nonExistentId = UuidValue.generate();
-
-        expect(
-          () => repo.getById(nonExistentId),
-          throwsA(
-            isA<RepositoryException>().having(
-              (e) => e.type,
-              'type',
-              RepositoryExceptionType.notFound,
-            ),
-          ),
-        );
-      });
-
       test(
-          'should throw RepositoryException.notFound when deleting '
+        'should throw RepositoryException.notFound for non-existent ID',
+        () async {
+          final repo = TestUserDynamoRepository(helper.connection);
+          final nonExistentId = UuidValue.generate();
+
+          expect(
+            () => repo.getById(nonExistentId),
+            throwsA(
+              isA<RepositoryException>().having(
+                (e) => e.type,
+                'type',
+                RepositoryExceptionType.notFound,
+              ),
+            ),
+          );
+        },
+      );
+
+      test('should throw RepositoryException.notFound when deleting '
           'non-existent ID', () async {
         final repo = TestUserDynamoRepository(helper.connection);
         final nonExistentId = UuidValue.generate();
@@ -177,18 +169,12 @@ void main() {
     group('ID mapping', () {
       test('should store aggregate id as DynamoDB partition key', () async {
         final repo = TestUserDynamoRepository(helper.connection);
-        final user = TestUser(
-          name: 'Test User',
-          email: 'test@example.com',
-        );
+        final user = TestUser(name: 'Test User', email: 'test@example.com');
 
         await repo.save(user);
 
         // Verify DynamoDB item has id field as partition key
-        final item = await helper.getItemById(
-          'test_users',
-          user.id.toString(),
-        );
+        final item = await helper.getItemById('test_users', user.id.toString());
 
         expect(item, isNotNull);
         expect(item!['id']?.s, equals(user.id.toString()));
@@ -222,10 +208,7 @@ void main() {
     group('custom table names', () {
       test('should use custom table name from annotation', () async {
         final repo = TestProductDynamoRepository(helper.connection);
-        final product = TestProduct(
-          name: 'Widget',
-          price: 19.99,
-        );
+        final product = TestProduct(name: 'Widget', price: 19.99);
 
         await repo.save(product);
 
@@ -242,10 +225,7 @@ void main() {
 
       test('should retrieve from custom table', () async {
         final repo = TestProductDynamoRepository(helper.connection);
-        final product = TestProduct(
-          name: 'Gadget',
-          price: 29.99,
-        );
+        final product = TestProduct(name: 'Gadget', price: 29.99);
 
         await repo.save(product);
         final retrieved = await repo.getById(product.id);
@@ -267,14 +247,8 @@ void main() {
         final userRepo = TestUserDynamoRepository(helper.connection);
         final productRepo = TestProductDynamoRepository(helper.connection);
 
-        final user = TestUser(
-          name: 'Alice',
-          email: 'alice@example.com',
-        );
-        final product = TestProduct(
-          name: 'Book',
-          price: 15.99,
-        );
+        final user = TestUser(name: 'Alice', email: 'alice@example.com');
+        final product = TestProduct(name: 'Book', price: 15.99);
 
         await userRepo.save(user);
         await productRepo.save(product);
@@ -290,14 +264,8 @@ void main() {
         final userRepo = TestUserDynamoRepository(helper.connection);
         final productRepo = TestProductDynamoRepository(helper.connection);
 
-        final user = TestUser(
-          name: 'Bob',
-          email: 'bob@example.com',
-        );
-        final product = TestProduct(
-          name: 'Pen',
-          price: 2.99,
-        );
+        final user = TestUser(name: 'Bob', email: 'bob@example.com');
+        final product = TestProduct(name: 'Pen', price: 2.99);
 
         await userRepo.save(user);
         await productRepo.save(product);
@@ -362,27 +330,32 @@ void main() {
         );
       });
 
-      test('should preserve original error in cause field', () async {
-        final repo = TestUserDynamoRepository(helper.connection);
-        final invalidId = UuidValue.generate();
+      test(
+        'should classify malformed storage without exposing its cause',
+        () async {
+          final repo = TestUserDynamoRepository(helper.connection);
+          final invalidId = UuidValue.generate();
 
-        await helper.connection.client.putItem(
-          tableName: 'test_users',
-          item: {
-            'id': AttributeValue(s: invalidId.toString()),
-            'name': AttributeValue(s: 'Invalid'),
-            // Missing required 'email' field
-          },
-        );
+          await helper.connection.client.putItem(
+            tableName: 'test_users',
+            item: {
+              'id': AttributeValue(s: invalidId.toString()),
+              'name': AttributeValue(s: 'Invalid'),
+              // Missing required 'email' field
+            },
+          );
 
-        try {
-          await repo.getById(invalidId);
-          fail('Should have thrown RepositoryException');
-        } on RepositoryException catch (e) {
-          expect(e.cause, isNotNull);
-          expect(e.type, equals(RepositoryExceptionType.unknown));
-        }
-      });
+          try {
+            await repo.getById(invalidId);
+            fail('Should have thrown RepositoryException');
+          } on RepositoryException catch (e) {
+            expect(e.cause, isNull);
+            expect(e.type, equals(RepositoryExceptionType.unknown));
+            expect(e.toString(), isNot(contains(invalidId.toString())));
+            expect(e.toString(), isNot(contains('Invalid')));
+          }
+        },
+      );
 
       test('should handle non-existent table gracefully', () async {
         // Create a connection but don't create the table
@@ -390,20 +363,22 @@ void main() {
         final tempConnection = tempHelper.connect();
 
         try {
-          final repo = TestUserDynamoRepository(tempConnection);
-          final user = TestUser(
-            name: 'Test',
-            email: 'test@example.com',
+          final absentTable =
+              'absent_${UuidValue.generate().uuid.replaceAll('-', '')}';
+          final repo = TestUserDynamoRepository(
+            tempConnection,
+            tableName: absentTable,
           );
+          final user = TestUser(name: 'Test', email: 'test@example.com');
 
           // Attempt to save to non-existent table should throw
-          expect(
-            () => repo.save(user),
+          await expectLater(
+            repo.save(user),
             throwsA(
               isA<RepositoryException>().having(
                 (e) => e.type,
                 'type',
-                RepositoryExceptionType.unknown,
+                RepositoryExceptionType.notFound,
               ),
             ),
           );
@@ -460,10 +435,7 @@ void main() {
         final customerOrders = await repo.findByCustomerId('CUST-123');
 
         expect(customerOrders.length, equals(2));
-        expect(
-          customerOrders.every((o) => o.customerId == 'CUST-123'),
-          isTrue,
-        );
+        expect(customerOrders.every((o) => o.customerId == 'CUST-123'), isTrue);
       });
 
       test('should support custom single-result query methods', () async {
@@ -493,24 +465,26 @@ void main() {
         expect(found, isNull);
       });
 
-      test('should expose protected members for custom implementations',
-          () async {
-        final repo = TestOrderDynamoRepositoryImpl(helper.connection);
+      test(
+        'should expose protected members for custom implementations',
+        () async {
+          final repo = TestOrderDynamoRepositoryImpl(helper.connection);
 
-        // Verify that custom implementation can access protected members
-        // by successfully executing custom query methods that use them
-        final order = TestOrder(
-          orderNumber: 'ORD-TEST',
-          customerId: 'CUST-TEST',
-          total: 200,
-        );
+          // Verify that custom implementation can access protected members
+          // by successfully executing custom query methods that use them
+          final order = TestOrder(
+            orderNumber: 'ORD-TEST',
+            customerId: 'CUST-TEST',
+            total: 200,
+          );
 
-        await repo.save(order);
-        final found = await repo.findByOrderNumber('ORD-TEST');
+          await repo.save(order);
+          final found = await repo.findByOrderNumber('ORD-TEST');
 
-        expect(found, isNotNull);
-        expect(found!.orderNumber, equals('ORD-TEST'));
-      });
+          expect(found, isNotNull);
+          expect(found!.orderNumber, equals('ORD-TEST'));
+        },
+      );
     });
 
     group('table creation utilities', () {
@@ -565,10 +539,7 @@ void main() {
 
         final users = List.generate(
           10,
-          (i) => TestUser(
-            name: 'User $i',
-            email: 'user$i@example.com',
-          ),
+          (i) => TestUser(name: 'User $i', email: 'user$i@example.com'),
         );
 
         // Save all users concurrently
@@ -618,10 +589,7 @@ void main() {
         // Verify one of the updates won (last write wins)
         final final_ = await repo.getById(userId);
         expect(final_.id, equals(userId));
-        expect(
-          ['Update 1', 'Update 2'].contains(final_.name),
-          isTrue,
-        );
+        expect(['Update 1', 'Update 2'].contains(final_.name), isTrue);
       });
     });
 

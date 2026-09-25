@@ -205,6 +205,7 @@ Future<void> _seedSampleData(Repository<User> repository) async {
   print('Seeded ${users.length} sample users');
   print('  - 2 users named "John" (for firstName query testing)');
   print(
-      '  - 3 users with profiles, 2 without (demonstrates optional child entity)');
+    '  - 3 users with profiles, 2 without (demonstrates optional child entity)',
+  );
   print('  - All users have addresses (demonstrates required value object)');
 }

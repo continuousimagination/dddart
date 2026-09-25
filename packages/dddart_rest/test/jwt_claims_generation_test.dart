@@ -39,9 +39,7 @@ void main() {
       final handler = _MockJwtAuthHandler();
 
       // Test with null optional fields
-      final json = {
-        'sub': 'user789',
-      };
+      final json = {'sub': 'user789'};
 
       final claims = handler.parseClaimsFromJson(json);
       expect(claims.sub, equals('user789'));
@@ -61,13 +59,12 @@ void main() {
 // Mock implementation for testing
 class _MockJwtAuthHandler extends JwtAuthHandler<StandardClaims, RefreshToken> {
   _MockJwtAuthHandler()
-      : super(
-          secret: 'test-secret',
-          refreshTokenRepository:
-              InMemoryRefreshTokenRepository<RefreshToken>(),
-          refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
-          claimsLoader: (userId) async => StandardClaims(sub: userId),
-          parseClaimsFromJson: StandardClaims.fromJson,
-          claimsToJson: (claims) => claims.toJson(),
-        );
+    : super(
+        secret: 'test-secret',
+        refreshTokenRepository: InMemoryRefreshTokenRepository<RefreshToken>(),
+        refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
+        claimsLoader: (userId) async => StandardClaims(sub: userId),
+        parseClaimsFromJson: StandardClaims.fromJson,
+        claimsToJson: (claims) => claims.toJson(),
+      );
 }

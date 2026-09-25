@@ -27,6 +27,7 @@
       "name": "dddart_rest",
       "path": "packages/dddart_rest",
       "generation": "required",
+      "generationPrerequisites": ["dddart_shared_model_fixture"],
       "allowedLocalPackages": [
         "dddart",
         "dddart_serialization",
@@ -61,6 +62,7 @@
       "name": "dddart_repository_dynamodb",
       "path": "packages/dddart_repository_dynamodb",
       "generation": "required",
+      "generationPrerequisites": ["dddart_shared_model_fixture"],
       "allowedLocalPackages": [
         "dddart",
         "dddart_serialization",
@@ -76,10 +78,11 @@
         "dddart",
         "dddart_serialization",
         "dddart_json",
+        "dddart_rest",
         "dddart_rest_client",
         "dddart_repository_rest"
       ],
-      "generationPrerequisites": ["dddart_rest"]
+      "generationPrerequisites": ["dddart_shared_model_fixture", "dddart_rest"]
     },
     {
       "name": "dddart_repository_sql",
@@ -355,10 +358,10 @@
       ],
       "resolution": "standalone",
       "generation": {
-        "action": "none",
-        "builders": [],
+        "action": "required",
+        "builders": ["dddart_json:json_serializable"],
         "disabledBuilders": [],
-        "outputs": []
+        "outputs": ["lib/versioned_user.g.dart"]
       },
       "entrypoints": [
         {
@@ -376,8 +379,8 @@
         {
           "path": "etag_concurrency_example.dart",
           "classification": "runnable",
-          "action": "compile",
-          "reason": "HTTP concurrency demonstration requires an interactive server lifecycle."
+          "action": "run",
+          "reason": "Finite self-checking atomic conditional demonstration owns its ephemeral loopback listener and closes it."
         },
         {
           "path": "main.dart",
@@ -427,7 +430,8 @@
         "dddart_serialization",
         "dddart_json",
         "dddart_rest_client",
-        "dddart_repository_rest"
+        "dddart_repository_rest",
+        "dddart_rest"
       ],
       "resolution": "workspace",
       "generation": {
@@ -904,6 +908,14 @@
         "ciAction": "not-required",
         "reason": "Only the independent JSON-004 round-trip is runnable; all EVENT integration surfaces are legacy WIP exclusions."
       }
+    }
+  ],
+  "fixtures": [
+    {
+      "name": "dddart_shared_model_fixture",
+      "path": "packages/dddart_json/test/fixtures/shared_model",
+      "generation": "required",
+      "allowedLocalPackages": ["dddart_shared_model_fixture", "dddart", "dddart_json", "dddart_serialization"]
     }
   ],
   "workspaceExemptions": [],

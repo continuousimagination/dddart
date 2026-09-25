@@ -19,8 +19,9 @@ void main() {
     addTearDown(() => fixture.deleteSync(recursive: true));
 
     final libDirectory = Directory('${fixture.path}/lib')..createSync();
-    File('${libDirectory.path}/model.dart')
-        .writeAsStringSync("part 'model.g.dart';\n");
+    File(
+      '${libDirectory.path}/model.dart',
+    ).writeAsStringSync("part 'model.g.dart';\n");
     generatedOutput = File('${libDirectory.path}/model.g.dart');
 
     fakeBin = Directory('${fixture.path}/fake-bin')..createSync();
@@ -67,16 +68,18 @@ void main() {
     expect(generatedOutput.existsSync(), isFalse);
   });
 
-  test('a successful build must recreate every declared generated part',
-      () async {
-    final result = await runGeneration('skip');
+  test(
+    'a successful build must recreate every declared generated part',
+    () async {
+      final result = await runGeneration('skip');
 
-    expect(result.exitCode, isNot(0));
-    expect(
-      '${result.stdout}\n${result.stderr}',
-      contains('Expected generated output is missing: lib/model.g.dart'),
-    );
-  });
+      expect(result.exitCode, isNot(0));
+      expect(
+        '${result.stdout}\n${result.stderr}',
+        contains('Expected generated output is missing: lib/model.g.dart'),
+      );
+    },
+  );
 
   test('generation passes after every declared part is recreated', () async {
     final result = await runGeneration('generate');

@@ -9,10 +9,7 @@ void main() {
   group('Three-Package Architecture Tests', () {
     test('JsonSerializer service class works for AggregateRoot', () {
       // Create a test user
-      final user = TestUser(
-        name: 'John Doe',
-        email: 'john@example.com',
-      );
+      final user = TestUser(name: 'John Doe', email: 'john@example.com');
 
       // Test serialization using the service class
       final serializer = TestUserJsonSerializer();
@@ -60,10 +57,7 @@ void main() {
     });
 
     test('Static convenience methods work', () {
-      final user = TestUser(
-        name: 'Jane Doe',
-        email: 'jane@example.com',
-      );
+      final user = TestUser(name: 'Jane Doe', email: 'jane@example.com');
 
       // Test static encode method
       final json = TestUserJsonSerializer.encode(user);
@@ -77,10 +71,7 @@ void main() {
     });
 
     test('Base Serializer interface methods work', () {
-      final user = TestUser(
-        name: 'Bob Smith',
-        email: 'bob@example.com',
-      );
+      final user = TestUser(name: 'Bob Smith', email: 'bob@example.com');
 
       final serializer = TestUserJsonSerializer();
 

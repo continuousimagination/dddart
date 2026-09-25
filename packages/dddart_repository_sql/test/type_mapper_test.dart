@@ -45,10 +45,7 @@ class MockDialect implements SqlDialect {
       throw UnimplementedError();
 
   @override
-  String selectWithJoins(
-    TableDefinition rootTable,
-    List<JoinClause> joins,
-  ) =>
+  String selectWithJoins(TableDefinition rootTable, List<JoinClause> joins) =>
       throw UnimplementedError();
 
   @override

@@ -17,9 +17,12 @@ Builder serializableBuilder(BuilderOptions options) =>
 
 /// Generator for DDDart serialization code.
 class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
-  static const _aggregateRootType = TypeChecker.fromRuntime(AggregateRoot);
-  static const _entityType = TypeChecker.fromRuntime(Entity);
-  static const _valueType = TypeChecker.fromRuntime(Value);
+  static const _aggregateRootType = TypeChecker.typeNamed(
+    AggregateRoot,
+    inPackage: 'dddart',
+  );
+  static const _entityType = TypeChecker.typeNamed(Entity, inPackage: 'dddart');
+  static const _valueType = TypeChecker.typeNamed(Value, inPackage: 'dddart');
 
   @override
   String generateForAnnotatedElement(
@@ -35,7 +38,7 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
     }
 
     final classElement = element;
-    final className = classElement.name;
+    final className = classElement.name!;
 
     // Validate that the class extends AggregateRoot or Value
     final classAnalysis = _analyzeClass(classElement);
@@ -162,7 +165,7 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
 
   /// Analyzes a class to determine its type and extract field information.
   ClassAnalysis _analyzeClass(ClassElement classElement) {
-    final className = classElement.name;
+    final className = classElement.name!;
     final supertype = classElement.supertype;
 
     if (supertype == null) {
@@ -176,6 +179,44 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
     // Check inheritance hierarchy
     final classType = _determineClassType(classElement);
 
+    final versioned = classElement.allSupertypes.any(
+      (type) => _isFrameworkType(
+        type,
+        'VersionedAggregateRoot',
+        'versioned_aggregate_root',
+      ),
+    );
+    if (versioned) {
+      InterfaceType? current = classElement.thisType;
+      while (current != null &&
+          !_isFrameworkType(
+            current,
+            'VersionedAggregateRoot',
+            'versioned_aggregate_root',
+          )) {
+        if (current.element.fields.any((field) => field.name == 'revision')) {
+          throw InvalidGenerationSourceError(
+            'Versioned aggregates must inherit the sole revision field; overriding revision is unsupported.',
+            element: classElement,
+          );
+        }
+        current = current.superclass;
+      }
+      final effectiveGetter = classElement.lookUpGetter(
+        name: 'revision',
+        library: classElement.library,
+      );
+      final canonicalGetter = current?.element.getGetter('revision');
+      if (current == null ||
+          canonicalGetter == null ||
+          effectiveGetter?.baseElement != canonicalGetter.baseElement) {
+        throw InvalidGenerationSourceError(
+          'Versioned aggregates must inherit the canonical revision getter through their superclass; mixin overrides and interface-only implementations are unsupported.',
+          element: classElement,
+        );
+      }
+    }
+
     // Extract field information
     final fields = _extractFields(classElement, classType);
 
@@ -183,6 +224,33 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
       type: classType,
       className: className,
       fields: fields,
+      requiredConstructorFields: {
+        for (final parameter
+            in classElement.unnamedConstructor?.formalParameters ??
+                <FormalParameterElement>[])
+          if (parameter.isRequiredNamed || parameter.isRequiredPositional)
+            parameter.name!,
+      },
+    );
+  }
+
+  bool _isFrameworkType(DartType type, String name, String file) =>
+      type is InterfaceType &&
+      type.element.name == name &&
+      type.element.library.uri.toString() == 'package:dddart/src/$file.dart';
+
+  String _visibleRevision(InterfaceType type, LibraryElement scope) {
+    for (final imported in scope.firstFragment.libraryImports) {
+      for (final entry in imported.namespace.definedNames2.entries) {
+        if (entry.value != type.element) continue;
+        final prefix = imported.prefix?.name;
+        return prefix == null || entry.key.startsWith('$prefix.')
+            ? entry.key
+            : '$prefix.${entry.key}';
+      }
+    }
+    throw InvalidGenerationSourceError(
+      'The framework Revision type must be publicly imported into the model library.',
     );
   }
 
@@ -219,7 +287,6 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
     ClassType classType,
   ) {
     final fields = <FieldInfo>[];
-
     final frameworkBaseType = switch (classType) {
       ClassType.aggregateRoot => _aggregateRootType,
       ClassType.entity => _entityType,
@@ -227,46 +294,42 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
       ClassType.invalid => null,
     };
     if (frameworkBaseType == null) return fields;
-
     final fieldNames = <String>{};
-    ClassElement? current = classElement;
-    while (current != null && !frameworkBaseType.isExactly(current)) {
-      final isInherited = current != classElement;
-
-      for (final field in current.fields) {
+    InterfaceType? current = classElement.thisType;
+    while (current != null && !frameworkBaseType.isExactly(current.element)) {
+      for (final field in current.element.fields) {
         if (field.isStatic || field.isSynthetic) continue;
+        final fieldName = field.name!;
         if ((classType == ClassType.aggregateRoot ||
                 classType == ClassType.entity) &&
-            ['id', 'createdAt', 'updatedAt'].contains(field.name)) {
+            const {'id', 'createdAt', 'updatedAt'}.contains(fieldName)) {
           continue;
         }
-
-        if (!fieldNames.add(field.name)) {
+        if (!fieldNames.add(fieldName)) {
           throw InvalidGenerationSourceError(
             'Cannot generate JSON serializer for ${classElement.name}: '
-            'application field "${field.name}" is declared more than once '
+            'application field "$fieldName" is declared more than once '
             'in its superclass chain.',
             element: classElement,
           );
         }
-
-        if (isInherited) {
+        if (current.element != classElement) {
           _validateInheritedFieldReconstruction(classElement, field);
         }
-
+        final type = current.getGetter(fieldName)!.returnType;
         fields.add(
           FieldInfo(
-            name: field.name,
-            type: field.type,
-            isNullable:
-                field.type.nullabilitySuffix == NullabilitySuffix.question,
+            name: fieldName,
+            type: type,
+            isNullable: type.nullabilitySuffix == NullabilitySuffix.question,
+            revisionConstructor: _isFrameworkType(type, 'Revision', 'revision')
+                ? _visibleRevision(type as InterfaceType, classElement.library)
+                : null,
           ),
         );
       }
-
-      current = current.supertype?.element as ClassElement?;
+      current = current.superclass;
     }
-
     return fields;
   }
 
@@ -274,35 +337,28 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
     ClassElement classElement,
     FieldElement field,
   ) {
-    final constructor = classElement.unnamedConstructor;
-    SuperFormalParameterElement? reconstructionParameter;
-
-    if (constructor != null) {
-      for (final parameter in constructor.parameters) {
-        if (parameter.name == field.name &&
-            parameter.isNamed &&
-            parameter is SuperFormalParameterElement) {
-          reconstructionParameter = parameter;
-          break;
-        }
+    FormalParameterElement? parameter;
+    for (final candidate
+        in classElement.unnamedConstructor?.formalParameters ??
+            <FormalParameterElement>[]) {
+      if (candidate.name == field.name &&
+          candidate.isNamed &&
+          candidate is SuperFormalParameterElement) {
+        parameter = candidate;
+        break;
       }
     }
-
-    ParameterElement? currentParameter = reconstructionParameter;
-    while (currentParameter is SuperFormalParameterElement) {
-      currentParameter = currentParameter.superConstructorParameter;
+    while (parameter is SuperFormalParameterElement) {
+      parameter = parameter.superConstructorParameter;
     }
-
-    final reconstructedField = currentParameter is FieldFormalParameterElement
-        ? currentParameter.field
+    final reconstructed = parameter is FieldFormalParameterElement
+        ? parameter.field
         : null;
-    if (reconstructedField?.declaration == field.declaration) return;
-
+    if (reconstructed?.baseElement == field.baseElement) return;
     throw InvalidGenerationSourceError(
       'Cannot generate JSON serializer for ${classElement.name}: inherited '
       'application field "${field.name}" has no reconstruction path through '
-      "${classElement.name}'s unnamed constructor and named super-parameter "
-      'chain.',
+      "${classElement.name}'s unnamed constructor and named super-parameter chain.",
       element: classElement,
     );
   }
@@ -317,8 +373,10 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
   ) {
     // Generate configurable versions of the methods
     final toJsonWithConfigBody = _generateToJsonWithConfig(className, analysis);
-    final fromJsonWithConfigBody =
-        _generateFromJsonWithConfig(className, analysis);
+    final fromJsonWithConfigBody = _generateFromJsonWithConfig(
+      className,
+      analysis,
+    );
     final annotationConfigSource = _generateConfigSource(annotationConfig);
 
     return '''
@@ -344,7 +402,11 @@ $fromJsonWithConfigBody
   
   @override
   String serialize($className object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
+    try {
+      return jsonEncode(toJson(object, config as SerializationConfig?));
+    } catch (_) {
+      throw SerializationException('Failed to serialize $className', expectedType: '$className');
+    }
   }
   
   @override
@@ -352,18 +414,13 @@ $fromJsonWithConfigBody
     try {
       final json = jsonDecode(data);
       if (json is! Map<String, dynamic>) {
-        throw DeserializationException(
-          'Expected JSON object but got \${json.runtimeType}',
-          expectedType: '$className',
-        );
+        throw DeserializationException('Expected JSON object', expectedType: '$className');
       }
       return fromJson(json, config as SerializationConfig?);
-    } catch (e) {
-      if (e is DeserializationException) rethrow;
-      throw DeserializationException(
-        'Failed to deserialize JSON: \$e',
-        expectedType: '$className',
-      );
+    } on DeserializationException {
+      rethrow;
+    } catch (_) {
+      throw DeserializationException('Failed to deserialize JSON', expectedType: '$className');
     }
   }
   
@@ -471,18 +528,21 @@ $fromJsonWithConfigBody
       buffer.writeln(
         "        id: UuidValue.fromString(json[SerializationUtils.applyFieldRename('id', effectiveConfig.fieldRename)] as String),",
       );
-      buffer.writeln(
-        "        createdAt: json[SerializationUtils.applyFieldRename('createdAt', effectiveConfig.fieldRename)] != null ? DateTime.parse(json[SerializationUtils.applyFieldRename('createdAt', effectiveConfig.fieldRename)] as String) : DateTime.now(),",
-      );
-      buffer.writeln(
-        "        updatedAt: json[SerializationUtils.applyFieldRename('updatedAt', effectiveConfig.fieldRename)] != null ? DateTime.parse(json[SerializationUtils.applyFieldRename('updatedAt', effectiveConfig.fieldRename)] as String) : DateTime.now(),",
-      );
+      for (final field in ['createdAt', 'updatedAt']) {
+        final access =
+            "json[SerializationUtils.applyFieldRename('$field', effectiveConfig.fieldRename)]";
+        final parsed = 'DateTime.parse($access as String)';
+        final value = analysis.requiredConstructorFields.contains(field)
+            ? parsed
+            : '$access != null ? $parsed : DateTime.now()';
+        buffer.writeln('        $field: $value,');
+      }
     }
 
     buffer.writeln('      );');
     buffer.writeln('    } catch (e) {');
     buffer.writeln('      throw DeserializationException(');
-    buffer.writeln("        'Failed to deserialize $className: \$e',");
+    buffer.writeln("        'Failed to deserialize $className',");
     buffer.writeln("        expectedType: '$className',");
     buffer.writeln('      );');
     buffer.writeln('    }');
@@ -496,6 +556,11 @@ $fromJsonWithConfigBody
     final fieldName = field.name;
     final jsonAccess =
         "json[SerializationUtils.applyFieldRename('$fieldName', effectiveConfig.fieldRename)]";
+
+    if (field.revisionConstructor != null) {
+      final parsed = '${field.revisionConstructor}.fromJson($jsonAccess)';
+      return field.isNullable ? '$jsonAccess == null ? null : $parsed' : parsed;
+    }
 
     // Handle nullable types first
     if (field.isNullable) {
@@ -645,8 +710,9 @@ $fromJsonWithConfigBody
     final createdAtKey = _applyFieldRename('createdAt', config.fieldRename);
     final updatedAtKey = _applyFieldRename('updatedAt', config.fieldRename);
 
-    buffer
-        .writeln("        id: UuidValue.fromString(json['$idKey'] as String),");
+    buffer.writeln(
+      "        id: UuidValue.fromString(json['$idKey'] as String),",
+    );
     buffer.writeln(
       "        createdAt: DateTime.parse(json['$createdAtKey'] as String),",
     );
@@ -657,7 +723,7 @@ $fromJsonWithConfigBody
     buffer.writeln('      );');
     buffer.writeln('    } catch (e) {');
     buffer.writeln('      throw DeserializationException(');
-    buffer.writeln("        'Failed to deserialize $className: \$e',");
+    buffer.writeln("        'Failed to deserialize $className',");
     buffer.writeln("        expectedType: '$className',");
     buffer.writeln('      );');
     buffer.writeln('    }');
@@ -725,7 +791,7 @@ $fromJsonWithConfigBody
     buffer.writeln('      );');
     buffer.writeln('    } catch (e) {');
     buffer.writeln('      throw DeserializationException(');
-    buffer.writeln("        'Failed to deserialize $className: \$e',");
+    buffer.writeln("        'Failed to deserialize $className',");
     buffer.writeln("        expectedType: '$className',");
     buffer.writeln('      );');
     buffer.writeln('    }');
@@ -807,6 +873,9 @@ $fromJsonWithConfigBody
   String _generateFieldSerialization(FieldInfo field, [String prefix = '']) {
     final typeName = field.type.getDisplayString(withNullability: false);
     final fieldRef = '$prefix${field.name}';
+    if (field.revisionConstructor != null) {
+      return field.isNullable ? '$fieldRef?.value' : '$fieldRef.value';
+    }
 
     // Handle nullable types first
     if (field.isNullable) {
@@ -1069,8 +1138,9 @@ $fromJsonWithConfigBody
 
     final itemType = typeArgs.first;
     final itemTypeName = itemType.getDisplayString(withNullability: false);
-    final itemTypeNameWithNull =
-        itemType.getDisplayString(withNullability: true);
+    final itemTypeNameWithNull = itemType.getDisplayString(
+      withNullability: true,
+    );
     final isSet = typeName.startsWith('Set<');
     final collectionMethod = isSet ? 'toSet()' : 'toList()';
     final itemIsNullable =
@@ -1131,8 +1201,9 @@ $fromJsonWithConfigBody
     final valueType = typeArgs[1];
     final keyTypeName = keyType.getDisplayString(withNullability: false);
     final valueTypeName = valueType.getDisplayString(withNullability: false);
-    final valueTypeNameWithNull =
-        valueType.getDisplayString(withNullability: true);
+    final valueTypeNameWithNull = valueType.getDisplayString(
+      withNullability: true,
+    );
     final valueIsNullable =
         valueType.nullabilitySuffix == NullabilitySuffix.question;
 
@@ -1198,8 +1269,9 @@ $fromJsonWithConfigBody
 
     final itemType = typeArgs.first;
     final itemTypeName = itemType.getDisplayString(withNullability: false);
-    final itemTypeNameWithNull =
-        itemType.getDisplayString(withNullability: true);
+    final itemTypeNameWithNull = itemType.getDisplayString(
+      withNullability: true,
+    );
     final isSet = typeName.startsWith('Set<');
     final collectionMethod = isSet ? 'toSet()' : 'toList()';
     final itemIsNullable =
@@ -1263,8 +1335,9 @@ $fromJsonWithConfigBody
     final valueType = typeArgs[1];
     final keyTypeName = keyType.getDisplayString(withNullability: false);
     final valueTypeName = valueType.getDisplayString(withNullability: false);
-    final valueTypeNameWithNull =
-        valueType.getDisplayString(withNullability: true);
+    final valueTypeNameWithNull = valueType.getDisplayString(
+      withNullability: true,
+    );
     final valueIsNullable =
         valueType.nullabilitySuffix == NullabilitySuffix.question;
 
@@ -1315,8 +1388,14 @@ $fromJsonWithConfigBody
 
   /// Checks if a type name represents a primitive type.
   bool _isPrimitiveType(String typeName) {
-    return ['String', 'int', 'double', 'bool', 'num', 'dynamic']
-        .contains(typeName);
+    return [
+      'String',
+      'int',
+      'double',
+      'bool',
+      'num',
+      'dynamic',
+    ].contains(typeName);
   }
 
   /// Checks if a type is an enum type.
@@ -1339,7 +1418,7 @@ $fromJsonWithConfigBody
         if (supertype == null) break;
 
         // Check if the supertype is named 'Enum' (from dart:core)
-        final supertypeName = supertype.element.name;
+        final supertypeName = supertype.element.name!;
         if (supertypeName == 'Enum') {
           return true;
         }
@@ -1365,7 +1444,7 @@ $fromJsonWithConfigBody
       final supertype = current.supertype;
       if (supertype == null) break;
 
-      final supertypeName = supertype.element.name;
+      final supertypeName = supertype.element.name!;
       if (['AggregateRoot', 'Entity', 'Value'].contains(supertypeName)) {
         return true;
       }
@@ -1383,10 +1462,12 @@ class ClassAnalysis {
     required this.type,
     required this.className,
     required this.fields,
+    this.requiredConstructorFields = const {},
   });
   final ClassType type;
   final String className;
   final List<FieldInfo> fields;
+  final Set<String> requiredConstructorFields;
 }
 
 /// Represents information about a field.
@@ -1395,16 +1476,13 @@ class FieldInfo {
     required this.name,
     required this.type,
     required this.isNullable,
+    this.revisionConstructor,
   });
   final String name;
   final DartType type;
   final bool isNullable;
+  final String? revisionConstructor;
 }
 
 /// Enumeration of class types for serialization.
-enum ClassType {
-  aggregateRoot,
-  entity,
-  value,
-  invalid,
-}
+enum ClassType { aggregateRoot, entity, value, invalid }

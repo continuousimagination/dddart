@@ -7,7 +7,7 @@ RESTful CRUD API framework for DDDart - Provides REST endpoints for aggregate ro
 ## Features
 
 - **Automatic CRUD endpoints** - Expose aggregate roots through REST APIs with a single configuration
-- **ETag conditional checks** - Detect changed ETags before an update
+- **Atomic conditional writes** - Explicit revision preconditions through ConditionalCrudResource and ConditionalRepository
 - **JWT Authentication** - Built-in support for self-hosted and OAuth/OIDC authentication
 - **Device Flow** - OAuth2 device flow for CLI tools and limited-input devices
 - **JSON media contract** - JSON success bodies, JSON arrays for collections, and RFC 7807 errors
@@ -491,6 +491,10 @@ All error responses use **RFC 7807 Problem Details** format with `Content-Type: 
 
 | Exception | HTTP Status | Title |
 |-----------|-------------|-------|
+| PreconditionRequiredException | 428 | Precondition Required |
+| PreconditionFailedException | 412 | Precondition Failed |
+| RepositoryCapabilityException | 501 | Not Implemented |
+| RevisionCapacityException | 413 | Content Too Large (capacityExceeded) |
 | RepositoryException (notFound) | 404 | Not Found |
 | RepositoryException (duplicate) | 409 | Conflict |
 | RepositoryException (constraint) | 422 | Unprocessable Entity |
@@ -500,150 +504,110 @@ All error responses use **RFC 7807 Problem Details** format with `Content-Type: 
 | Unsupported Content-Type | 415 | Unsupported Media Type |
 | Other exceptions | 500 | Internal Server Error |
 
-## ETag Conditional Update Checks
+## Representation validators and atomic conditional writes
 
-`CrudResource` includes ETags in item responses and can compare an `If-Match`
-header with the currently stored aggregate before a PUT. This can detect a stale
-client when another update has already been persisted and produces a different
-ETag before the comparison.
+Ordinary `CrudResource<T, TClaims>` uses `Repository<T>`. Its GET responses may
+include timestamp/content-hash ETags; these describe a representation and do not
+make a later read/check/write sequence atomic. Ordinary mutation requests with
+`If-*` or `Range` headers return501 before repository work. Unconditional ordinary
+writes remain supported, but cannot provide lost-update protection. A successful
+ordinary PUT has no ETag or Last-Modified response validator.
 
-The comparison and `repository.save()` are separate operations. They are not an
-atomic conditional write, so overlapping requests can both pass validation and
-then overwrite one another. Treat this feature as best-effort stale-update
-detection, not guaranteed optimistic locking.
+For atomic concurrency, use `ConditionalCrudResource<T, TClaims>` with:
 
-### How It Works
+- A model extending `VersionedAggregateRoot`, retaining its inherited identity,
+  timestamps and sole immutable `Revision`.
+- A generated JSON serializer for the complete model.
+- A `ConditionalRepository<T>` implementing compare-and-write atomically.
+  `InMemoryConditionalRepository` is isolate-local; the conditional DynamoDB
+  adapter provides provider-backed atomic writes. A wrapper around ordinary
+  `Repository.save` is insufficient.
 
-1. **GET requests** include an `ETag` header derived from the aggregate
-2. **PUT requests** can include an `If-Match` header with the ETag
-3. The server reads the current aggregate and compares its ETag
-4. If ETag doesn't match, returns `412 Precondition Failed`
-5. If it matches, the server later performs an ordinary repository save
-
-### Basic Usage
+The linked example owns its generated model/codec. Its composition is:
 
 ```dart
-// Configure resource with ETag support (enabled by default)
+final codec = VersionedUserJsonSerializer();
+final repository = InMemoryConditionalRepository<VersionedUser>(
+  copyWithRevision: (value, revision) => codec.fromJson({
+    ...codec.toJson(value),
+    'revision': revision.value,
+  }),
+);
 server.registerResource(
-  CrudResource<User, void>(
+  ConditionalCrudResource<VersionedUser, void>(
     path: '/users',
     repository: repository,
-    serializer: serializer,
-    etagStrategy: ETagStrategy.timestamp,  // Default
+    serializers: {'application/json': codec},
   ),
 );
 ```
 
-### Client Flow
+This loopback example omits authentication deliberately. Production resources
+must supply their trusted authentication and authorization handlers. Both
+ordinary and conditional resources share the same request-local auth, parsing,
+negotiation, serialization and error pipeline.
+
+### Conditional wire contract
+
+| Operation | Required condition | Body and response |
+|---|---|---|
+| GET `/users/{id}` | None | Complete positive revision and strong `ETag: "rN"` |
+| PUT create | Exactly `If-None-Match: *` | Complete body with revision0;201 plus accepted revision1 |
+| PUT update | Exactly `If-Match: "rN"` | Complete body with matching positive revisionN;200 plus accepted revisionN+1 |
+| DELETE | Exactly `If-Match: "rN"` | Empty body;204 after retirement |
+
+Every mutation has an explicit precondition; there is no conditional-resource
+unconditional fallback. Path/body identities and complete canonical metadata
+must agree. Weak/list/duplicate/conflicting tags, unsupported conditions and
+mismatched body revisions fail400; missing conditions fail428; stale conditions
+fail412. No precondition read occurs before the one repository mutation.
+Accepted copies are validated before the success response. Collection POST and
+query are not conditional operations.
+
+A successful PUT transforms revision metadata, so **neither201 nor200 includes
+ETag or Last-Modified**. The accepted JSON body carries its next revision. A412
+response is not a current-state snapshot and carries no current ETag; make a
+separate explicit GET for an observation. Same-content saves also increment the
+revision. Reaching the portable revision capacity fails413 with
+`code: capacityExceeded`. Retirement permanently fences the identity: even a
+later create-only PUT cannot reuse the retired key.
+
+### Stale drafts, uncertainty and deliberate reconciliation
+
+Two drafts read at revision1 both retain revision1. The first accepted update
+commits revision2; the other's unchanged `If-Match: "r1"` fails412. Do not
+silently replace that draft's revision with the newest cached revision or loop
+on retries. Fetch an observation if access remains usable, let the owner decide
+whether and how to reconcile the domain content, and submit a newly chosen
+proposal with that explicit basis.
+
+An unsuccessful remote response is not always proof that nothing committed:
+a browser can internally replay a buffered request, or the accepted response
+can be lost. The unchanged original precondition allows at most one mutation,
+but the final412/401/transport failure may leave attribution uncertain. The
+conditional REST repository preserves such post-dispatch uncertainty and makes
+no write replay or hidden rebase. A matching later GET is an observation, not a
+receipt for the earlier request. Access denial prohibits automatic recovery.
+This is not an idempotency-key or exactly-once-delivery protocol.
+
+### Ordinary validator strategies
+
+`ETagStrategy.timestamp` uses `updatedAt`; `ETagStrategy.contentHash` hashes the
+serialized representation. `ETagGenerator.validate` only compares values. Neither
+strategy can enforce storage concurrency, and neither is used as the revision
+authority of ConditionalCrudResource. `ResponseBuilder` can attach a representation
+validator when appropriate; calling it does not enforce any repository condition.
+
+See [example/etag_concurrency_example.dart](example/etag_concurrency_example.dart)
+for a runnable, self-checking loopback example of create201, missing428, update,
+stale412, explicit reconciliation and retirement. Its codec is generated normally:
 
 ```bash
-# Step 1: Fetch resource (receives ETag)
-curl http://localhost:8080/users/123
-# Response includes: ETag: "2024-01-15T10:30:00.000Z"
-
-# Step 2: Update with If-Match header
-curl -X PUT http://localhost:8080/users/123 \
-  -H "Content-Type: application/json" \
-  -H "If-Match: \"2024-01-15T10:30:00.000Z\"" \
-  -d '{"id":"123","name":"Updated",...}'
-
-# Success: 200 OK with new ETag
-# Different current ETag: 412 Precondition Failed
+cd packages/dddart_rest/example
+dart pub get
+dart run build_runner build --build-filter=lib/versioned_user.g.dart
+dart run etag_concurrency_example.dart
 ```
-
-### ETag Strategies
-
-**Timestamp Strategy** (default):
-- Uses aggregate's `updatedAt` timestamp
-- Fast and efficient
-- Detects changes only when application code advances `updatedAt`
-
-```dart
-etagStrategy: ETagStrategy.timestamp
-```
-
-**Content Hash Strategy**:
-- Uses SHA-256 hash of serialized content
-- More precise - detects serialized-content changes at comparison time
-- Slightly slower due to hashing
-
-Neither strategy makes the subsequent repository save atomic.
-
-```dart
-etagStrategy: ETagStrategy.contentHash
-```
-
-### Handling Conflicts
-
-When a `412 Precondition Failed` response is received:
-
-1. Response includes current ETag in header
-2. Client fetches latest version
-3. Client merges changes
-4. Client retries with new ETag
-
-**Example 412 Response:**
-```json
-{
-  "type": "about:blank",
-  "title": "Precondition Failed",
-  "status": 412,
-  "detail": "The provided ETag does not match the current resource state. Fetch the current representation before retrying."
-}
-```
-
-**Headers:**
-- `ETag: "2024-01-15T11:00:00.000Z"` - ETag derived from the current aggregate
-
-### Backward Compatibility
-
-ETags are **optional** - the `If-Match` header is not required:
-
-- **With If-Match**: Validates ETag, returns 412 on mismatch
-- **Without If-Match**: Updates without validation (backward compatible)
-
-This allows gradual adoption without breaking existing clients.
-
-### Sequential Stale-Update Example
-
-This flow rejects Client B because Client A's save completes before Client B's
-PUT begins. It does not model two overlapping PUT operations.
-
-```dart
-// Client A fetches user
-final responseA = await client.get('/users/123');
-final etagA = responseA.headers['etag'];
-
-// Client B fetches user (same ETag)
-final responseB = await client.get('/users/123');
-final etagB = responseB.headers['etag'];
-
-// Client A's update completes successfully
-await client.put(
-  '/users/123',
-  headers: {'If-Match': etagA},
-  body: updatedDataA,
-);
-
-// Client B's later update is rejected (stale ETag)
-final responseBUpdate = await client.put(
-  '/users/123',
-  headers: {'If-Match': etagB},  // Stale!
-  body: updatedDataB,
-);
-// Returns: 412 Precondition Failed
-
-// Client B fetches latest and retries
-final latestResponse = await client.get('/users/123');
-final latestETag = latestResponse.headers['etag'];
-await client.put(
-  '/users/123',
-  headers: {'If-Match': latestETag},
-  body: mergedData,
-);
-```
-
-See [example/etag_concurrency_example.dart](example/etag_concurrency_example.dart) for a complete working example.
 
 ## Complete Example
 
@@ -707,7 +671,8 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   CrudResource({
     required String path,
     required Repository<T> repository,
-    required JsonSerializer<T> serializer,
+    JsonSerializer<T>? serializer,
+    Map<String, Serializer<T>>? serializers,
     QueryHandler<T>? collectionHandler,
     Map<String, QueryHandler<T>> queryHandlers = const {},
     Map<Type, Response Function(Object)> customExceptionHandlers = const {},
@@ -722,7 +687,9 @@ class CrudResource<T extends AggregateRoot, TClaims> {
 **Parameters:**
 - `path` - Base URL path for the resource (e.g., '/users')
 - `repository` - Repository instance for persistence operations
-- `serializer` - JSON serializer for request and success response bodies
+- `serializer` - Canonical JSON serializer for request and success response bodies
+- `serializers` - Legacy content-type map (first is default); supply exactly one
+  of `serializer` and `serializers`, never both or neither
 - `collectionHandler` - Optional handler for an unfiltered collection GET. It
   owns selection, ordering, pagination, and `totalCount`; without it the request
   returns 400.
@@ -731,12 +698,25 @@ class CrudResource<T extends AggregateRoot, TClaims> {
 - `defaultSkip` - Default skip value for pagination (default: 0)
 - `defaultTake` - Default take value for pagination (default: 50)
 - `maxTake` - Maximum allowed take value (default: 100)
-- `etagStrategy` - Strategy for generating ETags (default: timestamp)
-- `queryHandlers` - Map of query parameter names to handler functions
-- `customExceptionHandlers` - Map of exception types to error response handlers
-- `defaultSkip` - Default skip value for pagination (default: 0)
-- `defaultTake` - Default take value for pagination (default: 50)
-- `maxTake` - Maximum allowed take value (default: 100)
+- `etagStrategy` - Ordinary GET/POST representation validator (default: timestamp); not atomic write protection
+
+The canonical `serializer:` contract validates JSON media headers before
+authentication, preserving its admission order. Legacy `serializers:` resources
+and conditional resources authenticate first. Every contract negotiates a
+success representation before mutation and authorizes protected reads before
+repository or collection-handler access. Authentication results remain local to
+each request; choosing a representation never grants authority.
+
+### ConditionalCrudResource<T, TClaims>
+
+Implements HttpResource for `T extends VersionedAggregateRoot`. Construction
+requires `path`, a `ConditionalRepository<T>` and exactly one application/json
+`JsonSerializer<T>`. Optional typed authentication/authorization handlers use
+the same request pipeline as ordinary CRUD. Item GET, conditional PUT and
+conditional DELETE are supported; collection create/query are unsupported.
+See [the conditional wire contract](#conditional-wire-contract) for required
+headers, complete metadata and outcome handling. HttpServer.registerResource
+accepts the common HttpResource interface for either resource type.
 
 ### QueryHandler<T>
 
@@ -1395,3 +1375,75 @@ See the [dddart_rest_client documentation](../dddart_rest_client/README.md) for 
 ## License
 
 MIT License - see LICENSE file for details
+
+## Socket-independent handlers and Lambda
+
+`HttpServer.buildHandler()` composes the same routing/CORS pipeline used by
+`start()` without binding a socket. The separate `dddart_lambda.dart` entry
+exports `LambdaRuntime`, `LambdaInvocationContext`, `HttpApiV2Adapter`, and
+`HttpApiV2Request` for HTTP API payload version2.0.
+
+`LambdaRuntime` accepts an initialized Shelf handler, a borrowed `http.Client`,
+and a Runtime API origin URI. Alternatively, its `initialize` factory accepts a
+handler initializer and reports a safe `init/error` on failure. `runOnce()` is a
+deterministic protocol seam; `run()` processes invocations until a terminal
+failure throws. The entry point must exit on terminal failure, not restart the
+same runtime. Injected clients stay caller-owned and must not add polling
+timeouts or delivery retries.
+
+The next request deliberately has no timeout. The Runtime API request ID binds
+the response/error URL; the optional invocation-attempt ID is echoed separately.
+An actual invocation deadline reports at most one safe error and terminates,
+because timing out a Dart Future cannot cancel a handler that may still be
+writing. An early application I/O TimeoutException is an ordinary invocation
+failure. Failed/uncertain response or error posting is terminal and never causes
+a second report. Errors do not include raw exception text, payloads or traces.
+Each response/error/init POST has a separate one-second delivery timeout,
+configurable through the positive `deliveryTimeout` constructor/factory
+parameter. A timeout is terminal even if the borrowed transport completes later;
+the runtime never retries delivery or begins another invocation.
+
+An optional synchronous `HttpApiV2Preflight` runs before request decoding in the
+adapter and both runtime construction paths. Return null to continue all normal
+validation and authentication, or a400–599 Shelf Response to reject. Success and
+redirect responses or callback exceptions fail closed with static errors.
+Keep validators pure. Their boundary may emit bounded local rejection telemetry,
+but must perform no network, repository, authentication or protected I/O. Nested
+event data is borrowed read-only; only the top-level map view is unmodifiable.
+Rejections use the ordinary response encoder.
+
+The v2 adapter preserves encoded raw paths, repeated raw queries, cookie arrays,
+binary bytes and typed invocation metadata in Shelf context. Duplicate request
+headers remain gateway-combined strings; application credential policy must
+reject ambiguity where appropriate. Unpaired UTF-16 surrogates are rejected
+before UTF-8 encoding can replace them. Provider domain name determines request
+authority when available. Application-specific API/stage/record/method policy
+belongs in application composition.
+
+## Explicit authorization and safe failures
+
+Authorization handlers must implement `authorizeRead`. Every item read and
+collection query, including unfiltered queries, is authorized when configured.
+An authorization handler without authentication now fails construction; both
+absent remains the public unauthenticated mode. PUT checks body/path identity and
+authorization before mutation. Ordinary CrudResource refuses conditional mutations;
+ConditionalCrudResource passes one explicit condition to atomic storage with no
+precondition read.
+
+Default errors/logs preserve status and operation signals without reflecting raw
+provider errors, submitted identifiers/query values, request bodies or exception
+stack objects. Configure any custom error handler and diagnostic sink with the
+same confidentiality boundary.
+
+### Portable conditional wire grammar
+
+`package:dddart_rest/dddart_rest_protocol.dart` exports `ConditionalHeaders`
+without server/IO dependencies. It encodes positive revisions as strong `"rN"`
+validators and parses only one explicit `If-Match` or create-only
+`If-None-Match: *`. Weak/list/duplicate/conflicting/noncanonical/out-of-range
+validators and unrelated conditional/range fields are rejected. Missing mutation
+preconditions have their own typed error. This parser supplies syntax only;
+authentication, authorization, body agreement and atomic repository mutation
+are implemented by ConditionalCrudResource and its shared server pipeline. The
+portable entry exports only the grammar so browser clients can share it without
+server dependencies.

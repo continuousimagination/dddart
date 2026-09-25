@@ -63,8 +63,10 @@ Future<void> main() async {
 
     for (final user in users) {
       await repository.save(user);
-      print('Created: ${user.name} (${user.email}) - '
-          'Active: ${user.isActive}');
+      print(
+        'Created: ${user.name} (${user.email}) - '
+        'Active: ${user.isActive}',
+      );
     }
 
     // Use custom query: Find active users
@@ -90,12 +92,15 @@ Future<void> main() async {
 
     // Use custom query: Find registered after date
     print('\n--- Custom Query: Find Registered After Date ---');
-    final recentUsers =
-        await repository.findRegisteredAfter(DateTime(2024, 3, 1));
+    final recentUsers = await repository.findRegisteredAfter(
+      DateTime(2024, 3, 1),
+    );
     print('Found ${recentUsers.length} users registered after March 1, 2024:');
     for (final user in recentUsers) {
-      print('  - ${user.name} registered on '
-          '${user.registeredAt.toIso8601String().split('T')[0]}');
+      print(
+        '  - ${user.name} registered on '
+        '${user.registeredAt.toIso8601String().split('T')[0]}',
+      );
     }
 
     // Standard CRUD operations still work

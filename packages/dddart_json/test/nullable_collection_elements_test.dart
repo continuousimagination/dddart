@@ -56,10 +56,7 @@ void main() {
       valueList: const [value, null],
       primitiveMap: const {'present': 'value', 'missing': null},
       dateMap: {'present': timestamp, 'missing': null},
-      enumMap: const {
-        'present': CollectionStatus.pending,
-        'missing': null,
-      },
+      enumMap: const {'present': CollectionStatus.pending, 'missing': null},
       valueMap: const {'present': value, 'missing': null},
     );
 
@@ -74,10 +71,10 @@ void main() {
       null,
     ]);
     expect(json['primitiveMap'], {'present': 'value', 'missing': null});
-    expect(
-      json['dateMap'],
-      {'present': timestamp.toIso8601String(), 'missing': null},
-    );
+    expect(json['dateMap'], {
+      'present': timestamp.toIso8601String(),
+      'missing': null,
+    });
     expect(json['enumMap'], {'present': 'pending', 'missing': null});
     expect(json['valueMap'], {
       'present': {'label': 'present'},

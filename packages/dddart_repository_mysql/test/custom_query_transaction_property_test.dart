@@ -83,7 +83,8 @@ void main() {
               expect(
                 count,
                 equals(products.length),
-                reason: 'Iteration $i: Custom query should see uncommitted '
+                reason:
+                    'Iteration $i: Custom query should see uncommitted '
                     'changes within transaction',
               );
             });
@@ -93,7 +94,8 @@ void main() {
             expect(
               countAfterCommit,
               equals(products.length),
-              reason: 'Iteration $i: Custom query should see committed changes '
+              reason:
+                  'Iteration $i: Custom query should see committed changes '
                   'after transaction',
             );
 
@@ -136,7 +138,8 @@ void main() {
                 expect(
                   countDuringTransaction,
                   equals(products.length),
-                  reason: 'Iteration $i: Custom query should see changes '
+                  reason:
+                      'Iteration $i: Custom query should see changes '
                       'within transaction',
                 );
 
@@ -158,7 +161,8 @@ void main() {
             expect(
               countAfterRollback,
               equals(0),
-              reason: 'Iteration $i: Custom query should see no data after '
+              reason:
+                  'Iteration $i: Custom query should see no data after '
                   'rollback',
             );
 
@@ -217,7 +221,8 @@ void main() {
               expect(
                 highPriceFound.length,
                 equals(highPriceProducts.length),
-                reason: 'Iteration $i: Should find correct number of '
+                reason:
+                    'Iteration $i: Should find correct number of '
                     'high-price products',
               );
 
@@ -243,7 +248,8 @@ void main() {
             expect(
               highPriceFoundAfter.length,
               equals(highPriceProducts.length),
-              reason: 'Iteration $i: Should find correct number of high-price '
+              reason:
+                  'Iteration $i: Should find correct number of high-price '
                   'products after commit',
             );
 
@@ -306,7 +312,8 @@ void main() {
                 expect(
                   countInner,
                   equals(outerProducts.length + innerProducts.length),
-                  reason: 'Iteration $i: Should see all products in inner '
+                  reason:
+                      'Iteration $i: Should see all products in inner '
                       'transaction',
                 );
               });
@@ -316,7 +323,8 @@ void main() {
               expect(
                 countAfterInner,
                 equals(outerProducts.length + innerProducts.length),
-                reason: 'Iteration $i: Should see all products after inner '
+                reason:
+                    'Iteration $i: Should see all products after inner '
                     'transaction',
               );
             });
@@ -336,92 +344,88 @@ void main() {
         tags: ['requires-mysql', 'property-test'],
       );
 
-      test(
-        'should rollback all changes including custom queries on nested '
-        'transaction failure',
-        () async {
-          final random = Random(104);
+      test('should rollback all changes including custom queries on nested '
+          'transaction failure', () async {
+        final random = Random(104);
 
-          for (var i = 0; i < 10; i++) {
-            final repo = CustomProductRepositoryImpl(helper!.connection);
-            await repo.createTables();
+        for (var i = 0; i < 10; i++) {
+          final repo = CustomProductRepositoryImpl(helper!.connection);
+          await repo.createTables();
 
-            final outerProducts = List.generate(
-              random.nextInt(3) + 1,
-              (_) => Product(
-                name: 'Outer${random.nextInt(1000)}',
-                price: random.nextDouble() * 100,
-              ),
-            );
+          final outerProducts = List.generate(
+            random.nextInt(3) + 1,
+            (_) => Product(
+              name: 'Outer${random.nextInt(1000)}',
+              price: random.nextDouble() * 100,
+            ),
+          );
 
-            final innerProducts = List.generate(
-              random.nextInt(3) + 1,
-              (_) => Product(
-                name: 'Inner${random.nextInt(1000)}',
-                price: random.nextDouble() * 100,
-              ),
-            );
+          final innerProducts = List.generate(
+            random.nextInt(3) + 1,
+            (_) => Product(
+              name: 'Inner${random.nextInt(1000)}',
+              price: random.nextDouble() * 100,
+            ),
+          );
 
-            // Execute nested transactions with failure
-            var exceptionThrown = false;
-            try {
+          // Execute nested transactions with failure
+          var exceptionThrown = false;
+          try {
+            await helper!.connection.transaction(() async {
+              // Save outer products
+              for (final product in outerProducts) {
+                await repo.save(product);
+              }
+
+              // Custom query should see outer products
+              final countOuter = await repo.countProducts();
+              expect(
+                countOuter,
+                equals(outerProducts.length),
+                reason: 'Iteration $i: Should see outer products',
+              );
+
+              // Inner transaction that fails
               await helper!.connection.transaction(() async {
-                // Save outer products
-                for (final product in outerProducts) {
+                // Save inner products
+                for (final product in innerProducts) {
                   await repo.save(product);
                 }
 
-                // Custom query should see outer products
-                final countOuter = await repo.countProducts();
+                // Custom query should see all products
+                final countInner = await repo.countProducts();
                 expect(
-                  countOuter,
-                  equals(outerProducts.length),
-                  reason: 'Iteration $i: Should see outer products',
+                  countInner,
+                  equals(outerProducts.length + innerProducts.length),
+                  reason: 'Iteration $i: Should see all products',
                 );
 
-                // Inner transaction that fails
-                await helper!.connection.transaction(() async {
-                  // Save inner products
-                  for (final product in innerProducts) {
-                    await repo.save(product);
-                  }
-
-                  // Custom query should see all products
-                  final countInner = await repo.countProducts();
-                  expect(
-                    countInner,
-                    equals(outerProducts.length + innerProducts.length),
-                    reason: 'Iteration $i: Should see all products',
-                  );
-
-                  // Force failure
-                  throw Exception('Inner transaction failed');
-                });
+                // Force failure
+                throw Exception('Inner transaction failed');
               });
-            } catch (e) {
-              exceptionThrown = true;
-            }
-
-            expect(
-              exceptionThrown,
-              isTrue,
-              reason: 'Iteration $i: Transaction should fail',
-            );
-
-            // After rollback, custom query should see no data
-            final countAfterRollback = await repo.countProducts();
-            expect(
-              countAfterRollback,
-              equals(0),
-              reason: 'Iteration $i: All changes should be rolled back',
-            );
-
-            // Clean up for next iteration
-            await helper!.dropAllTables();
+            });
+          } catch (e) {
+            exceptionThrown = true;
           }
-        },
-        tags: ['requires-mysql', 'property-test'],
-      );
+
+          expect(
+            exceptionThrown,
+            isTrue,
+            reason: 'Iteration $i: Transaction should fail',
+          );
+
+          // After rollback, custom query should see no data
+          final countAfterRollback = await repo.countProducts();
+          expect(
+            countAfterRollback,
+            equals(0),
+            reason: 'Iteration $i: All changes should be rolled back',
+          );
+
+          // Clean up for next iteration
+          await helper!.dropAllTables();
+        }
+      }, tags: ['requires-mysql', 'property-test']);
     });
   });
 }

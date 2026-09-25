@@ -162,9 +162,7 @@ Future<void> _demonstrateBusinessLogicWithSwappableRepo() async {
 /// - UserWithCustomRepoMongoRepository for production
 /// - MockRepository for integration tests
 /// - Future: RestRepository, PostgresRepository, etc.
-Future<void> _runBusinessLogic(
-  Repository<UserWithCustomRepo> userRepo,
-) async {
+Future<void> _runBusinessLogic(Repository<UserWithCustomRepo> userRepo) async {
   // Create user
   final user = UserWithCustomRepo(
     firstName: 'Test',

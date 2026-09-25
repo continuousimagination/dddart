@@ -7,13 +7,7 @@ import 'package:dddart_serialization/dddart_serialization.dart';
 part 'enum_example.g.dart';
 
 /// Example enum for order status
-enum OrderStatus {
-  pending,
-  processing,
-  shipped,
-  delivered,
-  cancelled,
-}
+enum OrderStatus { pending, processing, shipped, delivered, cancelled }
 
 /// Example aggregate with enum field
 @Serializable()

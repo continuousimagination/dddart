@@ -64,10 +64,7 @@ void main() {
           // Generate random string with various characteristics
           final name = _generateRandomString(random);
 
-          final product = SimpleProduct(
-            name: name,
-            price: 10,
-          );
+          final product = SimpleProduct(name: name, price: 10);
 
           // Save
           await repo.save(product);
@@ -100,10 +97,7 @@ void main() {
           // Generate random double with various ranges
           final price = _generateRandomDouble(random);
 
-          final product = SimpleProduct(
-            name: 'Product $i',
-            price: price,
-          );
+          final product = SimpleProduct(name: 'Product $i', price: price);
 
           // Save
           await repo.save(product);
@@ -213,11 +207,7 @@ void main() {
           // Generate product with random UUID
           final id = UuidValue.generate();
 
-          final product = SimpleProduct(
-            name: 'Product $i',
-            price: 10,
-            id: id,
-          );
+          final product = SimpleProduct(name: 'Product $i', price: 10, id: id);
 
           // Save
           await repo.save(product);
@@ -302,54 +292,48 @@ void main() {
       },
     );
 
-    test(
-      'should handle edge case values correctly',
-      () async {
-        final repo = SimpleProductMysqlRepository(helper!.connection);
-        await repo.createTables();
+    test('should handle edge case values correctly', () async {
+      final repo = SimpleProductMysqlRepository(helper!.connection);
+      await repo.createTables();
 
-        // Test edge cases
-        final edgeCases = [
-          ('Empty string', '', 0.0),
-          ('Very long string', 'a' * 255, 0.0), // Max VARCHAR(255) length
-          ('String with special chars', 'Test\n\t\r"\'\\', 0.0),
-          ('Zero price', 'Product', 0.0),
-          ('Very large price', 'Product', 999999999.99),
-          ('Very small price', 'Product', 0.01),
-          ('Negative price', 'Product', -100.0),
-        ];
+      // Test edge cases
+      final edgeCases = [
+        ('Empty string', '', 0.0),
+        ('Very long string', 'a' * 255, 0.0), // Max VARCHAR(255) length
+        ('String with special chars', 'Test\n\t\r"\'\\', 0.0),
+        ('Zero price', 'Product', 0.0),
+        ('Very large price', 'Product', 999999999.99),
+        ('Very small price', 'Product', 0.01),
+        ('Negative price', 'Product', -100.0),
+      ];
 
-        for (var i = 0; i < edgeCases.length; i++) {
-          final (description, name, price) = edgeCases[i];
+      for (var i = 0; i < edgeCases.length; i++) {
+        final (description, name, price) = edgeCases[i];
 
-          final product = SimpleProduct(
-            name: name,
-            price: price,
-          );
+        final product = SimpleProduct(name: name, price: price);
 
-          // Save
-          await repo.save(product);
+        // Save
+        await repo.save(product);
 
-          // Retrieve
-          final retrieved = await repo.getById(product.id);
+        // Retrieve
+        final retrieved = await repo.getById(product.id);
 
-          // Verify edge case is handled
-          expect(
-            retrieved.name,
-            equals(name),
-            reason: '$description: name should be preserved',
-          );
-          expect(
-            retrieved.price,
-            closeTo(price, 0.0001),
-            reason: '$description: price should be preserved',
-          );
+        // Verify edge case is handled
+        expect(
+          retrieved.name,
+          equals(name),
+          reason: '$description: name should be preserved',
+        );
+        expect(
+          retrieved.price,
+          closeTo(price, 0.0001),
+          reason: '$description: price should be preserved',
+        );
 
-          // Clean up
-          await repo.deleteById(product.id);
-        }
-      },
-    );
+        // Clean up
+        await repo.deleteById(product.id);
+      }
+    });
   });
 }
 

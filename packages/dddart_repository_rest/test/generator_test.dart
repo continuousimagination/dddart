@@ -33,10 +33,11 @@ import 'package:dddart_repository_rest/dddart_repository_rest.dart';
 void myFunction() {}
 ''',
         (resolver) async => (await resolver.findLibraryByName('test'))!,
+        readAllSourcesFromFilesystem: true,
       );
 
-      final function = library.topLevelElements
-          .whereType<FunctionElement>()
+      final function = library.children
+          .whereType<TopLevelFunctionElement>()
           .firstWhere((e) => e.name == 'myFunction');
 
       // Act & Assert: Expect InvalidGenerationSourceError
@@ -73,13 +74,14 @@ class NotAnAggregate {
 }
 ''',
         (resolver) async => (await resolver.findLibraryByName('test'))!,
+        readAllSourcesFromFilesystem: true,
       );
 
-      final classElement = library.topLevelElements
+      final classElement = library.children
           .whereType<ClassElement>()
           .firstWhere((e) => e.name == 'NotAnAggregate');
 
-      final annotation = classElement.metadata.firstWhere(
+      final annotation = classElement.metadata.annotations.firstWhere(
         (a) =>
             a.computeConstantValue()?.type?.element?.name ==
             'GenerateRestRepository',
@@ -118,13 +120,14 @@ class User extends AggregateRoot {
 }
 ''',
         (resolver) async => (await resolver.findLibraryByName('test'))!,
+        readAllSourcesFromFilesystem: true,
       );
 
-      final classElement = library.topLevelElements
+      final classElement = library.children
           .whereType<ClassElement>()
           .firstWhere((e) => e.name == 'User');
 
-      final annotation = classElement.metadata.firstWhere(
+      final annotation = classElement.metadata.annotations.firstWhere(
         (a) =>
             a.computeConstantValue()?.type?.element?.name ==
             'GenerateRestRepository',
@@ -165,13 +168,14 @@ class User extends AggregateRoot {
 }
 ''',
         (resolver) async => (await resolver.findLibraryByName('test'))!,
+        readAllSourcesFromFilesystem: true,
       );
 
-      final classElement = library.topLevelElements
+      final classElement = library.children
           .whereType<ClassElement>()
           .firstWhere((e) => e.name == 'User');
 
-      final annotation = classElement.metadata.firstWhere(
+      final annotation = classElement.metadata.annotations.firstWhere(
         (a) =>
             a.computeConstantValue()?.type?.element?.name ==
             'GenerateRestRepository',
@@ -193,24 +197,19 @@ class User extends AggregateRoot {
       expect(output, contains("String get _resourcePath => '/users'"));
       expect(output, contains('final _serializer = UserJsonSerializer()'));
       expect(output, contains('RepositoryException _mapHttpException'));
-      expect(
-        output,
-        contains("headers: {'Accept': 'application/json'}"),
-      );
-      expect(
-        output,
-        contains("'Content-Type': 'application/json'"),
-      );
+      expect(output, contains("headers: {'Accept': 'application/json'}"));
+      expect(output, contains("'Content-Type': 'application/json'"));
       expect(
         RegExp(r"headers: \{'Accept': 'application/json'\}").allMatches(output),
         hasLength(2),
       );
     });
 
-    test('custom methods preserve Dart parameter and type parameter forms',
-        () async {
-      final library = await resolveSource(
-        '''
+    test(
+      'custom methods preserve Dart parameter and type parameter forms',
+      () async {
+        final library = await resolveSource(
+          '''
 library test;
 
 import 'package:dddart/dddart.dart';
@@ -235,36 +234,38 @@ class User extends AggregateRoot {
   final String name;
 }
 ''',
-        (resolver) async => (await resolver.findLibraryByName('test'))!,
-      );
+          (resolver) async => (await resolver.findLibraryByName('test'))!,
+          readAllSourcesFromFilesystem: true,
+        );
 
-      final classElement = library.topLevelElements
-          .whereType<ClassElement>()
-          .firstWhere((element) => element.name == 'User');
-      final annotation = classElement.metadata.firstWhere(
-        (metadata) =>
-            metadata.computeConstantValue()?.type?.element?.name ==
-            'GenerateRestRepository',
-      );
+        final classElement = library.children
+            .whereType<ClassElement>()
+            .firstWhere((element) => element.name == 'User');
+        final annotation = classElement.metadata.annotations.firstWhere(
+          (metadata) =>
+              metadata.computeConstantValue()?.type?.element?.name ==
+              'GenerateRestRepository',
+        );
 
-      final output = generator.generateForAnnotatedElement(
-        classElement,
-        ConstantReader(annotation.computeConstantValue()),
-        _mockBuildStep(),
-      );
+        final output = generator.generateForAnnotatedElement(
+          classElement,
+          ConstantReader(annotation.computeConstantValue()),
+          _mockBuildStep(),
+        );
 
-      expect(
-        output,
-        contains(
-          'Future<R> transform<R extends Object>(R value, '
-          "{required bool enabled, String label = 'default'});",
-        ),
-      );
-      expect(
-        output,
-        contains('Future<List<User>> page(int offset, [int limit = 20]);'),
-      );
-    });
+        expect(
+          output,
+          contains(
+            'Future<R> transform<R extends Object>(R value, '
+            '{required bool enabled, String label = "default"});',
+          ),
+        );
+        expect(
+          output,
+          contains('Future<List<User>> page(int offset, [int limit = 20]);'),
+        );
+      },
+    );
   });
 }
 

@@ -21,7 +21,6 @@ void main() {
       testServer = await createTestServer<TestUser>(
         path: '/users',
         serializer: TestUserJsonSerializer(),
-        port: 8780,
       );
 
       // Create REST connection pointing to test server
@@ -38,27 +37,29 @@ void main() {
     });
 
     // **Feature: rest-repository, Property 5: CRUD operations round-trip correctly**
-    test('Property 5: save then getById returns equivalent aggregate',
-        () async {
-      // Run property test with 100 iterations
-      for (var i = 0; i < 100; i++) {
-        // Generate random user
-        final user = generateRandomTestUser();
+    test(
+      'Property 5: save then getById returns equivalent aggregate',
+      () async {
+        // Run property test with 100 iterations
+        for (var i = 0; i < 100; i++) {
+          // Generate random user
+          final user = generateRandomTestUser();
 
-        // Save the user
-        await userRepository.save(user);
+          // Save the user
+          await userRepository.save(user);
 
-        // Retrieve the user
-        final retrieved = await userRepository.getById(user.id);
+          // Retrieve the user
+          final retrieved = await userRepository.getById(user.id);
 
-        // Verify equivalence
-        expect(retrieved.id, equals(user.id));
-        expect(retrieved.name, equals(user.name));
-        expect(retrieved.email, equals(user.email));
-        expect(retrieved.createdAt, equals(user.createdAt));
-        expect(retrieved.updatedAt, equals(user.updatedAt));
-      }
-    });
+          // Verify equivalence
+          expect(retrieved.id, equals(user.id));
+          expect(retrieved.name, equals(user.name));
+          expect(retrieved.email, equals(user.email));
+          expect(retrieved.createdAt, equals(user.createdAt));
+          expect(retrieved.updatedAt, equals(user.updatedAt));
+        }
+      },
+    );
 
     // **Feature: rest-repository, Property 6: Delete removes aggregates**
     test('Property 6: deleteById then getById throws notFound', () async {

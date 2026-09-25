@@ -106,12 +106,7 @@ Request createRequest({
   String? body,
 }) {
   final uri = Uri.parse('http://localhost:8080$path');
-  return Request(
-    method,
-    uri,
-    headers: headers,
-    body: body,
-  );
+  return Request(method, uri, headers: headers, body: body);
 }
 
 Future<QueryResult<TestUser>> pagedCollectionHandler(
@@ -157,29 +152,33 @@ void main() {
   });
 
   group('CrudResource - handleGetById', () {
-    test('successful retrieval returns 200 with serialized aggregate',
-        () async {
-      // Arrange
-      await repository.save(testUser);
-      final request = createRequest(
-        path: '/users/${testUser.id}',
-        headers: {'accept': 'application/json'},
-      );
+    test(
+      'successful retrieval returns 200 with serialized aggregate',
+      () async {
+        // Arrange
+        await repository.save(testUser);
+        final request = createRequest(
+          path: '/users/${testUser.id}',
+          headers: {'accept': 'application/json'},
+        );
 
-      // Act
-      final response =
-          await resource.handleGetById(request, testUser.id.toString());
+        // Act
+        final response = await resource.handleGetById(
+          request,
+          testUser.id.toString(),
+        );
 
-      // Assert
-      expect(response.statusCode, equals(200));
-      expect(response.headers['Content-Type'], equals('application/json'));
+        // Assert
+        expect(response.statusCode, equals(200));
+        expect(response.headers['Content-Type'], equals('application/json'));
 
-      final bodyString = await response.readAsString();
-      final body = jsonDecode(bodyString);
-      expect(body['id'], equals(testUser.id.toString()));
-      expect(body['name'], equals('John Doe'));
-      expect(body['email'], equals('john@example.com'));
-    });
+        final bodyString = await response.readAsString();
+        final body = jsonDecode(bodyString);
+        expect(body['id'], equals(testUser.id.toString()));
+        expect(body['name'], equals('John Doe'));
+        expect(body['email'], equals('john@example.com'));
+      },
+    );
 
     test('ID parsing with valid UUID', () async {
       // Arrange
@@ -216,8 +215,10 @@ void main() {
       );
 
       // Act
-      final response =
-          await resource.handleGetById(request, testUser.id.toString());
+      final response = await resource.handleGetById(
+        request,
+        testUser.id.toString(),
+      );
 
       // Assert
       expect(response.headers['Content-Type'], equals('application/json'));
@@ -253,15 +254,15 @@ void main() {
         serializer: serializer,
         customExceptionHandlers: {
           CustomDomainException: (e) => Response(
-                418,
-                headers: {'Content-Type': 'application/problem+json'},
-                body: jsonEncode({
-                  'type': 'about:blank',
-                  'title': 'Custom Error',
-                  'status': 418,
-                  'detail': (e as CustomDomainException).message,
-                }),
-              ),
+            418,
+            headers: {'Content-Type': 'application/problem+json'},
+            body: jsonEncode({
+              'type': 'about:blank',
+              'title': 'Custom Error',
+              'status': 418,
+              'detail': (e as CustomDomainException).message,
+            }),
+          ),
         },
       );
 
@@ -269,8 +270,10 @@ void main() {
       final request = createRequest(path: '/users/invalid-id');
 
       // Act
-      final response =
-          await customResource.handleGetById(request, 'invalid-id');
+      final response = await customResource.handleGetById(
+        request,
+        'invalid-id',
+      );
 
       // Assert - should get error response
       expect(response.statusCode, greaterThanOrEqualTo(400));
@@ -296,45 +299,47 @@ void main() {
       );
     });
 
-    test('collection handler controls selection, pagination, and total count',
-        () async {
-      final selectedUser = TestUser(
-        name: 'Selected by handler',
-        email: 'selected@example.com',
-      );
-      Repository<TestUser>? receivedRepository;
-      Map<String, String>? receivedParams;
-      int? receivedSkip;
-      int? receivedTake;
+    test(
+      'collection handler controls selection, pagination, and total count',
+      () async {
+        final selectedUser = TestUser(
+          name: 'Selected by handler',
+          email: 'selected@example.com',
+        );
+        Repository<TestUser>? receivedRepository;
+        Map<String, String>? receivedParams;
+        int? receivedSkip;
+        int? receivedTake;
 
-      final resourceWithHandler = CrudResource<TestUser, dynamic>(
-        path: '/users',
-        repository: repository,
-        serializer: serializer,
-        maxTake: 7,
-        collectionHandler: (repo, params, skip, take, authResult) async {
-          receivedRepository = repo;
-          receivedParams = params;
-          receivedSkip = skip;
-          receivedTake = take;
-          return QueryResult([selectedUser], totalCount: 42);
-        },
-      );
+        final resourceWithHandler = CrudResource<TestUser, dynamic>(
+          path: '/users',
+          repository: repository,
+          serializer: serializer,
+          maxTake: 7,
+          collectionHandler: (repo, params, skip, take, authResult) async {
+            receivedRepository = repo;
+            receivedParams = params;
+            receivedSkip = skip;
+            receivedTake = take;
+            return QueryResult([selectedUser], totalCount: 42);
+          },
+        );
 
-      final response = await resourceWithHandler.handleQuery(
-        createRequest(path: '/users?skip=-5&take=200'),
-      );
+        final response = await resourceWithHandler.handleQuery(
+          createRequest(path: '/users?skip=-5&take=200'),
+        );
 
-      expect(response.statusCode, equals(200));
-      expect(receivedRepository, same(repository));
-      expect(receivedParams, isEmpty);
-      expect(receivedSkip, equals(0));
-      expect(receivedTake, equals(7));
-      expect(response.headers['X-Total-Count'], equals('42'));
-      final body = jsonDecode(await response.readAsString()) as List;
-      expect(body, hasLength(1));
-      expect(body.single['name'], equals('Selected by handler'));
-    });
+        expect(response.statusCode, equals(200));
+        expect(receivedRepository, same(repository));
+        expect(receivedParams, isEmpty);
+        expect(receivedSkip, equals(0));
+        expect(receivedTake, equals(7));
+        expect(response.headers['X-Total-Count'], equals('42'));
+        final body = jsonDecode(await response.readAsString()) as List;
+        expect(body, hasLength(1));
+        expect(body.single['name'], equals('Selected by handler'));
+      },
+    );
 
     test('returns handler-selected items with pagination', () async {
       // Arrange - create multiple users
@@ -401,13 +406,7 @@ void main() {
         collectionHandler: (repo, params, skip, take, authResult) {
           receivedSkip = skip;
           receivedTake = take;
-          return pagedCollectionHandler(
-            repo,
-            params,
-            skip,
-            take,
-            authResult,
-          );
+          return pagedCollectionHandler(repo, params, skip, take, authResult);
         },
       );
 
@@ -458,9 +457,7 @@ void main() {
         collectionHandler: pagedCollectionHandler,
       );
 
-      final request = createRequest(
-        headers: {'accept': 'application/json'},
-      );
+      final request = createRequest(headers: {'accept': 'application/json'});
 
       // Act
       final response = await resourceWithHandler.handleQuery(request);
@@ -613,8 +610,9 @@ void main() {
   group('CrudResource - handleQuery with multiple filters', () {
     test('returns 400 error when multiple filter params provided', () async {
       // Arrange
-      final request =
-          createRequest(path: '/users?name=John&email=john@example.com');
+      final request = createRequest(
+        path: '/users?name=John&email=john@example.com',
+      );
 
       // Act
       final response = await resource.handleQuery(request);
@@ -653,8 +651,9 @@ void main() {
 
     test('error message follows RFC 7807 format', () async {
       // Arrange
-      final request =
-          createRequest(path: '/users?name=John&email=john@example.com');
+      final request = createRequest(
+        path: '/users?name=John&email=john@example.com',
+      );
 
       // Act
       final response = await resource.handleQuery(request);
@@ -880,8 +879,10 @@ void main() {
       );
 
       // Act
-      final response =
-          await resource.handleUpdate(request, testUser.id.toString());
+      final response = await resource.handleUpdate(
+        request,
+        testUser.id.toString(),
+      );
 
       // Assert
       expect(response.statusCode, equals(200));
@@ -914,8 +915,10 @@ void main() {
       );
 
       // Act
-      final response =
-          await resource.handleUpdate(request, testUser.id.toString());
+      final response = await resource.handleUpdate(
+        request,
+        testUser.id.toString(),
+      );
 
       // Assert
       expect(response.statusCode, equals(200));
@@ -945,8 +948,10 @@ void main() {
       );
 
       // Act
-      final response =
-          await resource.handleUpdate(request, testUser.id.toString());
+      final response = await resource.handleUpdate(
+        request,
+        testUser.id.toString(),
+      );
 
       // Assert
       expect(response.headers['Content-Type'], equals('application/json'));
@@ -962,8 +967,10 @@ void main() {
       );
 
       // Act
-      final response =
-          await resource.handleUpdate(request, testUser.id.toString());
+      final response = await resource.handleUpdate(
+        request,
+        testUser.id.toString(),
+      );
 
       // Assert
       expect(response.statusCode, equals(415));
@@ -999,8 +1006,10 @@ void main() {
       );
 
       // Act
-      final response =
-          await resource.handleUpdate(request, testUser.id.toString());
+      final response = await resource.handleUpdate(
+        request,
+        testUser.id.toString(),
+      );
 
       // Assert
       expect(response.statusCode, equals(200));
@@ -1049,8 +1058,10 @@ void main() {
       );
 
       // Act
-      final response =
-          await resource.handleUpdate(request, testUser.id.toString());
+      final response = await resource.handleUpdate(
+        request,
+        testUser.id.toString(),
+      );
 
       // Assert - should get error response
       expect(response.statusCode, greaterThanOrEqualTo(400));
@@ -1067,8 +1078,10 @@ void main() {
       );
 
       // Act
-      final response =
-          await resource.handleDelete(request, testUser.id.toString());
+      final response = await resource.handleDelete(
+        request,
+        testUser.id.toString(),
+      );
 
       // Assert
       expect(response.statusCode, equals(204));
@@ -1081,10 +1094,7 @@ void main() {
       // Arrange
       await repository.save(testUser);
       final validId = testUser.id.toString();
-      final request = createRequest(
-        method: 'DELETE',
-        path: '/users/$validId',
-      );
+      final request = createRequest(method: 'DELETE', path: '/users/$validId');
 
       // Act
       final response = await resource.handleDelete(request, validId);
@@ -1159,9 +1169,7 @@ void main() {
 
       final jsonRequest = createRequest(
         path: '/users/${testUser.id}',
-        headers: {
-          'accept': 'application/yaml;q=1.0, application/json;q=0.5',
-        },
+        headers: {'accept': 'application/yaml;q=1.0, application/json;q=0.5'},
       );
       final jsonResponse = await resource.handleGetById(
         jsonRequest,
@@ -1179,8 +1187,10 @@ void main() {
       );
 
       // Act
-      final response =
-          await resource.handleGetById(request, testUser.id.toString());
+      final response = await resource.handleGetById(
+        request,
+        testUser.id.toString(),
+      );
 
       // Assert - wildcard selects JSON.
       expect(response.statusCode, equals(200));
@@ -1193,8 +1203,10 @@ void main() {
       final request = createRequest(path: '/users/${testUser.id}');
 
       // Act
-      final response =
-          await resource.handleGetById(request, testUser.id.toString());
+      final response = await resource.handleGetById(
+        request,
+        testUser.id.toString(),
+      );
 
       // Assert - a missing header selects JSON.
       expect(response.statusCode, equals(200));
@@ -1210,8 +1222,10 @@ void main() {
       );
 
       // Act
-      final response =
-          await resource.handleGetById(request, testUser.id.toString());
+      final response = await resource.handleGetById(
+        request,
+        testUser.id.toString(),
+      );
 
       // Assert
       expect(response.statusCode, equals(406));
@@ -1223,7 +1237,8 @@ void main() {
       final bodyString = await response.readAsString();
       final body = jsonDecode(bodyString);
       expect(body['title'], equals('Not Acceptable'));
-      expect(body['detail'], contains('application/xml'));
+      expect(body['detail'], 'Invalid request data');
+      expect(body['detail'], isNot(contains('application/xml')));
     });
   });
 
@@ -1366,9 +1381,7 @@ void main() {
         path: '/users',
         repository: repository,
         serializer: serializer,
-        customExceptionHandlers: {
-          CustomDomainException: (e) => Response(418),
-        },
+        customExceptionHandlers: {CustomDomainException: (e) => Response(418)},
       );
 
       // Trigger RepositoryException (not in custom handlers)
@@ -1376,8 +1389,10 @@ void main() {
       final request = createRequest(path: '/users/$nonExistentId');
 
       // Act
-      final response =
-          await customResource.handleGetById(request, nonExistentId);
+      final response = await customResource.handleGetById(
+        request,
+        nonExistentId,
+      );
 
       // Assert - should use ErrorMapper default handling
       expect(response.statusCode, equals(404));
@@ -1419,8 +1434,10 @@ void main() {
       final request = createRequest(path: '/users/$nonExistentId');
 
       // Act
-      final response =
-          await customResource.handleGetById(request, nonExistentId);
+      final response = await customResource.handleGetById(
+        request,
+        nonExistentId,
+      );
 
       // Assert
       expect(response.statusCode, equals(404));

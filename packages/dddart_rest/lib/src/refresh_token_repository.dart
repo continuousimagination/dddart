@@ -18,7 +18,8 @@ abstract interface class RefreshTokenRepository<T extends RefreshToken>
 /// This implementation is intended for examples and tests. It inherits the
 /// concrete inspection conveniences provided by [InMemoryRepository].
 final class InMemoryRefreshTokenRepository<T extends RefreshToken>
-    extends InMemoryRepository<T> implements RefreshTokenRepository<T> {
+    extends InMemoryRepository<T>
+    implements RefreshTokenRepository<T> {
   @override
   Future<T?> findByToken(String token) {
     for (final refreshToken in getAllSync()) {

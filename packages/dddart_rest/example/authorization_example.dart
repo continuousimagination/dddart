@@ -46,21 +46,39 @@ class UserClaims {
   final bool isAdmin;
 
   Map<String, dynamic> toJson() => {
-        'userId': userId,
-        'username': username,
-        'isAdmin': isAdmin,
-      };
+    'userId': userId,
+    'username': username,
+    'isAdmin': isAdmin,
+  };
 
   factory UserClaims.fromJson(Map<String, dynamic> json) => UserClaims(
-        userId: json['userId'] as String,
-        username: json['username'] as String,
-        isAdmin: json['isAdmin'] as bool? ?? false,
-      );
+    userId: json['userId'] as String,
+    username: json['username'] as String,
+    isAdmin: json['isAdmin'] as bool? ?? false,
+  );
 }
 
 // Authorization handler - enforces ownership rules
 class DocumentAuthorizationHandler
     extends AuthorizationHandler<Document, UserClaims> {
+  DocumentAuthorizationHandler(this.repository);
+  final Repository<Document> repository;
+
+  @override
+  Future<AuthorizationResult> authorizeRead(
+    UuidValue id,
+    AuthenticationResult<UserClaims> authResult,
+  ) async {
+    final claims = authResult.claims;
+    if (claims == null) {
+      return AuthorizationResult.deny('Authentication claims required');
+    }
+    final document = await repository.getById(id);
+    return claims.isAdmin || document.ownerId == claims.userId
+        ? AuthorizationResult.allow()
+        : AuthorizationResult.deny('Document access denied');
+  }
+
   @override
   Future<AuthorizationResult> authorizeCreate(
     Document aggregate,
@@ -101,20 +119,7 @@ class DocumentAuthorizationHandler
     UuidValue aggregateId,
     AuthenticationResult<UserClaims> authResult,
   ) async {
-    // For delete, we need to fetch the document to check ownership
-    // In production, consider passing the aggregate or using a cache
-    final isAdmin = authResult.claims!.isAdmin;
-
-    // Admins can delete any document
-    if (isAdmin) {
-      return AuthorizationResult.allow();
-    }
-
-    // Note: In a real implementation, you'd fetch the document here
-    // to check ownership. For this example, we'll allow it and let
-    // the repository handle the not-found case.
-    // A better approach is to pass the document to this method.
-    return AuthorizationResult.allow();
+    return authorizeRead(aggregateId, authResult);
   }
 
   @override
@@ -122,21 +127,12 @@ class DocumentAuthorizationHandler
     Map<String, String> queryParams,
     AuthenticationResult<UserClaims> authResult,
   ) async {
-    // Users can only query their own documents (unless admin)
-    final userId = authResult.claims!.userId;
-    final isAdmin = authResult.claims!.isAdmin;
-
-    if (queryParams.containsKey('ownerId')) {
-      final queriedOwnerId = queryParams['ownerId'];
-
-      if (queriedOwnerId != userId && !isAdmin) {
-        return AuthorizationResult.deny(
-          'You can only query your own documents',
-        );
-      }
+    final claims = authResult.claims;
+    if (claims != null &&
+        (claims.isAdmin || queryParams['ownerId'] == claims.userId)) {
+      return AuthorizationResult.allow();
     }
-
-    return AuthorizationResult.allow();
+    return AuthorizationResult.deny('Query access denied');
   }
 }
 
@@ -189,10 +185,7 @@ void main() async {
       userId: 'user-alice-id',
       username: 'alice',
     ),
-    'user-bob-id': const UserClaims(
-      userId: 'user-bob-id',
-      username: 'bob',
-    ),
+    'user-bob-id': const UserClaims(userId: 'user-bob-id', username: 'bob'),
     'user-admin-id': const UserClaims(
       userId: 'user-admin-id',
       username: 'admin',
@@ -215,7 +208,7 @@ void main() async {
   );
 
   // Create authorization handler
-  final authzHandler = DocumentAuthorizationHandler();
+  final authzHandler = DocumentAuthorizationHandler(documentRepo);
 
   // Create auth endpoints
   final authEndpoints = AuthEndpoints(
@@ -301,32 +294,44 @@ void main() async {
   print('curl http://localhost:8080/documents?ownerId=user-bob-id \\');
   print('  -H "Authorization: Bearer <alice_token>"');
   print('\n# 4. Update Alice\'s document (should succeed)');
-  print('curl -X PUT http://localhost:8080/documents/'
-      '00000000-0000-0000-0000-000000000001 \\');
+  print(
+    'curl -X PUT http://localhost:8080/documents/'
+    '00000000-0000-0000-0000-000000000001 \\',
+  );
   print('  -H "Authorization: Bearer <alice_token>" \\');
   print('  -H "Content-Type: application/json" \\');
-  print('  -d \'{"id":"00000000-0000-0000-0000-000000000001",'
-      '"title":"Updated","content":"New content",'
-      '"ownerId":"user-alice-id"}\'');
+  print(
+    '  -d \'{"id":"00000000-0000-0000-0000-000000000001",'
+    '"title":"Updated","content":"New content",'
+    '"ownerId":"user-alice-id"}\'',
+  );
   print('\n# 5. Try to update Bob\'s document as Alice (should fail with 403)');
-  print('curl -X PUT http://localhost:8080/documents/'
-      '00000000-0000-0000-0000-000000000003 \\');
+  print(
+    'curl -X PUT http://localhost:8080/documents/'
+    '00000000-0000-0000-0000-000000000003 \\',
+  );
   print('  -H "Authorization: Bearer <alice_token>" \\');
   print('  -H "Content-Type: application/json" \\');
-  print('  -d \'{"id":"00000000-0000-0000-0000-000000000003",'
-      '"title":"Hacked","content":"Malicious",'
-      '"ownerId":"user-bob-id"}\'');
+  print(
+    '  -d \'{"id":"00000000-0000-0000-0000-000000000003",'
+    '"title":"Hacked","content":"Malicious",'
+    '"ownerId":"user-bob-id"}\'',
+  );
   print('\n# 6. Login as admin and update any document (should succeed)');
   print('curl -X POST http://localhost:8080/auth/login \\');
   print('  -H "Content-Type: application/json" \\');
   print('  -d \'{"username":"admin","password":"admin123"}\'');
-  print('\ncurl -X PUT http://localhost:8080/documents/'
-      '00000000-0000-0000-0000-000000000003 \\');
+  print(
+    '\ncurl -X PUT http://localhost:8080/documents/'
+    '00000000-0000-0000-0000-000000000003 \\',
+  );
   print('  -H "Authorization: Bearer <admin_token>" \\');
   print('  -H "Content-Type: application/json" \\');
-  print('  -d \'{"id":"00000000-0000-0000-0000-000000000003",'
-      '"title":"Admin Update","content":"Fixed",'
-      '"ownerId":"user-bob-id"}\'');
+  print(
+    '  -d \'{"id":"00000000-0000-0000-0000-000000000003",'
+    '"title":"Admin Update","content":"Fixed",'
+    '"ownerId":"user-bob-id"}\'',
+  );
   print('\nPress Ctrl+C to stop the server');
 }
 

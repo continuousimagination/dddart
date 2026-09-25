@@ -139,10 +139,12 @@ void main() {
           );
 
           // Verify events with null userId are included
-          final eventsWithNullUserId =
-              events.where((e) => e.userId == null).length;
-          final returnedWithNullUserId =
-              returnedEvents.where((json) => json['userId'] == null).length;
+          final eventsWithNullUserId = events
+              .where((e) => e.userId == null)
+              .length;
+          final returnedWithNullUserId = returnedEvents
+              .where((json) => json['userId'] == null)
+              .length;
           expect(
             returnedWithNullUserId,
             equals(eventsWithNullUserId),
@@ -150,10 +152,12 @@ void main() {
           );
 
           // Verify events with null tenantId are included
-          final eventsWithNullTenantId =
-              events.where((e) => e.tenantId == null).length;
-          final returnedWithNullTenantId =
-              returnedEvents.where((json) => json['tenantId'] == null).length;
+          final eventsWithNullTenantId = events
+              .where((e) => e.tenantId == null)
+              .length;
+          final returnedWithNullTenantId = returnedEvents
+              .where((json) => json['tenantId'] == null)
+              .length;
           expect(
             returnedWithNullTenantId,
             equals(eventsWithNullTenantId),
@@ -222,8 +226,9 @@ void main() {
           );
 
           // Verify sensitive events are included
-          final sensitiveCount =
-              events.where((e) => e.eventType == 'SensitiveEvent').length;
+          final sensitiveCount = events
+              .where((e) => e.eventType == 'SensitiveEvent')
+              .length;
           final returnedSensitiveCount = returnedEvents
               .where((json) => json['eventType'] == 'SensitiveEvent')
               .length;

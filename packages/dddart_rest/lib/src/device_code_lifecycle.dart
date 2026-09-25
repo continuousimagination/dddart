@@ -18,11 +18,7 @@ abstract interface class DeviceCodeLifecycle<T extends DeviceCode> {
   });
 
   /// Creates an approved copy of [current] while preserving its concrete type.
-  T approve(
-    T current, {
-    required String userId,
-    required DateTime approvedAt,
-  });
+  T approve(T current, {required String userId, required DateTime approvedAt});
 
   /// Creates a consumed copy of [current] while preserving its concrete type.
   T consume(T current, {required DateTime consumedAt});
@@ -74,10 +70,7 @@ final class StandardDeviceCodeLifecycle
   }
 
   @override
-  DeviceCode consume(
-    DeviceCode current, {
-    required DateTime consumedAt,
-  }) {
+  DeviceCode consume(DeviceCode current, {required DateTime consumedAt}) {
     return DeviceCode(
       id: current.id,
       deviceCode: current.deviceCode,

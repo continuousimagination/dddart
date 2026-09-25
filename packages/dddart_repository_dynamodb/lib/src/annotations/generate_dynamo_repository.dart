@@ -222,6 +222,10 @@ class GenerateDynamoRepository {
   const GenerateDynamoRepository({
     this.tableName,
     this.implements,
+    this.aggregateType,
+    this.serializerType,
+    this.generatedBaseName,
+    this.conditionalWrites = false,
   });
 
   /// The DynamoDB table name for this aggregate type.
@@ -250,4 +254,17 @@ class GenerateDynamoRepository {
   /// is declared as a `part` of the aggregate library. Subclassing from another
   /// library does not provide access.
   final Type? implements;
+
+  /// Optional external aggregate type, leaving the binding in its adapter.
+  final Type? aggregateType;
+
+  /// Public, concrete JsonSerializer for [aggregateType], constructible without arguments.
+  final Type? serializerType;
+
+  /// Public class-name stem used before DynamoRepository (or its Base suffix).
+  final String? generatedBaseName;
+
+  /// Generates explicit atomic conditional CRUD for a VersionedAggregateRoot.
+  /// False rejects versioned roots; no unconditional adapter is synthesized.
+  final bool conditionalWrites;
 }

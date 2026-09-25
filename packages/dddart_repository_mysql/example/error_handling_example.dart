@@ -84,9 +84,7 @@ Future<void> _demonstrateConnectionError() async {
 
   // Try to connect to a non-existent MySQL instance
   final unavailablePort = mysqlExamplePort + 10000;
-  final connection = createMysqlExampleConnection(
-    port: unavailablePort,
-  );
+  final connection = createMysqlExampleConnection(port: unavailablePort);
 
   print(
     '   Attempting to connect to $mysqlExampleHost:$unavailablePort '

@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:dddart/dddart.dart';
-import 'package:dddart_rest_client/dddart_rest_client.dart';
+import 'package:dddart_rest_client/dddart_rest_client_core.dart';
 import 'package:http/http.dart' as http;
 
 /// Manages HTTP client and authentication for REST API communication.
@@ -77,14 +77,14 @@ class RestConnection {
     required this.baseUrl,
     required this.authProvider,
     required http.Client httpClient,
-  })  : _httpClient = httpClient,
-        _client = authProvider != null
-            ? RestClient(
-                baseUrl: baseUrl,
-                authProvider: authProvider,
-                httpClient: httpClient,
-              )
-            : null;
+  }) : _httpClient = httpClient,
+       _client = authProvider != null
+           ? RestClient(
+               baseUrl: baseUrl,
+               authProvider: authProvider,
+               httpClient: httpClient,
+             )
+           : null;
 
   /// The base URL of the REST API.
   ///
@@ -128,17 +128,15 @@ class RestConnection {
   }) async {
     try {
       return await request();
-    } on TimeoutException catch (error) {
+    } on TimeoutException {
       throw RepositoryException(
-        'REST $operation timed out: $error',
+        'REST $operation timed out',
         type: RepositoryExceptionType.timeout,
-        cause: error,
       );
-    } catch (error) {
+    } catch (_) {
       throw RepositoryException(
-        'REST $operation failed: $error',
+        'REST $operation failed',
         type: RepositoryExceptionType.connection,
-        cause: error,
       );
     }
   }

@@ -4,10 +4,7 @@
 /// why authorization was denied.
 class AuthorizationResult {
   /// Creates an authorization result
-  const AuthorizationResult({
-    required this.isAuthorized,
-    this.errorMessage,
-  });
+  const AuthorizationResult({required this.isAuthorized, this.errorMessage});
 
   /// Creates a successful authorization result
   factory AuthorizationResult.allow() {
@@ -16,10 +13,7 @@ class AuthorizationResult {
 
   /// Creates a failed authorization result with error message
   factory AuthorizationResult.deny(String errorMessage) {
-    return AuthorizationResult(
-      isAuthorized: false,
-      errorMessage: errorMessage,
-    );
+    return AuthorizationResult(isAuthorized: false, errorMessage: errorMessage);
   }
 
   /// Whether authorization succeeded

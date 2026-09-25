@@ -41,13 +41,14 @@ class Order extends AggregateRoot {
 }
 ''',
           (resolver) async => (await resolver.findLibraryByName('test'))!,
+          readAllSourcesFromFilesystem: true,
         );
 
-        final classElement = library.topLevelElements
+        final classElement = library.children
             .whereType<ClassElement>()
             .firstWhere((e) => e.name == 'Order');
 
-        final annotation = classElement.metadata.firstWhere(
+        final annotation = classElement.metadata.annotations.firstWhere(
           (a) =>
               a.computeConstantValue()?.type?.element?.name ==
               'GenerateMysqlRepository',
@@ -83,13 +84,14 @@ class Product extends AggregateRoot {
 }
 ''',
           (resolver) async => (await resolver.findLibraryByName('test'))!,
+          readAllSourcesFromFilesystem: true,
         );
 
-        final classElement = library.topLevelElements
+        final classElement = library.children
             .whereType<ClassElement>()
             .firstWhere((e) => e.name == 'Product');
 
-        final annotation = classElement.metadata.firstWhere(
+        final annotation = classElement.metadata.annotations.firstWhere(
           (a) =>
               a.computeConstantValue()?.type?.element?.name ==
               'GenerateMysqlRepository',
@@ -135,13 +137,14 @@ class Container extends AggregateRoot {
 }
 ''',
           (resolver) async => (await resolver.findLibraryByName('test'))!,
+          readAllSourcesFromFilesystem: true,
         );
 
-        final classElement = library.topLevelElements
+        final classElement = library.children
             .whereType<ClassElement>()
             .firstWhere((e) => e.name == 'Container');
 
-        final annotation = classElement.metadata.firstWhere(
+        final annotation = classElement.metadata.annotations.firstWhere(
           (a) =>
               a.computeConstantValue()?.type?.element?.name ==
               'GenerateMysqlRepository',
@@ -169,10 +172,11 @@ class Container extends AggregateRoot {
         expect(generated, contains('_mapMysqlException'));
       });
 
-      test('should have same method structure as SQLite repositories',
-          () async {
-        final library = await resolveSource(
-          '''
+      test(
+        'should have same method structure as SQLite repositories',
+        () async {
+          final library = await resolveSource(
+            '''
 library test;
 
 import 'package:dddart/dddart.dart';
@@ -186,44 +190,47 @@ class SimpleEntity extends AggregateRoot {
   final String value;
 }
 ''',
-          (resolver) async => (await resolver.findLibraryByName('test'))!,
-        );
+            (resolver) async => (await resolver.findLibraryByName('test'))!,
+            readAllSourcesFromFilesystem: true,
+          );
 
-        final classElement = library.topLevelElements
-            .whereType<ClassElement>()
-            .firstWhere((e) => e.name == 'SimpleEntity');
+          final classElement = library.children
+              .whereType<ClassElement>()
+              .firstWhere((e) => e.name == 'SimpleEntity');
 
-        final annotation = classElement.metadata.firstWhere(
-          (a) =>
-              a.computeConstantValue()?.type?.element?.name ==
-              'GenerateMysqlRepository',
-        );
+          final annotation = classElement.metadata.annotations.firstWhere(
+            (a) =>
+                a.computeConstantValue()?.type?.element?.name ==
+                'GenerateMysqlRepository',
+          );
 
-        final generated = generator.generateForAnnotatedElement(
-          classElement,
-          ConstantReader(annotation.computeConstantValue()),
-          _mockBuildStep(),
-        );
+          final generated = generator.generateForAnnotatedElement(
+            classElement,
+            ConstantReader(annotation.computeConstantValue()),
+            _mockBuildStep(),
+          );
 
-        // Verify method structure
-        expect(generated, contains('Future<void> createTables()'));
-        expect(generated, contains('Future<SimpleEntity> getById'));
-        expect(generated, contains('Future<void> save(SimpleEntity'));
-        expect(generated, contains('Future<void> deleteById'));
+          // Verify method structure
+          expect(generated, contains('Future<void> createTables()'));
+          expect(generated, contains('Future<SimpleEntity> getById'));
+          expect(generated, contains('Future<void> save(SimpleEntity'));
+          expect(generated, contains('Future<void> deleteById'));
 
-        // Verify transaction usage
-        expect(generated, contains('_connection.transaction'));
+          // Verify transaction usage
+          expect(generated, contains('_connection.transaction'));
 
-        // Verify error handling
-        expect(generated, contains('on RepositoryException'));
-        expect(generated, contains('catch (e)'));
-        expect(generated, contains('_mapMysqlException'));
-      });
+          // Verify error handling
+          expect(generated, contains('on RepositoryException'));
+          expect(generated, contains('catch (e)'));
+          expect(generated, contains('_mapMysqlException'));
+        },
+      );
 
-      test('should generate abstract base class for custom interfaces',
-          () async {
-        final library = await resolveSource(
-          '''
+      test(
+        'should generate abstract base class for custom interfaces',
+        () async {
+          final library = await resolveSource(
+            '''
 library test;
 
 import 'package:dddart/dddart.dart';
@@ -241,40 +248,45 @@ class Order extends AggregateRoot {
   final String customerId;
 }
 ''',
-          (resolver) async => (await resolver.findLibraryByName('test'))!,
-        );
+            (resolver) async => (await resolver.findLibraryByName('test'))!,
+            readAllSourcesFromFilesystem: true,
+          );
 
-        final classElement = library.topLevelElements
-            .whereType<ClassElement>()
-            .firstWhere((e) => e.name == 'Order');
+          final classElement = library.children
+              .whereType<ClassElement>()
+              .firstWhere((e) => e.name == 'Order');
 
-        final annotation = classElement.metadata.firstWhere(
-          (a) =>
-              a.computeConstantValue()?.type?.element?.name ==
-              'GenerateMysqlRepository',
-        );
+          final annotation = classElement.metadata.annotations.firstWhere(
+            (a) =>
+                a.computeConstantValue()?.type?.element?.name ==
+                'GenerateMysqlRepository',
+          );
 
-        final generated = generator.generateForAnnotatedElement(
-          classElement,
-          ConstantReader(annotation.computeConstantValue()),
-          _mockBuildStep(),
-        );
+          final generated = generator.generateForAnnotatedElement(
+            classElement,
+            ConstantReader(annotation.computeConstantValue()),
+            _mockBuildStep(),
+          );
 
-        // Verify abstract base class generation
-        expect(generated, contains('abstract class OrderMysqlRepositoryBase'));
-        expect(generated, contains('implements CustomOrderRepository'));
+          // Verify abstract base class generation
+          expect(
+            generated,
+            contains('abstract class OrderMysqlRepositoryBase'),
+          );
+          expect(generated, contains('implements CustomOrderRepository'));
 
-        // Verify protected members for subclass access
-        expect(generated, contains('final MysqlConnection _connection'));
-        expect(generated, contains('final _dialect = MysqlDialect()'));
-        expect(generated, contains('final _serializer'));
+          // Verify protected members for subclass access
+          expect(generated, contains('final MysqlConnection _connection'));
+          expect(generated, contains('final _dialect = MysqlDialect()'));
+          expect(generated, contains('final _serializer'));
 
-        // Verify abstract method declaration
-        expect(
-          generated,
-          contains('Future<List<Order>> findByCustomer(String customerId)'),
-        );
-      });
+          // Verify abstract method declaration
+          expect(
+            generated,
+            contains('Future<List<Order>> findByCustomer(String customerId)'),
+          );
+        },
+      );
 
       test('should use MySQL-specific dialect and connection', () async {
         final library = await resolveSource(
@@ -293,13 +305,14 @@ class TestAggregate extends AggregateRoot {
 }
 ''',
           (resolver) async => (await resolver.findLibraryByName('test'))!,
+          readAllSourcesFromFilesystem: true,
         );
 
-        final classElement = library.topLevelElements
+        final classElement = library.children
             .whereType<ClassElement>()
             .firstWhere((e) => e.name == 'TestAggregate');
 
-        final annotation = classElement.metadata.firstWhere(
+        final annotation = classElement.metadata.annotations.firstWhere(
           (a) =>
               a.computeConstantValue()?.type?.element?.name ==
               'GenerateMysqlRepository',
@@ -342,13 +355,14 @@ class Entity1 extends AggregateRoot {
 }
 ''',
           (resolver) async => (await resolver.findLibraryByName('test'))!,
+          readAllSourcesFromFilesystem: true,
         );
 
-        final classElement = library.topLevelElements
+        final classElement = library.children
             .whereType<ClassElement>()
             .firstWhere((e) => e.name == 'Entity1');
 
-        final annotation = classElement.metadata.firstWhere(
+        final annotation = classElement.metadata.annotations.firstWhere(
           (a) =>
               a.computeConstantValue()?.type?.element?.name ==
               'GenerateMysqlRepository',
@@ -386,6 +400,6 @@ BuildStep _mockBuildStep() {
 class _StubBuildStep implements BuildStep {
   @override
   dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
-        'BuildStep method called in test - this should not happen',
-      );
+    'BuildStep method called in test - this should not happen',
+  );
 }

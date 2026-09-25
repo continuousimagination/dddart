@@ -30,8 +30,6 @@ class OrderItem extends Entity {
   final Money unitPrice;
 
   /// Calculates the total price for this line item.
-  Money get totalPrice => Money(
-        amount: unitPrice.amount * quantity,
-        currency: unitPrice.currency,
-      );
+  Money get totalPrice =>
+      Money(amount: unitPrice.amount * quantity, currency: unitPrice.currency);
 }

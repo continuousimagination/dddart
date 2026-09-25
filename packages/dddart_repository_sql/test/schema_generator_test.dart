@@ -61,8 +61,8 @@ class MockSqlDialect implements SqlDialect {
       final action = fk.onDelete == CascadeAction.cascade
           ? 'CASCADE'
           : fk.onDelete == CascadeAction.setNull
-              ? 'SET NULL'
-              : 'RESTRICT';
+          ? 'SET NULL'
+          : 'RESTRICT';
       columnDefs.add(
         '  FOREIGN KEY (${fk.columnName}) '
         'REFERENCES ${fk.referencedTable}(${fk.referencedColumn}) '
@@ -84,10 +84,7 @@ class MockSqlDialect implements SqlDialect {
   }
 
   @override
-  String selectWithJoins(
-    TableDefinition rootTable,
-    List<JoinClause> joins,
-  ) {
+  String selectWithJoins(TableDefinition rootTable, List<JoinClause> joins) {
     final buffer = StringBuffer();
     buffer.write('SELECT * FROM ${rootTable.tableName}');
     for (final join in joins) {
@@ -398,18 +395,15 @@ void main() {
     });
 
     group('generateEntityCollectionTable', () {
-      test(
-        'should generate table for Set<Entity> without position column',
-        () {
-          // Note: This test verifies the structure without using actual
-          // ClassElement objects. Full integration tests with real entities
-          // are in the repository-specific packages.
+      test('should generate table for Set<Entity> without position column', () {
+        // Note: This test verifies the structure without using actual
+        // ClassElement objects. Full integration tests with real entities
+        // are in the repository-specific packages.
 
-          // The method signature and basic structure are tested here.
-          // Actual usage with ClassElement requires analyzer infrastructure
-          // that is better tested in integration tests.
-        },
-      );
+        // The method signature and basic structure are tested here.
+        // Actual usage with ClassElement requires analyzer infrastructure
+        // that is better tested in integration tests.
+      });
 
       test(
         'should generate table for Map<primitive, Entity> with map_key column',

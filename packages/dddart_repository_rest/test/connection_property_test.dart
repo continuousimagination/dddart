@@ -21,7 +21,6 @@ void main() {
       testServer = await createTestServer<TestUser>(
         path: '/users',
         serializer: TestUserJsonSerializer(),
-        port: 8781,
       );
 
       // Create REST connection pointing to test server
@@ -70,7 +69,6 @@ void main() {
             serializer: TestProductJsonSerializer(),
           ),
         },
-        port: 8782,
       );
 
       final sharedConnection = RestConnection(baseUrl: multiServer.baseUrl);

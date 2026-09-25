@@ -41,14 +41,16 @@ class TestAggregate extends AggregateRoot {
 }
 ''',
             (resolver) async => (await resolver.findLibraryByName('test'))!,
+            readAllSourcesFromFilesystem: true,
           );
 
-          final classElement = library.topLevelElements
+          final classElement = library.children
               .whereType<ClassElement>()
               .firstWhere((e) => e.name == 'TestAggregate');
 
-          final field = classElement.fields
-              .firstWhere((f) => f.name == 'favoriteNumbers');
+          final field = classElement.fields.firstWhere(
+            (f) => f.name == 'favoriteNumbers',
+          );
 
           const analyzer = CollectionAnalyzer();
           final collectionInfo = analyzer.analyzeCollection(field);
@@ -70,21 +72,24 @@ class TestAggregate extends AggregateRoot {
           );
 
           // Verify columns
-          final columnNames =
-              tableDefinition.columns.map((c) => c.name).toList();
+          final columnNames = tableDefinition.columns
+              .map((c) => c.name)
+              .toList();
           expect(columnNames, contains('test_aggregate_id'));
           expect(columnNames, contains('position'));
           expect(columnNames, contains('value'));
 
           // Verify position column is INTEGER
-          final positionColumn =
-              tableDefinition.columns.firstWhere((c) => c.name == 'position');
+          final positionColumn = tableDefinition.columns.firstWhere(
+            (c) => c.name == 'position',
+          );
           expect(positionColumn.sqlType, equals('INTEGER'));
           expect(positionColumn.isNullable, isFalse);
 
           // Verify value column is INTEGER (for int)
-          final valueColumn =
-              tableDefinition.columns.firstWhere((c) => c.name == 'value');
+          final valueColumn = tableDefinition.columns.firstWhere(
+            (c) => c.name == 'value',
+          );
           expect(valueColumn.sqlType, equals('INTEGER'));
           expect(valueColumn.isNullable, isFalse);
 
@@ -115,9 +120,10 @@ class TestAggregate extends AggregateRoot {
 }
 ''',
             (resolver) async => (await resolver.findLibraryByName('test'))!,
+            readAllSourcesFromFilesystem: true,
           );
 
-          final classElement = library.topLevelElements
+          final classElement = library.children
               .whereType<ClassElement>()
               .firstWhere((e) => e.name == 'TestAggregate');
 
@@ -135,8 +141,9 @@ class TestAggregate extends AggregateRoot {
           );
 
           // Verify value column is TEXT (for String)
-          final valueColumn =
-              tableDefinition.columns.firstWhere((c) => c.name == 'value');
+          final valueColumn = tableDefinition.columns.firstWhere(
+            (c) => c.name == 'value',
+          );
           expect(valueColumn.sqlType, equals('TEXT'));
           expect(valueColumn.dartType, equals('String'));
         },
@@ -159,14 +166,16 @@ class TestAggregate extends AggregateRoot {
 }
 ''',
             (resolver) async => (await resolver.findLibraryByName('test'))!,
+            readAllSourcesFromFilesystem: true,
           );
 
-          final classElement = library.topLevelElements
+          final classElement = library.children
               .whereType<ClassElement>()
               .firstWhere((e) => e.name == 'TestAggregate');
 
-          final field =
-              classElement.fields.firstWhere((f) => f.name == 'measurements');
+          final field = classElement.fields.firstWhere(
+            (f) => f.name == 'measurements',
+          );
 
           const analyzer = CollectionAnalyzer();
           final collectionInfo = analyzer.analyzeCollection(field);
@@ -180,8 +189,9 @@ class TestAggregate extends AggregateRoot {
           );
 
           // Verify value column is REAL (for double)
-          final valueColumn =
-              tableDefinition.columns.firstWhere((c) => c.name == 'value');
+          final valueColumn = tableDefinition.columns.firstWhere(
+            (c) => c.name == 'value',
+          );
           expect(valueColumn.sqlType, equals('REAL'));
           expect(valueColumn.dartType, equals('double'));
         },
@@ -204,14 +214,16 @@ class TestAggregate extends AggregateRoot {
 }
 ''',
             (resolver) async => (await resolver.findLibraryByName('test'))!,
+            readAllSourcesFromFilesystem: true,
           );
 
-          final classElement = library.topLevelElements
+          final classElement = library.children
               .whereType<ClassElement>()
               .firstWhere((e) => e.name == 'TestAggregate');
 
-          final field =
-              classElement.fields.firstWhere((f) => f.name == 'flags');
+          final field = classElement.fields.firstWhere(
+            (f) => f.name == 'flags',
+          );
 
           const analyzer = CollectionAnalyzer();
           final collectionInfo = analyzer.analyzeCollection(field);
@@ -225,8 +237,9 @@ class TestAggregate extends AggregateRoot {
           );
 
           // Verify value column is INTEGER (for bool)
-          final valueColumn =
-              tableDefinition.columns.firstWhere((c) => c.name == 'value');
+          final valueColumn = tableDefinition.columns.firstWhere(
+            (c) => c.name == 'value',
+          );
           expect(valueColumn.sqlType, equals('INTEGER'));
           expect(valueColumn.dartType, equals('bool'));
         },
@@ -249,14 +262,16 @@ class TestAggregate extends AggregateRoot {
 }
 ''',
             (resolver) async => (await resolver.findLibraryByName('test'))!,
+            readAllSourcesFromFilesystem: true,
           );
 
-          final classElement = library.topLevelElements
+          final classElement = library.children
               .whereType<ClassElement>()
               .firstWhere((e) => e.name == 'TestAggregate');
 
-          final field =
-              classElement.fields.firstWhere((f) => f.name == 'timestamps');
+          final field = classElement.fields.firstWhere(
+            (f) => f.name == 'timestamps',
+          );
 
           const analyzer = CollectionAnalyzer();
           final collectionInfo = analyzer.analyzeCollection(field);
@@ -270,8 +285,9 @@ class TestAggregate extends AggregateRoot {
           );
 
           // Verify value column is INTEGER (for DateTime)
-          final valueColumn =
-              tableDefinition.columns.firstWhere((c) => c.name == 'value');
+          final valueColumn = tableDefinition.columns.firstWhere(
+            (c) => c.name == 'value',
+          );
           expect(valueColumn.sqlType, equals('INTEGER'));
           expect(valueColumn.dartType, equals('DateTime'));
         },
@@ -294,14 +310,16 @@ class TestAggregate extends AggregateRoot {
 }
 ''',
             (resolver) async => (await resolver.findLibraryByName('test'))!,
+            readAllSourcesFromFilesystem: true,
           );
 
-          final classElement = library.topLevelElements
+          final classElement = library.children
               .whereType<ClassElement>()
               .firstWhere((e) => e.name == 'TestAggregate');
 
-          final field =
-              classElement.fields.firstWhere((f) => f.name == 'relatedIds');
+          final field = classElement.fields.firstWhere(
+            (f) => f.name == 'relatedIds',
+          );
 
           const analyzer = CollectionAnalyzer();
           final collectionInfo = analyzer.analyzeCollection(field);
@@ -315,8 +333,9 @@ class TestAggregate extends AggregateRoot {
           );
 
           // Verify value column is BLOB (for UuidValue)
-          final valueColumn =
-              tableDefinition.columns.firstWhere((c) => c.name == 'value');
+          final valueColumn = tableDefinition.columns.firstWhere(
+            (c) => c.name == 'value',
+          );
           expect(valueColumn.sqlType, equals('BLOB'));
           expect(valueColumn.dartType, equals('UuidValue'));
         },
@@ -343,14 +362,16 @@ class TestAggregate extends AggregateRoot {
 }
 ''',
             (resolver) async => (await resolver.findLibraryByName('test'))!,
+            readAllSourcesFromFilesystem: true,
           );
 
-          final classElement = library.topLevelElements
+          final classElement = library.children
               .whereType<ClassElement>()
               .firstWhere((e) => e.name == 'TestAggregate');
 
-          final field =
-              classElement.fields.firstWhere((f) => f.name == 'uniqueNumbers');
+          final field = classElement.fields.firstWhere(
+            (f) => f.name == 'uniqueNumbers',
+          );
 
           const analyzer = CollectionAnalyzer();
           final collectionInfo = analyzer.analyzeCollection(field);
@@ -372,16 +393,18 @@ class TestAggregate extends AggregateRoot {
           );
 
           // Verify columns
-          final columnNames =
-              tableDefinition.columns.map((c) => c.name).toList();
+          final columnNames = tableDefinition.columns
+              .map((c) => c.name)
+              .toList();
           expect(columnNames, contains('test_aggregate_id'));
           expect(columnNames, contains('value'));
           // Should NOT have position column for sets
           expect(columnNames, isNot(contains('position')));
 
           // Verify value column is INTEGER (for int)
-          final valueColumn =
-              tableDefinition.columns.firstWhere((c) => c.name == 'value');
+          final valueColumn = tableDefinition.columns.firstWhere(
+            (c) => c.name == 'value',
+          );
           expect(valueColumn.sqlType, equals('INTEGER'));
           expect(valueColumn.isNullable, isFalse);
 
@@ -411,14 +434,16 @@ class TestAggregate extends AggregateRoot {
 }
 ''',
             (resolver) async => (await resolver.findLibraryByName('test'))!,
+            readAllSourcesFromFilesystem: true,
           );
 
-          final classElement = library.topLevelElements
+          final classElement = library.children
               .whereType<ClassElement>()
               .firstWhere((e) => e.name == 'TestAggregate');
 
-          final field =
-              classElement.fields.firstWhere((f) => f.name == 'categories');
+          final field = classElement.fields.firstWhere(
+            (f) => f.name == 'categories',
+          );
 
           const analyzer = CollectionAnalyzer();
           final collectionInfo = analyzer.analyzeCollection(field);
@@ -432,13 +457,15 @@ class TestAggregate extends AggregateRoot {
           );
 
           // Verify no position column
-          final columnNames =
-              tableDefinition.columns.map((c) => c.name).toList();
+          final columnNames = tableDefinition.columns
+              .map((c) => c.name)
+              .toList();
           expect(columnNames, isNot(contains('position')));
 
           // Verify value column is TEXT (for String)
-          final valueColumn =
-              tableDefinition.columns.firstWhere((c) => c.name == 'value');
+          final valueColumn = tableDefinition.columns.firstWhere(
+            (c) => c.name == 'value',
+          );
           expect(valueColumn.sqlType, equals('TEXT'));
         },
       );
@@ -460,14 +487,16 @@ class TestAggregate extends AggregateRoot {
 }
 ''',
             (resolver) async => (await resolver.findLibraryByName('test'))!,
+            readAllSourcesFromFilesystem: true,
           );
 
-          final classElement = library.topLevelElements
+          final classElement = library.children
               .whereType<ClassElement>()
               .firstWhere((e) => e.name == 'TestAggregate');
 
-          final field =
-              classElement.fields.firstWhere((f) => f.name == 'uniqueScores');
+          final field = classElement.fields.firstWhere(
+            (f) => f.name == 'uniqueScores',
+          );
 
           const analyzer = CollectionAnalyzer();
           final collectionInfo = analyzer.analyzeCollection(field);
@@ -481,8 +510,9 @@ class TestAggregate extends AggregateRoot {
           );
 
           // Verify value column is REAL (for double)
-          final valueColumn =
-              tableDefinition.columns.firstWhere((c) => c.name == 'value');
+          final valueColumn = tableDefinition.columns.firstWhere(
+            (c) => c.name == 'value',
+          );
           expect(valueColumn.sqlType, equals('REAL'));
         },
       );
@@ -508,14 +538,16 @@ class TestAggregate extends AggregateRoot {
 }
 ''',
             (resolver) async => (await resolver.findLibraryByName('test'))!,
+            readAllSourcesFromFilesystem: true,
           );
 
-          final classElement = library.topLevelElements
+          final classElement = library.children
               .whereType<ClassElement>()
               .firstWhere((e) => e.name == 'TestAggregate');
 
-          final field =
-              classElement.fields.firstWhere((f) => f.name == 'scoresByGame');
+          final field = classElement.fields.firstWhere(
+            (f) => f.name == 'scoresByGame',
+          );
 
           const analyzer = CollectionAnalyzer();
           final collectionInfo = analyzer.analyzeCollection(field);
@@ -537,8 +569,9 @@ class TestAggregate extends AggregateRoot {
           );
 
           // Verify columns
-          final columnNames =
-              tableDefinition.columns.map((c) => c.name).toList();
+          final columnNames = tableDefinition.columns
+              .map((c) => c.name)
+              .toList();
           expect(columnNames, contains('test_aggregate_id'));
           expect(columnNames, contains('map_key'));
           expect(columnNames, contains('value'));
@@ -546,15 +579,17 @@ class TestAggregate extends AggregateRoot {
           expect(columnNames, isNot(contains('position')));
 
           // Verify map_key column is TEXT (for String key)
-          final keyColumn =
-              tableDefinition.columns.firstWhere((c) => c.name == 'map_key');
+          final keyColumn = tableDefinition.columns.firstWhere(
+            (c) => c.name == 'map_key',
+          );
           expect(keyColumn.sqlType, equals('TEXT'));
           expect(keyColumn.dartType, equals('String'));
           expect(keyColumn.isNullable, isFalse);
 
           // Verify value column is INTEGER (for int value)
-          final valueColumn =
-              tableDefinition.columns.firstWhere((c) => c.name == 'value');
+          final valueColumn = tableDefinition.columns.firstWhere(
+            (c) => c.name == 'value',
+          );
           expect(valueColumn.sqlType, equals('INTEGER'));
           expect(valueColumn.dartType, equals('int'));
           expect(valueColumn.isNullable, isFalse);
@@ -585,14 +620,16 @@ class TestAggregate extends AggregateRoot {
 }
 ''',
             (resolver) async => (await resolver.findLibraryByName('test'))!,
+            readAllSourcesFromFilesystem: true,
           );
 
-          final classElement = library.topLevelElements
+          final classElement = library.children
               .whereType<ClassElement>()
               .firstWhere((e) => e.name == 'TestAggregate');
 
-          final field =
-              classElement.fields.firstWhere((f) => f.name == 'namesByCode');
+          final field = classElement.fields.firstWhere(
+            (f) => f.name == 'namesByCode',
+          );
 
           const analyzer = CollectionAnalyzer();
           final collectionInfo = analyzer.analyzeCollection(field);
@@ -606,14 +643,16 @@ class TestAggregate extends AggregateRoot {
           );
 
           // Verify map_key column is INTEGER (for int key)
-          final keyColumn =
-              tableDefinition.columns.firstWhere((c) => c.name == 'map_key');
+          final keyColumn = tableDefinition.columns.firstWhere(
+            (c) => c.name == 'map_key',
+          );
           expect(keyColumn.sqlType, equals('INTEGER'));
           expect(keyColumn.dartType, equals('int'));
 
           // Verify value column is TEXT (for String value)
-          final valueColumn =
-              tableDefinition.columns.firstWhere((c) => c.name == 'value');
+          final valueColumn = tableDefinition.columns.firstWhere(
+            (c) => c.name == 'value',
+          );
           expect(valueColumn.sqlType, equals('TEXT'));
           expect(valueColumn.dartType, equals('String'));
         },
@@ -636,14 +675,16 @@ class TestAggregate extends AggregateRoot {
 }
 ''',
             (resolver) async => (await resolver.findLibraryByName('test'))!,
+            readAllSourcesFromFilesystem: true,
           );
 
-          final classElement = library.topLevelElements
+          final classElement = library.children
               .whereType<ClassElement>()
               .firstWhere((e) => e.name == 'TestAggregate');
 
-          final field =
-              classElement.fields.firstWhere((f) => f.name == 'ratesByCountry');
+          final field = classElement.fields.firstWhere(
+            (f) => f.name == 'ratesByCountry',
+          );
 
           const analyzer = CollectionAnalyzer();
           final collectionInfo = analyzer.analyzeCollection(field);
@@ -657,13 +698,15 @@ class TestAggregate extends AggregateRoot {
           );
 
           // Verify map_key column is TEXT (for String key)
-          final keyColumn =
-              tableDefinition.columns.firstWhere((c) => c.name == 'map_key');
+          final keyColumn = tableDefinition.columns.firstWhere(
+            (c) => c.name == 'map_key',
+          );
           expect(keyColumn.sqlType, equals('TEXT'));
 
           // Verify value column is REAL (for double value)
-          final valueColumn =
-              tableDefinition.columns.firstWhere((c) => c.name == 'value');
+          final valueColumn = tableDefinition.columns.firstWhere(
+            (c) => c.name == 'value',
+          );
           expect(valueColumn.sqlType, equals('REAL'));
           expect(valueColumn.dartType, equals('double'));
         },
@@ -686,14 +729,16 @@ class TestAggregate extends AggregateRoot {
 }
 ''',
             (resolver) async => (await resolver.findLibraryByName('test'))!,
+            readAllSourcesFromFilesystem: true,
           );
 
-          final classElement = library.topLevelElements
+          final classElement = library.children
               .whereType<ClassElement>()
               .firstWhere((e) => e.name == 'TestAggregate');
 
-          final field =
-              classElement.fields.firstWhere((f) => f.name == 'flagsById');
+          final field = classElement.fields.firstWhere(
+            (f) => f.name == 'flagsById',
+          );
 
           const analyzer = CollectionAnalyzer();
           final collectionInfo = analyzer.analyzeCollection(field);
@@ -707,8 +752,9 @@ class TestAggregate extends AggregateRoot {
           );
 
           // Verify value column is INTEGER (for bool value)
-          final valueColumn =
-              tableDefinition.columns.firstWhere((c) => c.name == 'value');
+          final valueColumn = tableDefinition.columns.firstWhere(
+            (c) => c.name == 'value',
+          );
           expect(valueColumn.sqlType, equals('INTEGER'));
           expect(valueColumn.dartType, equals('bool'));
         },

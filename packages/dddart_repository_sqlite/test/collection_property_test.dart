@@ -974,8 +974,9 @@ TestValueCollections _generateRandomValueCollections(Random random) {
 
   final pricesByProduct = <String, Money>{};
   for (var i = 0; i < random.nextInt(5) + 1; i++) {
-    pricesByProduct['product${random.nextInt(100)}'] =
-        _generateRandomMoney(random);
+    pricesByProduct['product${random.nextInt(100)}'] = _generateRandomMoney(
+      random,
+    );
   }
 
   return TestValueCollections(

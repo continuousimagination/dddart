@@ -2,12 +2,13 @@ name: _dddart_workspace
 publish_to: none
 
 environment:
-  sdk: '>=3.5.0 <4.0.0'
+  sdk: ^3.9.0
 
 workspace:
   - packages/dddart
   - packages/dddart_serialization
   - packages/dddart_json
+  - packages/dddart_json/test/fixtures/shared_model
   - packages/dddart_json/example
   - packages/dddart_rest
   - packages/dddart_rest_client

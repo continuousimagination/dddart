@@ -13,12 +13,13 @@ enum ETagStrategy {
   contentHash,
 }
 
-/// Generates ETags for aggregate roots to support conditional request checks.
+/// Generates representation validators from aggregate timestamps or content.
 ///
-/// `CrudResource` can compare an ETag from an HTTP `If-Match` header with the
-/// current aggregate before saving. Generating or comparing an ETag does not
-/// make the later repository save atomic, so overlapping writes can both pass
-/// that check.
+/// Comparing these values does not make a repository write atomic or prevent
+/// lost updates. Ordinary CrudResource uses them for GET/POST representations
+/// and refuses conditional mutations. Atomic writes require
+/// ConditionalCrudResource with a ConditionalRepository and inherited Revision;
+/// that protocol uses strong revision tags instead of these strategies.
 ///
 /// Two strategies are supported:
 /// - [ETagStrategy.timestamp]: Uses the aggregate's updatedAt timestamp
@@ -38,10 +39,7 @@ class ETagGenerator<T extends AggregateRoot> {
   /// Parameters:
   /// - [strategy]: The strategy to use for generating ETags (defaults to timestamp)
   /// - [serializer]: Required when using contentHash strategy
-  ETagGenerator({
-    this.strategy = ETagStrategy.timestamp,
-    this.serializer,
-  }) {
+  ETagGenerator({this.strategy = ETagStrategy.timestamp, this.serializer}) {
     if (strategy == ETagStrategy.contentHash && serializer == null) {
       throw ArgumentError(
         'serializer is required when using contentHash strategy',
@@ -84,10 +82,11 @@ class ETagGenerator<T extends AggregateRoot> {
 
   /// Validates that the provided ETag matches the current aggregate state
   ///
-  /// Returns true if the ETags match, false otherwise.
+  /// Returns true if the ETags match, false otherwise. This comparison is not
+  /// an atomic storage operation and must not be used as a write guarantee.
   ///
   /// Parameters:
-  /// - [providedETag]: The ETag from the If-Match header
+  /// - [providedETag]: A representation validator to compare
   /// - [aggregate]: The current aggregate state
   ///
   /// Returns: true if ETags match, false otherwise

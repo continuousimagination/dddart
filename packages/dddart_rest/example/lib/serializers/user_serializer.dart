@@ -45,8 +45,9 @@ class UserSerializer extends ExampleJsonSerializer<User> {
       lastName: json['lastName'],
       email: json['email'],
       address: _addressFromJson(json['address']),
-      profile:
-          json['profile'] != null ? _profileFromJson(json['profile']) : null,
+      profile: json['profile'] != null
+          ? _profileFromJson(json['profile'])
+          : null,
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
     );

@@ -69,10 +69,11 @@ class QueryResult<T extends AggregateRoot> {
 ///   );
 /// };
 /// ```
-typedef QueryHandler<T extends AggregateRoot> = Future<QueryResult<T>> Function(
-  Repository<T> repository,
-  Map<String, String> queryParams,
-  int skip,
-  int take,
-  dynamic authResult,
-);
+typedef QueryHandler<T extends AggregateRoot> =
+    Future<QueryResult<T>> Function(
+      Repository<T> repository,
+      Map<String, String> queryParams,
+      int skip,
+      int take,
+      dynamic authResult,
+    );

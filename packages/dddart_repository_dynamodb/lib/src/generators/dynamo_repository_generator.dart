@@ -1,9 +1,12 @@
 /// Code generator for DynamoDB repository implementations.
 library;
 
-// ignore_for_file: deprecated_member_use, avoid_redundant_argument_values
+import 'dart:convert';
 
 import 'package:analyzer/dart/element/element.dart';
+// ignore_for_file: deprecated_member_use, avoid_redundant_argument_values
+
+import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:build/build.dart';
 import 'package:dddart_repository_dynamodb/src/annotations/generate_dynamo_repository.dart';
@@ -18,10 +21,7 @@ import 'package:source_gen/source_gen.dart';
 /// `.dynamo_repository.g.part` fragments. The combining builder merges those
 /// fragments into each owning library's declared `*.g.dart` part.
 Builder dynamoRepositoryBuilder(BuilderOptions options) {
-  return SharedPartBuilder(
-    [DynamoRepositoryGenerator()],
-    'dynamo_repository',
-  );
+  return SharedPartBuilder([DynamoRepositoryGenerator()], 'dynamo_repository');
 }
 
 /// Generator for DynamoDB repository implementations.
@@ -45,8 +45,25 @@ class DynamoRepositoryGenerator
       );
     }
 
-    final classElement = element;
-    final className = classElement.name;
+    final external = _annotationType(annotation, 'aggregateType', element);
+    final classElement = external?.element as ClassElement? ?? element;
+    final className = classElement.name!;
+    final conditional =
+        annotation.peek('conditionalWrites')?.boolValue ?? false;
+    final versioned = classElement.allSupertypes.any(
+      (type) => _isDeclaration(
+        type,
+        'package:dddart/src/versioned_aggregate_root.dart',
+        'VersionedAggregateRoot',
+      ),
+    );
+    if (conditional != versioned) {
+      throw InvalidGenerationSourceError(
+        'conditionalWrites must be true exactly for versioned aggregate roots.',
+        element: element,
+      );
+    }
+    if (conditional) _validateRevisionAuthority(classElement);
 
     // Validate class extends AggregateRoot
     if (!_extendsAggregateRoot(classElement)) {
@@ -58,7 +75,7 @@ class DynamoRepositoryGenerator
     }
 
     // Validate class has @Serializable annotation
-    if (!_hasSerializableAnnotation(classElement)) {
+    if (external == null && !_hasSerializableAnnotation(classElement)) {
       throw InvalidGenerationSourceError(
         'Class $className must be annotated with @Serializable() to use '
         '@GenerateDynamoRepository.',
@@ -70,16 +87,84 @@ class DynamoRepositoryGenerator
     final tableName = _extractTableName(annotation, className);
     final customInterface = _extractImplementsInterface(annotation);
 
-    // Determine what to generate based on interface analysis
-    if (customInterface == null) {
-      // No custom interface - generate concrete class
-      return _generateConcreteRepository(className, tableName);
+    final modelType = external ?? classElement.thisType;
+    final serializer = _annotationType(annotation, 'serializerType', element);
+    final baseName =
+        annotation.peek('generatedBaseName')?.literalValue as String? ??
+        className;
+    if (!RegExp(r'^[A-Z][A-Za-z0-9_]*$').hasMatch(baseName)) {
+      throw InvalidGenerationSourceError(
+        'generatedBaseName must be a public class-name stem',
+        element: element,
+      );
     }
-
-    // Analyze interface to determine if abstract base is needed
-    final interfaceMethods = _getInterfaceMethods(customInterface);
-    final baseRepositoryMethods = {'getById', 'save', 'deleteById'};
-    final objectMethods = {
+    if (external != null && serializer == null) {
+      throw InvalidGenerationSourceError(
+        'serializerType is required and must resolve; build the shared model/serializer package before the adapter (same-target generated types are unsupported)',
+        element: element,
+      );
+    }
+    if (serializer != null) {
+      final serializerClass = serializer.element;
+      if (serializerClass is! ClassElement ||
+          serializerClass.isPrivate ||
+          serializerClass.isAbstract ||
+          serializerClass.unnamedConstructor == null ||
+          serializerClass.unnamedConstructor!.formalParameters.any(
+            (p) => p.isRequiredNamed || p.isRequiredPositional,
+          ) ||
+          !serializer.allSupertypes.any(
+            (type) =>
+                _isDeclaration(
+                  type,
+                  'package:dddart_json/src/json_serializer.dart',
+                  'JsonSerializer',
+                ) &&
+                type.typeArguments.length == 1 &&
+                type.typeArguments.single == modelType,
+          )) {
+        throw InvalidGenerationSourceError(
+          'serializerType must be a public concrete JsonSerializer<$className> with an argument-free constructor',
+          element: element,
+        );
+      }
+    }
+    if (customInterface != null &&
+        (customInterface.nullabilitySuffix == NullabilitySuffix.question ||
+            ![customInterface, ...customInterface.allSupertypes].any(
+              (type) =>
+                  _isDeclaration(
+                    type,
+                    conditional
+                        ? 'package:dddart/src/conditional_repository.dart'
+                        : 'package:dddart/src/repository.dart',
+                    conditional ? 'ConditionalRepository' : 'Repository',
+                  ) &&
+                  type.typeArguments.length == 1 &&
+                  type.typeArguments.single == modelType,
+            ))) {
+      throw InvalidGenerationSourceError(
+        'implements must match the selected conditional or ordinary Repository<$className> contract',
+        element: element,
+      );
+    }
+    if (conditional && customInterface != null) {
+      _validateConditionalPort(customInterface, modelType, element);
+    }
+    final aggregateName = _visibleType(modelType, element.library);
+    final serializerName = serializer == null
+        ? '${className}JsonSerializer'
+        : _visibleType(serializer, element.library);
+    final interfaceName = customInterface == null
+        ? null
+        : _visibleType(customInterface, element.library);
+    final methods = customInterface == null
+        ? <MethodElement>[]
+        : _getInterfaceMethods(customInterface);
+    const baseMethods = {
+      'getById',
+      'save',
+      'deleteById',
       'toString',
       'hashCode',
       'noSuchMethod',
@@ -89,32 +174,229 @@ class DynamoRepositoryGenerator
       'hashAll',
       'hashAllUnordered',
     };
-    final customMethods = interfaceMethods
-        .where(
-          (m) =>
-              !baseRepositoryMethods.contains(m.name) &&
-              !objectMethods.contains(m.name) &&
-              !m.isOperator &&
-              !m.isStatic,
-        )
-        .toList();
-
-    if (customMethods.isEmpty) {
-      // Interface only has base Repository methods - generate concrete class
-      return _generateConcreteRepository(
-        className,
+    final custom = <String, MethodElement>{};
+    for (final method in methods) {
+      if (!baseMethods.contains(method.name) &&
+          !method.isOperator &&
+          !method.isStatic) {
+        custom.putIfAbsent(method.name!, () => method);
+      }
+    }
+    if (conditional) {
+      return _generateConditionalRepository(
+        aggregateName,
+        serializerName,
+        '${baseName}DynamoRepository',
         tableName,
-        implements: customInterface,
-      );
-    } else {
-      // Interface has custom methods - generate abstract base class
-      return _generateAbstractBaseRepository(
-        className,
-        tableName,
-        implements: customInterface,
-        abstractMethods: customMethods,
+        interfaceName,
+        custom.values.toList(),
+        element.library,
       );
     }
+    if (custom.isEmpty) {
+      return _generateConcreteRepository(
+        aggregateName,
+        tableName,
+        implements: customInterface,
+        repositoryName: '${baseName}DynamoRepository',
+        serializerName: serializerName,
+        interfaceName: interfaceName,
+      );
+    }
+    return _generateAbstractBaseRepository(
+      aggregateName,
+      tableName,
+      implements: customInterface!,
+      abstractMethods: custom.values.toList(),
+      scope: element.library,
+      repositoryName: '${baseName}DynamoRepositoryBase',
+      serializerName: serializerName,
+      interfaceName: interfaceName!,
+    );
+  }
+
+  void _validateConditionalPort(
+    InterfaceType port,
+    InterfaceType model,
+    Element owner,
+  ) {
+    final canonical = [port, ...port.allSupertypes].firstWhere(
+      (type) =>
+          _isDeclaration(
+            type,
+            'package:dddart/src/conditional_repository.dart',
+            'ConditionalRepository',
+          ) &&
+          type.typeArguments.single == model,
+    );
+    for (final name in ['getById', 'save', 'deleteById']) {
+      final expected = canonical.getMethod(name)!;
+      // InterfaceType lookup retains generic substitution and selects the
+      // effective declaration, including inherited/custom-interface members.
+      final actual = port.lookUpMethod(name, owner.library!);
+      if (actual == null || !_sameCrudSignature(actual, expected)) {
+        throw InvalidGenerationSourceError(
+          'Custom conditional member $name must match ConditionalRepository<${model.getDisplayString()}> exactly.',
+          element: actual ?? owner,
+        );
+      }
+    }
+  }
+
+  bool _sameCrudSignature(MethodElement actual, MethodElement expected) {
+    if (actual.typeParameters.length != expected.typeParameters.length ||
+        actual.returnType != expected.returnType ||
+        actual.formalParameters.length != expected.formalParameters.length) {
+      return false;
+    }
+    final actualPositional = actual.formalParameters
+        .where((p) => p.isPositional)
+        .toList();
+    final expectedPositional = expected.formalParameters
+        .where((p) => p.isPositional)
+        .toList();
+    if (actualPositional.length != expectedPositional.length) return false;
+    for (var index = 0; index < expectedPositional.length; index++) {
+      final a = actualPositional[index];
+      final e = expectedPositional[index];
+      if (a.type != e.type ||
+          a.isRequiredPositional != e.isRequiredPositional) {
+        return false;
+      }
+    }
+    final named = {
+      for (final p in actual.formalParameters.where((p) => p.isNamed))
+        p.name: p,
+    };
+    for (final e in expected.formalParameters.where((p) => p.isNamed)) {
+      final a = named[e.name];
+      if (a == null ||
+          a.type != e.type ||
+          a.isRequiredNamed != e.isRequiredNamed) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  void _validateRevisionAuthority(ClassElement element) {
+    InterfaceType? current = element.thisType;
+    while (current != null &&
+        !_isDeclaration(
+          current,
+          'package:dddart/src/versioned_aggregate_root.dart',
+          'VersionedAggregateRoot',
+        )) {
+      if (current.element.fields.any(
+        (field) => field.name == 'revision' || field.name == '__dddart_retired',
+      )) {
+        throw InvalidGenerationSourceError(
+          'Reserved revision or retirement metadata is overridden.',
+          element: element,
+        );
+      }
+      current = current.superclass;
+    }
+    final canonical = current?.element.getGetter('revision');
+    if (canonical == null ||
+        element
+                .lookUpGetter(name: 'revision', library: element.library)
+                ?.baseElement !=
+            canonical.baseElement) {
+      throw InvalidGenerationSourceError(
+        'The canonical inherited revision authority is required.',
+        element: element,
+      );
+    }
+  }
+
+  String _generateConditionalRepository(
+    String model,
+    String codec,
+    String name,
+    String location,
+    String? port,
+    List<MethodElement> methods,
+    LibraryElement scope,
+  ) {
+    final abstract = methods.isNotEmpty;
+    final generatedName = abstract ? '${name}Base' : name;
+    final literal = jsonEncode(location);
+    final buffer = StringBuffer();
+    buffer.writeln('/// Generated conditional repository for [$model].');
+    buffer.writeln(
+      '${abstract ? "abstract " : ""}class $generatedName extends DynamoConditionalRepository<$model>${port == null ? "" : " implements $port"} {',
+    );
+    buffer.writeln(
+      '  /// Creates the typed conditional adapter using trusted configuration.',
+    );
+    buffer.writeln(
+      '  $generatedName(DynamoConnection connection, {String? tableName})',
+    );
+    buffer.writeln(
+      '      : super(connection, serializer: $codec(), tableName: tableName ?? $literal);',
+    );
+    for (final method in methods) {
+      buffer.writeln('  @override');
+      buffer.writeln('  ${_generateMethodSignature(method, scope)};');
+    }
+    buffer.writeln('}');
+    return buffer.toString();
+  }
+
+  bool _isDeclaration(InterfaceType type, String uri, String name) =>
+      type.element.name == name && type.element.library.uri.toString() == uri;
+
+  InterfaceType? _annotationType(
+    ConstantReader annotation,
+    String field,
+    Element owner,
+  ) {
+    final value = annotation.peek(field);
+    if (value == null || value.isNull) return null;
+    final type = value.typeValue;
+    if (type is! InterfaceType ||
+        type.element is! ClassElement ||
+        type.element.isPrivate ||
+        type.nullabilitySuffix == NullabilitySuffix.question) {
+      throw InvalidGenerationSourceError(
+        '$field must name a public class',
+        element: owner,
+      );
+    }
+    return type;
+  }
+
+  String _visibleType(InterfaceType type, LibraryElement scope) {
+    final element = type.element;
+    var name = element.name!;
+    if (element.library != scope && element.library.uri.scheme != 'dart') {
+      String? visible;
+      for (final imported in scope.firstFragment.libraryImports) {
+        for (final entry in imported.namespace.definedNames2.entries) {
+          if (entry.value != element) continue;
+          final prefix = imported.prefix?.name;
+          visible = prefix == null || entry.key.startsWith('$prefix.')
+              ? entry.key
+              : '$prefix.${entry.key}';
+          break;
+        }
+        if (visible != null) break;
+      }
+      if (visible == null) {
+        throw InvalidGenerationSourceError(
+          'Type $name must be publicly imported into the adapter binding library',
+        );
+      }
+      name = visible;
+    }
+    if (type.typeArguments.isNotEmpty) {
+      name +=
+          '<${type.typeArguments.map((argument) => _renderType(argument, scope)).join(', ')}>';
+    }
+    return type.nullabilitySuffix == NullabilitySuffix.question
+        ? '$name?'
+        : name;
   }
 
   /// Validates that a class extends AggregateRoot.
@@ -123,7 +405,11 @@ class DynamoRepositoryGenerator
   bool _extendsAggregateRoot(ClassElement element) {
     ClassElement? current = element;
     while (current != null) {
-      if (current.name == 'AggregateRoot') return true;
+      if (current.name == 'AggregateRoot' &&
+          current.library.uri.toString() ==
+              'package:dddart/src/aggregate_root.dart') {
+        return true;
+      }
       final supertype = current.supertype;
       if (supertype == null) break;
       current = supertype.element as ClassElement?;
@@ -133,7 +419,7 @@ class DynamoRepositoryGenerator
 
   /// Validates that a class has the @Serializable annotation.
   bool _hasSerializableAnnotation(ClassElement element) {
-    return element.metadata.any((annotation) {
+    return element.metadata.annotations.any((annotation) {
       final value = annotation.computeConstantValue();
       if (value == null) return false;
       final typeName = value.type?.element?.name;
@@ -147,7 +433,16 @@ class DynamoRepositoryGenerator
   /// Otherwise, converts the class name to snake_case.
   String _extractTableName(ConstantReader annotation, String className) {
     final tableName = annotation.peek('tableName')?.stringValue;
-    return tableName ?? _toSnakeCase(className);
+    final selected = tableName ?? _toSnakeCase(className);
+    if (selected.length < 3 ||
+        selected.length > 255 ||
+        selected.startsWith('aws.') ||
+        !RegExp(r'^[A-Za-z0-9_.-]+$').hasMatch(selected)) {
+      throw InvalidGenerationSourceError(
+        'tableName must satisfy DynamoDB table naming rules',
+      );
+    }
+    return selected;
   }
 
   /// Extracts the custom interface type from the annotation.
@@ -171,21 +466,21 @@ class DynamoRepositoryGenerator
     // Add the most-derived declarations first so inherited declarations with
     // the same name cannot produce duplicate abstract members.
     for (final method in interfaceType.methods) {
-      methodsByName.putIfAbsent(method.name, () => method);
+      methodsByName.putIfAbsent(method.name!, () => method);
     }
 
     // Get methods from all superinterfaces (including Repository<T>)
     // but exclude Object and system classes
     for (final supertype in interfaceType.allSupertypes) {
-      final supertypeName = supertype.element.name;
+      final supertypeName = supertype.element.name!;
       // Skip Object and system classes
       if (supertypeName == 'Object' ||
           supertypeName.startsWith('_') ||
-          supertype.element.library.name.startsWith('dart.')) {
+          supertype.element.library.isInSdk) {
         continue;
       }
       for (final method in supertype.methods) {
-        methodsByName.putIfAbsent(method.name, () => method);
+        methodsByName.putIfAbsent(method.name!, () => method);
       }
     }
 
@@ -216,6 +511,7 @@ class DynamoRepositoryGenerator
       final response = await _connection.client.getItem(
         tableName: tableName,
         key: {'id': AttributeValue(s: id.toString())},
+        consistentRead: readConsistency == DynamoReadConsistency.strong,
       );
       
       if (response.item == null || response.item!.isEmpty) {
@@ -242,6 +538,9 @@ class DynamoRepositoryGenerator
     return '''
   @override
   Future<void> save($className aggregate) async {
+    if (aggregate is VersionedAggregateRoot) {
+      throw const RepositoryCapabilityException();
+    }
     try {
       final json = _serializer.toJson(aggregate);
       
@@ -269,6 +568,7 @@ class DynamoRepositoryGenerator
       final getResponse = await _connection.client.getItem(
         tableName: tableName,
         key: {'id': AttributeValue(s: id.toString())},
+        consistentRead: readConsistency == DynamoReadConsistency.strong,
       );
       
       if (getResponse.item == null || getResponse.item!.isEmpty) {
@@ -293,59 +593,12 @@ class DynamoRepositoryGenerator
 
   /// Generates the DynamoDB exception mapping helper method.
   String _generateMapDynamoExceptionMethod() {
-    return r'''
-  /// Maps DynamoDB exceptions to RepositoryException types.
-  RepositoryException _mapDynamoException(
-    Object error,
-    String operation,
-  ) {
-    final errorString = error.toString();
-    
-    // Map ResourceNotFoundException to notFound
-    if (errorString.contains('ResourceNotFoundException')) {
-      return RepositoryException(
-        'Resource not found during $operation: $errorString',
-        type: RepositoryExceptionType.notFound,
-        cause: error,
-      );
-    }
-    
-    // Map ConditionalCheckFailedException to duplicate
-    if (errorString.contains('ConditionalCheckFailedException')) {
-      return RepositoryException(
-        'Conditional check failed during $operation: $errorString',
-        type: RepositoryExceptionType.duplicate,
-        cause: error,
-      );
-    }
-    
-    // Map network/connectivity errors to connection
-    if (errorString.contains('connection') || 
-        errorString.contains('network') ||
-        errorString.contains('SocketException')) {
-      return RepositoryException(
-        'Connection error during $operation: $errorString',
-        type: RepositoryExceptionType.connection,
-        cause: error,
-      );
-    }
-    
-    // Map timeout errors to timeout
-    if (errorString.contains('timeout') || errorString.contains('TimeoutException')) {
-      return RepositoryException(
-        'Timeout during $operation: $errorString',
-        type: RepositoryExceptionType.timeout,
-        cause: error,
-      );
-    }
-    
-    // All other errors map to unknown
-    return RepositoryException(
-      'DynamoDB error during $operation: $errorString',
-      type: RepositoryExceptionType.unknown,
-      cause: error,
-    );
-  }''';
+    return '''
+  /// Maps typed SDK failures without exposing provider data or raw causes.
+  RepositoryException _mapDynamoException(Object error, String operation) {
+    return DynamoRepositoryException.map(error, operation);
+  }
+''';
   }
 
   /// Generates table creation utility methods.
@@ -354,7 +607,10 @@ class DynamoRepositoryGenerator
   /// - createTable: Instance method to execute table creation
   /// - getCreateTableCommand: Returns AWS CLI command string
   /// - getCloudFormationTemplate: Returns CloudFormation YAML snippet
-  String _generateTableCreationMethods(String className, String tableName) {
+  String _generateTableCreationMethods(
+    String repositoryName,
+    String tableName,
+  ) {
     return '''
   /// Creates the DynamoDB table for this repository.
   ///
@@ -365,7 +621,7 @@ class DynamoRepositoryGenerator
   ///
   /// Example:
   /// ```dart
-  /// final repo = ${className}DynamoRepository(connection);
+  /// final repo = $repositoryName(connection);
   /// await repo.createTable();
   /// ```
   Future<void> createTable() async {
@@ -398,7 +654,7 @@ class DynamoRepositoryGenerator
   ///
   /// Example:
   /// ```dart
-  /// final command = ${className}DynamoRepository.getCreateTableCommand('$tableName');
+  /// final command = $repositoryName.getCreateTableCommand('$tableName');
   /// print(command);
   /// // Copy and paste into terminal
   /// ```
@@ -419,7 +675,7 @@ aws dynamodb create-table \\\\
   ///
   /// Example:
   /// ```dart
-  /// final template = ${className}DynamoRepository.getCloudFormationTemplate('$tableName');
+  /// final template = $repositoryName.getCloudFormationTemplate('$tableName');
   /// print(template);
   /// // Add to CloudFormation template
   /// ```
@@ -470,10 +726,13 @@ Resources:
   String _generateConcreteRepository(
     String className,
     String tableName, {
+    required String repositoryName,
+    required String serializerName,
     InterfaceType? implements,
+    String? interfaceName,
   }) {
     final interfaceClause = implements != null
-        ? 'implements ${implements.element.name}'
+        ? 'implements $interfaceName'
         : 'implements Repository<$className>';
 
     final buffer = StringBuffer();
@@ -488,13 +747,27 @@ Resources:
     );
     buffer.writeln('/// extended');
     buffer.writeln('/// to add custom query methods.');
-    buffer.writeln('class ${className}DynamoRepository $interfaceClause {');
+    buffer.writeln('class $repositoryName $interfaceClause {');
 
     // Constructor
     buffer.writeln('  /// Creates a repository instance.');
     buffer.writeln('  ///');
     buffer.writeln('  /// [connection] - A DynamoDB connection instance.');
-    buffer.writeln('  ${className}DynamoRepository(this._connection);');
+    buffer.writeln('''
+  $repositoryName(this._connection, {
+    this.readConsistency = DynamoReadConsistency.eventual,
+    String? tableName,
+  }) : tableName = tableName ?? '$tableName' {
+    if (tableName != null &&
+        (tableName.length < 3 || tableName.length > 255 ||
+         tableName.startsWith('aws.') ||
+         !RegExp(r'^[A-Za-z0-9_.-]+\$').hasMatch(tableName))) {
+      throw ArgumentError('Invalid DynamoDB table name');
+    }
+  }
+  /// Point-read consistency policy.
+  final DynamoReadConsistency readConsistency;
+''');
     buffer.writeln();
 
     // Generate fields and getters
@@ -502,10 +775,10 @@ Resources:
     buffer.writeln('  final DynamoConnection _connection;');
     buffer.writeln();
     buffer.writeln('  /// The table name for $className aggregates.');
-    buffer.writeln("  String get tableName => '$tableName';");
+    buffer.writeln('  final String tableName;');
     buffer.writeln();
     buffer.writeln('  /// The JSON serializer for $className aggregates.');
-    buffer.writeln('  final _serializer = ${className}JsonSerializer();');
+    buffer.writeln('  final _serializer = $serializerName();');
     buffer.writeln();
 
     // Generate CRUD methods
@@ -523,7 +796,7 @@ Resources:
     buffer.writeln();
 
     // Generate table creation utilities
-    buffer.writeln(_generateTableCreationMethods(className, tableName));
+    buffer.writeln(_generateTableCreationMethods(repositoryName, tableName));
 
     buffer.writeln('}');
 
@@ -542,6 +815,10 @@ Resources:
     String tableName, {
     required InterfaceType implements,
     required List<MethodElement> abstractMethods,
+    required LibraryElement scope,
+    required String repositoryName,
+    required String serializerName,
+    required String interfaceName,
   }) {
     final buffer = StringBuffer();
 
@@ -562,14 +839,28 @@ Resources:
     );
     buffer.writeln('/// the repository implementation.');
     buffer.writeln(
-      'abstract class ${className}DynamoRepositoryBase implements ${implements.element.name} {',
+      'abstract class $repositoryName implements $interfaceName {',
     );
 
     // Constructor
     buffer.writeln('  /// Creates a repository instance.');
     buffer.writeln('  ///');
     buffer.writeln('  /// [connection] - A DynamoDB connection instance.');
-    buffer.writeln('  ${className}DynamoRepositoryBase(this._connection);');
+    buffer.writeln('''
+  $repositoryName(this._connection, {
+    this.readConsistency = DynamoReadConsistency.eventual,
+    String? tableName,
+  }) : tableName = tableName ?? '$tableName' {
+    if (tableName != null &&
+        (tableName.length < 3 || tableName.length > 255 ||
+         tableName.startsWith('aws.') ||
+         !RegExp(r'^[A-Za-z0-9_.-]+\$').hasMatch(tableName))) {
+      throw ArgumentError('Invalid DynamoDB table name');
+    }
+  }
+  /// Point-read consistency policy.
+  final DynamoReadConsistency readConsistency;
+''');
     buffer.writeln();
 
     // Generate fields and getters
@@ -577,10 +868,10 @@ Resources:
     buffer.writeln('  final DynamoConnection _connection;');
     buffer.writeln();
     buffer.writeln('  /// The table name for $className aggregates.');
-    buffer.writeln("  String get tableName => '$tableName';");
+    buffer.writeln('  final String tableName;');
     buffer.writeln();
     buffer.writeln('  /// The JSON serializer for $className aggregates.');
-    buffer.writeln('  final _serializer = ${className}JsonSerializer();');
+    buffer.writeln('  final _serializer = $serializerName();');
     buffer.writeln();
 
     // Generate concrete implementations of base Repository methods
@@ -598,7 +889,7 @@ Resources:
     buffer.writeln();
 
     // Generate table creation utilities
-    buffer.writeln(_generateTableCreationMethods(className, tableName));
+    buffer.writeln(_generateTableCreationMethods(repositoryName, tableName));
     buffer.writeln();
 
     // Add abstract method declarations for custom methods
@@ -607,7 +898,7 @@ Resources:
       buffer.writeln();
       for (final method in abstractMethods) {
         buffer.writeln('  @override');
-        buffer.writeln('  ${_generateMethodSignature(method)};');
+        buffer.writeln('  ${_generateMethodSignature(method, scope)};');
         buffer.writeln();
       }
     }
@@ -620,53 +911,97 @@ Resources:
   /// Generates a method signature from a MethodElement.
   ///
   /// Includes return type, method name, and parameters with types.
-  String _generateMethodSignature(MethodElement method) {
-    final returnType =
-        method.returnType.getDisplayString(withNullability: true);
-    final typeParameters = method.typeParameters.isEmpty
-        ? ''
-        : '<${method.typeParameters.map((parameter) {
-            final bound = parameter.bound;
-            if (bound == null) return parameter.name;
-            return '${parameter.name} extends '
-                '${bound.getDisplayString(withNullability: true)}';
-          }).join(', ')}>';
-
-    final requiredPositional = method.parameters
-        .where((parameter) => parameter.isRequiredPositional)
-        .map(_generateParameter)
-        .toList();
-    final optionalPositional = method.parameters
-        .where((parameter) => parameter.isOptionalPositional)
-        .map(_generateParameter)
-        .toList();
-    final named = method.parameters
-        .where((parameter) => parameter.isNamed)
-        .map(_generateParameter)
-        .toList();
-
-    final parameterGroups = <String>[...requiredPositional];
-    if (optionalPositional.isNotEmpty) {
-      parameterGroups.add('[${optionalPositional.join(', ')}]');
-    }
-    if (named.isNotEmpty) {
-      parameterGroups.add('{${named.join(', ')}}');
-    }
-
-    return '$returnType ${method.name}$typeParameters'
-        '(${parameterGroups.join(', ')})';
+  String _generateMethodSignature(MethodElement method, LibraryElement scope) {
+    final generics = _typeParameters(method.typeParameters, scope);
+    return '${_renderType(method.returnType, scope)} ${method.name}$generics(${_parameters(method.formalParameters, scope)})';
   }
 
-  String _generateParameter(ParameterElement parameter) {
-    final buffer = StringBuffer();
-    if (parameter.isRequiredNamed) buffer.write('required ');
-    if (parameter.isCovariant) buffer.write('covariant ');
-    buffer
-      ..write(parameter.type.getDisplayString(withNullability: true))
-      ..write(' ${parameter.name}');
+  String _renderType(DartType type, LibraryElement scope) {
+    if (type is InterfaceType) return _visibleType(type, scope);
+    if (type is FunctionType) {
+      final nullable = type.nullabilitySuffix == NullabilitySuffix.question
+          ? '?'
+          : '';
+      return '${_renderType(type.returnType, scope)} Function${_typeParameters(type.typeParameters, scope)}(${_parameters(type.formalParameters, scope)})$nullable';
+    }
+    if (type is RecordType) {
+      throw InvalidGenerationSourceError(
+        'Record-valued custom signatures are not supported',
+      );
+    }
+    return type.getDisplayString();
+  }
 
-    final defaultValue = parameter.defaultValueCode;
-    if (defaultValue != null) buffer.write(' = $defaultValue');
-    return buffer.toString();
+  String _typeParameters(
+    List<TypeParameterElement> parameters,
+    LibraryElement scope,
+  ) {
+    if (parameters.isEmpty) return '';
+    return '<${parameters.map((p) => '${p.name}${p.bound == null ? '' : ' extends ${_renderType(p.bound!, scope)}'}').join(', ')}>';
+  }
+
+  String _defaultLiteral(
+    FormalParameterElement parameter,
+    LibraryElement scope,
+  ) {
+    final value = parameter.computeConstantValue();
+    if (value == null) {
+      throw InvalidGenerationSourceError(
+        'Cannot resolve default for ${parameter.name}',
+      );
+    }
+    if (value.isNull) return 'null';
+    final string = value.toStringValue();
+    if (string != null) return jsonEncode(string).replaceAll(r'$', r'\$');
+    final boolean = value.toBoolValue();
+    if (boolean != null) return '$boolean';
+    final integer = value.toIntValue();
+    if (integer != null) return '$integer';
+    final decimal = value.toDoubleValue();
+    if (decimal != null && decimal.isFinite) return '$decimal';
+    final type = value.type;
+    if (type is InterfaceType && type.element is EnumElement) {
+      final index = value.getField('index')?.toIntValue();
+      for (final field in type.element.fields.where(
+        (field) => field.isEnumConstant,
+      )) {
+        if (field.computeConstantValue()?.getField('index')?.toIntValue() ==
+                index &&
+            index != null) {
+          return '${_visibleType(type, scope)}.${field.name}';
+        }
+      }
+    }
+    throw InvalidGenerationSourceError(
+      'Unsupported default for ${parameter.name}; use a primitive, null, or publicly imported enum constant',
+    );
+  }
+
+  String _parameters(
+    List<FormalParameterElement> parameters,
+    LibraryElement scope,
+  ) {
+    final positional = <String>[];
+    final optional = <String>[];
+    final named = <String>[];
+    for (final parameter in parameters) {
+      var code =
+          '${parameter.isRequiredNamed ? 'required ' : ''}${parameter.isCovariant ? 'covariant ' : ''}${_renderType(parameter.type, scope)}${parameter.name == null || parameter.name!.isEmpty ? '' : ' ${parameter.name}'}';
+      if (parameter.defaultValueCode != null) {
+        code += ' = ${_defaultLiteral(parameter, scope)}';
+      }
+      if (parameter.isNamed) {
+        named.add(code);
+      } else if (parameter.isOptionalPositional) {
+        optional.add(code);
+      } else {
+        positional.add(code);
+      }
+    }
+    return [
+      ...positional,
+      if (optional.isNotEmpty) '[${optional.join(', ')}]',
+      if (named.isNotEmpty) '{${named.join(', ')}}',
+    ].join(', ');
   }
 }

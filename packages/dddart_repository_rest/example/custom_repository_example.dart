@@ -24,9 +24,7 @@ Future<void> main() async {
   print('=== Custom Repository Example ===\n');
 
   // Create a REST connection
-  final connection = RestConnection(
-    baseUrl: 'http://localhost:8080',
-  );
+  final connection = RestConnection(baseUrl: 'http://localhost:8080');
 
   // Create an instance of our custom repository
   final productRepository = ProductRestRepository(connection);

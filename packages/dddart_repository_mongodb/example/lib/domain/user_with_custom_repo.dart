@@ -15,10 +15,7 @@ part 'user_with_custom_repo_impl.dart';
 /// This demonstrates how to use a custom repository interface that will
 /// generate an abstract base class requiring custom method implementations.
 @Serializable()
-@GenerateMongoRepository(
-  collectionName: 'users',
-  implements: UserRepository,
-)
+@GenerateMongoRepository(collectionName: 'users', implements: UserRepository)
 class UserWithCustomRepo extends AggregateRoot {
   /// Creates a new User.
   UserWithCustomRepo({

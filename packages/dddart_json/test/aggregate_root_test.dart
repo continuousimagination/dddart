@@ -8,10 +8,7 @@ void main() {
   group('AggregateRoot Serialization', () {
     group('Simple AggregateRoot', () {
       test('serializes simple AggregateRoot with basic fields to JSON', () {
-        final user = TestUser(
-          name: 'John Doe',
-          email: 'john@example.com',
-        );
+        final user = TestUser(name: 'John Doe', email: 'john@example.com');
 
         final serializer = TestUserJsonSerializer();
         final json = serializer.toJson(user);
@@ -137,29 +134,31 @@ void main() {
         expect(user.address.zipCode, equals('67890'));
       });
 
-      test('round-trip serialization with nested Values maintains equality',
-          () {
-        const address = TestAddress(
-          street: '789 Pine Rd',
-          city: 'Elsewhere',
-          zipCode: '54321',
-        );
-        final original = TestUserWithAddress(
-          name: 'David Brown',
-          email: 'david@example.com',
-          address: address,
-          id: UuidValue.fromString('550e8400-e29b-41d4-a716-446655440003'),
-          createdAt: DateTime.parse('2024-01-03T14:00:00.000Z'),
-          updatedAt: DateTime.parse('2024-01-03T14:45:00.000Z'),
-        );
+      test(
+        'round-trip serialization with nested Values maintains equality',
+        () {
+          const address = TestAddress(
+            street: '789 Pine Rd',
+            city: 'Elsewhere',
+            zipCode: '54321',
+          );
+          final original = TestUserWithAddress(
+            name: 'David Brown',
+            email: 'david@example.com',
+            address: address,
+            id: UuidValue.fromString('550e8400-e29b-41d4-a716-446655440003'),
+            createdAt: DateTime.parse('2024-01-03T14:00:00.000Z'),
+            updatedAt: DateTime.parse('2024-01-03T14:45:00.000Z'),
+          );
 
-        final serializer = TestUserWithAddressJsonSerializer();
-        final json = serializer.toJson(original);
-        final deserialized = serializer.fromJson(json);
+          final serializer = TestUserWithAddressJsonSerializer();
+          final json = serializer.toJson(original);
+          final deserialized = serializer.fromJson(json);
 
-        expect(deserialized, equals(original));
-        expect(deserialized.address, equals(original.address));
-      });
+          expect(deserialized, equals(original));
+          expect(deserialized.address, equals(original.address));
+        },
+      );
     });
 
     group('Field naming strategies', () {

@@ -42,9 +42,8 @@ final class InMemoryDeviceCodeRepository<T extends DeviceCode>
     implements DeviceCodeRepository<T> {
   /// Creates an empty repository using [lifecycle] for the typed consume
   /// transition.
-  InMemoryDeviceCodeRepository({
-    required DeviceCodeLifecycle<T> lifecycle,
-  }) : _lifecycle = lifecycle;
+  InMemoryDeviceCodeRepository({required DeviceCodeLifecycle<T> lifecycle})
+    : _lifecycle = lifecycle;
 
   final DeviceCodeLifecycle<T> _lifecycle;
   final Map<UuidValue, T> _storage = {};
@@ -124,10 +123,7 @@ final class InMemoryDeviceCodeRepository<T extends DeviceCode>
       return Future.value();
     }
 
-    final consumed = _lifecycle.consume(
-      approved,
-      consumedAt: consumedAt,
-    );
+    final consumed = _lifecycle.consume(approved, consumedAt: consumedAt);
     _storage[consumed.id] = consumed;
     return Future.value(consumed);
   }

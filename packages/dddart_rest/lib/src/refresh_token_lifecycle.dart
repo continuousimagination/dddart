@@ -47,10 +47,7 @@ final class StandardRefreshTokenLifecycle
   }
 
   @override
-  RefreshToken revoke(
-    RefreshToken current, {
-    required DateTime revokedAt,
-  }) {
+  RefreshToken revoke(RefreshToken current, {required DateTime revokedAt}) {
     return RefreshToken(
       id: current.id,
       userId: current.userId,

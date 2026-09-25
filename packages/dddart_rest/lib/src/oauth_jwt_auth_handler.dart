@@ -163,10 +163,7 @@ class OAuthJwtAuthHandler<TClaims> extends AuthenticationHandler<TClaims> {
         jwt.claims.toJson().cast<String, dynamic>(),
       );
 
-      return AuthenticationResult.success(
-        userId: userId,
-        claims: claims,
-      );
+      return AuthenticationResult.success(userId: userId, claims: claims);
     } catch (e) {
       // Sanitize error message to avoid leaking token data
       var errorMsg = e.toString();

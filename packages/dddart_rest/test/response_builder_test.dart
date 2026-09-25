@@ -66,10 +66,7 @@ void main() {
   group('ResponseBuilder - Single aggregate responses', () {
     test('ok() method returns 200 with serialized body', () async {
       // Act
-      final response = responseBuilder.ok(
-        testUser,
-        serializer,
-      );
+      final response = responseBuilder.ok(testUser, serializer);
 
       // Assert
       expect(response.statusCode, equals(200));
@@ -86,10 +83,7 @@ void main() {
 
     test('created() method returns 201 with serialized body', () async {
       // Act
-      final response = responseBuilder.created(
-        testUser,
-        serializer,
-      );
+      final response = responseBuilder.created(testUser, serializer);
 
       // Assert
       expect(response.statusCode, equals(201));
@@ -103,10 +97,7 @@ void main() {
     });
 
     test('Content-Type is always application/json', () async {
-      final jsonResponse = responseBuilder.ok(
-        testUser,
-        serializer,
-      );
+      final jsonResponse = responseBuilder.ok(testUser, serializer);
 
       expect(jsonResponse.headers['Content-Type'], equals('application/json'));
     });
@@ -125,10 +116,7 @@ void main() {
       final users = [testUser, user2];
 
       // Act
-      final response = responseBuilder.okList(
-        users,
-        serializer,
-      );
+      final response = responseBuilder.okList(users, serializer);
 
       // Assert
       expect(response.statusCode, equals(200));
@@ -164,10 +152,7 @@ void main() {
       final users = [testUser];
 
       // Act
-      final response = responseBuilder.okList(
-        users,
-        serializer,
-      );
+      final response = responseBuilder.okList(users, serializer);
 
       // Assert
       expect(response.statusCode, equals(200));
@@ -179,11 +164,7 @@ void main() {
       final users = [testUser];
 
       // Act
-      final response = responseBuilder.okList(
-        users,
-        serializer,
-        totalCount: 1,
-      );
+      final response = responseBuilder.okList(users, serializer, totalCount: 1);
 
       // Assert
       expect(response.headers['Content-Type'], equals('application/json'));
@@ -194,11 +175,7 @@ void main() {
       final users = <TestUser>[];
 
       // Act
-      final response = responseBuilder.okList(
-        users,
-        serializer,
-        totalCount: 0,
-      );
+      final response = responseBuilder.okList(users, serializer, totalCount: 0);
 
       // Assert
       expect(response.statusCode, equals(200));
@@ -264,17 +241,16 @@ void main() {
       expect(body['status'], equals(404));
       expect(
         body['detail'],
-        equals(
-          'User with ID 123e4567-e89b-12d3-a456-426614174000 not found',
-        ),
+        equals('User with ID 123e4567-e89b-12d3-a456-426614174000 not found'),
       );
     });
 
     test('error responses include all required RFC 7807 fields', () async {
       // Act - badRequest
       final badRequestResponse = responseBuilder.badRequest('Test message');
-      final badRequestBody =
-          jsonDecode(await badRequestResponse.readAsString());
+      final badRequestBody = jsonDecode(
+        await badRequestResponse.readAsString(),
+      );
 
       // Assert - badRequest has all required fields
       expect(badRequestBody.containsKey('type'), isTrue);

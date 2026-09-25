@@ -6,37 +6,41 @@ import 'test_models.dart';
 void main() {
   group('Error Handling and Edge Cases', () {
     group('Missing required fields', () {
-      test('throws DeserializationException when required field is missing',
-          () {
-        final json = {
-          'email': 'incomplete@example.com',
-          // Missing 'name' field
-          'id': '550e8400-e29b-41d4-a716-446655440000',
-          'createdAt': '2024-01-01T12:00:00.000Z',
-          'updatedAt': '2024-01-01T12:30:00.000Z',
-        };
+      test(
+        'throws DeserializationException when required field is missing',
+        () {
+          final json = {
+            'email': 'incomplete@example.com',
+            // Missing 'name' field
+            'id': '550e8400-e29b-41d4-a716-446655440000',
+            'createdAt': '2024-01-01T12:00:00.000Z',
+            'updatedAt': '2024-01-01T12:30:00.000Z',
+          };
 
-        final serializer = TestUserJsonSerializer();
-        expect(
-          () => serializer.fromJson(json),
-          throwsA(isA<DeserializationException>()),
-        );
-      });
+          final serializer = TestUserJsonSerializer();
+          expect(
+            () => serializer.fromJson(json),
+            throwsA(isA<DeserializationException>()),
+          );
+        },
+      );
 
-      test('throws descriptive error for missing AggregateRoot base fields',
-          () {
-        final json = {
-          'name': 'Test User',
-          'email': 'test@example.com',
-          // Missing 'id', 'createdAt', 'updatedAt'
-        };
+      test(
+        'throws descriptive error for missing AggregateRoot base fields',
+        () {
+          final json = {
+            'name': 'Test User',
+            'email': 'test@example.com',
+            // Missing 'id', 'createdAt', 'updatedAt'
+          };
 
-        final serializer = TestUserJsonSerializer();
-        expect(
-          () => serializer.fromJson(json),
-          throwsA(isA<DeserializationException>()),
-        );
-      });
+          final serializer = TestUserJsonSerializer();
+          expect(
+            () => serializer.fromJson(json),
+            throwsA(isA<DeserializationException>()),
+          );
+        },
+      );
 
       test('throws descriptive error for missing nested Value fields', () {
         final json = {
@@ -171,7 +175,7 @@ void main() {
     group('Malformed JSON', () {
       test('deserialize wraps malformed JSON syntax', () {
         expect(
-          () => TestUserJsonSerializer().deserialize('{"name":'),
+          () => TestUserJsonSerializer().deserialize('{"private-input":'),
           throwsA(
             isA<DeserializationException>()
                 .having(
@@ -183,6 +187,11 @@ void main() {
                   (exception) => exception.expectedType,
                   'expectedType',
                   'TestUser',
+                )
+                .having(
+                  (exception) => exception.toString(),
+                  'safe diagnostic',
+                  isNot(contains('private-input')),
                 ),
           ),
         );
@@ -264,7 +273,7 @@ void main() {
         }
       });
 
-      test('error messages distinguish between different error types', () {
+      test('invalid fields retain safe typed errors without raw details', () {
         // Test missing field error
         final missingFieldJson = {
           'email': 'test@example.com',
@@ -300,11 +309,13 @@ void main() {
         expect(missingFieldError, isNotNull);
         expect(wrongTypeError, isNotNull);
 
-        // Both should be DeserializationExceptions but with different messages
-        expect(
-          missingFieldError!.message,
-          isNot(equals(wrongTypeError!.message)),
-        );
+        // Public errors identify the model without exposing runtime cast data.
+        for (final error in [missingFieldError!, wrongTypeError!]) {
+          expect(error.message, 'Failed to deserialize TestUser');
+          expect(error.expectedType, 'TestUser');
+          expect(error.toString(), isNot(contains('123')));
+          expect(error.toString(), isNot(contains('test@example.com')));
+        }
       });
 
       test('nested deserialization errors provide context', () {
@@ -503,33 +514,35 @@ void main() {
         expect(user.name, equals('Valid User'));
       });
 
-      test('multiple consecutive errors do not affect subsequent operations',
-          () {
-        // Cause multiple errors
-        for (var i = 0; i < 5; i++) {
-          expect(
-            () => TestUserJsonSerializer().fromJson({'invalid': 'data$i'}),
-            throwsA(isA<DeserializationException>()),
-          );
-        }
+      test(
+        'multiple consecutive errors do not affect subsequent operations',
+        () {
+          // Cause multiple errors
+          for (var i = 0; i < 5; i++) {
+            expect(
+              () => TestUserJsonSerializer().fromJson({'invalid': 'data$i'}),
+              throwsA(isA<DeserializationException>()),
+            );
+          }
 
-        // Verify normal operation still works
-        final validJson = {
-          'name': 'Post Error User',
-          'email': 'posterror@example.com',
-          'id': '550e8400-e29b-41d4-a716-446655440000',
-          'createdAt': '2024-01-01T12:00:00.000Z',
-          'updatedAt': '2024-01-01T12:30:00.000Z',
-        };
+          // Verify normal operation still works
+          final validJson = {
+            'name': 'Post Error User',
+            'email': 'posterror@example.com',
+            'id': '550e8400-e29b-41d4-a716-446655440000',
+            'createdAt': '2024-01-01T12:00:00.000Z',
+            'updatedAt': '2024-01-01T12:30:00.000Z',
+          };
 
-        final user = TestUserJsonSerializer().fromJson(validJson);
-        expect(user.name, equals('Post Error User'));
+          final user = TestUserJsonSerializer().fromJson(validJson);
+          expect(user.name, equals('Post Error User'));
 
-        final serializer = TestUserJsonSerializer();
-        final json = serializer.toJson(user);
-        final roundTrip = serializer.fromJson(json);
-        expect(roundTrip, equals(user));
-      });
+          final serializer = TestUserJsonSerializer();
+          final json = serializer.toJson(user);
+          final roundTrip = serializer.fromJson(json);
+          expect(roundTrip, equals(user));
+        },
+      );
     });
   });
 }

@@ -24,3 +24,7 @@ doc/api/
 # Temporary files
 *.tmp
 *.temp
+
+# Reviewed tracked consumer artifacts must remain visible to Pub.
+!/test/auth_token_subtype_test.g.dart
+!/example/pubspec.lock

@@ -74,8 +74,9 @@ void main() {
             }
 
             // Verify primary key constraint
-            final pkColumns =
-                table.columns.where((c) => c.isPrimaryKey).toList();
+            final pkColumns = table.columns
+                .where((c) => c.isPrimaryKey)
+                .toList();
             for (final _ in pkColumns) {
               expect(
                 sql1,
@@ -144,8 +145,10 @@ void main() {
             }
 
             // Verify correct number of placeholders
-            final expectedPlaceholders =
-                List.filled(columns.length, '?').join(', ');
+            final expectedPlaceholders = List.filled(
+              columns.length,
+              '?',
+            ).join(', ');
             expect(
               sql1,
               contains('VALUES ($expectedPlaceholders)'),
@@ -165,103 +168,97 @@ void main() {
         },
       );
 
-      test(
-        'should generate consistent DELETE statements for any table',
-        () {
-          final random = Random(102);
+      test('should generate consistent DELETE statements for any table', () {
+        final random = Random(102);
 
-          for (var i = 0; i < 100; i++) {
-            // Generate random table name
-            final tableName = _generateRandomTableName(random);
+        for (var i = 0; i < 100; i++) {
+          // Generate random table name
+          final tableName = _generateRandomTableName(random);
 
-            // Generate SQL twice
-            final sql1 = dialect.delete(tableName);
-            final sql2 = dialect.delete(tableName);
+          // Generate SQL twice
+          final sql1 = dialect.delete(tableName);
+          final sql2 = dialect.delete(tableName);
 
-            // Verify consistency
-            expect(
-              sql1,
-              equals(sql2),
-              reason: 'Iteration $i: SQL generation should be deterministic',
-            );
+          // Verify consistency
+          expect(
+            sql1,
+            equals(sql2),
+            reason: 'Iteration $i: SQL generation should be deterministic',
+          );
 
-            // Verify required syntax elements
-            expect(
-              sql1,
-              equals('DELETE FROM `$tableName` WHERE `id` = ?'),
-              reason: 'Iteration $i: Should generate correct DELETE statement',
-            );
-          }
-        },
-      );
+          // Verify required syntax elements
+          expect(
+            sql1,
+            equals('DELETE FROM `$tableName` WHERE `id` = ?'),
+            reason: 'Iteration $i: Should generate correct DELETE statement',
+          );
+        }
+      });
 
-      test(
-        'should generate consistent SELECT with JOIN statements',
-        () {
-          final random = Random(103);
+      test('should generate consistent SELECT with JOIN statements', () {
+        final random = Random(103);
 
-          for (var i = 0; i < 100; i++) {
-            // Generate random table and joins
-            final rootTable = _generateRandomTableDefinition(random);
-            final joins = _generateRandomJoins(random);
+        for (var i = 0; i < 100; i++) {
+          // Generate random table and joins
+          final rootTable = _generateRandomTableDefinition(random);
+          final joins = _generateRandomJoins(random);
 
-            // Generate SQL twice
-            final sql1 = dialect.selectWithJoins(rootTable, joins);
-            final sql2 = dialect.selectWithJoins(rootTable, joins);
+          // Generate SQL twice
+          final sql1 = dialect.selectWithJoins(rootTable, joins);
+          final sql2 = dialect.selectWithJoins(rootTable, joins);
 
-            // Verify consistency
-            expect(
-              sql1,
-              equals(sql2),
-              reason: 'Iteration $i: SQL generation should be deterministic',
-            );
+          // Verify consistency
+          expect(
+            sql1,
+            equals(sql2),
+            reason: 'Iteration $i: SQL generation should be deterministic',
+          );
 
-            // Verify SELECT clause
-            expect(
-              sql1,
-              startsWith('SELECT'),
-              reason: 'Iteration $i: Should start with SELECT',
-            );
-            expect(
-              sql1,
-              contains('FROM `${rootTable.tableName}`'),
-              reason: 'Iteration $i: Should select from correct table',
-            );
+          // Verify SELECT clause
+          expect(
+            sql1,
+            startsWith('SELECT'),
+            reason: 'Iteration $i: Should start with SELECT',
+          );
+          expect(
+            sql1,
+            contains('FROM `${rootTable.tableName}`'),
+            reason: 'Iteration $i: Should select from correct table',
+          );
 
-            // Verify all columns are selected
-            for (final column in rootTable.columns) {
-              if (column.sqlType == 'BINARY(16)') {
-                // UUID columns should use BIN_TO_UUID
-                expect(
-                  sql1,
-                  contains('BIN_TO_UUID'),
-                  reason: 'Iteration $i: Should convert BINARY UUID columns',
-                );
-              } else {
-                expect(
-                  sql1,
-                  contains('`${rootTable.tableName}`.`${column.name}`'),
-                  reason: 'Iteration $i: Should include column ${column.name}',
-                );
-              }
-            }
-
-            // Verify JOIN clauses
-            for (final join in joins) {
+          // Verify all columns are selected
+          for (final column in rootTable.columns) {
+            if (column.sqlType == 'BINARY(16)') {
+              // UUID columns should use BIN_TO_UUID
               expect(
                 sql1,
-                contains('JOIN `${join.table}`'),
-                reason: 'Iteration $i: Should include JOIN for ${join.table}',
+                contains('BIN_TO_UUID'),
+                reason: 'Iteration $i: Should convert BINARY UUID columns',
               );
+            } else {
               expect(
                 sql1,
-                contains('ON ${join.onCondition}'),
-                reason: 'Iteration $i: Should include ON condition',
+                contains('`${rootTable.tableName}`.`${column.name}`'),
+                reason: 'Iteration $i: Should include column ${column.name}',
               );
             }
           }
-        },
-      );
+
+          // Verify JOIN clauses
+          for (final join in joins) {
+            expect(
+              sql1,
+              contains('JOIN `${join.table}`'),
+              reason: 'Iteration $i: Should include JOIN for ${join.table}',
+            );
+            expect(
+              sql1,
+              contains('ON ${join.onCondition}'),
+              reason: 'Iteration $i: Should include ON condition',
+            );
+          }
+        }
+      });
 
       test(
         'should maintain SQL syntax compatibility across driver changes',
@@ -427,11 +424,7 @@ List<JoinClause> _generateRandomJoins(Random random) {
 
 /// Gets a random JOIN type.
 JoinType _getRandomJoinType(Random random) {
-  final types = [
-    JoinType.inner,
-    JoinType.left,
-    JoinType.right,
-  ];
+  final types = [JoinType.inner, JoinType.left, JoinType.right];
   return types[random.nextInt(types.length)];
 }
 

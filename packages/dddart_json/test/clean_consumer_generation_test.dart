@@ -80,9 +80,9 @@ class ConsumerValue extends Value {
 }
 '''
             .replaceFirst(
-          '__GENERATED_PART_DIRECTIVE__',
-          "part 'model.g.dart';",
-        ),
+              '__GENERATED_PART_DIRECTIVE__',
+              "part 'model.g.dart';",
+            ),
       );
 
       final binDirectory = Directory('${fixture.path}/bin')..createSync();
@@ -100,15 +100,12 @@ void main() {
 ''');
 
       await _expectDartSuccess(fixture, ['pub', 'get', '--offline']);
-      await _expectDartSuccess(
-        fixture,
-        [
-          'run',
-          'build_runner',
-          'build',
-          '--delete-conflicting-outputs',
-        ],
-      );
+      await _expectDartSuccess(fixture, [
+        'run',
+        'build_runner',
+        'build',
+        '--delete-conflicting-outputs',
+      ]);
 
       expect(File('${libDirectory.path}/model.g.dart').existsSync(), isTrue);
       await _expectDartSuccess(fixture, ['analyze', '--fatal-warnings']);
@@ -139,10 +136,7 @@ Future<void> _expectDartSuccess(
     Platform.resolvedExecutable,
     arguments,
     workingDirectory: workingDirectory.path,
-    environment: {
-      ...Platform.environment,
-      'CI': 'true',
-    },
+    environment: {...Platform.environment, 'CI': 'true'},
   );
 
   expect(

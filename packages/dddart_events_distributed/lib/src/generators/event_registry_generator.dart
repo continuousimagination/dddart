@@ -10,9 +10,9 @@ import 'package:source_gen/source_gen.dart';
 
 /// Builder function for the event registry generator.
 Builder eventRegistryBuilder(BuilderOptions options) => LibraryBuilder(
-      EventRegistryGenerator(),
-      generatedExtension: '.event_registry.g.dart',
-    );
+  EventRegistryGenerator(),
+  generatedExtension: '.event_registry.g.dart',
+);
 
 /// Generator for event registry that maps event type names to
 /// fromJson factories.
@@ -21,7 +21,10 @@ class EventRegistryGenerator extends Generator {
   String? generate(LibraryReader library, BuildStep buildStep) {
     // Find all classes annotated with @Serializable that extend DomainEvent
     final annotatedElements = library.annotatedWith(
-      const TypeChecker.fromRuntime(Serializable),
+      const TypeChecker.typeNamed(
+        Serializable,
+        inPackage: 'dddart_serialization',
+      ),
     );
 
     final eventClasses = <ClassElement>[];
@@ -45,7 +48,10 @@ class EventRegistryGenerator extends Generator {
     }
 
     // Generate the event registry
-    return _generateEventRegistry(eventClasses);
+    return _generateEventRegistry(
+      eventClasses,
+      buildStep.inputId.path.split('/').last,
+    );
   }
 
   /// Checks if a class extends DomainEvent.
@@ -56,7 +62,7 @@ class EventRegistryGenerator extends Generator {
       final supertype = current.supertype;
       if (supertype == null) break;
 
-      final supertypeName = supertype.element.name;
+      final supertypeName = supertype.element.name!;
 
       // Check for DomainEvent
       if (supertypeName == 'DomainEvent') {
@@ -70,17 +76,21 @@ class EventRegistryGenerator extends Generator {
   }
 
   /// Generates the event registry map.
-  String _generateEventRegistry(List<ClassElement> eventClasses) {
+  String _generateEventRegistry(
+    List<ClassElement> eventClasses,
+    String inputFile,
+  ) {
     final buffer = StringBuffer()
       ..writeln('// Generated event registry')
       ..writeln('// ignore_for_file: type=lint')
       ..writeln()
       ..writeln("import 'package:dddart/dddart.dart';")
+      ..writeln("import '$inputFile';")
       ..writeln();
 
     // Sort event classes by name for deterministic output
     final sortedClasses = List<ClassElement>.from(eventClasses)
-      ..sort((a, b) => a.name.compareTo(b.name));
+      ..sort((a, b) => a.name!.compareTo(b.name!));
 
     buffer
       ..writeln(
@@ -103,7 +113,7 @@ class EventRegistryGenerator extends Generator {
       );
 
     for (final classElement in sortedClasses) {
-      final className = classElement.name;
+      final className = classElement.name!;
       buffer.writeln("  '$className': $className.fromJson,");
     }
 

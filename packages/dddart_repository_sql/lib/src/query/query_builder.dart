@@ -166,10 +166,7 @@ class QueryBuilder {
   /// );
   /// // DELETE FROM orders WHERE customerId = ? AND status = ?
   /// ```
-  String buildDelete({
-    required String tableName,
-    required String whereClause,
-  }) {
+  String buildDelete({required String tableName, required String whereClause}) {
     final buffer = StringBuffer('DELETE FROM ');
     buffer.write(tableName);
     buffer.write(' WHERE ');
