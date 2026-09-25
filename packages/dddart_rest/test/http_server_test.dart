@@ -107,7 +107,7 @@ void main() {
   group('HttpServer - Resource Registration', () {
     test('registerResource() adds resource to internal list', () async {
       // Arrange
-      final server = HttpServer(port: 8081);
+      final server = HttpServer(port: 0);
       final repository = InMemoryRepository<TestUser>();
       final serializer = TestUserSerializer();
       final resource = CrudResource<TestUser, dynamic>(
@@ -122,11 +122,12 @@ void main() {
 
       // Assert - verify by starting server and checking routes work
       await server.start();
+      final port = server.boundPort!;
 
       // Make a test request to verify the resource is registered
       final client = io.HttpClient();
       try {
-        final request = await client.get('localhost', 8081, '/users');
+        final request = await client.get('localhost', port, '/users');
         final response = await request.close();
 
         // Should get 200 (empty list) not 404 (route not found)
@@ -139,7 +140,7 @@ void main() {
 
     test('multiple resources can be registered', () async {
       // Arrange
-      final server = HttpServer(port: 8082);
+      final server = HttpServer(port: 0);
 
       final userRepository = InMemoryRepository<TestUser>();
       final userSerializer = TestUserSerializer();
@@ -163,19 +164,20 @@ void main() {
       server.registerResource(userResource);
       server.registerResource(productResource);
       await server.start();
+      final port = server.boundPort!;
 
       // Assert - verify both resources are accessible
       final client = io.HttpClient();
       try {
         // Test users endpoint
-        final usersRequest = await client.get('localhost', 8082, '/users');
+        final usersRequest = await client.get('localhost', port, '/users');
         final usersResponse = await usersRequest.close();
         expect(usersResponse.statusCode, equals(200));
 
         // Test products endpoint
         final productsRequest = await client.get(
           'localhost',
-          8082,
+          port,
           '/products',
         );
         final productsResponse = await productsRequest.close();
@@ -189,10 +191,10 @@ void main() {
 
   group('HttpServer - Server Lifecycle', () {
     test(
-      'start() creates router and starts shelf server on configured port',
+      'start() creates router and starts shelf server on allocated port',
       () async {
         // Arrange
-        final server = HttpServer(port: 8083);
+        final server = HttpServer(port: 0);
         final repository = InMemoryRepository<TestUser>();
         final serializer = TestUserSerializer();
         final resource = CrudResource<TestUser, dynamic>(
@@ -205,11 +207,12 @@ void main() {
 
         // Act
         await server.start();
+        final port = server.boundPort!;
+        expect(port, greaterThan(0));
 
-        // Assert - verify server is running on the configured port
         final client = io.HttpClient();
         try {
-          final request = await client.get('localhost', 8083, '/users');
+          final request = await client.get('localhost', port, '/users');
           final response = await request.close();
           expect(response.statusCode, equals(200));
         } finally {
@@ -221,7 +224,7 @@ void main() {
 
     test('stop() closes shelf server cleanly', () async {
       // Arrange
-      final server = HttpServer(port: 8084);
+      final server = HttpServer(port: 0);
       final repository = InMemoryRepository<TestUser>();
       final serializer = TestUserSerializer();
       final resource = CrudResource<TestUser, dynamic>(
@@ -232,9 +235,11 @@ void main() {
       );
       server.registerResource(resource);
       await server.start();
+      final port = server.boundPort!;
 
       // Act
       await server.stop();
+      expect(server.boundPort, isNull);
 
       // Assert - verify server is no longer accepting connections
       // Poll until the port is actually closed (with timeout)
@@ -245,7 +250,7 @@ void main() {
       try {
         for (var i = 0; i < maxAttempts; i++) {
           try {
-            final request = await client.get('localhost', 8084, '/users');
+            final request = await client.get('localhost', port, '/users');
             await request.close();
             // Connection succeeded, wait a bit and try again
             await Future<void>.delayed(const Duration(milliseconds: 100));
@@ -268,7 +273,7 @@ void main() {
 
     test('starting already-running server throws StateError', () async {
       // Arrange
-      final server = HttpServer(port: 8085);
+      final server = HttpServer(port: 0);
       final repository = InMemoryRepository<TestUser>();
       final serializer = TestUserSerializer();
       final resource = CrudResource<TestUser, dynamic>(
@@ -299,7 +304,7 @@ void main() {
 
     test('stopping non-running server throws StateError', () async {
       // Arrange
-      final server = HttpServer(port: 8086);
+      final server = HttpServer(port: 0);
 
       // Act & Assert
       await expectLater(
@@ -318,7 +323,7 @@ void main() {
   group('HttpServer - Route Registration', () {
     test('routes are created for all CRUD operations', () async {
       // Arrange
-      final server = HttpServer(port: 8087);
+      final server = HttpServer(port: 0);
       final repository = InMemoryRepository<TestUser>();
       final serializer = TestUserSerializer();
 
@@ -340,13 +345,14 @@ void main() {
       );
       server.registerResource(resource);
       await server.start();
+      final port = server.boundPort!;
 
       final client = io.HttpClient();
       try {
         // Test GET collection
         final getCollectionRequest = await client.get(
           'localhost',
-          8087,
+          port,
           '/users',
         );
         final getCollectionResponse = await getCollectionRequest.close();
@@ -355,14 +361,14 @@ void main() {
         // Test GET by ID
         final getByIdRequest = await client.get(
           'localhost',
-          8087,
+          port,
           '/users/${testUser.id}',
         );
         final getByIdResponse = await getByIdRequest.close();
         expect(getByIdResponse.statusCode, equals(200));
 
         // Test POST
-        final postRequest = await client.post('localhost', 8087, '/users');
+        final postRequest = await client.post('localhost', port, '/users');
         postRequest.headers.set('Content-Type', 'application/json');
         final newUser = TestUser(
           id: UuidValue.fromString('999e4567-e89b-12d3-a456-426614174999'),
@@ -378,7 +384,7 @@ void main() {
         // Test PUT
         final putRequest = await client.put(
           'localhost',
-          8087,
+          port,
           '/users/${testUser.id}',
         );
         putRequest.headers.set('Content-Type', 'application/json');
@@ -396,7 +402,7 @@ void main() {
         // Test DELETE
         final deleteRequest = await client.delete(
           'localhost',
-          8087,
+          port,
           '/users/${testUser.id}',
         );
         final deleteResponse = await deleteRequest.close();
@@ -409,7 +415,7 @@ void main() {
 
     test('routes for multiple resources do not conflict', () async {
       // Arrange
-      final server = HttpServer(port: 8088);
+      final server = HttpServer(port: 0);
 
       // Set up users resource
       final userRepository = InMemoryRepository<TestUser>();
@@ -452,17 +458,18 @@ void main() {
       server.registerResource(userResource);
       server.registerResource(productResource);
       await server.start();
+      final port = server.boundPort!;
 
       final client = io.HttpClient();
       try {
         // Test users routes
-        final usersGetRequest = await client.get('localhost', 8088, '/users');
+        final usersGetRequest = await client.get('localhost', port, '/users');
         final usersGetResponse = await usersGetRequest.close();
         expect(usersGetResponse.statusCode, equals(200));
 
         final userGetByIdRequest = await client.get(
           'localhost',
-          8088,
+          port,
           '/users/${testUser.id}',
         );
         final userGetByIdResponse = await userGetByIdRequest.close();
@@ -471,7 +478,7 @@ void main() {
         // Test products routes
         final productsGetRequest = await client.get(
           'localhost',
-          8088,
+          port,
           '/products',
         );
         final productsGetResponse = await productsGetRequest.close();
@@ -479,7 +486,7 @@ void main() {
 
         final productGetByIdRequest = await client.get(
           'localhost',
-          8088,
+          port,
           '/products/${testProduct.id}',
         );
         final productGetByIdResponse = await productGetByIdRequest.close();
@@ -505,7 +512,7 @@ void main() {
 
     test('route patterns match expected format', () async {
       // Arrange
-      final server = HttpServer(port: 8089);
+      final server = HttpServer(port: 0);
       final repository = InMemoryRepository<TestUser>();
       final serializer = TestUserSerializer();
 
@@ -526,18 +533,19 @@ void main() {
       );
       server.registerResource(resource);
       await server.start();
+      final port = server.boundPort!;
 
       final client = io.HttpClient();
       try {
         // Verify collection endpoint pattern: /resource
-        final collectionRequest = await client.get('localhost', 8089, '/users');
+        final collectionRequest = await client.get('localhost', port, '/users');
         final collectionResponse = await collectionRequest.close();
         expect(collectionResponse.statusCode, equals(200));
 
         // Verify item endpoint pattern: /resource/:id
         final itemRequest = await client.get(
           'localhost',
-          8089,
+          port,
           '/users/${testUser.id}',
         );
         final itemResponse = await itemRequest.close();
@@ -546,7 +554,7 @@ void main() {
         // Verify invalid patterns return 404
         final invalidRequest = await client.get(
           'localhost',
-          8089,
+          port,
           '/users/invalid/extra/path',
         );
         final invalidResponse = await invalidRequest.close();

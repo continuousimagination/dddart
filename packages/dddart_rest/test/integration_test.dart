@@ -145,12 +145,12 @@ void main() {
     late HttpServer server;
     late InMemoryRepository<TestUser> repository;
     late TestUserSerializer serializer;
-    const port = 8081;
+    late int port;
 
     setUp(() async {
       repository = InMemoryRepository<TestUser>();
       serializer = TestUserSerializer();
-      server = HttpServer(port: port);
+      server = HttpServer(port: 0);
 
       server.registerResource(
         CrudResource<TestUser, dynamic>(
@@ -162,6 +162,7 @@ void main() {
       );
 
       await server.start();
+      port = server.boundPort!;
     });
 
     tearDown(() async {
@@ -292,12 +293,12 @@ void main() {
     late HttpServer server;
     late InMemoryRepository<TestUser> repository;
     late TestUserSerializer serializer;
-    const port = 8082;
+    late int port;
 
     setUp(() async {
       repository = InMemoryRepository<TestUser>();
       serializer = TestUserSerializer();
-      server = HttpServer(port: port);
+      server = HttpServer(port: 0);
 
       // Register custom query handler
       server.registerResource(
@@ -324,6 +325,7 @@ void main() {
       );
 
       await server.start();
+      port = server.boundPort!;
     });
 
     tearDown(() async {
@@ -396,12 +398,12 @@ void main() {
     late HttpServer server;
     late InMemoryRepository<TestUser> repository;
     late TestUserSerializer jsonSerializer;
-    const port = 8083;
+    late int port;
 
     setUp(() async {
       repository = InMemoryRepository<TestUser>();
       jsonSerializer = TestUserSerializer();
-      server = HttpServer(port: port);
+      server = HttpServer(port: 0);
 
       server.registerResource(
         CrudResource<TestUser, dynamic>(
@@ -412,6 +414,7 @@ void main() {
       );
 
       await server.start();
+      port = server.boundPort!;
     });
 
     tearDown(() async {
@@ -515,12 +518,12 @@ void main() {
     late HttpServer server;
     late InMemoryRepository<TestUser> repository;
     late TestUserSerializer serializer;
-    const port = 8084;
+    late int port;
 
     setUp(() async {
       repository = InMemoryRepository<TestUser>();
       serializer = TestUserSerializer();
-      server = HttpServer(port: port);
+      server = HttpServer(port: 0);
 
       server.registerResource(
         CrudResource<TestUser, dynamic>(
@@ -544,6 +547,7 @@ void main() {
       );
 
       await server.start();
+      port = server.boundPort!;
     });
 
     tearDown(() async {
@@ -663,12 +667,12 @@ void main() {
     late HttpServer server;
     late TestRepository repository;
     late TestUserSerializer serializer;
-    const port = 8085;
+    late int port;
 
     setUp(() async {
       repository = TestRepository();
       serializer = TestUserSerializer();
-      server = HttpServer(port: port);
+      server = HttpServer(port: 0);
 
       server.registerResource(
         CrudResource<TestUser, dynamic>(
@@ -693,6 +697,7 @@ void main() {
       );
 
       await server.start();
+      port = server.boundPort!;
     });
 
     tearDown(() async {
@@ -757,12 +762,12 @@ void main() {
     late HttpServer server;
     late InMemoryRepository<TestUser> repository;
     late TestUserSerializer serializer;
-    const port = 8086;
+    late int port;
 
     setUp(() async {
       repository = InMemoryRepository<TestUser>();
       serializer = TestUserSerializer();
-      server = HttpServer(port: port);
+      server = HttpServer(port: 0);
 
       server.registerResource(
         CrudResource<TestUser, dynamic>(
@@ -788,6 +793,7 @@ void main() {
       );
 
       await server.start();
+      port = server.boundPort!;
     });
 
     tearDown(() async {

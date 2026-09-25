@@ -42,6 +42,9 @@ class HttpServer {
   /// The underlying shelf HttpServer instance
   io.HttpServer? _shelfServer;
 
+  /// The active listener port, or null when the server is stopped.
+  int? get boundPort => _shelfServer?.port;
+
   /// Configures allowed origins for CORS requests.
   ///
   /// Pass `['*']` to allow all origins, or specify exact origins like
