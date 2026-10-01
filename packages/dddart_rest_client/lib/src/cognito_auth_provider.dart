@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:dddart_rest_client/src/auth_provider.dart';
 import 'package:dddart_rest_client/src/localhost_callback_strategy.dart';
 import 'package:dddart_rest_client/src/oauth_callback_strategy.dart';
+import 'package:dddart_rest_client/src/oauth_credential_store.dart';
+import 'package:dddart_rest_client/src/oauth_login_store.dart';
 import 'package:dddart_rest_client/src/pkce_generator.dart';
 import 'package:http/http.dart' as http;
 
@@ -13,14 +15,20 @@ class CognitoAuthProvider implements AuthProvider {
   CognitoAuthProvider({
     required this.cognitoDomain,
     required this.clientId,
-    required this.credentialsPath,
+    this.credentialsPath,
+    this.credentialStore,
+    this.loginStore,
     OAuthCallbackStrategy? callbackStrategy,
     List<String>? scopes,
     this.onOutput,
     http.Client? httpClient,
   })  : callbackStrategy = callbackStrategy ?? LocalhostCallbackStrategy(),
         scopes = scopes ?? ['openid', 'email', 'profile'],
-        _httpClient = httpClient ?? http.Client();
+        _httpClient = httpClient ?? http.Client() {
+    if (credentialsPath == null && credentialStore == null) {
+      throw ArgumentError('Provide a credential store or credentials path.');
+    }
+  }
 
   /// Base URL of the Cognito hosted UI.
   final String cognitoDomain;
@@ -29,7 +37,13 @@ class CognitoAuthProvider implements AuthProvider {
   final String clientId;
 
   /// Local path used to persist credentials.
-  final String credentialsPath;
+  final String? credentialsPath;
+
+  /// Optional platform storage; filesystem persistence remains the default.
+  final OAuthCredentialStore? credentialStore;
+
+  /// Optional navigation/reload transaction store for managed browser login.
+  final OAuthLoginStore? loginStore;
 
   /// Strategy that receives the OAuth redirect callback.
   final OAuthCallbackStrategy callbackStrategy;
@@ -93,6 +107,87 @@ class CognitoAuthProvider implements AuthProvider {
     final tokens = await _exchangeCodeForTokens(result.code, codeVerifier);
     await _saveCredentials(tokens);
     onOutput?.call('✓ Successfully authenticated!');
+  }
+
+  /// Creates and persists a one-use PKCE/state/nonce transaction before navigation.
+  /// Complete the redirected callback using [completeLogin] after reload.
+  Future<Uri> beginLogin({bool forceReauthentication = false}) async {
+    final store = loginStore;
+    if (store == null) {
+      throw StateError('Navigation login requires an OAuth login store.');
+    }
+    final verifier = PKCEGenerator.generateCodeVerifier();
+    final state = PKCEGenerator.generateState();
+    final nonce = PKCEGenerator.generateState();
+    await store.save({
+      'verifier': verifier,
+      'state': state,
+      'nonce': nonce,
+      'created_at': DateTime.now().toUtc().toIso8601String(),
+      'redirect_uri': callbackStrategy.getRedirectUri(),
+      'client_id': clientId,
+      'domain': cognitoDomain,
+    });
+    final url = Uri.parse(
+      _buildAuthorizationUrl(
+        codeChallenge: PKCEGenerator.generateCodeChallenge(verifier),
+        state: state,
+      ),
+    );
+    return url.replace(
+      queryParameters: {
+        ...url.queryParameters,
+        'nonce': nonce,
+        'prompt': forceReauthentication ? 'login' : 'select_account',
+      },
+    );
+  }
+
+  /// Exchanges a matching, unexpired callback and consumes pending state once.
+  Future<void> completeLogin(CallbackResult callback) async {
+    final store = loginStore;
+    if (store == null) {
+      throw StateError('Navigation login requires an OAuth login store.');
+    }
+    final transaction = await store.load();
+    await store.clear();
+    if (transaction == null ||
+        callback.hasError ||
+        callback.code.isEmpty ||
+        transaction['state'] != callback.state ||
+        transaction['client_id'] != clientId ||
+        transaction['domain'] != cognitoDomain ||
+        transaction['redirect_uri'] != callbackStrategy.getRedirectUri()) {
+      throw AuthenticationException('Invalid OAuth callback.');
+    }
+    final created = DateTime.parse(transaction['created_at'] as String);
+    final now = DateTime.now().toUtc();
+    if (created.isBefore(now.subtract(const Duration(minutes: 10))) ||
+        created.isAfter(now.add(const Duration(seconds: 30)))) {
+      throw AuthenticationException('Expired OAuth callback.');
+    }
+    final tokens = await _exchangeCodeForTokens(
+      callback.code,
+      transaction['verifier'] as String,
+    );
+    final parts = tokens.idToken.split('.');
+    Map<String, dynamic>? idClaims;
+    try {
+      if (parts.length == 3) {
+        idClaims = jsonDecode(
+          utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+        ) as Map<String, dynamic>;
+      }
+    } on Exception {
+      throw AuthenticationException('Invalid OAuth ID token.');
+    }
+    // These tokens came directly from the configured provider's TLS token
+    // endpoint. The server independently verifies access-token signatures.
+    if (idClaims?['nonce'] != transaction['nonce'] ||
+        idClaims?['aud'] != clientId) {
+      throw AuthenticationException('Invalid OAuth nonce or client.');
+    }
+    await _saveCredentials(tokens);
   }
 
   String _buildAuthorizationUrl({
@@ -276,8 +371,12 @@ class CognitoAuthProvider implements AuthProvider {
   }
 
   Future<_StoredCredentials?> _loadCredentials() async {
+    if (credentialStore != null) {
+      final json = await credentialStore!.load();
+      return json == null ? null : _StoredCredentials.fromJson(json);
+    }
     try {
-      final file = File(credentialsPath);
+      final file = File(credentialsPath!);
       if (!await file.exists()) return null;
       final contents = await file.readAsString();
       final json = jsonDecode(contents) as Map<String, dynamic>;
@@ -288,20 +387,28 @@ class CognitoAuthProvider implements AuthProvider {
   }
 
   Future<void> _saveCredentials(_CognitoTokens tokens) async {
-    final file = File(credentialsPath);
-    await file.parent.create(recursive: true);
     final creds = _StoredCredentials(
       accessToken: tokens.accessToken,
       idToken: tokens.idToken,
       refreshToken: tokens.refreshToken,
       expiresAt: DateTime.now().add(Duration(seconds: tokens.expiresIn)),
     );
+    if (credentialStore != null) {
+      await credentialStore!.save(creds.toJson());
+      return;
+    }
+    final file = File(credentialsPath!);
+    await file.parent.create(recursive: true);
     await file.writeAsString(jsonEncode(creds.toJson()));
   }
 
   Future<void> _deleteCredentials() async {
+    if (credentialStore != null) {
+      await credentialStore!.clear();
+      return;
+    }
     try {
-      final file = File(credentialsPath);
+      final file = File(credentialsPath!);
       if (await file.exists()) await file.delete();
     } catch (e) {
       // Ignore

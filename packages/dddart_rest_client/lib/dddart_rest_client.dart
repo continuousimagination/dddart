@@ -10,4 +10,6 @@ export 'src/device_flow_auth_provider.dart';
 export 'src/localhost_callback_strategy.dart';
 export 'src/manual_callback_strategy.dart';
 export 'src/oauth_callback_strategy.dart';
+export 'src/oauth_credential_store.dart';
+export 'src/oauth_login_store.dart';
 export 'src/rest_client.dart';
