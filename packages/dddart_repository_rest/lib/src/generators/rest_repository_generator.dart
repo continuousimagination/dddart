@@ -288,7 +288,7 @@ class RestRepositoryGenerator
     );
     buffer.writeln('///');
     buffer.writeln(
-      '/// This abstract class implements the base Repository<$className> methods',
+      '/// This abstract class implements the base `Repository<$className>` methods',
     );
     buffer.writeln(
       '/// (getById, save, deleteById) and declares custom methods as abstract.',
