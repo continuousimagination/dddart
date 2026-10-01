@@ -162,7 +162,7 @@ class EventBusClient {
         }
 
         for (final eventJson in eventsJson) {
-          await _processEvent(eventJson as Map<String, dynamic>);
+          await _processEvent(eventJson);
         }
       } else {
         _logger.warning('Poll failed: ${response.statusCode}');
