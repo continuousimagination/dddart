@@ -143,7 +143,16 @@ class EventBusClient {
       if (_closed) return;
 
       if (response.statusCode == 200) {
-        final eventsJson = jsonDecode(response.body) as List;
+        final eventsJson = (jsonDecode(response.body) as List)
+            .map((value) => Map<String, dynamic>.from(value as Map))
+            .toList();
+        // A server batch may be unordered. Advance the inclusive cursor only
+        // after earlier entries in that same batch have been considered.
+        DateTime timestamp(Map<String, dynamic> event) =>
+            DateTime.tryParse(event['createdAt'] as String? ?? '') ??
+            DateTime.fromMillisecondsSinceEpoch(0);
+        eventsJson
+            .sort((left, right) => timestamp(left).compareTo(timestamp(right)));
 
         // Use FINEST for empty polls to reduce noise, FINE for actual events
         if (eventsJson.isEmpty) {
