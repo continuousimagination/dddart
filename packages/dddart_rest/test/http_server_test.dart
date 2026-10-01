@@ -5,6 +5,7 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/src/crud_resource.dart';
 import 'package:dddart_rest/src/http_server.dart';
 import 'package:dddart_rest/src/query_handler.dart';
+import 'package:shelf/shelf.dart' as shelf;
 import 'package:test/test.dart';
 
 import 'json_serializer_test_support.dart';
@@ -104,6 +105,25 @@ Future<QueryResult<T>> inMemoryCollectionHandler<T extends AggregateRoot>(
 }
 
 void main() {
+  test('buildHandler serves registered repositories without binding a port',
+      () async {
+    final repository = InMemoryRepository<TestUser>();
+    final user = TestUser(name: 'Synthetic', email: 'synthetic@example.test');
+    await repository.save(user);
+    final server = HttpServer()
+      ..registerResource(
+        CrudResource<TestUser, void>(
+          path: '/users',
+          repository: repository,
+          serializer: TestUserSerializer(),
+        ),
+      );
+    final response = await server.buildHandler()(
+      shelf.Request('GET', Uri.parse('http://local/users/${user.id}')),
+    );
+    expect(response.statusCode, 200);
+    expect(jsonDecode(await response.readAsString())['id'], user.id.toString());
+  });
   group('HttpServer - Resource Registration', () {
     test('registerResource() adds resource to internal list', () async {
       // Arrange
