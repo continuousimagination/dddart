@@ -174,9 +174,13 @@ class CognitoAuthProvider implements AuthProvider {
     Map<String, dynamic>? idClaims;
     try {
       if (parts.length == 3) {
-        idClaims = jsonDecode(
+        final decoded = jsonDecode(
           utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
-        ) as Map<String, dynamic>;
+        );
+        if (decoded is! Map<String, dynamic>) {
+          throw const FormatException('ID token claims must be an object.');
+        }
+        idClaims = decoded;
       }
     } on Exception {
       throw AuthenticationException('Invalid OAuth ID token.');

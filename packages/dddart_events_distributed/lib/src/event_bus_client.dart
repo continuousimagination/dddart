@@ -96,9 +96,16 @@ class EventBusClient {
 
   /// Acquire current credentials for each request instead of retaining a token.
   final Future<String?> Function()? authTokenProvider;
+
+  /// Time allowed for a complete polling response before requesting cancellation.
+  ///
+  /// The default is two seconds. Increase this for slower endpoints. Late
+  /// responses are ignored. A custom HTTP client that does not support aborting
+  /// requests keeps the polling slot until its outstanding request settles.
   final Duration requestTimeout;
   bool _polling = false;
   bool _closed = false;
+  Completer<void>? _pollAbort;
   final Set<String> _seenAtTimestamp = {};
 
   /// Timestamp of the last received event.
@@ -122,6 +129,7 @@ class EventBusClient {
   Future<void> _poll() async {
     if (_closed || _polling) return;
     _polling = true;
+    Timer? timeout;
     try {
       final url = Uri.parse('$serverUrl/events').replace(
         queryParameters: {'since': _lastTimestamp.toIso8601String()},
@@ -138,9 +146,26 @@ class EventBusClient {
         headers['Authorization'] = 'Bearer $token';
       }
 
-      final response =
-          await _httpClient.get(url, headers: headers).timeout(requestTimeout);
-      if (_closed) return;
+      final abort = Completer<void>();
+      _pollAbort = abort;
+      var timedOut = false;
+      timeout = Timer(requestTimeout, () {
+        timedOut = true;
+        if (!abort.isCompleted) abort.complete();
+        _logger.warning('Poll timed out; awaiting transport cancellation.');
+      });
+      final request = http.AbortableRequest(
+        'GET',
+        url,
+        abortTrigger: abort.future,
+      )..headers.addAll(headers);
+      // Keep single-flight ownership through both headers and response body.
+      // A timeout requests cancellation; it never releases a still-live request.
+      final response = await http.Response.fromStream(
+        await _httpClient.send(request),
+      );
+      timeout.cancel();
+      if (_closed || timedOut) return;
 
       if (response.statusCode == 200) {
         final eventsJson = (jsonDecode(response.body) as List)
@@ -170,6 +195,8 @@ class EventBusClient {
     } catch (e, stackTrace) {
       _logger.severe('Poll error', e, stackTrace);
     } finally {
+      timeout?.cancel();
+      _pollAbort = null;
       _polling = false;
     }
   }
@@ -217,8 +244,11 @@ class EventBusClient {
 
       // Build headers with optional authentication
       final headers = <String, String>{'Content-Type': 'application/json'};
-      if (_authToken != null) {
-        headers['Authorization'] = 'Bearer $_authToken';
+      final token =
+          authTokenProvider == null ? _authToken : await authTokenProvider!();
+      if (_closed) return;
+      if (token != null) {
+        headers['Authorization'] = 'Bearer $token';
       }
 
       final response = await _httpClient.post(
@@ -295,6 +325,8 @@ class EventBusClient {
     _closed = true;
     _logger.info('EventBusClient closing');
     _pollingTimer?.cancel();
+    final abort = _pollAbort;
+    if (abort != null && !abort.isCompleted) abort.complete();
     await _subscription?.cancel();
     _httpClient.close();
     await localEventBus.close();
