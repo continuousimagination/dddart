@@ -1,146 +1,126 @@
-# DDDart Monorepo
+# DDDart
 
-A collection of packages for Domain-Driven Design in Dart with automatic JSON serialization.
+DDDart is a Dart workspace for building domain-driven applications with domain
+primitives, serialization and code generation, repository backends, REST server
+and client support, webhooks, configuration, and experimental distributed
+events.
 
-## Packages
+The repository currently contains 15 framework packages. See the
+[framework map](docs/framework-map.md) for their exact roles, dependencies,
+generated-code boundaries, and runtime requirements.
 
-### [dddart](packages/dddart/)
-Core DDDart framework providing base classes for entities, aggregate roots, and value objects, plus serialization interfaces.
+## Package groups
 
-### [dddart_serialization](packages/dddart_serialization/)
-Serialization framework providing the `@Serializable` annotation and configuration classes for DDDart objects.
+- **Domain foundation:** `dddart`, `dddart_serialization`, and `dddart_json`.
+- **Persistence:** MongoDB, DynamoDB, SQLite, MySQL, shared SQL infrastructure,
+  and generated REST client repositories.
+- **HTTP:** `dddart_rest` for Shelf server resources and
+  `dddart_rest_client` for authenticated clients.
+- **Supporting packages:** configuration, generic and Slack webhooks, and
+  experimental distributed events.
 
-### [dddart_json](packages/dddart_json/)
-JSON serialization code generation for DDDart objects. Generates type-safe serializer service classes.
+Repository implementations do not all expose the same capabilities. CRUD uses
+`Repository<T>`; collection reads belong in explicit application or domain
+interfaces with defined query and pagination semantics. Consult the
+[capability matrix](docs/framework-map.md#repository-capability-matrix) before
+selecting or abstracting a backend.
 
-## Quick Start
+## JSON serialization quick start
 
-1. **Add dependencies**:
+Within this unreleased workspace, add the current foundation packages and a
+builder to a consumer package:
+
 ```yaml
 dependencies:
-  dddart: ^1.0.0
-  dddart_serialization: ^1.0.0
-  dddart_json: ^1.0.0
+  dddart:
+    resolution: workspace
+  dddart_serialization:
+    resolution: workspace
+  dddart_json:
+    resolution: workspace
 
 dev_dependencies:
   build_runner: ^2.4.0
 ```
 
-2. **Create your domain models**:
+Define an annotated domain type. The owning library imports the JSON package and
+has one combined generated part:
+
 ```dart
+import 'dart:convert';
+
 import 'package:dddart/dddart.dart';
+import 'package:dddart_json/dddart_json.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 part 'user.g.dart';
 
 @Serializable()
 class User extends AggregateRoot {
-  const User({
+  User({
     required this.name,
     required this.email,
     super.id,
     super.createdAt,
     super.updatedAt,
   });
-  
+
   final String name;
   final String email;
 }
 ```
 
-3. **Generate serialization code**:
+Generate from the consumer package that owns the annotated library:
+
 ```bash
-dart run build_runner build
+dart run build_runner build --delete-conflicting-outputs
 ```
 
-4. **Use serialization**:
+Then use the generated serializer:
+
 ```dart
 final serializer = UserJsonSerializer();
 final user = User(name: 'John', email: 'john@example.com');
 
-// Serialize
 final json = serializer.toJson(user);
 final jsonString = serializer.serialize(user);
 
-// Deserialize
 final userFromJson = serializer.fromJson(json);
 final userFromString = serializer.deserialize(jsonString);
 ```
 
-## Features
-
-- **PODO Preservation**: Domain objects remain Plain Old Dart Objects
-- **DDD Compliance**: Enforces proper aggregate boundaries and patterns
-- **Type Safety**: Full compile-time type checking with generated code
-- **Cross-Platform**: Works on Dart server, Flutter mobile, and Flutter web
-- **Flexible Configuration**: Constructor defaults with method-level overrides
-- **Nested Serialization**: Handles complex object graphs automatically
-
-## Architecture
-
-The DDDart serialization system uses a three-package architecture:
-
-- **dddart**: Core DDD primitives + serialization contracts
-- **dddart_serialization**: Framework with annotations and configuration
-- **dddart_json**: JSON-specific implementation with code generation
-
-This design allows for:
-- Clean separation of concerns
-- Multiple serialization formats (JSON, YAML, Protocol Buffers, etc.)
-- Framework-agnostic domain models
-- Extensible serialization system
+Multiple generators can contribute to the same `user.g.dart`. Do not add a
+separate part directive for each serializer or repository backend.
+Consumer-generated files are normally ignored by Git, so regenerate and compile
+the owning library instead of trusting locally present output.
 
 ## Development
 
-This is a monorepo containing multiple Dart packages. Each package has its own:
-- `pubspec.yaml` for dependencies
-- `README.md` for documentation
-- `test/` directory for tests
-
-### Running Tests
+The root `pubspec.yaml` is authoritative for workspace membership. Resolve the
+workspace from the repository root:
 
 ```bash
-# Test all packages
-dart test
-
-# Test specific packages
-cd packages/dddart && dart test
-cd packages/dddart_serialization && dart test
-cd packages/dddart_json && dart test
+dart pub get
 ```
 
-### Code Generation
+Run focused analysis and tests from each affected package or example. The root
+does not contain an all-workspace Dart test suite. `scripts/test-all.sh` is the
+shared local gate; it validates the workspace-backed policy in
+`tool/validation/inventory.json`, then checks every declared package and example.
+Local mode intentionally excludes MongoDB, DynamoDB, and MySQL service-backed
+tests; CI supplies those service lanes.
 
-```bash
-# Generate serialization code for examples/tests
-cd packages/dddart_json && dart run build_runner build
-```
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the canonical contributor workflow and
+[AGENTS.md](AGENTS.md) for repository-wide agent guidance.
 
-### Package Dependencies
+## Platform support
 
-```
-dddart (core)
-├── No external dependencies
-│
-dddart_serialization (framework)
-├── dddart
-│
-dddart_json (JSON implementation)
-├── dddart
-├── dddart_serialization
-├── build
-├── source_gen
-└── analyzer
-```
-
-## Contributing
-
-1. Make changes in the appropriate package directory
-2. Update tests and documentation
-3. Run tests for affected packages
-4. Ensure code generation works correctly
-5. Submit a pull request
+Runtime requirements differ by package. Server and file-based APIs use
+`dart:io`, SQLite uses a native embedded library, and MongoDB, DynamoDB, and
+MySQL integrations require their corresponding services or local emulators. Do
+not infer support for a target from this root package list; verify the selected
+package and compile for the intended platform.
 
 ## License
 
-MIT License - see individual package directories for details.
+MIT License. See package directories for package-specific metadata.

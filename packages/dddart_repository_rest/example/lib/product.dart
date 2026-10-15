@@ -15,7 +15,7 @@ abstract interface class ProductRepository implements Repository<Product> {
   /// Finds products by category.
   Future<List<Product>> findByCategory(String category);
 
-  /// Finds products within a price range.
+  /// Finds the first default REST page of products within a price range.
   Future<List<Product>> findByPriceRange(double minPrice, double maxPrice);
 }
 
@@ -98,13 +98,11 @@ class ProductRestRepository extends ProductRestRepositoryBase {
     double maxPrice,
   ) async {
     try {
-      // Build query string with multiple parameters
+      final uri = Uri.parse(
+        '${_connection.baseUrl}$_resourcePath',
+      ).replace(queryParameters: {'priceRange': '$minPrice,$maxPrice'});
       final response = await _connection.executeRequest(
-        () => _connection.client.get(
-          Uri.parse(
-            '${_connection.baseUrl}$_resourcePath?minPrice=$minPrice&maxPrice=$maxPrice',
-          ),
-        ),
+        () => _connection.client.get(uri),
         operation: 'find products by price range',
       );
 

@@ -426,6 +426,7 @@
         "dddart",
         "dddart_serialization",
         "dddart_json",
+        "dddart_rest",
         "dddart_rest_client",
         "dddart_repository_rest"
       ],
@@ -463,6 +464,12 @@
           "classification": "runnable",
           "action": "compile",
           "reason": "Requires a separately running REST server to exercise transport failures."
+        },
+        {
+          "path": "product_price_range_server_example.dart",
+          "classification": "runnable",
+          "action": "compile",
+          "reason": "Long-running in-memory REST server for the preserved Agent Parallelism Experiment 001."
         }
       ],
       "sourceOverrides": [],

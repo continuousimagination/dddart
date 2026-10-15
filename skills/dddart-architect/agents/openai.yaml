@@ -1,0 +1,4 @@
+interface:
+  display_name: "dddart Architect"
+  short_description: "Decompose dddart work into safe parallel tasks"
+  default_prompt: "Use $dddart-architect to decompose this dddart feature into contract-frozen, independently testable work items."
