@@ -1,8 +1,14 @@
 targets:
   $default:
     builders:
+      # Runtime tests have no generated parts; generator tests supply source
+      # fixtures directly to build_test. Do not resolve test-library metadata
+      # merely to discover that it has no serialization inputs.
+      dddart_json:json_serializable:
+        generate_for: [lib/**, example/**]
       dddart_events_distributed:event_registry:
         enabled: true
+        generate_for: [lib/**, example/**]
 
 builders:
   event_registry:

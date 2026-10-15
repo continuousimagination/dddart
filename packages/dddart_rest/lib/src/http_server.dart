@@ -125,6 +125,17 @@ class HttpServer {
       throw StateError('Server is already running');
     }
 
+    _shelfServer = await shelf_io.serve(
+      buildHandler(),
+      io.InternetAddress.anyIPv4,
+      port,
+      shared: true,
+    );
+  }
+
+  /// Builds the same registered Shelf handler without opening a listening port.
+  /// Useful for managed runtimes (including Lambda) and in-process consumers.
+  Handler buildHandler() {
     final router = Router();
 
     // Register routes for each resource
@@ -173,13 +184,7 @@ class HttpServer {
       handler = _corsMiddleware().addHandler(handler);
     }
 
-    // Start shelf server with router on configured port
-    _shelfServer = await shelf_io.serve(
-      handler,
-      io.InternetAddress.anyIPv4,
-      port,
-      shared: true,
-    );
+    return handler;
   }
 
   /// Stops the HTTP server
