@@ -17,8 +17,8 @@ JSON serialization code generation for DDDart objects. Generates type-safe seria
 
 1. **Add dependencies** using the [Git installation guide](docs/GIT_INSTALLATION.md).
    These packages are not yet published on pub.dev, so the hosted `^1.0.0`
-   examples previously shown here cannot resolve. Pin all packages to the
-   same repository commit.
+   examples previously shown here cannot resolve. Pin all direct dddart
+   dependencies to the same repository commit.
 
 2. **Create your domain models**:
 ```dart

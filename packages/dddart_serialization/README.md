@@ -14,10 +14,9 @@ This is a framework package - you'll typically use it alongside a specific seria
 ## Installation
 
 Until these packages are published on pub.dev, use the
-[Git installation guide](../../docs/GIT_INSTALLATION.md). A Git dependency on
-`dddart_serialization` alone still tries to resolve its `dddart: ^0.9.0`
-dependency from pub.dev. Pin both packages to one Git commit and add the
-documented root override for `dddart`.
+[Git installation guide](../../docs/GIT_INSTALLATION.md). Pin every direct
+dddart dependency to one Git commit. The package's sibling dependency on core
+resolves from that same checkout.
 
 ## Usage
 
