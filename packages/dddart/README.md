@@ -14,12 +14,10 @@ A lightweight Domain-Driven Design (DDD) framework for Dart that provides base c
 
 ## Installation
 
-Add this to your package's `pubspec.yaml` file:
-
-```yaml
-dependencies:
-  dddart: ^1.0.0
-```
+Until the package is published on pub.dev, add it from Git using a full commit
+SHA and `path: packages/dddart`. See the [Git installation guide](../../docs/GIT_INSTALLATION.md)
+for a working `pubspec.yaml` and the additional setup needed when combining
+DD Dart packages.
 
 Then run:
 

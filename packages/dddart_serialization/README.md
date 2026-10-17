@@ -13,11 +13,10 @@ This is a framework package - you'll typically use it alongside a specific seria
 
 ## Installation
 
-```yaml
-dependencies:
-  dddart: ^0.1.0
-  dddart_serialization: ^0.1.0
-```
+Until these packages are published on pub.dev, use the
+[Git installation guide](../../docs/GIT_INSTALLATION.md). Pin every direct
+dddart dependency to one Git commit. The package's sibling dependency on core
+resolves from that same checkout.
 
 ## Usage
 
