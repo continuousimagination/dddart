@@ -95,7 +95,7 @@ void main() {
     );
     expect((await repository.getById(source.id)).name, 'good');
 
-    final db = await factory.open('failures', version: 1);
+    final db = await factory.open('failures', version: 2);
     final transaction = db.transaction('samples', idbModeReadWrite);
     final committed = transaction.completed;
     await transaction.objectStore('samples').put({

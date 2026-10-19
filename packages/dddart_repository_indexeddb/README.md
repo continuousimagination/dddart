@@ -47,17 +47,24 @@ try {
 }
 ```
 
-Use a dedicated database name for each object store with this initial schema.
-The adapter creates its store at database version 1. Opening an existing
-database at that version with a different, missing store reports a connection
-failure; it does not change the schema or erase data.
+Use a dedicated database name for each object store. The adapter opens database
+version 2 and writes a schema/codec marker in the same version-change
+transaction. Existing version-1 aggregate, unique-index and receipt records
+are checked before the upgrade; their bytes are left intact. An interrupted
+upgrade rolls back the marker and version change, so opening again can retry.
+An incompatible codec, malformed legacy record, or unexpected store fails the
+upgrade and preserves the old database for an explicit migration. Separate
+contexts opening version 2 must agree on the codec version. Close old tabs that
+still hold version-1 connections so the upgrade can proceed.
 
 `save` is an upsert, as specified by `Repository<T>`. It waits for the
 IndexedDB transaction to commit before returning. `getById` validates the
 stored envelope, codec version, and decoded aggregate ID. Missing IDs map to
 `RepositoryExceptionType.notFound`; invalid snapshots map to `constraint`;
 storage failures carry their underlying cause. Reads never rewrite old or
-malformed records. Encoding must produce a complete detached snapshot.
+malformed records. Basic `save` and `deleteById` reject managed, malformed,
+or older-codec records rather than replacing them. Encoding must produce a
+complete detached snapshot.
 
 ## Conditional transactions
 
@@ -117,11 +124,16 @@ fail explicitly before mutation while existing receipts remain resolvable.
 The application must plan a deliberate compaction/migration before reaching
 that limit. Browser quota and origin-data eviction remain possible.
 
-Migration fences, incompatible-schema recovery, and quota/unavailable-storage
-proof remain separate work. The base CRUD API has not acquired conditional
-guarantees; callers that need them must use `commitConditional`.
+Version-1 to version-2 migration only adds the schema marker; it does not
+transform aggregate payloads. A later codec change needs an explicit consumer
+migration. Storage unavailability is a typed connection error. A quota failure
+after a conditional write starts can yield `uncertain`; retain the exact
+operation ID and digest, resolve it when storage returns, and retry the same
+request if no receipt can be found. An absent receipt is never rollback proof.
+The base CRUD API has not acquired conditional guarantees; callers that need
+them must use `commitConditional`.
 
 Run `dart test` for the in-memory IndexedDB contract and injected failure
 checks. Run `dart test -p chrome test/browser_repository_test.dart
 test/conditional_browser_test.dart` for real browser checks. Run both from this
-package directory.
+package directory. Physical WebKit/device behavior is still a separate proof.

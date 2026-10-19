@@ -18,7 +18,7 @@ typedef AggregateDecoder<T extends AggregateRoot> = T Function(String snapshot);
 /// The caller supplies an [IdbFactory] so browser code can use
 /// `idbFactoryNative` without a silent in-memory fallback. This class only
 /// implements basic CRUD and an optional conditional transaction capability.
-/// Migration fences and recovery from incompatible stored schemas are separate.
+/// Schema upgrades preserve existing records and validate the codec before use.
 class IndexedDbRepository<T extends AggregateRoot>
     implements Repository<T>, ConditionalRepository<T> {
   IndexedDbRepository({
@@ -57,18 +57,95 @@ class IndexedDbRepository<T extends AggregateRoot>
         type: RepositoryExceptionType.connection,
       );
     }
-    return _opening ??= _factory.open(
-      databaseName,
-      version: 1,
-      onUpgradeNeeded: (event) {
-        if (!event.database.objectStoreNames.contains(storeName)) {
-          event.database.createObjectStore(storeName);
-        }
-      },
-    ).catchError((Object error) {
+    return _opening ??= _openAndValidate().catchError((Object error) {
       _opening = null;
+      if (error is RepositoryException) throw error;
       throw _storageFailure('open', error);
     });
+  }
+
+  Future<Database> _openAndValidate() async {
+    Database? db;
+    RepositoryException? upgradeFailure;
+    try {
+      db = await _factory.open(
+        databaseName,
+        version: _schemaVersion,
+        onUpgradeNeeded: (event) async {
+          try {
+            if (!event.database.objectStoreNames.contains(storeName)) {
+              if (event.oldVersion != 0) {
+                throw _invalidStored('Existing database has a different store');
+              }
+              event.database.createObjectStore(storeName);
+            }
+            // The marker and version change commit together. A failed scan or
+            // write aborts the upgrade, preserving the old database.
+            final store = event.transaction.objectStore(storeName);
+            if (event.oldVersion != 0) {
+              await for (final cursor in store.openCursor(autoAdvance: true)) {
+                final key = cursor.primaryKey;
+                final raw = cursor.value;
+                if (key == _receiptCountKey) {
+                  if (raw is! Map || raw['kind'] != 'receiptCount') {
+                    throw _invalidStored('Legacy receipt count is malformed');
+                  }
+                } else if (key is String && key.startsWith(_receiptPrefix)) {
+                  if (raw is! Map || raw['kind'] != 'receipt') {
+                    throw _invalidStored('Legacy receipt is malformed');
+                  }
+                } else if (key is String && key.startsWith(_uniquePrefix)) {
+                  if (raw is! Map || raw['kind'] != 'unique') {
+                    throw _invalidStored('Legacy unique index is malformed');
+                  }
+                } else if (key is! String ||
+                    raw is! Map ||
+                    raw['id'] != key ||
+                    raw['codecVersion'] != codecVersion ||
+                    raw['payload'] is! String) {
+                  throw _invalidStored(
+                      'Legacy aggregate needs explicit codec migration');
+                }
+              }
+            }
+            final existing = await store.getObject(_schemaKey);
+            if (existing != null) {
+              throw _invalidStored('Schema marker already exists');
+            }
+            await store.put({
+              'kind': 'schema',
+              'version': _schemaVersion,
+              'codecVersion': codecVersion,
+            }, _schemaKey);
+          } catch (error) {
+            upgradeFailure = error is RepositoryException
+                ? error
+                : _storageFailure('upgrade', error);
+            try {
+              event.transaction.abort();
+            } catch (_) {
+              // A request failure can already have aborted the transaction.
+            }
+          }
+        },
+      );
+      final transaction = db.transaction(storeName, idbModeReadOnly);
+      final marker = await _runCommitted(
+        transaction,
+        () => transaction.objectStore(storeName).getObject(_schemaKey),
+      );
+      if (marker is! Map ||
+          marker['kind'] != 'schema' ||
+          marker['version'] != _schemaVersion ||
+          marker['codecVersion'] != codecVersion) {
+        throw _invalidStored('Database schema or codec is incompatible');
+      }
+      return db;
+    } catch (_) {
+      db?.close();
+      if (upgradeFailure != null) throw upgradeFailure!;
+      rethrow;
+    }
   }
 
   @override
@@ -131,12 +208,7 @@ class IndexedDbRepository<T extends AggregateRoot>
       await _runCommitted(transaction, () async {
         final store = transaction.objectStore(storeName);
         final previous = await store.getObject(aggregate.id.uuid);
-        if (_isManaged(previous)) {
-          throw RepositoryException(
-            'Conditional aggregate requires commitConditional',
-            type: RepositoryExceptionType.constraint,
-          );
-        }
+        _assertBasicWritable(previous, aggregate.id);
         await store.put({
           'id': aggregate.id.uuid,
           'codecVersion': codecVersion,
@@ -165,12 +237,7 @@ class IndexedDbRepository<T extends AggregateRoot>
             type: RepositoryExceptionType.notFound,
           );
         }
-        if (_isManaged(existing)) {
-          throw RepositoryException(
-            'Conditional aggregate requires commitConditional',
-            type: RepositoryExceptionType.constraint,
-          );
-        }
+        _assertBasicWritable(existing, id);
         await store.delete(id.uuid);
         return null;
       });
@@ -621,7 +688,20 @@ class IndexedDbRepository<T extends AggregateRoot>
     }
   }
 
-  bool _isManaged(Object? raw) => raw is Map && raw['managed'] == true;
+  void _assertBasicWritable(Object? raw, UuidValue id) {
+    if (raw == null) return;
+    if (raw is! Map ||
+        raw.length != 3 ||
+        raw['id'] != id.uuid ||
+        raw['codecVersion'] != codecVersion ||
+        raw['payload'] is! String ||
+        raw.containsKey('managed') ||
+        raw.containsKey('revision') ||
+        raw.containsKey('uniqueKeys')) {
+      throw _invalidStored(
+          'Stored aggregate is managed, malformed, or needs migration');
+    }
+  }
 
   String _uniqueKey(UniqueValue value) {
     if (value.index.isEmpty ||
@@ -729,6 +809,8 @@ class IndexedDbRepository<T extends AggregateRoot>
 const _uniquePrefix = '__dddart_unique__';
 const _receiptPrefix = '__dddart_receipt__';
 const _receiptCountKey = '__dddart_receipt_count__';
+const _schemaKey = '__dddart_schema__';
+const _schemaVersion = 2;
 
 final class _PreparedCommit {
   const _PreparedCommit(this.operationId, this.digest, this.mutations);
