@@ -64,6 +64,6 @@ operations across records, operation receipts, migration, or recovery from
 uncertain write outcomes. Those need a contract beyond `Repository<T>` before
 local-first application state can depend on them.
 
-Run `dart test test/repository_test.dart` for the in-memory IndexedDB contract
-checks and `dart test -p chrome test/browser_repository_test.dart` for a real
-browser check. Run both from this package directory.
+Run `dart test` for the in-memory IndexedDB contract and injected request/commit
+failure checks. Run `dart test -p chrome test/browser_repository_test.dart` for a
+real browser check. Run both from this package directory.

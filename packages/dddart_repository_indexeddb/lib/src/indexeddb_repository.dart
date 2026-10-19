@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dddart/dddart.dart';
 import 'package:idb_shim/idb.dart';
 
@@ -65,9 +67,10 @@ class IndexedDbRepository<T extends AggregateRoot> implements Repository<T> {
     try {
       final db = await _database();
       final transaction = db.transaction(storeName, idbModeReadOnly);
-      final committed = transaction.completed;
-      stored = await transaction.objectStore(storeName).getObject(id.uuid);
-      await committed;
+      stored = await _runCommitted(
+        transaction,
+        () => transaction.objectStore(storeName).getObject(id.uuid),
+      );
     } on RepositoryException {
       rethrow;
     } catch (error) {
@@ -115,13 +118,14 @@ class IndexedDbRepository<T extends AggregateRoot> implements Repository<T> {
     try {
       final db = await _database();
       final transaction = db.transaction(storeName, idbModeReadWrite);
-      final committed = transaction.completed;
-      await transaction.objectStore(storeName).put({
-        'id': aggregate.id.uuid,
-        'codecVersion': codecVersion,
-        'payload': payload,
-      }, aggregate.id.uuid);
-      await committed;
+      await _runCommitted(transaction, () async {
+        await transaction.objectStore(storeName).put({
+          'id': aggregate.id.uuid,
+          'codecVersion': codecVersion,
+          'payload': payload,
+        }, aggregate.id.uuid);
+        return null;
+      });
     } on RepositoryException {
       rethrow;
     } catch (error) {
@@ -134,18 +138,18 @@ class IndexedDbRepository<T extends AggregateRoot> implements Repository<T> {
     try {
       final db = await _database();
       final transaction = db.transaction(storeName, idbModeReadWrite);
-      final committed = transaction.completed;
-      final store = transaction.objectStore(storeName);
-      final existing = await store.getObject(id.uuid);
-      if (existing == null) {
-        await committed;
-        throw RepositoryException(
-          'Aggregate $id was not found',
-          type: RepositoryExceptionType.notFound,
-        );
-      }
-      await store.delete(id.uuid);
-      await committed;
+      await _runCommitted(transaction, () async {
+        final store = transaction.objectStore(storeName);
+        final existing = await store.getObject(id.uuid);
+        if (existing == null) {
+          throw RepositoryException(
+            'Aggregate $id was not found',
+            type: RepositoryExceptionType.notFound,
+          );
+        }
+        await store.delete(id.uuid);
+        return null;
+      });
     } on RepositoryException {
       rethrow;
     } catch (error) {
@@ -158,6 +162,34 @@ class IndexedDbRepository<T extends AggregateRoot> implements Repository<T> {
     _closed = true;
     final opening = _opening;
     if (opening != null) (await opening).close();
+  }
+
+  /// Attach the completion error handler before issuing the first request.
+  /// A failed request can also abort its transaction, yielding two separate
+  /// failed futures. Both must be observed before this operation returns.
+  Future<Object?> _runCommitted(
+    Transaction transaction,
+    Future<Object?> Function() action,
+  ) async {
+    final completion = transaction.completed.then<AsyncError?>(
+      (_) => null,
+      onError: (Object error, StackTrace stack) => AsyncError(error, stack),
+    );
+    Object? result;
+    AsyncError? actionFailure;
+    try {
+      result = await action();
+    } catch (error, stack) {
+      actionFailure = AsyncError(error, stack);
+    }
+    final commitFailure = await completion;
+    if (commitFailure != null) {
+      Error.throwWithStackTrace(commitFailure.error, commitFailure.stackTrace);
+    }
+    if (actionFailure != null) {
+      Error.throwWithStackTrace(actionFailure.error, actionFailure.stackTrace);
+    }
+    return result;
   }
 
   RepositoryException _storageFailure(String operation, Object error) {
