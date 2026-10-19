@@ -132,7 +132,8 @@ class _AbortStore implements ObjectStore {
     transaction.putCount++;
     if (transaction.putCount == transaction.abortAtPut) {
       transaction.delegate.abort();
-      return Future.error(StateError('injected transaction abort'));
+      return Future.error(
+          StateError('QuotaExceededError: injected full store'));
     }
     return delegate.put(value, key);
   }
@@ -183,7 +184,7 @@ void main() {
       throwsA(isA<RepositoryException>().having(
         (error) => error.type,
         'type',
-        RepositoryExceptionType.connection,
+        RepositoryExceptionType.constraint,
       )),
     );
     await missingStore.close();
@@ -202,9 +203,12 @@ void main() {
     await repository.close();
   });
 
-  test('an abort after one queued put preserves every prior record', () async {
+  test('injected quota failure after one queued put preserves prior data',
+      () async {
     final factory = _LostAckFactory(newIdbFactoryMemory());
     final repository = _repository('abort', factory: factory);
+    final prior = _Sample(name: 'Prior');
+    await repository.save(prior);
     final a = _Sample(name: 'A');
     final b = _Sample(name: 'B');
     final request = ConditionalCommit<_Sample>(
@@ -233,6 +237,7 @@ void main() {
         )),
       );
     }
+    expect((await repository.getById(prior.id)).name, 'Prior');
     expect(
         (await repository.resolveOperation(
           request.operationId,

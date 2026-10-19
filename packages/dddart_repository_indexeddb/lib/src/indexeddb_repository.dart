@@ -5,6 +5,10 @@ import 'package:dddart/dddart.dart';
 import 'package:crypto/crypto.dart';
 import 'package:idb_shim/idb.dart';
 
+import 'transaction_error_guard_stub.dart'
+    if (dart.library.js_interop) 'transaction_error_guard_web.dart'
+    as native_guard;
+
 /// Serializes one detached aggregate snapshot. Implementations must include
 /// everything needed to reconstruct the aggregate, including its identity.
 typedef AggregateEncoder<T extends AggregateRoot> = String Function(
@@ -18,7 +22,7 @@ typedef AggregateDecoder<T extends AggregateRoot> = T Function(String snapshot);
 /// The caller supplies an [IdbFactory] so browser code can use
 /// `idbFactoryNative` without a silent in-memory fallback. This class only
 /// implements basic CRUD and an optional conditional transaction capability.
-/// Migration fences and recovery from incompatible stored schemas are separate.
+/// Schema upgrades preserve existing records and validate the codec before use.
 class IndexedDbRepository<T extends AggregateRoot>
     implements Repository<T>, ConditionalRepository<T> {
   IndexedDbRepository({
@@ -57,18 +61,154 @@ class IndexedDbRepository<T extends AggregateRoot>
         type: RepositoryExceptionType.connection,
       );
     }
-    return _opening ??= _factory.open(
-      databaseName,
-      version: 1,
-      onUpgradeNeeded: (event) {
-        if (!event.database.objectStoreNames.contains(storeName)) {
-          event.database.createObjectStore(storeName);
-        }
-      },
-    ).catchError((Object error) {
+    return _opening ??= _openAndValidate().catchError((Object error) {
       _opening = null;
+      if (error is RepositoryException) throw error;
       throw _storageFailure('open', error);
     });
+  }
+
+  Future<Database> _openAndValidate() async {
+    Database? db;
+    RepositoryException? upgradeFailure;
+    try {
+      db = await _factory.open(
+        databaseName,
+        version: _schemaVersion,
+        onUpgradeNeeded: (event) async {
+          try {
+            if (!event.database.objectStoreNames.contains(storeName)) {
+              if (event.oldVersion != 0) {
+                throw _invalidStored('Existing database has a different store');
+              }
+              event.database.createObjectStore(storeName);
+            }
+            // The marker and version change commit together. A failed scan or
+            // write aborts the upgrade, preserving the old database.
+            final store = event.transaction.objectStore(storeName);
+            if (event.oldVersion != 0) {
+              await _validateLegacyRecords(store);
+            }
+            final existing = await store.getObject(_schemaKey);
+            if (existing != null) {
+              throw _invalidStored('Schema marker already exists');
+            }
+            await store.put({
+              'kind': 'schema',
+              'version': _schemaVersion,
+              'codecVersion': codecVersion,
+            }, _schemaKey);
+          } catch (error) {
+            upgradeFailure = error is RepositoryException
+                ? error
+                : _storageFailure('upgrade', error);
+            try {
+              event.transaction.abort();
+            } catch (_) {
+              // A request failure can already have aborted the transaction.
+            }
+          }
+        },
+      );
+      final transaction = db.transaction(storeName, idbModeReadOnly);
+      final marker = await _runCommitted(
+        transaction,
+        () => transaction.objectStore(storeName).getObject(_schemaKey),
+      );
+      if (marker is! Map ||
+          marker['kind'] != 'schema' ||
+          marker['version'] != _schemaVersion ||
+          marker['codecVersion'] != codecVersion) {
+        throw _invalidStored('Database schema or codec is incompatible');
+      }
+      return db;
+    } catch (_) {
+      db?.close();
+      if (upgradeFailure != null) throw upgradeFailure!;
+      rethrow;
+    }
+  }
+
+  Future<void> _validateLegacyRecords(ObjectStore store) async {
+    final indexedOwners = <String, String>{};
+    final claimedOwners = <String, String>{};
+    int? receiptCount;
+    var receipts = 0;
+    await for (final cursor in store.openCursor(autoAdvance: true)) {
+      final key = cursor.primaryKey;
+      final raw = cursor.value;
+      if (key == _receiptCountKey) {
+        if (raw is! Map ||
+            raw.length != 2 ||
+            raw['kind'] != 'receiptCount' ||
+            raw['count'] is! int ||
+            (raw['count'] as int) < 0) {
+          throw _invalidStored('Legacy receipt count is malformed');
+        }
+        receiptCount = raw['count'] as int;
+      } else if (key is String && key.startsWith(_receiptPrefix)) {
+        if (raw is! Map || raw['digest'] is! String) {
+          throw _invalidStored('Legacy receipt is malformed');
+        }
+        try {
+          final id = UuidValue.fromString(key.substring(_receiptPrefix.length));
+          _parseReceipt(raw, id, raw['digest'] as String);
+        } on ArgumentError {
+          throw _invalidStored('Legacy receipt ID is malformed');
+        }
+        receipts++;
+      } else if (key is String && key.startsWith(_uniquePrefix)) {
+        if (raw is! Map ||
+            raw.length != 2 ||
+            raw['kind'] != 'unique' ||
+            raw['owner'] is! String ||
+            !_validStoredUniqueKey(key)) {
+          throw _invalidStored('Legacy unique index is malformed');
+        }
+        try {
+          UuidValue.fromString(raw['owner'] as String);
+        } on ArgumentError {
+          throw _invalidStored('Legacy unique owner is malformed');
+        }
+        indexedOwners[key] = raw['owner'] as String;
+      } else {
+        if (key is! String ||
+            raw is! Map ||
+            raw['id'] != key ||
+            raw['codecVersion'] != codecVersion ||
+            raw['payload'] is! String) {
+          throw _invalidStored('Legacy aggregate needs explicit migration');
+        }
+        late final UuidValue id;
+        try {
+          id = UuidValue.fromString(key);
+          if (decode(raw['payload'] as String).id != id) {
+            throw const FormatException('Legacy aggregate identity mismatch');
+          }
+        } catch (_) {
+          throw _invalidStored('Legacy aggregate payload is malformed');
+        }
+        if (raw['managed'] == true) {
+          if (raw.length != 6) {
+            throw _invalidStored('Legacy conditional aggregate is malformed');
+          }
+          for (final uniqueKey in _storedState(raw, id).uniqueKeys) {
+            if (claimedOwners.containsKey(uniqueKey)) {
+              throw _invalidStored('Legacy unique value has multiple claims');
+            }
+            claimedOwners[uniqueKey] = key;
+          }
+        } else if (raw.length != 3) {
+          throw _invalidStored('Legacy basic aggregate is malformed');
+        }
+      }
+    }
+    if ((receiptCount ?? 0) != receipts ||
+        indexedOwners.length != claimedOwners.length ||
+        indexedOwners.entries
+            .any((entry) => claimedOwners[entry.key] != entry.value)) {
+      throw _invalidStored('Legacy metadata does not match its records');
+    }
   }
 
   @override
@@ -131,12 +271,7 @@ class IndexedDbRepository<T extends AggregateRoot>
       await _runCommitted(transaction, () async {
         final store = transaction.objectStore(storeName);
         final previous = await store.getObject(aggregate.id.uuid);
-        if (_isManaged(previous)) {
-          throw RepositoryException(
-            'Conditional aggregate requires commitConditional',
-            type: RepositoryExceptionType.constraint,
-          );
-        }
+        _assertBasicWritable(previous, aggregate.id);
         await store.put({
           'id': aggregate.id.uuid,
           'codecVersion': codecVersion,
@@ -165,12 +300,7 @@ class IndexedDbRepository<T extends AggregateRoot>
             type: RepositoryExceptionType.notFound,
           );
         }
-        if (_isManaged(existing)) {
-          throw RepositoryException(
-            'Conditional aggregate requires commitConditional',
-            type: RepositoryExceptionType.constraint,
-          );
-        }
+        _assertBasicWritable(existing, id);
         await store.delete(id.uuid);
         return null;
       });
@@ -538,7 +668,11 @@ class IndexedDbRepository<T extends AggregateRoot>
   }
 
   CommitResult _parseReceipt(Object raw, UuidValue operationId, String digest) {
-    if (raw is! Map || raw['kind'] != 'receipt' || raw['digest'] is! String) {
+    if (raw is! Map ||
+        raw.length != 5 ||
+        raw['kind'] != 'receipt' ||
+        raw['digest'] is! String ||
+        (raw['digest'] as String).isEmpty) {
       throw _invalidStored('Operation receipt is malformed');
     }
     if (raw['digest'] != digest) {
@@ -568,7 +702,9 @@ class IndexedDbRepository<T extends AggregateRoot>
     }
     final revisions = <UuidValue, String>{};
     for (final entry in encodedVersions.entries) {
-      if (entry.key is! String || entry.value is! String) {
+      if (entry.key is! String ||
+          entry.value is! String ||
+          (entry.value as String).isEmpty) {
         throw _invalidStored('Operation receipt revisions are malformed');
       }
       try {
@@ -577,6 +713,9 @@ class IndexedDbRepository<T extends AggregateRoot>
       } on ArgumentError {
         throw _invalidStored('Operation receipt revisions are malformed');
       }
+    }
+    if (decision == CommitDecision.rejected && revisions.isNotEmpty) {
+      throw _invalidStored('Rejected operation has revisions');
     }
     return CommitResult(
       operationId: operationId,
@@ -600,7 +739,8 @@ class IndexedDbRepository<T extends AggregateRoot>
           'Conditional aggregate is malformed or needs migration');
     }
     final keys = raw['uniqueKeys'] as List;
-    if (keys.any((key) => key is! String || !key.startsWith(_uniquePrefix))) {
+    if (keys.any((key) => key is! String || !_validStoredUniqueKey(key)) ||
+        keys.toSet().length != keys.length) {
       throw _invalidStored('Conditional aggregate unique values are malformed');
     }
     return _StoredState(raw['revision'] as String, List<String>.from(keys));
@@ -621,7 +761,31 @@ class IndexedDbRepository<T extends AggregateRoot>
     }
   }
 
-  bool _isManaged(Object? raw) => raw is Map && raw['managed'] == true;
+  void _assertBasicWritable(Object? raw, UuidValue id) {
+    if (raw == null) return;
+    if (raw is! Map ||
+        raw.length != 3 ||
+        raw['id'] != id.uuid ||
+        raw['codecVersion'] != codecVersion ||
+        raw['payload'] is! String ||
+        raw.containsKey('managed') ||
+        raw.containsKey('revision') ||
+        raw.containsKey('uniqueKeys')) {
+      throw _invalidStored(
+          'Stored aggregate is managed, malformed, or needs migration');
+    }
+    try {
+      if (decode(raw['payload'] as String).id != id) {
+        throw const FormatException('Stored aggregate identity mismatch');
+      }
+    } catch (error) {
+      throw RepositoryException(
+        'Stored aggregate cannot be safely replaced or deleted',
+        type: RepositoryExceptionType.constraint,
+        cause: error,
+      );
+    }
+  }
 
   String _uniqueKey(UniqueValue value) {
     if (value.index.isEmpty ||
@@ -634,6 +798,25 @@ class IndexedDbRepository<T extends AggregateRoot>
           value.index,
           value.value,
         ])))}';
+  }
+
+  bool _validStoredUniqueKey(String key) {
+    if (!key.startsWith(_uniquePrefix)) return false;
+    try {
+      final decoded = jsonDecode(
+          utf8.decode(base64Url.decode(key.substring(_uniquePrefix.length))));
+      if (decoded is! List ||
+          decoded.length != 2 ||
+          decoded[0] is! String ||
+          decoded[1] is! String) {
+        return false;
+      }
+      return _uniqueKey(
+              UniqueValue(decoded[0] as String, decoded[1] as String)) ==
+          key;
+    } catch (_) {
+      return false;
+    }
   }
 
   String _receiptKey(UuidValue id) => '$_receiptPrefix${id.uuid}';
@@ -672,7 +855,9 @@ class IndexedDbRepository<T extends AggregateRoot>
     Transaction transaction,
     Future<Object?> Function() action,
   ) async {
-    final completion = transaction.completed.then<AsyncError?>(
+    final completionFuture = transaction.completed;
+    native_guard.guardNativeTransactionError(transaction);
+    final completion = completionFuture.then<AsyncError?>(
       (_) => null,
       onError: (Object error, StackTrace stack) => AsyncError(error, stack),
     );
@@ -729,6 +914,8 @@ class IndexedDbRepository<T extends AggregateRoot>
 const _uniquePrefix = '__dddart_unique__';
 const _receiptPrefix = '__dddart_receipt__';
 const _receiptCountKey = '__dddart_receipt_count__';
+const _schemaKey = '__dddart_schema__';
+const _schemaVersion = 2;
 
 final class _PreparedCommit {
   const _PreparedCommit(this.operationId, this.digest, this.mutations);

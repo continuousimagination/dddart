@@ -37,6 +37,11 @@ class _Database extends Database {
   _Database() : super(_UnusedFactory());
 
   Object? record;
+  final Object schema = const {
+    'kind': 'schema',
+    'version': 2,
+    'codecVersion': 1,
+  };
   _Failure failure = _Failure.none;
 
   @override
@@ -87,7 +92,8 @@ class _Store implements ObjectStore {
   final _Database database;
 
   @override
-  Future<Object?> getObject(Object key) async => database.record;
+  Future<Object?> getObject(Object key) async =>
+      key == '__dddart_schema__' ? database.schema : database.record;
 
   @override
   Future<Object> put(Object value, [Object? key]) async {

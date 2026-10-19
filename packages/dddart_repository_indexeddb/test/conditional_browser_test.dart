@@ -183,7 +183,7 @@ void main() {
           ))
               .decision,
           CommitDecision.uncertain);
-      final rawDb = await nativeFactory.open(name, version: 1);
+      final rawDb = await nativeFactory.open(name, version: 2);
       try {
         final transaction = rawDb.transaction('samples', idbModeReadOnly);
         final completed = transaction.completed;
