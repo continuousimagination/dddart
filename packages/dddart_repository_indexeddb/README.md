@@ -143,5 +143,6 @@ fixed and retested.
 
 Run `dart test` for the in-memory IndexedDB contract and injected failure
 checks. Run `dart test -p chrome test/browser_repository_test.dart
-test/conditional_browser_test.dart` for real browser checks. Run both from this
-package directory. Physical WebKit/device behavior is still a separate proof.
+test/conditional_browser_test.dart test/native_request_error_test.dart` for
+real browser checks. Run both from this package directory. Physical
+WebKit/device behavior is still a separate proof.
