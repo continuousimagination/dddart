@@ -283,4 +283,78 @@ void main() {
       await factory.deleteDatabase(name);
     }
   });
+
+  test('malformed native version-1 metadata cannot commit an upgrade',
+      () async {
+    final factory = idbFactoryNative;
+    final managed = _BrowserSample(label: 'damaged');
+    final unclaimedKey =
+        '__dddart_unique__${base64Url.encode(utf8.encode(jsonEncode([
+          'name',
+          'unused'
+        ])))}';
+    for (final bad in [
+      ('__dddart_receipt_count__', {'kind': 'receiptCount', 'count': -1}),
+      ('__dddart_unique__invalid', {'kind': 'unique'}),
+      (unclaimedKey, {'kind': 'unique', 'owner': UuidValue.generate().uuid}),
+      (
+        managed.id.uuid,
+        {
+          'id': managed.id.uuid,
+          'codecVersion': 1,
+          'payload': jsonEncode({
+            'id': managed.id.uuid,
+            'label': managed.label,
+          }),
+          'managed': true,
+          'uniqueKeys': <String>[],
+        }
+      ),
+    ]) {
+      final name = 'dddart-bad-upgrade-${UuidValue.generate()}';
+      final old = await factory.open(name,
+          version: 1,
+          onUpgradeNeeded: (event) =>
+              event.database.createObjectStore('samples'));
+      final write = old.transaction('samples', idbModeReadWrite);
+      final done = write.completed;
+      await write.objectStore('samples').put(bad.$2, bad.$1);
+      await done;
+      old.close();
+      final repository = IndexedDbRepository<_BrowserSample>(
+        factory: factory,
+        databaseName: name,
+        storeName: 'samples',
+        encode: (value) =>
+            jsonEncode({'id': value.id.uuid, 'label': value.label}),
+        decode: (value) {
+          final data = jsonDecode(value) as Map<String, dynamic>;
+          return _BrowserSample(
+            id: UuidValue.fromString(data['id'] as String),
+            label: data['label'] as String,
+          );
+        },
+      );
+      await expectLater(
+        repository.getById(UuidValue.generate()),
+        throwsA(isA<RepositoryException>().having(
+          (error) => error.type,
+          'type',
+          RepositoryExceptionType.constraint,
+        )),
+      );
+      final prior = await factory.open(name, version: 1);
+      expect(prior.version, 1);
+      final read = prior.transaction('samples', idbModeReadOnly);
+      final readDone = read.completed;
+      final retained = await read.objectStore('samples').getObject(bad.$1);
+      final marker =
+          await read.objectStore('samples').getObject('__dddart_schema__');
+      await readDone;
+      expect(retained, bad.$2);
+      expect(marker, isNull);
+      prior.close();
+      await factory.deleteDatabase(name);
+    }
+  });
 }

@@ -210,6 +210,48 @@ void main() {
     await repository.close();
   });
 
+  test('undecodable or misidentified payloads survive basic CRUD attempts',
+      () async {
+    for (final invalid in [
+      'not JSON',
+      _encode(_Sample(name: 'wrong identity')),
+    ]) {
+      final factory = newIdbFactoryMemory();
+      final sample = _Sample(name: 'original');
+      final seeded = _repository(factory, 'bad-payload');
+      await seeded.save(sample);
+      final raw = await factory.open('bad-payload', version: 2);
+      final write = raw.transaction('samples', idbModeReadWrite);
+      final done = write.completed;
+      await write.objectStore('samples').put({
+        'id': sample.id.uuid,
+        'codecVersion': 1,
+        'payload': invalid,
+      }, sample.id.uuid);
+      await done;
+      raw.close();
+      final guarded = _repository(factory, 'bad-payload');
+      await expectLater(
+        guarded.save(_Sample(id: sample.id, name: 'replacement')),
+        throwsA(isA<RepositoryException>().having(
+            (error) => error.type, 'type', RepositoryExceptionType.constraint)),
+      );
+      await expectLater(
+        guarded.deleteById(sample.id),
+        throwsA(isA<RepositoryException>().having(
+            (error) => error.type, 'type', RepositoryExceptionType.constraint)),
+      );
+      final check = await factory.open('bad-payload', version: 2);
+      final read = check.transaction('samples', idbModeReadOnly);
+      final readDone = read.completed;
+      final retained =
+          await read.objectStore('samples').getObject(sample.id.uuid);
+      await readDone;
+      expect((retained as Map)['payload'], invalid);
+      check.close();
+    }
+  });
+
   test('unavailable storage reports a typed connection error', () async {
     final repository = _repository(_UnavailableFactory(), 'unavailable');
     await expectLater(

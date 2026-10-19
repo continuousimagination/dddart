@@ -50,7 +50,8 @@ try {
 Use a dedicated database name for each object store. The adapter opens database
 version 2 and writes a schema/codec marker in the same version-change
 transaction. Existing version-1 aggregate, unique-index and receipt records
-are checked before the upgrade; their bytes are left intact. An interrupted
+are validated, including payload identity, receipt counts, and unique-claim
+ownership, before the upgrade; their bytes are left intact. An interrupted
 upgrade rolls back the marker and version change, so opening again can retry.
 An incompatible codec, malformed legacy record, or unexpected store fails the
 upgrade and preserves the old database for an explicit migration. Separate
@@ -62,9 +63,9 @@ IndexedDB transaction to commit before returning. `getById` validates the
 stored envelope, codec version, and decoded aggregate ID. Missing IDs map to
 `RepositoryExceptionType.notFound`; invalid snapshots map to `constraint`;
 storage failures carry their underlying cause. Reads never rewrite old or
-malformed records. Basic `save` and `deleteById` reject managed, malformed,
-or older-codec records rather than replacing them. Encoding must produce a
-complete detached snapshot.
+malformed records. Basic `save` and `deleteById` validate the existing payload
+and reject managed, malformed, or older-codec records rather than replacing
+them. Encoding must produce a complete detached snapshot.
 
 ## Conditional transactions
 
@@ -132,6 +133,13 @@ operation ID and digest, resolve it when storage returns, and retry the same
 request if no receipt can be found. An absent receipt is never rollback proof.
 The base CRUD API has not acquired conditional guarantees; callers that need
 them must use `commitConditional`.
+
+The native adapter temporarily suppresses `idb_shim` 2.10.1+1's transaction
+`onerror` callback because it assumes a nullable browser error is present
+during request-error bubbling. It still observes the final transaction abort
+or completion and separately awaits each request. A native duplicate-key
+regression test exercises this path. Remove the guard when the dependency is
+fixed and retested.
 
 Run `dart test` for the in-memory IndexedDB contract and injected failure
 checks. Run `dart test -p chrome test/browser_repository_test.dart
