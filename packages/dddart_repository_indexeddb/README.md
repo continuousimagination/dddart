@@ -59,11 +59,69 @@ stored envelope, codec version, and decoded aggregate ID. Missing IDs map to
 storage failures carry their underlying cause. Reads never rewrite old or
 malformed records. Encoding must produce a complete detached snapshot.
 
-This package does not provide conditional revisions, uniqueness rules, atomic
-operations across records, operation receipts, migration, or recovery from
-uncertain write outcomes. Those need a contract beyond `Repository<T>` before
-local-first application state can depend on them.
+## Conditional transactions
 
-Run `dart test` for the in-memory IndexedDB contract and injected request/commit
-failure checks. Run `dart test -p chrome test/browser_repository_test.dart` for a
-real browser check. Run both from this package directory.
+`IndexedDbRepository<T>` also implements the optional, portable
+`ConditionalRepository<T>` interface. A call to `commitConditional` checks all
+expected revisions and desired unique values, changes every affected record,
+and stores a receipt in one read-write IndexedDB transaction. It never treats a
+successful request as a successful commit until the transaction completes.
+Every put receives a fresh opaque revision, including after a delete and
+recreation of the same aggregate ID. Two browser contexts writing from one
+revision cannot both succeed.
+
+```dart
+final request = ConditionalCommit<MyAggregate>(
+  operationId: UuidValue.generate(),
+  mutations: [
+    ConditionalMutation.put(
+      edited,
+      expected: ExpectedRevision.match(previous.revision),
+      uniqueValues: [UniqueValue('name', normalizedName)],
+    ),
+  ],
+);
+final digest = repository.digestFor(request);
+final result = await repository.commitConditional(request);
+if (result.decision == CommitDecision.uncertain) {
+  final reconciled = await repository.resolveOperation(
+    request.operationId,
+    digest,
+  );
+  // If still uncertain, retain the exact request and retry with its same ID.
+}
+```
+
+The caller supplies already-normalized unique values; name policy belongs to
+the application. Each put supplies its *complete* desired unique-value set, so
+omitted old claims are released. A rejected stale revision or unique collision
+has a durable receipt. Reusing an operation ID with different encoded payload
+or conditions is a constraint error. An absent receipt, including one queried
+after a storage error, is **uncertain**, never proof that a write did not commit.
+If a caller times out independently, it should retain the request, its ID, and
+the precomputed digest for reconciliation. Re-encoding a mutable aggregate
+after an uncertain result can change the digest; use detached immutable input.
+
+The implementation keeps aggregate records, unique-claim records, and receipts
+in the same object store to preserve atomicity without changing the initial
+database schema. Basic `save` and `deleteById` reject aggregates already
+managed by conditional transactions, preventing an unconditional overwrite.
+Old basic-CRUD records have no revisions and cannot be conditionally updated
+without an explicit migration. Reads do not silently migrate them.
+
+One commit accepts 1–32 aggregates, at most 16 unique values per aggregate,
+values of at most 256 characters, and snapshots of at most 1 MiB. Receipts are
+retained for the database lifetime and are never silently pruned. The default
+limit is 100,000 receipts per repository database; once reached, new operations
+fail explicitly before mutation while existing receipts remain resolvable.
+The application must plan a deliberate compaction/migration before reaching
+that limit. Browser quota and origin-data eviction remain possible.
+
+Migration fences, incompatible-schema recovery, and quota/unavailable-storage
+proof remain separate work. The base CRUD API has not acquired conditional
+guarantees; callers that need them must use `commitConditional`.
+
+Run `dart test` for the in-memory IndexedDB contract and injected failure
+checks. Run `dart test -p chrome test/browser_repository_test.dart
+test/conditional_browser_test.dart` for real browser checks. Run both from this
+package directory.

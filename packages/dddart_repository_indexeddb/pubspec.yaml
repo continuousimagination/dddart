@@ -10,6 +10,7 @@ environment:
   sdk: '>=3.5.0 <4.0.0'
 
 dependencies:
+  crypto: ^3.0.0
   dddart:
     path: ../dddart
   idb_shim: 2.10.1+1
