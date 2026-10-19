@@ -37,6 +37,8 @@ class _LostAckFactory implements IdbFactory {
 
   final IdbFactory delegate;
   bool loseNextWriteAck = false;
+  int? abortAtPut;
+  bool failTransactionStart = false;
 
   @override
   Future<Database> open(
@@ -71,11 +73,17 @@ class _LostAckDatabase extends Database {
   @override
   Transaction transaction(Object storeNameOrStoreNames, String mode) {
     final factory = super.factory as _LostAckFactory;
+    if (factory.failTransactionStart) {
+      throw StateError('connection invalidated before transaction start');
+    }
     final loseAck = mode == idbModeReadWrite && factory.loseNextWriteAck;
+    final abortAtPut = mode == idbModeReadWrite ? factory.abortAtPut : null;
     if (loseAck) factory.loseNextWriteAck = false;
+    if (abortAtPut != null) factory.abortAtPut = null;
     return _LostAckTransaction(
       delegate.transaction(storeNameOrStoreNames, mode),
       loseAck,
+      abortAtPut,
     );
   }
 
@@ -88,10 +96,12 @@ class _LostAckDatabase extends Database {
 }
 
 class _LostAckTransaction implements Transaction {
-  _LostAckTransaction(this.delegate, this.loseAck);
+  _LostAckTransaction(this.delegate, this.loseAck, this.abortAtPut);
 
   final Transaction delegate;
   final bool loseAck;
+  final int? abortAtPut;
+  int putCount = 0;
 
   @override
   Future<Database> get completed => loseAck
@@ -99,7 +109,36 @@ class _LostAckTransaction implements Transaction {
       : delegate.completed;
 
   @override
-  ObjectStore objectStore(String name) => delegate.objectStore(name);
+  ObjectStore objectStore(String name) => abortAtPut == null
+      ? delegate.objectStore(name)
+      : _AbortStore(delegate.objectStore(name), this);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnimplementedError(invocation.memberName.toString());
+}
+
+class _AbortStore implements ObjectStore {
+  _AbortStore(this.delegate, this.transaction);
+
+  final ObjectStore delegate;
+  final _LostAckTransaction transaction;
+
+  @override
+  Future<Object?> getObject(Object key) => delegate.getObject(key);
+
+  @override
+  Future<Object> put(Object value, [Object? key]) {
+    transaction.putCount++;
+    if (transaction.putCount == transaction.abortAtPut) {
+      transaction.delegate.abort();
+      return Future.error(StateError('injected transaction abort'));
+    }
+    return delegate.put(value, key);
+  }
+
+  @override
+  Future<void> delete(Object keyOrRange) => delegate.delete(keyOrRange);
 
   @override
   dynamic noSuchMethod(Invocation invocation) =>
@@ -126,6 +165,88 @@ ConditionalCommit<_Sample> _put(
     );
 
 void main() {
+  test('missing store and invalidated connection are typed pre-dispatch',
+      () async {
+    final memory = newIdbFactoryMemory();
+    final wrong = await memory.open('missing-store',
+        version: 1,
+        onUpgradeNeeded: (event) =>
+            event.database.createObjectStore('something-else'));
+    wrong.close();
+    final missingStore = _repository('missing-store', factory: memory);
+    final request = _put(
+      _Sample(name: 'No store'),
+      const ExpectedRevision.absent(),
+    );
+    await expectLater(
+      missingStore.commitConditional(request),
+      throwsA(isA<RepositoryException>().having(
+        (error) => error.type,
+        'type',
+        RepositoryExceptionType.connection,
+      )),
+    );
+    await missingStore.close();
+
+    final invalidated = _LostAckFactory(newIdbFactoryMemory())
+      ..failTransactionStart = true;
+    final repository = _repository('invalidated', factory: invalidated);
+    await expectLater(
+      repository.commitConditional(request),
+      throwsA(isA<RepositoryException>().having(
+        (error) => error.type,
+        'type',
+        RepositoryExceptionType.connection,
+      )),
+    );
+    await repository.close();
+  });
+
+  test('an abort after one queued put preserves every prior record', () async {
+    final factory = _LostAckFactory(newIdbFactoryMemory());
+    final repository = _repository('abort', factory: factory);
+    final a = _Sample(name: 'A');
+    final b = _Sample(name: 'B');
+    final request = ConditionalCommit<_Sample>(
+      operationId: UuidValue.generate(),
+      mutations: [
+        ConditionalMutation.put(
+          a,
+          expected: const ExpectedRevision.absent(),
+        ),
+        ConditionalMutation.put(
+          b,
+          expected: const ExpectedRevision.absent(),
+        ),
+      ],
+    );
+    factory.abortAtPut = 2;
+    final uncertain = await repository.commitConditional(request);
+    expect(uncertain.decision, CommitDecision.uncertain);
+    for (final id in [a.id, b.id]) {
+      await expectLater(
+        repository.getVersioned(id),
+        throwsA(isA<RepositoryException>().having(
+          (error) => error.type,
+          'type',
+          RepositoryExceptionType.notFound,
+        )),
+      );
+    }
+    expect(
+        (await repository.resolveOperation(
+          request.operationId,
+          uncertain.payloadDigest,
+        ))
+            .decision,
+        CommitDecision.uncertain);
+    final retried = await repository.commitConditional(request);
+    expect(retried.decision, CommitDecision.committed);
+    expect((await repository.getVersioned(a.id)).aggregate.name, 'A');
+    expect((await repository.getVersioned(b.id)).aggregate.name, 'B');
+    await repository.close();
+  });
+
   test('receipt cap rejects new operations without losing old receipts',
       () async {
     final repository = _repository('capacity', maxReceipts: 1);

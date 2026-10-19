@@ -247,8 +247,15 @@ class IndexedDbRepository<T extends AggregateRoot>
   @override
   Future<CommitResult> commitConditional(ConditionalCommit<T> request) async {
     final prepared = _prepare(request);
-    final db = await _database();
-    final transaction = db.transaction(storeName, idbModeReadWrite);
+    final Transaction transaction;
+    try {
+      final db = await _database();
+      transaction = db.transaction(storeName, idbModeReadWrite);
+    } on RepositoryException {
+      rethrow;
+    } catch (error) {
+      throw _storageFailure('start conditional transaction', error);
+    }
     try {
       final result = await _runCommitted(
         transaction,
@@ -659,7 +666,8 @@ class IndexedDbRepository<T extends AggregateRoot>
 
   /// Attach the completion error handler before issuing the first request.
   /// A failed request can also abort its transaction, yielding two separate
-  /// failed futures. Both must be observed before this operation returns.
+  /// failed futures. A failed request setup may leave earlier writes queued,
+  /// so this aborts explicitly and observes both outcomes before returning.
   Future<Object?> _runCommitted(
     Transaction transaction,
     Future<Object?> Function() action,
@@ -670,17 +678,35 @@ class IndexedDbRepository<T extends AggregateRoot>
     );
     Object? result;
     AsyncError? actionFailure;
+    var abortRequested = false;
     try {
       result = await action();
     } catch (error, stack) {
       actionFailure = AsyncError(error, stack);
+      // A failed request setup need not abort IndexedDB automatically. Abort
+      // before any queued writes can commit without their receipt.
+      try {
+        transaction.abort();
+        abortRequested = true;
+      } catch (_) {
+        // It may already have aborted or committed; completion decides whether
+        // the caller can treat this as a confirmed failure.
+      }
     }
     final commitFailure = await completion;
+    if (actionFailure != null) {
+      if (abortRequested && commitFailure != null) {
+        Error.throwWithStackTrace(
+            actionFailure.error, actionFailure.stackTrace);
+      }
+      if (commitFailure == null) {
+        throw StateError(
+          'Transaction completed after its action failed: ${actionFailure.error}',
+        );
+      }
+    }
     if (commitFailure != null) {
       Error.throwWithStackTrace(commitFailure.error, commitFailure.stackTrace);
-    }
-    if (actionFailure != null) {
-      Error.throwWithStackTrace(actionFailure.error, actionFailure.stackTrace);
     }
     return result;
   }
