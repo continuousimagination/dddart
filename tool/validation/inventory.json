@@ -104,6 +104,12 @@
       ]
     },
     {
+      "name": "dddart_repository_indexeddb",
+      "path": "packages/dddart_repository_indexeddb",
+      "generation": "none",
+      "allowedLocalPackages": ["dddart", "dddart_repository_indexeddb"]
+    },
+    {
       "name": "dddart_repository_mysql",
       "path": "packages/dddart_repository_mysql",
       "generation": "required",
