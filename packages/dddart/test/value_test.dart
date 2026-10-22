@@ -45,6 +45,17 @@ class CustomPropsValue extends Value {
       [publicData]; // Only include publicData in equality
 }
 
+class CollectionValue extends Value {
+  const CollectionValue(this.payload);
+
+  final Object? payload;
+
+  @override
+  List<Object?> get props => [payload];
+}
+
+CollectionValue _collectionValue(Object? payload) => CollectionValue(payload);
+
 void main() {
   group('Value', () {
     group('abstract class behavior', () {
@@ -130,6 +141,7 @@ void main() {
 
         expect(value1.hashCode, equals(value2.hashCode));
         expect(value1.hashCode, isNot(equals(value3.hashCode)));
+        expect(value1.hashCode, Object.hashAll(value1.props));
       });
 
       test('toString provides meaningful representation automatically', () {
@@ -187,6 +199,85 @@ void main() {
         expect(props, contains('test'));
         expect(props, contains(42));
         expect(props, contains(true));
+      });
+    });
+
+    group('collection properties', () {
+      test('separately allocated nested lists compare and hash equally', () {
+        final left = _collectionValue([
+          1,
+          [null, const TestValue('nested')],
+        ]);
+        final right = _collectionValue([
+          1,
+          [null, const TestValue('nested')],
+        ]);
+        final reordered = _collectionValue([
+          [null, const TestValue('nested')],
+          1,
+        ]);
+
+        expect(left, equals(right));
+        expect(left.hashCode, equals(right.hashCode));
+        expect({left: 'found'}[right], 'found');
+        expect(left, isNot(equals(reordered)));
+      });
+
+      test('nested sets and maps ignore insertion order', () {
+        final left = _collectionValue({
+          'items': <Object?>{const TestValue('alpha'), const TestValue('beta')},
+          'entries': <Object?>[
+            {'count': 1, 'active': true},
+            {'count': 2, 'active': false},
+          ],
+        });
+        final right = _collectionValue({
+          'entries': <Object?>[
+            {'active': true, 'count': 1},
+            {'active': false, 'count': 2},
+          ],
+          'items': <Object?>{const TestValue('beta'), const TestValue('alpha')},
+        });
+
+        expect(left, equals(right));
+        expect(left.hashCode, equals(right.hashCode));
+      });
+
+      test('nested collection keys and set members use structural equality',
+          () {
+        final left = _collectionValue(<Object?, Object?>{
+          <int>[1, 2]: <List<int>>{
+            [3, 4],
+            [5, 6],
+          },
+        });
+        final right = _collectionValue(<Object?, Object?>{
+          <int>[1, 2]: <List<int>>{
+            [5, 6],
+            [3, 4],
+          },
+        });
+
+        expect(left, equals(right));
+        expect(left.hashCode, equals(right.hashCode));
+      });
+
+      test('collection kind and unequal nested values remain distinct', () {
+        final ordered = _collectionValue({
+          'items': [1, 2],
+        });
+        final reversed = _collectionValue({
+          'items': [2, 1],
+        });
+        expect(
+          _collectionValue([1, 2]),
+          isNot(equals(_collectionValue({1, 2}))),
+        );
+        expect(ordered, isNot(equals(reversed)));
+        expect(
+          const CollectionValue(null),
+          equals(const CollectionValue(null)),
+        );
       });
     });
 
