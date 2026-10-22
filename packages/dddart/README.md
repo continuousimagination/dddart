@@ -114,6 +114,14 @@ class Money extends Value {
 }
 ```
 
+`Value.props` also compares nested lists and other iterables element by element
+in order. Sets and maps compare without regard to insertion order, including
+nested collection members and map keys; equal values have equal hash codes.
+Keep collection properties immutable. Mutating one after a `Value` has been used
+as a set member or map key changes its equality and may change its hash code.
+Cyclic collections are not supported. Values with only scalar properties keep
+their existing equality and hash behavior.
+
 ### Using the Event Bus
 
 ```dart
