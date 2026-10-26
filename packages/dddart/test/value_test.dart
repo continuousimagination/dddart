@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:dddart/src/value.dart';
 import 'package:test/test.dart';
 
@@ -44,6 +46,17 @@ class CustomPropsValue extends Value {
   List<Object?> get props =>
       [publicData]; // Only include publicData in equality
 }
+
+class CollectionValue extends Value {
+  const CollectionValue(this.payload);
+
+  final Object? payload;
+
+  @override
+  List<Object?> get props => [payload];
+}
+
+CollectionValue _collectionValue(Object? payload) => CollectionValue(payload);
 
 void main() {
   group('Value', () {
@@ -130,6 +143,7 @@ void main() {
 
         expect(value1.hashCode, equals(value2.hashCode));
         expect(value1.hashCode, isNot(equals(value3.hashCode)));
+        expect(value1.hashCode, Object.hashAll(value1.props));
       });
 
       test('toString provides meaningful representation automatically', () {
@@ -187,6 +201,167 @@ void main() {
         expect(props, contains('test'));
         expect(props, contains(42));
         expect(props, contains(true));
+      });
+    });
+
+    group('collection category boundaries', () {
+      test('collection categories compare symmetrically in both directions',
+          () {
+        final categories = <Object>[
+          <int>[1, 2],
+          <int>{1, 2},
+          <int, int>{1: 2},
+          ListQueue<int>.from([1, 2]),
+        ];
+        for (var i = 0; i < categories.length; i++) {
+          for (var j = i + 1; j < categories.length; j++) {
+            final left = CollectionValue(categories[i]);
+            final right = CollectionValue(categories[j]);
+            expect(left == right, isFalse, reason: '$i -> $j');
+            expect(right == left, isFalse, reason: '$j -> $i');
+          }
+        }
+      });
+
+      test(
+          'collection category boundaries apply recursively to members and keys',
+          () {
+        final wrappers = <Object Function(Object)>[
+          (value) => <Object>[value],
+          (value) => <String, Object>{'items': value},
+          (value) => <Object>{value},
+          (value) => <Object, String>{value: 'entry'},
+        ];
+        for (final wrap in wrappers) {
+          final queue = CollectionValue(wrap(ListQueue<int>.from([1, 2])));
+          final list = CollectionValue(wrap(<int>[1, 2]));
+          expect(queue == list, isFalse);
+          expect(list == queue, isFalse);
+          expect(<Value>{queue}.contains(list), isFalse);
+          expect(<Value>{list}.contains(queue), isFalse);
+        }
+      });
+
+      test(
+          'other finite iterables retain ordered structural equality and hashing',
+          () {
+        final queue = CollectionValue(ListQueue<int>.from([1, 2]));
+        final lazy =
+            CollectionValue(Iterable<int>.generate(2, (index) => index + 1));
+        final reversed = CollectionValue(ListQueue<int>.from([2, 1]));
+        expect(queue == lazy, isTrue);
+        expect(lazy == queue, isTrue);
+        expect(queue.hashCode, lazy.hashCode);
+        expect(<Value, String>{queue: 'found'}[lazy], 'found');
+        expect(<Value>{lazy}.contains(queue), isTrue);
+        expect(queue == reversed, isFalse);
+        expect(reversed == queue, isFalse);
+      });
+    });
+
+    group('collection properties', () {
+      test('separately allocated nested lists compare and hash equally', () {
+        final left = _collectionValue([
+          1,
+          [null, const TestValue('nested')],
+        ]);
+        final right = _collectionValue([
+          1,
+          [null, const TestValue('nested')],
+        ]);
+        final reordered = _collectionValue([
+          [null, const TestValue('nested')],
+          1,
+        ]);
+
+        expect(left, equals(right));
+        expect(left.hashCode, equals(right.hashCode));
+        expect({left: 'found'}[right], 'found');
+        expect(left, isNot(equals(reordered)));
+      });
+
+      test('nested sets and maps ignore insertion order', () {
+        final left = _collectionValue({
+          'items': <Object?>{const TestValue('alpha'), const TestValue('beta')},
+          'entries': <Object?>[
+            {'count': 1, 'active': true},
+            {'count': 2, 'active': false},
+          ],
+        });
+        final right = _collectionValue({
+          'entries': <Object?>[
+            {'active': true, 'count': 1},
+            {'active': false, 'count': 2},
+          ],
+          'items': <Object?>{const TestValue('beta'), const TestValue('alpha')},
+        });
+
+        expect(left, equals(right));
+        expect(left.hashCode, equals(right.hashCode));
+      });
+
+      test('nested collection keys and set members use structural equality',
+          () {
+        final left = _collectionValue(<Object?, Object?>{
+          <int>[1, 2]: <List<int>>{
+            [3, 4],
+            [5, 6],
+          },
+        });
+        final right = _collectionValue(<Object?, Object?>{
+          <int>[1, 2]: <List<int>>{
+            [5, 6],
+            [3, 4],
+          },
+        });
+
+        expect(left, equals(right));
+        expect(left.hashCode, equals(right.hashCode));
+      });
+
+      test('changed nested keys or set members remain unequal', () {
+        final original = _collectionValue(<Object?, Object?>{
+          <int>[1, 2]: <List<int>>{
+            [3, 4],
+            [5, 6],
+          },
+        });
+        final changedKey = _collectionValue(<Object?, Object?>{
+          <int>[1, 3]: <List<int>>{
+            [3, 4],
+            [5, 6],
+          },
+        });
+        final changedMember = _collectionValue(<Object?, Object?>{
+          <int>[1, 2]: <List<int>>{
+            [3, 4],
+            [5, 7],
+          },
+        });
+        for (final changed in [changedKey, changedMember]) {
+          expect(original == changed, isFalse);
+          expect(changed == original, isFalse);
+          expect(<Value, String>{original: 'stored'}[changed], isNull);
+          expect(<Value, String>{changed: 'stored'}[original], isNull);
+        }
+      });
+
+      test('collection kind and unequal nested values remain distinct', () {
+        final ordered = _collectionValue({
+          'items': [1, 2],
+        });
+        final reversed = _collectionValue({
+          'items': [2, 1],
+        });
+        expect(
+          _collectionValue([1, 2]),
+          isNot(equals(_collectionValue({1, 2}))),
+        );
+        expect(ordered, isNot(equals(reversed)));
+        expect(
+          const CollectionValue(null),
+          equals(const CollectionValue(null)),
+        );
       });
     });
 
