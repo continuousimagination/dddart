@@ -53,7 +53,7 @@ abstract class Value {
   /// which is important for value object immutability.
   const Value();
 
-  static const _collectionEquality = DeepCollectionEquality();
+  static const _collectionEquality = _ValueCollectionEquality();
 
   /// Properties that define this value object's identity.
   ///
@@ -62,8 +62,10 @@ abstract class Value {
   /// this should typically include all properties.
   ///
   /// The order of properties in this list matters for equality comparison.
-  /// Nested lists and other iterables compare in order; sets and maps compare
-  /// without regard to insertion order. Keep nested collections immutable:
+  /// Nested lists and other finite iterables compare in order; sets and maps
+  /// compare without regard to insertion order. Lists, sets, maps, and other
+  /// iterables are distinct equality categories at every nesting level.
+  /// Keep nested collections immutable:
   /// changing one after using a Value as a map key or set member can change
   /// its hash code. Cyclic collections are not supported.
   List<Object?> get props;
@@ -104,5 +106,22 @@ abstract class Value {
     final className = runtimeType.toString();
     final propsString = props.join(', ');
     return '$className($propsString)';
+  }
+}
+
+// DeepCollectionEquality's ordered Iterable fallback can accept a List or Set
+// on only one side. Enforce symmetric categories before delegating. Its nested
+// equality helpers reuse `this`, so the boundary applies to members and keys.
+class _ValueCollectionEquality extends DeepCollectionEquality {
+  const _ValueCollectionEquality();
+
+  @override
+  bool equals(Object? left, Object? right) {
+    if ((left is List) != (right is List) ||
+        (left is Set) != (right is Set) ||
+        (left is Map) != (right is Map)) {
+      return false;
+    }
+    return super.equals(left, right);
   }
 }

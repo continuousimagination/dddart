@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:dddart/src/value.dart';
 import 'package:test/test.dart';
 
@@ -202,6 +204,61 @@ void main() {
       });
     });
 
+    group('collection category boundaries', () {
+      test('collection categories compare symmetrically in both directions',
+          () {
+        final categories = <Object>[
+          <int>[1, 2],
+          <int>{1, 2},
+          <int, int>{1: 2},
+          ListQueue<int>.from([1, 2]),
+        ];
+        for (var i = 0; i < categories.length; i++) {
+          for (var j = i + 1; j < categories.length; j++) {
+            final left = CollectionValue(categories[i]);
+            final right = CollectionValue(categories[j]);
+            expect(left == right, isFalse, reason: '$i -> $j');
+            expect(right == left, isFalse, reason: '$j -> $i');
+          }
+        }
+      });
+
+      test(
+          'collection category boundaries apply recursively to members and keys',
+          () {
+        final wrappers = <Object Function(Object)>[
+          (value) => <Object>[value],
+          (value) => <String, Object>{'items': value},
+          (value) => <Object>{value},
+          (value) => <Object, String>{value: 'entry'},
+        ];
+        for (final wrap in wrappers) {
+          final queue = CollectionValue(wrap(ListQueue<int>.from([1, 2])));
+          final list = CollectionValue(wrap(<int>[1, 2]));
+          expect(queue == list, isFalse);
+          expect(list == queue, isFalse);
+          expect(<Value>{queue}.contains(list), isFalse);
+          expect(<Value>{list}.contains(queue), isFalse);
+        }
+      });
+
+      test(
+          'other finite iterables retain ordered structural equality and hashing',
+          () {
+        final queue = CollectionValue(ListQueue<int>.from([1, 2]));
+        final lazy =
+            CollectionValue(Iterable<int>.generate(2, (index) => index + 1));
+        final reversed = CollectionValue(ListQueue<int>.from([2, 1]));
+        expect(queue == lazy, isTrue);
+        expect(lazy == queue, isTrue);
+        expect(queue.hashCode, lazy.hashCode);
+        expect(<Value, String>{queue: 'found'}[lazy], 'found');
+        expect(<Value>{lazy}.contains(queue), isTrue);
+        expect(queue == reversed, isFalse);
+        expect(reversed == queue, isFalse);
+      });
+    });
+
     group('collection properties', () {
       test('separately allocated nested lists compare and hash equally', () {
         final left = _collectionValue([
@@ -260,6 +317,33 @@ void main() {
 
         expect(left, equals(right));
         expect(left.hashCode, equals(right.hashCode));
+      });
+
+      test('changed nested keys or set members remain unequal', () {
+        final original = _collectionValue(<Object?, Object?>{
+          <int>[1, 2]: <List<int>>{
+            [3, 4],
+            [5, 6],
+          },
+        });
+        final changedKey = _collectionValue(<Object?, Object?>{
+          <int>[1, 3]: <List<int>>{
+            [3, 4],
+            [5, 6],
+          },
+        });
+        final changedMember = _collectionValue(<Object?, Object?>{
+          <int>[1, 2]: <List<int>>{
+            [3, 4],
+            [5, 7],
+          },
+        });
+        for (final changed in [changedKey, changedMember]) {
+          expect(original == changed, isFalse);
+          expect(changed == original, isFalse);
+          expect(<Value, String>{original: 'stored'}[changed], isNull);
+          expect(<Value, String>{changed: 'stored'}[original], isNull);
+        }
       });
 
       test('collection kind and unequal nested values remain distinct', () {
