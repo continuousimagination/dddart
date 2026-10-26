@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 
 /// Base class for immutable value objects in Domain-Driven Design.
@@ -37,7 +38,7 @@ import 'package:meta/meta.dart';
 /// - **Consistent behavior**: All value objects get the same reliable equality semantics
 /// - **Explicit control**: Clear documentation of which properties define identity
 /// - **Const support**: Works with const constructors for compile-time constants
-/// - **No dependencies**: Pure Dart solution with no reflection or code generation
+/// - **No reflection or code generation**: Equality works with ordinary Dart values
 ///
 /// ## For True Value Objects
 ///
@@ -52,6 +53,8 @@ abstract class Value {
   /// which is important for value object immutability.
   const Value();
 
+  static const _collectionEquality = _ValueCollectionEquality();
+
   /// Properties that define this value object's identity.
   ///
   /// Subclasses must override this method to return all properties that
@@ -59,6 +62,12 @@ abstract class Value {
   /// this should typically include all properties.
   ///
   /// The order of properties in this list matters for equality comparison.
+  /// Nested lists and other finite iterables compare in order; sets and maps
+  /// compare without regard to insertion order. Lists, sets, maps, and other
+  /// iterables are distinct equality categories at every nesting level.
+  /// Keep nested collections immutable:
+  /// changing one after using a Value as a map key or set member can change
+  /// its hash code. Cyclic collections are not supported.
   List<Object?> get props;
 
   /// Determines whether two value objects are equal.
@@ -71,16 +80,7 @@ abstract class Value {
     if (other.runtimeType != runtimeType) return false;
     if (other is! Value) return false;
 
-    final thisProps = props;
-    final otherProps = other.props;
-
-    if (thisProps.length != otherProps.length) return false;
-
-    for (var i = 0; i < thisProps.length; i++) {
-      if (thisProps[i] != otherProps[i]) return false;
-    }
-
-    return true;
+    return _collectionEquality.equals(props, other.props);
   }
 
   /// Returns a hash code for this value object.
@@ -88,7 +88,14 @@ abstract class Value {
   /// The hash code is calculated based on all properties defined by [props].
   @override
   int get hashCode {
-    return Object.hashAll(props);
+    final properties = props;
+    // Preserve the existing scalar-only hash behavior. Collections need the
+    // same structural treatment as equality, including nested set/map order.
+    if (properties
+        .every((property) => property is! Iterable && property is! Map)) {
+      return Object.hashAll(properties);
+    }
+    return _collectionEquality.hash(properties);
   }
 
   /// Returns a string representation of this value object.
@@ -99,5 +106,22 @@ abstract class Value {
     final className = runtimeType.toString();
     final propsString = props.join(', ');
     return '$className($propsString)';
+  }
+}
+
+// DeepCollectionEquality's ordered Iterable fallback can accept a List or Set
+// on only one side. Enforce symmetric categories before delegating. Its nested
+// equality helpers reuse `this`, so the boundary applies to members and keys.
+class _ValueCollectionEquality extends DeepCollectionEquality {
+  const _ValueCollectionEquality();
+
+  @override
+  bool equals(Object? left, Object? right) {
+    if ((left is List) != (right is List) ||
+        (left is Set) != (right is Set) ||
+        (left is Map) != (right is Map)) {
+      return false;
+    }
+    return super.equals(left, right);
   }
 }
