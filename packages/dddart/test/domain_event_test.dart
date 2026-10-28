@@ -2,7 +2,7 @@ import 'package:dddart/dddart.dart';
 import 'package:test/test.dart';
 
 // Concrete test event for testing DomainEvent base class
-class TestDomainEvent extends DomainEvent {
+class TestDomainEvent extends DomainEvent<UuidValue> {
   TestDomainEvent({
     required super.aggregateId,
     required this.data,
@@ -13,7 +13,7 @@ class TestDomainEvent extends DomainEvent {
   final String data;
 }
 
-class AnotherTestEvent extends DomainEvent {
+class AnotherTestEvent extends DomainEvent<UuidValue> {
   AnotherTestEvent({
     required super.aggregateId,
     required this.value,

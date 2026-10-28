@@ -24,12 +24,14 @@
 ///
 /// @Serializable()
 /// @GenerateDynamoRepository(tableName: 'users')
-/// class User extends AggregateRoot {
+/// class User extends UuidAggregateRoot {
 ///   User({
-///     required UuidValue id,
+///     super.id,
 ///     required this.email,
 ///     required this.name,
-///   }) : super(id);
+///     super.createdAt,
+///     super.updatedAt,
+///   });
 ///
 ///   final String email;
 ///   final String name;
@@ -59,3 +61,4 @@ export 'src/annotations/generate_dynamo_repository.dart';
 export 'src/connection/dynamo_connection.dart';
 export 'src/exceptions/dynamo_repository_exception.dart';
 export 'src/utils/attribute_value_converter.dart';
+export 'src/utils/identity_key.dart';

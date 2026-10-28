@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+- **BREAKING:** `StoredEvent<I>` retains concrete aggregate references separately
+  from its UUID record ID. Mixed streams use explicit tagged identity JSON;
+  old bare UUID references require migration.
+- **BREAKING:** `EventRegistry` replaces implicit runtime-name/payload fallback.
+  Register stable keys and typed callbacks or JSON serializers. Generated
+  registrations share an owning combined part with concrete event serializers.
+- Decode and validate registered events before advancing the inclusive polling
+  cursor; failed identity/payload decoding stops the batch and remains retryable.
+  Valid unknown event types retain their intentional skip behavior.
+- HTTP ingestion accepts explicit identity codecs and a typed custom-record
+  factory. UUID record repositories remain `Repository<T, UuidValue>`.
+- Prove native/scoped/UUID references, generation, forwarding, filtering and
+  cursor retry behavior without expanding deferred AWS/legacy transport work.
+
 ## [0.1.0] - 2024-12-05
 
 ### Added

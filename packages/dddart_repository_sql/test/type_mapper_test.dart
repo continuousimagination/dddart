@@ -3,7 +3,7 @@ import 'package:dddart_repository_sql/dddart_repository_sql.dart';
 import 'package:test/test.dart';
 
 /// Mock SQL dialect for testing.
-class MockDialect implements SqlDialect {
+class MockDialect extends SqlDialect {
   const MockDialect();
 
   @override

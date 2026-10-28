@@ -19,7 +19,7 @@ part 'user_with_custom_repo_impl.dart';
   collectionName: 'users',
   implements: UserRepository,
 )
-class UserWithCustomRepo extends AggregateRoot {
+class UserWithCustomRepo extends UuidAggregateRoot {
   /// Creates a new User.
   UserWithCustomRepo({
     required this.firstName,

@@ -2,7 +2,7 @@ import 'package:dddart/dddart.dart';
 import 'package:test/test.dart';
 
 // Test domain models
-class TestUser extends AggregateRoot {
+class TestUser extends UuidAggregateRoot {
   TestUser({
     required this.name,
     super.id,
@@ -12,7 +12,7 @@ class TestUser extends AggregateRoot {
   final String name;
 }
 
-class UserRegisteredEvent extends DomainEvent {
+class UserRegisteredEvent extends DomainEvent<UuidValue> {
   UserRegisteredEvent({
     required super.aggregateId,
     required this.userName,
@@ -66,7 +66,7 @@ void main() {
 
     test('InMemoryRepository works without logging configuration', () async {
       // Requirement 4.1, 4.2, 4.4, 4.5
-      final repository = InMemoryRepository<TestUser>();
+      final repository = InMemoryRepository<TestUser, UuidValue>();
       final userId = UuidValue.generate();
       final user = TestUser(id: userId, name: 'Jane Doe');
 
@@ -84,7 +84,7 @@ void main() {
     test('Multiple operations work without logging configuration', () async {
       // Requirement 4.1, 4.2, 4.3, 4.4, 4.5
       final eventBus = EventBus();
-      final repository = InMemoryRepository<TestUser>();
+      final repository = InMemoryRepository<TestUser, UuidValue>();
 
       // Perform multiple operations
       for (var i = 0; i < 10; i++) {
@@ -106,7 +106,7 @@ void main() {
     test('Logging has minimal overhead when disabled', () async {
       // Requirement 4.3 - Verify minimal performance overhead
       final eventBus = EventBus();
-      final repository = InMemoryRepository<TestUser>();
+      final repository = InMemoryRepository<TestUser, UuidValue>();
       final stopwatch = Stopwatch()..start();
 
       // Perform operations without logging
@@ -136,7 +136,7 @@ void main() {
       Logger.root.level = Level.OFF;
 
       final eventBus = EventBus();
-      final repository = InMemoryRepository<TestUser>();
+      final repository = InMemoryRepository<TestUser, UuidValue>();
       final userId = UuidValue.generate();
       final user = TestUser(id: userId, name: 'Test User');
       final event = UserRegisteredEvent(
@@ -158,7 +158,7 @@ void main() {
       Logger.root.clearListeners();
 
       final eventBus = EventBus();
-      final repository = InMemoryRepository<TestUser>();
+      final repository = InMemoryRepository<TestUser, UuidValue>();
       final userId = UuidValue.generate();
       final user = TestUser(id: userId, name: 'Test User');
       final event = UserRegisteredEvent(
@@ -176,7 +176,7 @@ void main() {
     test('Repository operations complete successfully without logging',
         () async {
       // Requirement 4.2, 4.4, 4.5
-      final repository = InMemoryRepository<TestUser>();
+      final repository = InMemoryRepository<TestUser, UuidValue>();
       final userId = UuidValue.generate();
       final user = TestUser(id: userId, name: 'Complete Test');
 

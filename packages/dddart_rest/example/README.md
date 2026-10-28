@@ -594,7 +594,7 @@ queryHandlers: {
 ```
 
 The handlers adapt the explicit `UserRepository.list`, `findByFirstName`, and
-`findByEmail` operations; they never assume that every `Repository<User>` can
+`findByEmail` operations; they never assume that every `Repository<User, UuidValue>` can
 enumerate its datastore. See `lib/repositories/user_repository.dart` and
 `lib/handlers/query_handlers.dart` for the complete implementation.
 

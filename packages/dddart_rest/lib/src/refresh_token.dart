@@ -1,5 +1,10 @@
+import 'dart:convert';
+
 import 'package:dddart/dddart.dart';
+import 'package:dddart_json/dddart_json.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
+
+part 'refresh_token.g.dart';
 
 /// Refresh token for maintaining long-lived sessions
 ///
@@ -10,7 +15,7 @@ import 'package:dddart_serialization/dddart_serialization.dart';
 /// but it is an infrastructure concern, not a domain concept. The Repository
 /// pattern is used here as a general-purpose persistence abstraction.
 @Serializable()
-class RefreshToken extends AggregateRoot {
+class RefreshToken extends UuidAggregateRoot {
   /// Creates a refresh token
   RefreshToken({
     required super.id,

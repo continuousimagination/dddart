@@ -1,92 +1,56 @@
-/// Abstract interface for configuration providers.
-///
-/// Providers read configuration from a specific source (file, environment,
-/// cloud service) and make values available through a common interface.
-///
-/// Implementations must provide methods to retrieve individual configuration
-/// values, retrieve configuration sections, and reload configuration from
-/// the underlying source.
-///
-/// Example implementation:
-/// ```dart
-/// class MyConfigProvider implements ConfigProvider {
-///   @override
-///   String? getString(String key) {
-///     // Retrieve value from source
-///   }
-///
-///   @override
-///   Map<String, String> getSection(String prefix) {
-///     // Retrieve all keys with prefix
-///   }
-///
-///   @override
-///   Future<void> reload() async {
-///     // Reload from source
-///   }
-/// }
-/// ```
-abstract interface class ConfigProvider {
-  /// Retrieves a configuration value by key.
-  ///
-  /// Returns the string value associated with [key], or null if the key
-  /// does not exist or has an explicit null value.
-  ///
-  /// Keys typically use dot notation for hierarchical organization:
-  /// - `database.host`
-  /// - `database.port`
-  /// - `logging.level`
-  ///
-  /// Example:
-  /// ```dart
-  /// final host = provider.getString('database.host');
-  /// if (host != null) {
-  ///   print('Database host: $host');
-  /// }
-  /// ```
-  ///
-  /// Returns null if the key does not exist in this provider.
-  String? getString(String key);
+import 'package:dddart_config/src/config_lookup.dart';
+import 'package:dddart_config/src/exceptions.dart';
 
-  /// Retrieves all configuration keys with a given prefix.
-  ///
-  /// Returns a map of all keys starting with [prefix], with the prefix
-  /// removed from the returned keys. This is useful for retrieving
-  /// configuration sections or groups of related settings.
-  ///
-  /// For example, if the configuration contains:
-  /// - `database.host` = "localhost"
-  /// - `database.port` = "5432"
-  /// - `database.name` = "mydb"
-  ///
-  /// Then `getSection('database')` returns:
-  /// ```dart
-  /// {
-  ///   'host': 'localhost',
-  ///   'port': '5432',
-  ///   'name': 'mydb'
-  /// }
-  /// ```
-  ///
-  /// Returns an empty map if no keys match the prefix.
-  Map<String, String> getSection(String prefix);
+/// A structural configuration source.
+///
+/// Implement [lookup] and [reload]. The empty lookup path must return the
+/// provider's complete root map, or an absent result for an empty source.
+/// This lets Configuration resolve ancestors and descendants consistently.
+abstract class ConfigProvider {
+  /// Selects a dotted map path, preserving explicit null and collection types.
+  ConfigLookup lookup(String path);
 
-  /// Reloads configuration from the underlying source.
-  ///
-  /// Re-reads all configuration values from the source (file, environment,
-  /// cloud service, etc.). This allows configuration changes to be picked
-  /// up at runtime without restarting the application.
-  ///
-  /// Example:
-  /// ```dart
-  /// // Configuration file has been updated
-  /// await provider.reload();
-  /// // New values are now available
-  /// final newValue = provider.getString('some.key');
-  /// ```
-  ///
-  /// Throws an exception if the reload operation fails (e.g., file cannot
-  /// be read, network error, parse error). The specific exception type
-  /// depends on the provider implementation.
+  /// Reloads the underlying source.
   Future<void> reload();
+
+  /// Reads a scalar as text; missing/null return null and collections fail.
+  String? getString(String key) {
+    final value = lookup(key).value;
+    if (value == null) return null;
+    if (value is String || value is num || value is bool) {
+      return value.toString();
+    }
+    throw TypeConversionException(key, 'scalar', value);
+  }
+
+  /// Projects a map onto legacy dotted scalar strings.
+  ///
+  /// Use structural lookup or Configuration.getMap to preserve collections.
+  /// Null entries are omitted; lists are rejected rather than stringified.
+  Map<String, String> getSection(String prefix) {
+    final value = lookup(prefix).value;
+    if (value is! Map<String, Object?>) return const {};
+    final result = <String, String>{};
+    void visit(Map<String, Object?> map, String relative) {
+      for (final entry in map.entries) {
+        final key = relative.isEmpty ? entry.key : '$relative.${entry.key}';
+        final child = entry.value;
+        if (child is Map<String, Object?>) {
+          visit(child, key);
+        } else if (child != null) {
+          if (child is! String && child is! num && child is! bool) {
+            throw TypeConversionException(
+              prefix.isEmpty ? key : '$prefix.$key',
+              'scalar',
+              child,
+            );
+          }
+          result[key] = child.toString();
+        }
+      }
+    }
+
+    visit(value, '');
+    return Map.unmodifiable(result);
+  }
 }

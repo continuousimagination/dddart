@@ -9,10 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **BREAKING:** Removed `QueryableRepository<T>`. `Repository<T>` remains a
+- **BREAKING:** `Entity<I>`, `AggregateRoot<I>`, repositories and event aggregate
+  references carry the concrete `I extends Identity`. General entity creation
+  requires its actual identity; repository lookup/deletion reject unrelated IDs.
+- `UuidValue` is the stock Identity implementation. `UuidEntity` and
+  `UuidAggregateRoot` preserve optional UUID generation without coercing custom IDs.
+- **BREAKING:** Removed `QueryableRepository<T>`. `Repository<T, I>` remains a
   CRUD-only contract; applications should define domain-specific read methods
   when they need collection access.
-- `InMemoryRepository<T>.getAll()` and `getAllSync()` remain concrete,
+- `InMemoryRepository<T, I>.getAll()` and `getAllSync()` remain concrete,
   unmodifiable conveniences for tests and prototypes.
 
 ### Added

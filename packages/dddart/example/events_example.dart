@@ -115,7 +115,7 @@ class EventsExample {
     final eventBus = EventBus();
 
     // Multiple listeners for the same event type
-    final subscriptions = <StreamSubscription<DomainEvent>>[];
+    final subscriptions = <StreamSubscription<DomainEvent<UuidValue>>>[];
 
     // Listener 1: Send welcome email
     subscriptions.add(
@@ -276,7 +276,7 @@ class EventsExample {
     print('Scenario: E-commerce order processing workflow\n');
 
     final eventBus = EventBus();
-    final subscriptions = <StreamSubscription<DomainEvent>>[];
+    final subscriptions = <StreamSubscription<DomainEvent<UuidValue>>>[];
 
     // Set up event handlers for different services
 

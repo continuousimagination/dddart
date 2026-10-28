@@ -8,7 +8,7 @@ import 'package:test/test.dart';
 import 'json_serializer_test_support.dart';
 
 // Test aggregate root
-class TestUser extends AggregateRoot {
+class TestUser extends UuidAggregateRoot {
   TestUser({
     required this.name,
     required this.email,
@@ -48,7 +48,7 @@ class TestUserSerializer extends TestJsonSerializer<TestUser> {
 }
 
 // Mock repository for testing
-class MockRepository implements Repository<TestUser> {
+class MockRepository implements Repository<TestUser, UuidValue> {
   final Map<UuidValue, TestUser> _storage = {};
 
   @override
@@ -87,12 +87,12 @@ class MockRepository implements Repository<TestUser> {
 void main() {
   group('ETag Integration Tests', () {
     late MockRepository repository;
-    late CrudResource<TestUser, dynamic> resource;
+    late CrudResource<TestUser, UuidValue, dynamic> resource;
     late TestUser testUser;
 
     setUp(() {
       repository = MockRepository();
-      resource = CrudResource<TestUser, dynamic>(
+      resource = CrudResource<TestUser, UuidValue, dynamic>(
         path: '/users',
         repository: repository,
         serializer: TestUserSerializer(),
@@ -466,7 +466,7 @@ void main() {
 
     group('contentHash strategy', () {
       test('generates different ETags for different content', () async {
-        final contentHashResource = CrudResource<TestUser, dynamic>(
+        final contentHashResource = CrudResource<TestUser, UuidValue, dynamic>(
           path: '/users',
           repository: repository,
           serializer: TestUserSerializer(),

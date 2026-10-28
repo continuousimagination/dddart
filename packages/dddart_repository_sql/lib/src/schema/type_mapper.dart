@@ -1,4 +1,6 @@
+import 'package:analyzer/dart/element/type.dart';
 import 'package:dddart_repository_sql/src/dialect/sql_dialect.dart';
+import 'package:dddart_repository_sql/src/schema/identity_type.dart';
 
 /// Maps between Dart types and SQL column types.
 ///
@@ -15,7 +17,7 @@ import 'package:dddart_repository_sql/src/dialect/sql_dialect.dart';
 /// | double    | REAL              | DOUBLE           |
 /// | bool      | INTEGER           | TINYINT(1)       |
 /// | DateTime  | TEXT              | DATETIME         |
-/// | UuidValue | BLOB              | BINARY(16)       |
+/// | UuidValue | BLOB (UTF-8 key)  | VARBINARY(1024)  |
 ///
 /// Example:
 /// ```dart
@@ -26,6 +28,12 @@ import 'package:dddart_repository_sql/src/dialect/sql_dialect.dart';
 class TypeMapper {
   /// Creates a type mapper.
   const TypeMapper();
+
+  /// Maps a resolved identity type atomically, before embedded value handling.
+  String? getSqlTypeFor(DartType type, SqlDialect dialect) =>
+      IdentityTypeAnalysis.isIdentity(type)
+          ? dialect.identityColumnType
+          : getSqlType(type.getDisplayString(withNullability: false), dialect);
 
   /// Gets the SQL type for a Dart type using the specified dialect.
   ///

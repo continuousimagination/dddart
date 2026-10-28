@@ -1,120 +1,38 @@
 import 'dart:io';
 
+import 'package:dddart_config/src/config_lookup.dart';
 import 'package:dddart_config/src/config_provider.dart';
 import 'package:dddart_config/src/exceptions.dart';
 import 'package:yaml/yaml.dart';
 
-/// Configuration provider that reads from YAML files.
-///
-/// This provider loads configuration from a YAML file and makes values
-/// accessible through dot notation keys. Nested YAML structures are
-/// flattened into dot-separated keys for consistent access patterns.
-///
-/// Example YAML file:
-/// ```yaml
-/// database:
-///   host: localhost
-///   port: 5432
-///   connection:
-///     timeout: 30
-/// features:
-///   - feature1
-///   - feature2
-/// ```
-///
-/// Accessible as:
-/// - `database.host` → "localhost"
-/// - `database.port` → "5432"
-/// - `database.connection.timeout` → "30"
-/// - `features` → "feature1,feature2"
-///
-/// YAML lists are converted to comma-separated strings for consistent
-/// string-based access across all configuration providers.
-class YamlConfigProvider implements ConfigProvider {
-  /// Creates a YAML configuration provider for the given file path.
-  ///
-  /// The file is loaded and parsed immediately during construction.
-  /// The YAML structure is flattened into dot-notation keys for access.
-  ///
-  /// Example:
-  /// ```dart
-  /// final provider = YamlConfigProvider('config.yaml');
-  /// final host = provider.getString('database.host');
-  /// ```
-  ///
-  /// Throws [FileAccessException] if the file cannot be read or if the
-  /// YAML content cannot be parsed.
-  YamlConfigProvider(this._filePath) {
+/// Reads YAML maps without discarding collection types or explicit null.
+class YamlConfigProvider extends ConfigProvider {
+  /// Loads a YAML mapping from [filePath].
+  YamlConfigProvider(String filePath) : _filePath = filePath {
     _load();
   }
 
   final String _filePath;
-  final Map<String, String> _config = {};
+  ConfigLookup _root = ConfigLookup.present(<String, Object?>{});
 
-  /// Loads and parses the YAML file, flattening the structure.
   void _load() {
+    final Object? yaml;
     try {
-      final file = File(_filePath);
-      final content = file.readAsStringSync();
-      final yaml = loadYaml(content);
-
-      _config.clear();
-      if (yaml != null) {
-        _flatten(yaml, '');
-      }
-    } on FileSystemException catch (e) {
-      throw FileAccessException(_filePath, e);
-    } on YamlException catch (e) {
-      throw FileAccessException(_filePath, e);
-    } catch (e) {
-      throw FileAccessException(_filePath, e);
+      yaml = loadYaml(File(_filePath).readAsStringSync());
+    } on FileSystemException catch (error) {
+      throw FileAccessException(_filePath, error);
+    } on YamlException catch (error) {
+      throw FileAccessException(_filePath, error);
     }
-  }
-
-  /// Flattens a nested YAML structure into dot-notation keys.
-  ///
-  /// Recursively processes maps and converts lists to comma-separated strings.
-  /// The [prefix] accumulates the key path as we traverse the structure.
-  void _flatten(dynamic value, String prefix) {
-    if (value is Map) {
-      for (final entry in value.entries) {
-        final key = entry.key.toString();
-        final fullKey = prefix.isEmpty ? key : '$prefix.$key';
-        _flatten(entry.value, fullKey);
-      }
-    } else if (value is List) {
-      // Convert list to comma-separated string
-      final stringValue = value.map((e) => e.toString()).join(',');
-      _config[prefix] = stringValue;
-    } else if (value != null) {
-      _config[prefix] = value.toString();
+    if (yaml != null && yaml is! Map) {
+      throw TypeConversionException('', 'root map', yaml);
     }
-    // Null values are not stored (treated as missing keys)
+    _root = ConfigLookup.present(yaml ?? <String, Object?>{});
   }
 
   @override
-  String? getString(String key) {
-    return _config[key];
-  }
+  ConfigLookup lookup(String path) => _root.at(path);
 
   @override
-  Map<String, String> getSection(String prefix) {
-    final section = <String, String>{};
-    final prefixWithDot = '$prefix.';
-
-    for (final entry in _config.entries) {
-      if (entry.key.startsWith(prefixWithDot)) {
-        // Remove the prefix and the dot
-        final keyWithoutPrefix = entry.key.substring(prefixWithDot.length);
-        section[keyWithoutPrefix] = entry.value;
-      }
-    }
-
-    return section;
-  }
-
-  @override
-  Future<void> reload() async {
-    _load();
-  }
+  Future<void> reload() async => _load();
 }

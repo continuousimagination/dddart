@@ -9,7 +9,7 @@ import 'package:http/http.dart' as http;
 import 'lib/json_serializer_support.dart';
 
 // Simple User aggregate for demonstration
-class User extends AggregateRoot {
+class User extends UuidAggregateRoot {
   User({
     required super.id,
     required this.name,
@@ -62,11 +62,11 @@ void main() async {
   print('=== ETag Conditional Update Example ===\n');
 
   // Create repository and server
-  final repository = InMemoryRepository<User>();
+  final repository = InMemoryRepository<User, UuidValue>();
   final server = HttpServer(port: 8080);
 
   server.registerResource(
-    CrudResource<User, void>(
+    CrudResource<User, UuidValue, void>(
       path: '/users',
       repository: repository,
       serializer: UserSerializer(),

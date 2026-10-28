@@ -41,7 +41,7 @@
 ///
 /// @Serializable()
 /// @GenerateMongoRepository(collectionName: 'users')
-/// class User extends AggregateRoot {
+/// class User extends UuidAggregateRoot {
 ///   final String firstName;
 ///   final String lastName;
 ///
@@ -87,13 +87,13 @@
 /// Define a custom interface and extend the generated base class:
 ///
 /// ```dart
-/// abstract interface class UserRepository implements Repository<User> {
+/// abstract interface class UserRepository implements Repository<User, UuidValue> {
 ///   Future<User?> findByEmail(String email);
 /// }
 ///
 /// @Serializable()
 /// @GenerateMongoRepository(implements: UserRepository)
-/// class User extends AggregateRoot {
+/// class User extends UuidAggregateRoot {
 ///   final String email;
 ///   User({required this.email});
 /// }
@@ -107,7 +107,6 @@
 ///   Future<User?> findByEmail(String email) async {
 ///     final doc = await _collection.findOne(where.eq('email', email));
 ///     if (doc == null) return null;
-///     doc['id'] = doc['_id'];
 ///     doc.remove('_id');
 ///     return _serializer.fromJson(doc);
 ///   }
@@ -123,3 +122,4 @@ export 'src/connection/mongo_connection.dart';
 
 // Exceptions
 export 'src/exceptions/mongo_repository_exception.dart';
+export 'src/identity_key.dart';

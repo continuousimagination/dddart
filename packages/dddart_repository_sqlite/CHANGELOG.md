@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Changed
+
+- Resolve inherited generic entity collection types consistently during parent
+  foreign-key discovery. Concrete List<C> bindings retain typed child IDs,
+  parent references, contents and order through CRUD without dropped rows.
+- Breaking: generated Repository<T, I> lookup/deletion and collection parents
+  use the concrete identity. Constructors accept shared identityCodecs.
+- Native/scoped IDs and identity collections use exact canonical UTF-8 BLOBs,
+  with typed field/JSON path metadata instead of UUID/name heuristics.
+- UUID keys now preserve their exact text case; migrate/recreate 16-byte schemas.
+- Preserve named/generic custom method signatures, include null identity fields
+  in persistence updates, and reject malformed keys without persisted changes.
+- Migrate the illustrative order item to the public serializable entity API.
+
 ## [0.9.0] - 2025-12-01
 
 ### Added

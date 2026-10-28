@@ -5,7 +5,7 @@ import 'package:dddart/dddart.dart';
 /// This event indicates that an order has left the warehouse and is
 /// in transit to the customer. It can trigger notification emails,
 /// tracking updates, and inventory adjustments.
-class OrderShippedEvent extends DomainEvent {
+class OrderShippedEvent extends DomainEvent<UuidValue> {
   /// The tracking number for the shipment.
   final String trackingNumber;
 

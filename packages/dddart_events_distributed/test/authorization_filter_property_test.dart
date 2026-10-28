@@ -28,7 +28,7 @@ void main() {
           final eventCount = 5 + random.nextInt(16); // 5-20 events
 
           // Generate events with random userId values
-          final events = <StoredEvent>[];
+          final events = <StoredEvent<Identity>>[];
           for (var j = 0; j < eventCount; j++) {
             final event = _generateRandomStoredEvent(random);
             await repository.save(event);
@@ -39,7 +39,7 @@ void main() {
           final allowedUserId = events[random.nextInt(events.length)].userId;
 
           // Create endpoints with authorization filter
-          final endpoints = EventHttpEndpoints<StoredEvent>(
+          final endpoints = EventHttpEndpoints<StoredEvent<Identity>>(
             eventRepository: repository,
             authorizationFilter: (event, request) {
               // Only allow events with matching userId
@@ -111,7 +111,7 @@ void main() {
           final repository = InMemoryEventRepository();
           final eventCount = 5 + random.nextInt(16); // 5-20 events
 
-          final events = <StoredEvent>[];
+          final events = <StoredEvent<Identity>>[];
           for (var j = 0; j < eventCount; j++) {
             final event = _generateRandomStoredEvent(random);
             await repository.save(event);
@@ -119,7 +119,7 @@ void main() {
           }
 
           // Create endpoints with filter that always returns true
-          final endpoints = EventHttpEndpoints<StoredEvent>(
+          final endpoints = EventHttpEndpoints<StoredEvent<Identity>>(
             eventRepository: repository,
             authorizationFilter: (event, request) => true,
           );
@@ -161,7 +161,7 @@ void main() {
           final repository = InMemoryEventRepository();
           final eventCount = 5 + random.nextInt(11); // 5-15 events
 
-          final events = <StoredEvent>[];
+          final events = <StoredEvent<Identity>>[];
           for (var j = 0; j < eventCount; j++) {
             final event = _generateRandomStoredEvent(random);
             await repository.save(event);
@@ -169,7 +169,7 @@ void main() {
           }
 
           // Create endpoints with filter that throws for some events
-          final endpoints = EventHttpEndpoints<StoredEvent>(
+          final endpoints = EventHttpEndpoints<StoredEvent<Identity>>(
             eventRepository: repository,
             authorizationFilter: (event, request) {
               // Throw exception for events with null userId
@@ -230,7 +230,7 @@ void main() {
           final repository = InMemoryEventRepository();
           final eventCount = 10 + random.nextInt(21); // 10-30 events
 
-          final events = <StoredEvent>[];
+          final events = <StoredEvent<Identity>>[];
           for (var j = 0; j < eventCount; j++) {
             final event = _generateRandomStoredEvent(random);
             await repository.save(event);
@@ -242,7 +242,7 @@ void main() {
           final allowedSessionId = 'session-${random.nextInt(10)}';
 
           // Create endpoints with complex authorization filter
-          final endpoints = EventHttpEndpoints<StoredEvent>(
+          final endpoints = EventHttpEndpoints<StoredEvent<Identity>>(
             eventRepository: repository,
             authorizationFilter: (event, request) {
               // Allow if tenantId matches OR sessionId matches
@@ -300,13 +300,13 @@ void main() {
 
 // Helper functions
 
-/// Generates a random StoredEvent for testing.
-StoredEvent _generateRandomStoredEvent(Random random) {
+/// Generates a random StoredEvent<Identity> for testing.
+StoredEvent<Identity> _generateRandomStoredEvent(Random random) {
   final includeUserId = random.nextBool();
   final includeTenantId = random.nextBool();
   final includeSessionId = random.nextBool();
 
-  return StoredEvent(
+  return StoredEvent<Identity>(
     id: UuidValue.generate(),
     createdAt: _generateRandomDateTime(random),
     aggregateId: UuidValue.generate(),
@@ -331,16 +331,17 @@ DateTime _generateRandomDateTime(Random random) {
 }
 
 /// In-memory implementation of EventRepository for testing.
-class InMemoryEventRepository implements EventRepository<StoredEvent> {
-  final List<StoredEvent> _events = [];
+class InMemoryEventRepository
+    implements EventRepository<StoredEvent<Identity>> {
+  final List<StoredEvent<Identity>> _events = [];
 
   @override
-  Future<void> save(StoredEvent entity) async {
+  Future<void> save(StoredEvent<Identity> entity) async {
     _events.add(entity);
   }
 
   @override
-  Future<StoredEvent> getById(UuidValue id) async {
+  Future<StoredEvent<Identity>> getById(UuidValue id) async {
     try {
       return _events.firstWhere((e) => e.id == id);
     } catch (_) {
@@ -354,7 +355,7 @@ class InMemoryEventRepository implements EventRepository<StoredEvent> {
   }
 
   @override
-  Future<List<StoredEvent>> findSince(DateTime timestamp) async {
+  Future<List<StoredEvent<Identity>>> findSince(DateTime timestamp) async {
     return _events
         .where(
           (e) =>

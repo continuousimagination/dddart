@@ -3,7 +3,7 @@ import 'package:dddart/dddart.dart';
 import 'package:test/test.dart';
 
 // Test domain events
-class TestEvent extends DomainEvent {
+class TestEvent extends DomainEvent<UuidValue> {
   TestEvent({
     required super.aggregateId,
     required this.message,
@@ -11,7 +11,7 @@ class TestEvent extends DomainEvent {
   final String message;
 }
 
-class OrderCreatedEvent extends DomainEvent {
+class OrderCreatedEvent extends DomainEvent<UuidValue> {
   OrderCreatedEvent({
     required UuidValue orderId,
     required this.customerId,
@@ -21,7 +21,7 @@ class OrderCreatedEvent extends DomainEvent {
   final int itemCount;
 }
 
-class OrderConfirmedEvent extends DomainEvent {
+class OrderConfirmedEvent extends DomainEvent<UuidValue> {
   OrderConfirmedEvent({
     required UuidValue orderId,
     required this.confirmedAt,
@@ -29,7 +29,7 @@ class OrderConfirmedEvent extends DomainEvent {
   final DateTime confirmedAt;
 }
 
-class PaymentProcessedEvent extends DomainEvent {
+class PaymentProcessedEvent extends DomainEvent<UuidValue> {
   PaymentProcessedEvent({
     required UuidValue orderId,
     required this.amount,
@@ -38,7 +38,7 @@ class PaymentProcessedEvent extends DomainEvent {
 }
 
 // Test aggregate root
-class TestAggregate extends AggregateRoot {
+class TestAggregate extends UuidAggregateRoot {
   TestAggregate({super.id});
 
   void doSomething(String message) {
@@ -53,7 +53,7 @@ class TestAggregate extends AggregateRoot {
 }
 
 // Test aggregate for order flow
-class TestOrder extends AggregateRoot {
+class TestOrder extends UuidAggregateRoot {
   TestOrder({
     required this.customerId,
     this.itemCount = 0,
@@ -113,11 +113,11 @@ void main() {
       expect(event.context, isEmpty);
     });
 
-    test('AggregateRoot extends Entity correctly', () {
+    test('AggregateRoot extends UuidEntity correctly', () {
       final aggregate = TestAggregate();
 
-      expect(aggregate, isA<Entity>());
-      expect(aggregate, isA<AggregateRoot>());
+      expect(aggregate, isA<Entity<UuidValue>>());
+      expect(aggregate, isA<AggregateRoot<UuidValue>>());
       expect(aggregate.id, isNotNull);
       expect(aggregate.createdAt, isNotNull);
       expect(aggregate.updatedAt, isNotNull);
@@ -206,12 +206,12 @@ void main() {
 
     test('Complete event flow from aggregate to multiple listeners', () async {
       final order = TestOrder(customerId: 'customer-123');
-      final listener1Events = <DomainEvent>[];
-      final listener2Events = <DomainEvent>[];
-      final listener3Events = <DomainEvent>[];
+      final listener1Events = <DomainEvent<UuidValue>>[];
+      final listener2Events = <DomainEvent<UuidValue>>[];
+      final listener3Events = <DomainEvent<UuidValue>>[];
 
       // Set up multiple listeners
-      eventBus.on<DomainEvent>().listen(listener1Events.add);
+      eventBus.on<DomainEvent<UuidValue>>().listen(listener1Events.add);
       eventBus.on<OrderCreatedEvent>().listen(listener2Events.add);
       eventBus.on<OrderConfirmedEvent>().listen(listener3Events.add);
 
@@ -244,10 +244,10 @@ void main() {
 
     test('Event ordering is preserved across multiple operations', () async {
       final order = TestOrder(customerId: 'customer-456');
-      final receivedEvents = <DomainEvent>[];
+      final receivedEvents = <DomainEvent<UuidValue>>[];
       final eventTypes = <String>[];
 
-      eventBus.on<DomainEvent>().listen((event) {
+      eventBus.on<DomainEvent<UuidValue>>().listen((event) {
         receivedEvents.add(event);
         eventTypes.add(event.runtimeType.toString());
       });
@@ -282,9 +282,9 @@ void main() {
       final order1 = TestOrder(customerId: 'customer-1');
       final order2 = TestOrder(customerId: 'customer-2');
       final order3 = TestOrder(customerId: 'customer-3');
-      final allEvents = <DomainEvent>[];
+      final allEvents = <DomainEvent<UuidValue>>[];
 
-      eventBus.on<DomainEvent>().listen(allEvents.add);
+      eventBus.on<DomainEvent<UuidValue>>().listen(allEvents.add);
 
       // Multiple aggregates perform operations
       order1.create(2);
@@ -348,13 +348,13 @@ void main() {
     test('Complex event flow with multiple event types and listeners',
         () async {
       final order = TestOrder(customerId: 'customer-complex');
-      final allEvents = <DomainEvent>[];
+      final allEvents = <DomainEvent<UuidValue>>[];
       final createdEvents = <OrderCreatedEvent>[];
       final confirmedEvents = <OrderConfirmedEvent>[];
       final paymentEvents = <PaymentProcessedEvent>[];
 
       // Set up type-specific listeners
-      eventBus.on<DomainEvent>().listen(allEvents.add);
+      eventBus.on<DomainEvent<UuidValue>>().listen(allEvents.add);
       eventBus.on<OrderCreatedEvent>().listen(createdEvents.add);
       eventBus.on<OrderConfirmedEvent>().listen(confirmedEvents.add);
       eventBus.on<PaymentProcessedEvent>().listen(paymentEvents.add);

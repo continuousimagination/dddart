@@ -112,18 +112,18 @@ class TestServer {
 ///   serializer: TestUserJsonSerializer(),
 /// );
 /// ```
-Future<TestServer> createTestServer<T extends AggregateRoot>({
+Future<TestServer> createTestServer<T extends AggregateRoot<UuidValue>>({
   required String path,
   required JsonSerializer<T> serializer,
   bool withAuth = false,
   int port = 8765, // Use a fixed test port
 }) async {
-  final repository = InMemoryRepository<T>();
+  final repository = InMemoryRepository<T, UuidValue>();
   final server = HttpServer(port: port);
 
   // Register CRUD resource
   server.registerResource(
-    CrudResource<T, void>(
+    CrudResource<T, UuidValue, void>(
       path: path,
       repository: repository,
       serializer: serializer,
@@ -140,7 +140,9 @@ Future<TestServer> createTestServer<T extends AggregateRoot>({
 ///
 /// Useful for testing scenarios with multiple aggregate types.
 Future<TestServer> createMultiResourceTestServer({
-  required Map<String, CrudResource<AggregateRoot, dynamic>> resources,
+  required Map<String,
+          CrudResource<AggregateRoot<UuidValue>, UuidValue, dynamic>>
+      resources,
   bool withAuth = false,
   int port = 8765, // Use a fixed test port
 }) async {
@@ -173,7 +175,7 @@ Future<TestServer> createMultiResourceTestServer({
 ///   },
 /// );
 /// ```
-Future<void> withTestServer<T extends AggregateRoot>({
+Future<void> withTestServer<T extends AggregateRoot<UuidValue>>({
   required String path,
   required JsonSerializer<T> serializer,
   required Future<void> Function(String baseUrl) testFn,
@@ -196,7 +198,9 @@ Future<void> withTestServer<T extends AggregateRoot>({
 ///
 /// Automatically starts the server before the test and stops it after.
 Future<void> withMultiResourceTestServer({
-  required Map<String, CrudResource<AggregateRoot, dynamic>> resources,
+  required Map<String,
+          CrudResource<AggregateRoot<UuidValue>, UuidValue, dynamic>>
+      resources,
   required Future<void> Function(String baseUrl) testFn,
   bool withAuth = false,
 }) async {

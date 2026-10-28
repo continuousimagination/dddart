@@ -20,6 +20,7 @@
 /// ```
 library dddart_config;
 
+export 'src/config_lookup.dart';
 export 'src/config_provider.dart';
 export 'src/config_requirement.dart';
 export 'src/configuration.dart';

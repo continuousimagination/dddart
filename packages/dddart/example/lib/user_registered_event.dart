@@ -5,7 +5,7 @@ import 'package:dddart/dddart.dart';
 /// This event captures the essential information about a user registration
 /// and can be used to trigger side effects like sending welcome emails,
 /// creating user profiles, or updating analytics.
-class UserRegisteredEvent extends DomainEvent {
+class UserRegisteredEvent extends DomainEvent<UuidValue> {
   /// The email address of the registered user.
   final String email;
 

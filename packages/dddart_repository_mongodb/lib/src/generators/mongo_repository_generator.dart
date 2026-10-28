@@ -6,6 +6,7 @@ library;
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:build/build.dart';
+import 'package:dddart/dddart.dart' show AggregateRoot, Identity;
 import 'package:dddart_repository_mongodb/src/annotations/generate_mongo_repository.dart';
 import 'package:source_gen/source_gen.dart';
 
@@ -48,7 +49,7 @@ class MongoRepositoryGenerator
     final classElement = element;
     final className = classElement.name;
 
-    // Task 4.2: Validate class extends AggregateRoot
+    // Task 4.2: Validate class extends UuidAggregateRoot
     if (!_extendsAggregateRoot(classElement)) {
       throw InvalidGenerationSourceError(
         'Class $className must extend AggregateRoot to use @GenerateMongoRepository.',
@@ -64,6 +65,8 @@ class MongoRepositoryGenerator
       );
     }
 
+    final identityType = _concreteIdentityType(classElement);
+
     // Task 4.3: Extract configuration from annotation
     final collectionName = _extractCollectionName(annotation, className);
     final customInterface = _extractImplementsInterface(annotation);
@@ -71,7 +74,11 @@ class MongoRepositoryGenerator
     // Task 4.4: Determine what to generate based on interface analysis
     if (customInterface == null) {
       // No custom interface - will generate concrete class in task 5
-      return _generateConcreteRepository(className, collectionName);
+      return _generateConcreteRepository(
+        className,
+        identityType,
+        collectionName,
+      );
     }
 
     // Task 4.4: Analyze interface to determine if abstract base is needed
@@ -101,6 +108,7 @@ class MongoRepositoryGenerator
       // Interface only has base Repository methods - will generate concrete class
       return _generateConcreteRepository(
         className,
+        identityType,
         collectionName,
         implements: customInterface,
       );
@@ -108,6 +116,7 @@ class MongoRepositoryGenerator
       // Interface has custom methods - will generate abstract base class in task 6
       return _generateAbstractBaseRepository(
         className,
+        identityType,
         collectionName,
         implements: customInterface,
         abstractMethods: customMethods,
@@ -115,18 +124,31 @@ class MongoRepositoryGenerator
     }
   }
 
-  /// Validates that a class extends AggregateRoot.
+  /// Validates that a class extends UuidAggregateRoot.
   ///
   /// Walks the inheritance hierarchy to find AggregateRoot.
   bool _extendsAggregateRoot(ClassElement element) {
-    ClassElement? current = element;
-    while (current != null) {
-      if (current.name == 'AggregateRoot') return true;
-      final supertype = current.supertype;
-      if (supertype == null) break;
-      current = supertype.element as ClassElement?;
+    return element.allSupertypes.any(
+      (type) =>
+          const TypeChecker.fromRuntime(AggregateRoot).isExactly(type.element),
+    );
+  }
+
+  String _concreteIdentityType(ClassElement element) {
+    final root = element.allSupertypes.firstWhere(
+      (type) =>
+          const TypeChecker.fromRuntime(AggregateRoot).isExactly(type.element),
+    );
+    final identity = root.typeArguments.single;
+    if (element.typeParameters.isNotEmpty ||
+        identity is! InterfaceType ||
+        const TypeChecker.fromRuntime(Identity).isExactly(identity.element)) {
+      throw InvalidGenerationSourceError(
+        'Repository generation requires a concrete identity type.',
+        element: element,
+      );
     }
-    return false;
+    return identity.getDisplayString(withNullability: false);
   }
 
   /// Validates that a class has the @Serializable annotation.
@@ -161,15 +183,17 @@ class MongoRepositoryGenerator
   /// Gets all methods from an interface type, including inherited methods.
   ///
   /// This includes methods from the interface itself and all superinterfaces
-  /// (including Repository<T>), but excludes methods from Object and other
+  /// (including Repository<T, UuidValue>), but excludes methods from Object and other
   /// system classes.
   List<MethodElement> _getInterfaceMethods(InterfaceType interfaceType) {
-    final methods = <MethodElement>[];
+    final methods = <String, MethodElement>{};
 
     // Get methods from the interface itself
-    methods.addAll(interfaceType.methods);
+    for (final method in interfaceType.methods) {
+      methods.putIfAbsent(method.name, () => method);
+    }
 
-    // Get methods from all superinterfaces (including Repository<T>)
+    // Get methods from all superinterfaces (including Repository<T, UuidValue>)
     // but exclude Object and system classes
     for (final supertype in interfaceType.allSupertypes) {
       final supertypeName = supertype.element.name;
@@ -179,10 +203,12 @@ class MongoRepositoryGenerator
           supertype.element.library.name.startsWith('dart.')) {
         continue;
       }
-      methods.addAll(supertype.methods);
+      for (final method in supertype.methods) {
+        methods.putIfAbsent(method.name, () => method);
+      }
     }
 
-    return methods;
+    return methods.values.toList();
   }
 
   /// Converts a camelCase or PascalCase string to snake_case.
@@ -204,17 +230,18 @@ class MongoRepositoryGenerator
   ///
   /// This is used when:
   /// - No custom interface is specified
-  /// - Custom interface only contains base Repository<T> methods
+  /// - Custom interface only contains base Repository<T, UuidValue> methods
   ///
   /// The generated class can be instantiated directly.
   String _generateConcreteRepository(
     String className,
+    String identityType,
     String collectionName, {
     InterfaceType? implements,
   }) {
     final interfaceClause = implements != null
         ? 'implements ${implements.element.name}'
-        : 'implements Repository<$className>';
+        : 'implements Repository<$className, $identityType>';
 
     final buffer = StringBuffer();
 
@@ -233,7 +260,9 @@ class MongoRepositoryGenerator
     buffer.writeln('  /// Creates a repository instance.');
     buffer.writeln('  ///');
     buffer.writeln('  /// [database] - An open MongoDB database connection.');
-    buffer.writeln('  ${className}MongoRepository(this._database);');
+    buffer.writeln(
+      '  ${className}MongoRepository(this._database, {IdentityCodecRegistry? identityCodecs}) : _identityCodecs = identityCodecs ?? IdentityCodecRegistry();',
+    );
     buffer.writeln();
 
     // Task 5.1: Generate fields and getters
@@ -250,19 +279,19 @@ class MongoRepositoryGenerator
     );
     buffer.writeln();
     buffer.writeln('  /// The JSON serializer for $className aggregates.');
-    buffer.writeln('  final _serializer = ${className}JsonSerializer();');
+    buffer.writeln(_generateIdentityMembers(className));
     buffer.writeln();
 
     // Task 5.2: Generate getById method
-    buffer.writeln(_generateGetByIdMethod(className));
+    buffer.writeln(_generateGetByIdMethod(className, identityType));
     buffer.writeln();
 
     // Task 5.3: Generate save method
-    buffer.writeln(_generateSaveMethod(className));
+    buffer.writeln(_generateSaveMethod(className, identityType));
     buffer.writeln();
 
     // Task 5.4: Generate deleteById method
-    buffer.writeln(_generateDeleteByIdMethod(className));
+    buffer.writeln(_generateDeleteByIdMethod(className, identityType));
     buffer.writeln();
 
     // Task 5.5: Generate exception mapping helper
@@ -274,12 +303,24 @@ class MongoRepositoryGenerator
   }
 
   /// Generates the getById method implementation.
-  String _generateGetByIdMethod(String className) {
+  String _generateIdentityMembers(String className) => '''
+  final IdentityCodecRegistry _identityCodecs;
+  late final _serializer = ${className}JsonSerializer.withIdentityCodecs(_identityCodecs);
+
+  /// Converts a stored document, retaining its structural identity.
+  $className fromDocument(Map<String, dynamic> document) {
+    final json = Map<String, dynamic>.from(document)..remove('_id');
+    return _serializer.fromJson(json);
+  }
+''';
+
+  String _generateGetByIdMethod(String className, String identityType) {
     return '''
   @override
-  Future<$className> getById(UuidValue id) async {
+  Future<$className> getById($identityType id) async {
+    final key = encodeMongoIdentityKey<$identityType>(_identityCodecs, id);
     try {
-      final doc = await _collection.findOne(where.eq('_id', id.toString()));
+      final doc = await _collection.findOne(where.eq('_id', key));
       
       if (doc == null) {
         throw RepositoryException(
@@ -288,11 +329,11 @@ class MongoRepositoryGenerator
         );
       }
       
-      // Convert MongoDB _id back to id field for deserialization
-      doc['id'] = doc['_id'];
-      doc.remove('_id');
-      
-      return _serializer.fromJson(doc);
+      final aggregate = fromDocument(doc);
+      if (aggregate.id != id) {
+        throw const DeserializationException('Stored identity does not match requested key');
+      }
+      return aggregate;
     } on RepositoryException {
       rethrow;
     } catch (e) {
@@ -306,20 +347,20 @@ class MongoRepositoryGenerator
   }
 
   /// Generates the save method implementation.
-  String _generateSaveMethod(String className) {
+  String _generateSaveMethod(String className, String identityType) {
     return '''
   @override
   Future<void> save($className aggregate) async {
+    final key = encodeMongoIdentityKey<$identityType>(_identityCodecs, aggregate.id);
     try {
       final doc = _serializer.toJson(aggregate);
       
-      // Use aggregate's id as MongoDB _id
-      doc['_id'] = doc['id'];
-      doc.remove('id');
+      // Preserve structural JSON identity separately from the exact binary key.
+      doc['_id'] = key;
       
       // Upsert operation
       await _collection.replaceOne(
-        where.eq('_id', aggregate.id.toString()),
+        where.eq('_id', key),
         doc,
         upsert: true,
       );
@@ -336,12 +377,13 @@ class MongoRepositoryGenerator
   }
 
   /// Generates the deleteById method implementation.
-  String _generateDeleteByIdMethod(String className) {
+  String _generateDeleteByIdMethod(String className, String identityType) {
     return '''
   @override
-  Future<void> deleteById(UuidValue id) async {
+  Future<void> deleteById($identityType id) async {
+    final key = encodeMongoIdentityKey<$identityType>(_identityCodecs, id);
     try {
-      final result = await _collection.deleteOne(where.eq('_id', id.toString()));
+      final result = await _collection.deleteOne(where.eq('_id', key));
       
       if (result.nRemoved == 0) {
         throw RepositoryException(
@@ -372,7 +414,7 @@ class MongoRepositoryGenerator
     String operation,
   ) {
     // Map specific MongoDB error codes to RepositoryExceptionType
-    if (error.message?.contains('duplicate key') ?? false) {
+    if (error.message.contains('duplicate key')) {
       return RepositoryException(
         'Duplicate key error during $operation: ${error.message}',
         type: RepositoryExceptionType.duplicate,
@@ -380,7 +422,7 @@ class MongoRepositoryGenerator
       );
     }
     
-    if (error.message?.contains('connection') ?? false) {
+    if (error.message.contains('connection')) {
       return RepositoryException(
         'Connection error during $operation: ${error.message}',
         type: RepositoryExceptionType.connection,
@@ -388,7 +430,7 @@ class MongoRepositoryGenerator
       );
     }
     
-    if (error.message?.contains('timeout') ?? false) {
+    if (error.message.contains('timeout')) {
       return RepositoryException(
         'Timeout during $operation: ${error.message}',
         type: RepositoryExceptionType.timeout,
@@ -407,12 +449,13 @@ class MongoRepositoryGenerator
   /// Generates an abstract base repository class.
   ///
   /// This is used when a custom interface contains methods beyond the base
-  /// Repository<T> interface. The generated abstract class implements the
+  /// Repository<T, UuidValue> interface. The generated abstract class implements the
   /// base CRUD methods and declares custom methods as abstract.
   ///
   /// Developers must extend this class and implement the custom methods.
   String _generateAbstractBaseRepository(
     String className,
+    String identityType,
     String collectionName, {
     required InterfaceType implements,
     required List<MethodElement> abstractMethods,
@@ -443,7 +486,9 @@ class MongoRepositoryGenerator
     buffer.writeln('  /// Creates a repository instance.');
     buffer.writeln('  ///');
     buffer.writeln('  /// [database] - An open MongoDB database connection.');
-    buffer.writeln('  ${className}MongoRepositoryBase(this._database);');
+    buffer.writeln(
+      '  ${className}MongoRepositoryBase(this._database, {IdentityCodecRegistry? identityCodecs}) : _identityCodecs = identityCodecs ?? IdentityCodecRegistry();',
+    );
     buffer.writeln();
 
     // Task 6.1: Generate fields and getters (same as concrete class)
@@ -460,17 +505,17 @@ class MongoRepositoryGenerator
     );
     buffer.writeln();
     buffer.writeln('  /// The JSON serializer for $className aggregates.');
-    buffer.writeln('  final _serializer = ${className}JsonSerializer();');
+    buffer.writeln(_generateIdentityMembers(className));
     buffer.writeln();
 
     // Task 6.1: Generate concrete implementations of base Repository methods
-    buffer.writeln(_generateGetByIdMethod(className));
+    buffer.writeln(_generateGetByIdMethod(className, identityType));
     buffer.writeln();
 
-    buffer.writeln(_generateSaveMethod(className));
+    buffer.writeln(_generateSaveMethod(className, identityType));
     buffer.writeln();
 
-    buffer.writeln(_generateDeleteByIdMethod(className));
+    buffer.writeln(_generateDeleteByIdMethod(className, identityType));
     buffer.writeln();
 
     buffer.writeln(_generateMapMongoExceptionMethod());
@@ -498,11 +543,43 @@ class MongoRepositoryGenerator
   String _generateMethodSignature(MethodElement method) {
     final returnType =
         method.returnType.getDisplayString(withNullability: true);
-    final params = method.parameters.map((p) {
-      final type = p.type.getDisplayString(withNullability: true);
-      return '$type ${p.name}';
-    }).join(', ');
+    final typeParameters = method.typeParameters.isEmpty
+        ? ''
+        : '<${method.typeParameters.map((parameter) {
+            final bound = parameter.bound;
+            return bound == null
+                ? parameter.name
+                : '${parameter.name} extends ${bound.getDisplayString(withNullability: true)}';
+          }).join(', ')}>';
+    final required = method.parameters
+        .where((p) => p.isRequiredPositional)
+        .map(_generateParameter)
+        .toList();
+    final optional = method.parameters
+        .where((p) => p.isOptionalPositional)
+        .map(_generateParameter)
+        .toList();
+    final named = method.parameters
+        .where((p) => p.isNamed)
+        .map(_generateParameter)
+        .toList();
+    final groups = <String>[
+      ...required,
+      if (optional.isNotEmpty) '[${optional.join(', ')}]',
+      if (named.isNotEmpty) '{${named.join(', ')}}',
+    ];
+    return '$returnType ${method.name}$typeParameters(${groups.join(', ')})';
+  }
 
-    return '$returnType ${method.name}($params)';
+  String _generateParameter(ParameterElement parameter) {
+    final buffer = StringBuffer();
+    if (parameter.isRequiredNamed) buffer.write('required ');
+    if (parameter.isCovariant) buffer.write('covariant ');
+    buffer
+      ..write(parameter.type.getDisplayString(withNullability: true))
+      ..write(' ${parameter.name}');
+    final defaultValue = parameter.defaultValueCode;
+    if (defaultValue != null) buffer.write(' = $defaultValue');
+    return buffer.toString();
   }
 }

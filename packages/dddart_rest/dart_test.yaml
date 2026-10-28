@@ -1,5 +1,9 @@
 # Test configuration for dddart_rest
 
+# Socket suites reuse fixed ports with shared binds; run files serially so
+# requests cannot reach another test's server.
+concurrency: 1
+
 # Run tests from test directory
 paths:
   - test/

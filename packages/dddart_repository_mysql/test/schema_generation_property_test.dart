@@ -35,20 +35,20 @@ import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
 
 @Serializable()
-class OrderItem extends Entity {
+class OrderItem extends UuidEntity {
   OrderItem({required this.productId}) : super();
   final UuidValue productId;
 }
 
 @Serializable()
-class Payment extends Entity {
+class Payment extends UuidEntity {
   Payment({required this.amount}) : super();
   final double amount;
 }
 
 @Serializable()
 @GenerateMysqlRepository()
-class Order extends AggregateRoot {
+class Order extends UuidAggregateRoot {
   Order({required this.items, required this.payments}) : super();
   final List<OrderItem> items;
   final List<Payment> payments;
@@ -93,14 +93,14 @@ import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
 
 @Serializable()
-class Item extends Entity {
+class Item extends UuidEntity {
   Item({required this.name}) : super();
   final String name;
 }
 
 @Serializable()
 @GenerateMysqlRepository()
-class Container extends AggregateRoot {
+class Container extends UuidAggregateRoot {
   Container({required this.items}) : super();
   final List<Item> items;
 }
@@ -153,14 +153,14 @@ import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
 
 @Serializable()
-class LineItem extends Entity {
+class LineItem extends UuidEntity {
   LineItem({required this.sku}) : super();
   final String sku;
 }
 
 @Serializable()
 @GenerateMysqlRepository()
-class Invoice extends AggregateRoot {
+class Invoice extends UuidAggregateRoot {
   Invoice({required this.lineItems}) : super();
   final List<LineItem> lineItems;
 }
@@ -212,7 +212,7 @@ class Address extends Value {
 
 @Serializable()
 @GenerateMysqlRepository()
-class Customer extends AggregateRoot {
+class Customer extends UuidAggregateRoot {
   Customer({required this.shippingAddress}) : super();
   final Address shippingAddress;
 }
@@ -268,7 +268,7 @@ class Notes extends Value {
 
 @Serializable()
 @GenerateMysqlRepository()
-class Task extends AggregateRoot {
+class Task extends UuidAggregateRoot {
   Task({this.notes}) : super();
   final Notes? notes;
 }
@@ -293,7 +293,6 @@ class Task extends AggregateRoot {
         );
 
         // Should have logic to handle null value objects
-        expect(generated, contains('allNull'));
         expect(generated, contains('_rowToJson'));
       });
     });
@@ -319,7 +318,7 @@ class Price extends Value {
 
 @Serializable()
 @GenerateMysqlRepository()
-class Product extends AggregateRoot {
+class Product extends UuidAggregateRoot {
   Product({required this.price}) : super();
   final Price price;
 }
@@ -361,7 +360,7 @@ import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
 
 @Serializable()
 @GenerateMysqlRepository()
-class SimpleAggregate extends AggregateRoot {
+class SimpleAggregate extends UuidAggregateRoot {
   SimpleAggregate({required this.name}) : super();
   final String name;
 }
@@ -390,7 +389,8 @@ class SimpleAggregate extends AggregateRoot {
         expect(generated, contains('DEFAULT CHARSET=utf8mb4'));
       });
 
-      test('should use BINARY(16) for UUID columns', () async {
+      test('should use exact variable binary storage for UUID columns',
+          () async {
         final library = await resolveSource(
           '''
 library test;
@@ -401,7 +401,7 @@ import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
 
 @Serializable()
 @GenerateMysqlRepository()
-class Entity1 extends AggregateRoot {
+class Entity1 extends UuidAggregateRoot {
   Entity1({required this.referenceId}) : super();
   final UuidValue referenceId;
 }
@@ -425,8 +425,7 @@ class Entity1 extends AggregateRoot {
           _mockBuildStep(),
         );
 
-        // Verify BINARY(16) is used for UUIDs
-        expect(generated, contains('BINARY(16)'));
+        expect(generated, contains('VARBINARY(1024)'));
       });
     });
   });

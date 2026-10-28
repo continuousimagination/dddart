@@ -1,15 +1,13 @@
 /// SQLite-specific SQL dialect implementation.
 library;
 
-import 'dart:typed_data';
-
 import 'package:dddart/dddart.dart';
 import 'package:dddart_repository_sql/dddart_repository_sql.dart';
 
 /// SQLite SQL dialect implementation.
 ///
 /// Provides SQLite-specific SQL syntax and type mappings.
-class SqliteDialect implements SqlDialect {
+class SqliteDialect extends SqlDialect {
   /// Creates a SQLite dialect instance.
   const SqliteDialect();
 
@@ -32,46 +30,15 @@ class SqliteDialect implements SqlDialect {
   String get dateTimeColumnType => 'TEXT';
 
   @override
-  Object? encodeUuid(UuidValue uuid) {
-    // Convert UUID string to 16-byte BLOB for efficient storage
-    final uuidString = uuid.uuid.replaceAll('-', '');
-    final bytes = Uint8List(16);
-
-    for (var i = 0; i < 16; i++) {
-      final hex = uuidString.substring(i * 2, i * 2 + 2);
-      bytes[i] = int.parse(hex, radix: 16);
-    }
-
-    return bytes;
-  }
+  Object? encodeUuid(UuidValue uuid) => encodeIdentityKey(uuid.uuid);
 
   @override
   UuidValue decodeUuid(Object? value) {
-    if (value == null) {
-      throw ArgumentError('Cannot decode null as UuidValue');
+    try {
+      return UuidValue.fromString(decodeIdentityKey(value));
+    } catch (_) {
+      throw ArgumentError('Expected a canonical UUID identity key');
     }
-
-    if (value is! Uint8List && value is! List<int>) {
-      throw ArgumentError(
-        'Expected Uint8List or List<int>, got ${value.runtimeType}',
-      );
-    }
-
-    final bytes =
-        value is Uint8List ? value : Uint8List.fromList(value as List<int>);
-
-    if (bytes.length != 16) {
-      throw ArgumentError(
-        'UUID BLOB must be exactly 16 bytes, got ${bytes.length}',
-      );
-    }
-
-    // Convert 16 bytes back to UUID string format
-    final hex = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-    final uuidString = '${hex.substring(0, 8)}-${hex.substring(8, 12)}-'
-        '${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20, 32)}';
-
-    return UuidValue.fromString(uuidString);
   }
 
   @override

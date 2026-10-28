@@ -41,7 +41,7 @@ import 'package:dddart/dddart.dart';
 /// - When it logically belongs to a parent aggregate
 /// - When it should be persisted/retrieved with the parent
 /// - Examples: OrderLineItem (in Order), Comment (in BlogPost), Address (in Customer)
-class Profile extends Entity {
+class Profile extends UuidEntity {
   /// Creates a Profile with the specified properties
   ///
   /// The id, createdAt, and updatedAt are inherited from Entity and managed

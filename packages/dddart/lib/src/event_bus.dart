@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dddart/src/domain_event.dart';
+import 'package:dddart/src/identity.dart';
 import 'package:logging/logging.dart';
 
 /// A local event bus for publishing and subscribing to domain events.
@@ -26,8 +27,8 @@ import 'package:logging/logging.dart';
 /// ```
 class EventBus {
   final Logger _logger = Logger('dddart.eventbus');
-  final StreamController<DomainEvent> _controller =
-      StreamController<DomainEvent>.broadcast();
+  final StreamController<DomainEvent<Identity>> _controller =
+      StreamController<DomainEvent<Identity>>.broadcast();
 
   /// Publishes a domain event to all subscribers.
   ///
@@ -35,7 +36,7 @@ class EventBus {
   /// to the event's type or any of its supertypes.
   ///
   /// [event] The domain event to publish.
-  void publish(DomainEvent event) {
+  void publish(DomainEvent<Identity> event) {
     if (_controller.isClosed) {
       throw StateError('Cannot publish event: EventBus is closed');
     }
@@ -58,7 +59,7 @@ class EventBus {
   ///   // Handle UserRegistered events
   /// });
   /// ```
-  Stream<T> on<T extends DomainEvent>() {
+  Stream<T> on<T extends DomainEvent<Identity>>() {
     _logger.fine('Creating subscription for event type: $T');
     final stream = _controller.stream.where((event) => event is T).cast<T>();
 

@@ -8,6 +8,7 @@ This package provides the core serialization framework for DDDart, including:
 - `@Serializable` annotation for marking serializable classes
 - Configuration classes for customizing serialization behavior
 - Common utilities and interfaces used by serialization implementations
+- Explicit JSON/key codecs and instance-local registration for identity kinds
 
 This is a framework package - you'll typically use it alongside a specific serialization implementation like `dddart_json`.
 
@@ -29,8 +30,8 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 @Serializable()
-class User extends AggregateRoot {
-  const User({
+class User extends UuidAggregateRoot {
+  User({
     required this.name,
     required this.email,
     super.id,
@@ -80,6 +81,39 @@ final nullConfig = SerializationConfig(
   includeNullFields: true,
 );
 ```
+
+### Identity codecs
+
+`IdentityCodec<I>` defines `toJson`/`fromJson` for structural JSON values and
+`toKey`/`fromKey` for canonical, reversible string keys. Include all scope
+components in a key. Debugging `toString()` output is never an implicit encoding.
+
+`IdentityCodecRegistry()` registers `UuidIdentityCodec` under the stable key
+`uuid`. Add each concrete application identity kind explicitly:
+
+```dart
+final codecs = IdentityCodecRegistry()
+  ..register<IssueId>('github.issue.v1', IssueIdCodec());
+final json = codecs.toJson<IssueId>(issueId);
+final restored = codecs.fromJson<IssueId>(json);
+final key = codecs.toKey<IssueId>(issueId);
+final sameId = codecs.fromKey<IssueId>(key);
+```
+
+`IssueId` and `IssueIdCodec` above are application-defined. JSON can contain a
+native string, number, or scoped object, as chosen by that codec. Key encoding
+checks that decoding preserves identity equality; decoding rejects noncanonical
+aliases. URI escaping and database size, type and comparison rules belong to the
+transport or repository adapter.
+
+Use `toTaggedJson(identity)` and `fromTaggedJson(value)` for heterogeneous
+streams. The envelope is `{"type": "github.issue.v1", "value": ...}`. Its type
+key is an explicit wire contract; changing it requires a migration. Duplicate
+types/keys, unknown kinds and malformed values fail explicitly. Registries are
+injected instances; there is no global registry.
+
+See [JSON identity generation](../dddart_json/README.md#identity-generation)
+for sharing these codecs through generated serializers.
 
 ### Field Naming Strategies
 

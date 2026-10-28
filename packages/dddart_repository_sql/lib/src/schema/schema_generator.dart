@@ -2,6 +2,7 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:dddart_repository_sql/src/dialect/sql_dialect.dart';
 import 'package:dddart_repository_sql/src/schema/collection_analyzer.dart';
+import 'package:dddart_repository_sql/src/schema/identity_type.dart';
 import 'package:dddart_repository_sql/src/schema/table_definition.dart';
 import 'package:dddart_repository_sql/src/schema/type_mapper.dart';
 
@@ -138,6 +139,7 @@ class SchemaGenerator {
     required String parentTable,
     required String fieldName,
     required CollectionInfo collectionInfo,
+    String parentIdentityType = 'UuidValue',
   }) {
     final tableName = '${parentTable}_${fieldName}_items';
     const typeMapper = TypeMapper();
@@ -148,8 +150,8 @@ class SchemaGenerator {
     columns.add(
       ColumnDefinition(
         name: '${parentTable}_id',
-        sqlType: dialect.uuidColumnType,
-        dartType: 'UuidValue',
+        sqlType: dialect.identityColumnType,
+        dartType: parentIdentityType,
         isNullable: false,
         isPrimaryKey: false,
         isForeignKey: true,
@@ -175,7 +177,7 @@ class SchemaGenerator {
       final keyType = collectionInfo.keyType;
       if (keyType != null) {
         final keyTypeName = _getTypeName(keyType);
-        final keySqlType = typeMapper.getSqlType(keyTypeName, dialect);
+        final keySqlType = typeMapper.getSqlTypeFor(keyType, dialect);
         if (keySqlType != null) {
           columns.add(
             ColumnDefinition(
@@ -194,7 +196,7 @@ class SchemaGenerator {
     // Add value column
     final elementType = collectionInfo.elementType;
     final elementTypeName = _getTypeName(elementType);
-    final valueSqlType = typeMapper.getSqlType(elementTypeName, dialect);
+    final valueSqlType = typeMapper.getSqlTypeFor(elementType, dialect);
     if (valueSqlType != null) {
       columns.add(
         ColumnDefinition(
@@ -270,6 +272,7 @@ class SchemaGenerator {
     required String fieldName,
     required CollectionInfo collectionInfo,
     required ClassElement valueObjectClass,
+    String parentIdentityType = 'UuidValue',
   }) {
     final tableName = '${parentTable}_${fieldName}_items';
     const typeMapper = TypeMapper();
@@ -280,8 +283,8 @@ class SchemaGenerator {
     columns.add(
       ColumnDefinition(
         name: '${parentTable}_id',
-        sqlType: dialect.uuidColumnType,
-        dartType: 'UuidValue',
+        sqlType: dialect.identityColumnType,
+        dartType: parentIdentityType,
         isNullable: false,
         isPrimaryKey: false,
         isForeignKey: true,
@@ -307,7 +310,7 @@ class SchemaGenerator {
       final keyType = collectionInfo.keyType;
       if (keyType != null) {
         final keyTypeName = _getTypeName(keyType);
-        final keySqlType = typeMapper.getSqlType(keyTypeName, dialect);
+        final keySqlType = typeMapper.getSqlTypeFor(keyType, dialect);
         if (keySqlType != null) {
           columns.add(
             ColumnDefinition(
@@ -375,7 +378,7 @@ class SchemaGenerator {
 
       final fieldType = field.type;
       final dartTypeName = _getTypeName(fieldType);
-      final sqlType = typeMapper.getSqlType(dartTypeName, dialect);
+      final sqlType = typeMapper.getSqlTypeFor(fieldType, dialect);
 
       if (sqlType != null) {
         columns.add(
@@ -435,6 +438,7 @@ class SchemaGenerator {
     required String fieldName,
     required CollectionInfo collectionInfo,
     required ClassElement entityClass,
+    String parentIdentityType = 'UuidValue',
   }) {
     final tableName = _toSnakeCase(fieldName);
     const typeMapper = TypeMapper();
@@ -445,8 +449,9 @@ class SchemaGenerator {
     columns.add(
       ColumnDefinition(
         name: 'id',
-        sqlType: dialect.uuidColumnType,
-        dartType: 'UuidValue',
+        sqlType: dialect.identityColumnType,
+        dartType: IdentityTypeAnalysis.identityOf(entityClass)
+            .getDisplayString(withNullability: false),
         isNullable: false,
         isPrimaryKey: true,
         isForeignKey: false,
@@ -457,8 +462,8 @@ class SchemaGenerator {
     columns.add(
       ColumnDefinition(
         name: '${parentTable}_id',
-        sqlType: dialect.uuidColumnType,
-        dartType: 'UuidValue',
+        sqlType: dialect.identityColumnType,
+        dartType: parentIdentityType,
         isNullable: false,
         isPrimaryKey: false,
         isForeignKey: true,
@@ -470,7 +475,7 @@ class SchemaGenerator {
       final keyType = collectionInfo.keyType;
       if (keyType != null) {
         final keyTypeName = _getTypeName(keyType);
-        final keySqlType = typeMapper.getSqlType(keyTypeName, dialect);
+        final keySqlType = typeMapper.getSqlTypeFor(keyType, dialect);
         if (keySqlType != null) {
           columns.add(
             ColumnDefinition(

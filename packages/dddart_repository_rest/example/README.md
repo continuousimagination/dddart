@@ -89,18 +89,18 @@ Future<void> main() async {
 
   // Register user resource
   server.registerResource(
-    CrudResource<User, void>(
+    CrudResource<User, UuidValue, void>(
       path: '/users',
-      repository: InMemoryRepository<User>(),
+      repository: InMemoryRepository<User, UuidValue>(),
       serializer: UserJsonSerializer(),
     ),
   );
 
   // Register product resource
   server.registerResource(
-    CrudResource<Product, void>(
+    CrudResource<Product, UuidValue, void>(
       path: '/products',
-      repository: InMemoryRepository<Product>(),
+      repository: InMemoryRepository<Product, UuidValue>(),
       serializer: ProductJsonSerializer(),
     ),
   );

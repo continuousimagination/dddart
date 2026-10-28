@@ -9,6 +9,7 @@ import 'dart:math';
 
 import 'package:dddart/dddart.dart';
 import 'package:dddart_events_distributed/src/event_bus_server.dart';
+import 'package:dddart_events_distributed/src/event_registry.dart';
 import 'package:dddart_events_distributed/src/event_repository.dart';
 import 'package:dddart_events_distributed/src/stored_event.dart';
 import 'package:test/test.dart';
@@ -24,10 +25,14 @@ void main() {
           // Create fresh instances for each iteration
           final eventBus = EventBus();
           final repository = InMemoryEventRepository();
-          final server = EventBusServer<StoredEvent>(
+          final server = EventBusServer<StoredEvent<Identity>>(
             localEventBus: eventBus,
             eventRepository: repository,
-            storedEventFactory: StoredEvent.fromDomainEvent,
+            storedEventFactory: (event) =>
+                StoredEvent<Identity>.fromDomainEvent(
+              event,
+              registry: _testRegistry(),
+            ),
           );
 
           // Generate random test event
@@ -96,10 +101,14 @@ void main() {
           // Create fresh instances
           final eventBus = EventBus();
           final repository = InMemoryEventRepository();
-          final server = EventBusServer<StoredEvent>(
+          final server = EventBusServer<StoredEvent<Identity>>(
             localEventBus: eventBus,
             eventRepository: repository,
-            storedEventFactory: StoredEvent.fromDomainEvent,
+            storedEventFactory: (event) =>
+                StoredEvent<Identity>.fromDomainEvent(
+              event,
+              registry: _testRegistry(),
+            ),
           );
 
           // Generate random number of events (2-10)
@@ -159,10 +168,14 @@ void main() {
           // Create fresh instances
           final eventBus = EventBus();
           final repository = InMemoryEventRepository();
-          final server = EventBusServer<StoredEvent>(
+          final server = EventBusServer<StoredEvent<Identity>>(
             localEventBus: eventBus,
             eventRepository: repository,
-            storedEventFactory: StoredEvent.fromDomainEvent,
+            storedEventFactory: (event) =>
+                StoredEvent<Identity>.fromDomainEvent(
+              event,
+              registry: _testRegistry(),
+            ),
           );
 
           // Generate event with random context fields
@@ -231,10 +244,14 @@ void main() {
           // Create instances with failing repository (30% failure rate)
           final eventBus = EventBus();
           final repository = FailingEventRepository(failureRate: 0.3);
-          final server = EventBusServer<StoredEvent>(
+          final server = EventBusServer<StoredEvent<Identity>>(
             localEventBus: eventBus,
             eventRepository: repository,
-            storedEventFactory: StoredEvent.fromDomainEvent,
+            storedEventFactory: (event) =>
+                StoredEvent<Identity>.fromDomainEvent(
+              event,
+              registry: _testRegistry(),
+            ),
           );
 
           // Publish multiple events
@@ -268,7 +285,7 @@ void main() {
 
 // Generator functions
 
-/// Generates a random test DomainEvent.
+/// Generates a random test DomainEvent<UuidValue>.
 TestDomainEvent _generateRandomTestEvent(Random random) {
   final includeUserId = random.nextBool();
   final includeTenantId = random.nextBool();
@@ -310,8 +327,8 @@ DateTime _generateRandomDateTime(Random random) {
 
 // Test implementations
 
-/// Test DomainEvent for property testing.
-class TestDomainEvent extends DomainEvent {
+/// Test DomainEvent<UuidValue> for property testing.
+class TestDomainEvent extends DomainEvent<UuidValue> {
   TestDomainEvent({
     required super.aggregateId,
     required this.data,
@@ -321,19 +338,36 @@ class TestDomainEvent extends DomainEvent {
   });
 
   final String data;
+
+  Map<String, dynamic> toJson() => {
+        'eventId': eventId.uuid,
+        'occurredAt': occurredAt.toIso8601String(),
+        'aggregateId': aggregateId.uuid,
+        'context': context,
+        'data': data,
+      };
+
+  static TestDomainEvent fromJson(Map<String, dynamic> json) => TestDomainEvent(
+        aggregateId: UuidValue.fromString(json['aggregateId'] as String),
+        eventId: UuidValue.fromString(json['eventId'] as String),
+        occurredAt: DateTime.parse(json['occurredAt'] as String),
+        context: Map<String, dynamic>.from(json['context'] as Map),
+        data: json['data'] as String,
+      );
 }
 
 /// In-memory implementation of EventRepository for testing.
-class InMemoryEventRepository implements EventRepository<StoredEvent> {
-  final List<StoredEvent> _events = [];
+class InMemoryEventRepository
+    implements EventRepository<StoredEvent<Identity>> {
+  final List<StoredEvent<Identity>> _events = [];
 
   @override
-  Future<void> save(StoredEvent entity) async {
+  Future<void> save(StoredEvent<Identity> entity) async {
     _events.add(entity);
   }
 
   @override
-  Future<StoredEvent> getById(UuidValue id) async {
+  Future<StoredEvent<Identity>> getById(UuidValue id) async {
     try {
       return _events.firstWhere((e) => e.id == id);
     } catch (_) {
@@ -342,7 +376,7 @@ class InMemoryEventRepository implements EventRepository<StoredEvent> {
   }
 
   /// Helper method for testing - not part of Repository interface.
-  Future<List<StoredEvent>> findAll() async {
+  Future<List<StoredEvent<Identity>>> findAll() async {
     return List.from(_events);
   }
 
@@ -356,7 +390,7 @@ class InMemoryEventRepository implements EventRepository<StoredEvent> {
   }
 
   @override
-  Future<List<StoredEvent>> findSince(DateTime timestamp) async {
+  Future<List<StoredEvent<Identity>>> findSince(DateTime timestamp) async {
     return _events
         .where(
           (e) =>
@@ -373,11 +407,11 @@ class InMemoryEventRepository implements EventRepository<StoredEvent> {
 }
 
 /// Repository that randomly fails to test error handling.
-class FailingEventRepository implements EventRepository<StoredEvent> {
+class FailingEventRepository implements EventRepository<StoredEvent<Identity>> {
   FailingEventRepository({this.failureRate = 0.5});
 
   final double failureRate;
-  final List<StoredEvent> _events = [];
+  final List<StoredEvent<Identity>> _events = [];
   final Random _random = Random();
 
   void _maybeThrow() {
@@ -387,13 +421,13 @@ class FailingEventRepository implements EventRepository<StoredEvent> {
   }
 
   @override
-  Future<void> save(StoredEvent entity) async {
+  Future<void> save(StoredEvent<Identity> entity) async {
     _maybeThrow();
     _events.add(entity);
   }
 
   @override
-  Future<StoredEvent> getById(UuidValue id) async {
+  Future<StoredEvent<Identity>> getById(UuidValue id) async {
     _maybeThrow();
     try {
       return _events.firstWhere((e) => e.id == id);
@@ -403,7 +437,7 @@ class FailingEventRepository implements EventRepository<StoredEvent> {
   }
 
   /// Helper method for testing - not part of Repository interface.
-  Future<List<StoredEvent>> findAll() async {
+  Future<List<StoredEvent<Identity>>> findAll() async {
     return List.from(_events);
   }
 
@@ -418,7 +452,7 @@ class FailingEventRepository implements EventRepository<StoredEvent> {
   }
 
   @override
-  Future<List<StoredEvent>> findSince(DateTime timestamp) async {
+  Future<List<StoredEvent<Identity>>> findSince(DateTime timestamp) async {
     _maybeThrow();
     return _events
         .where(
@@ -435,3 +469,10 @@ class FailingEventRepository implements EventRepository<StoredEvent> {
     _events.removeWhere((e) => e.createdAt.isBefore(timestamp));
   }
 }
+
+EventRegistry _testRegistry() => EventRegistry()
+  ..register<TestDomainEvent>(
+    'TestDomainEvent',
+    encode: (event) => event.toJson(),
+    decode: TestDomainEvent.fromJson,
+  );

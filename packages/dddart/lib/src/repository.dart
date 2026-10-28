@@ -1,8 +1,8 @@
 import 'package:dddart/dddart.dart' show InMemoryRepository;
 import 'package:dddart/src/aggregate_root.dart';
+import 'package:dddart/src/identity.dart';
 import 'package:dddart/src/in_memory_repository.dart' show InMemoryRepository;
 import 'package:dddart/src/repository_exception.dart';
-import 'package:dddart/src/uuid_value.dart';
 
 /// Base interface for repositories that manage aggregate roots.
 ///
@@ -19,12 +19,13 @@ import 'package:dddart/src/uuid_value.dart';
 ///
 /// * [T] - The aggregate root type managed by this repository. Must extend
 ///   [AggregateRoot].
+/// * [I] - The concrete identity of [T], accepted by lookup and deletion.
 ///
 /// ## Usage Example
 ///
 /// ```dart
 /// // Define a custom repository interface for your aggregate
-/// abstract interface class UserRepository implements Repository<User> {
+/// abstract interface class UserRepository implements Repository<User, UuidValue> {
 ///   Future<User?> getByEmail(String email);
 ///   Future<List<User>> getActiveUsers();
 /// }
@@ -147,7 +148,7 @@ import 'package:dddart/src/uuid_value.dart';
 /// to add domain-specific query methods:
 ///
 /// ```dart
-/// abstract interface class ProductRepository implements Repository<Product> {
+/// abstract interface class ProductRepository implements Repository<Product, UuidValue> {
 ///   Future<List<Product>> getByCategory(String category);
 ///   Future<List<Product>> searchByName(String searchTerm);
 ///   Future<List<Product>> getInPriceRange(double min, double max);
@@ -160,7 +161,7 @@ import 'package:dddart/src/uuid_value.dart';
 /// in-memory implementation:
 ///
 /// ```dart
-/// final repository = InMemoryRepository<User>();
+/// final repository = InMemoryRepository<User, UuidValue>();
 ///
 /// // Use in tests without external dependencies
 /// final user = User(name: 'Test User');
@@ -173,16 +174,15 @@ import 'package:dddart/src/uuid_value.dart';
 /// * [AggregateRoot] - The base class for aggregate roots
 /// * [InMemoryRepository] - An in-memory implementation for testing
 /// * [RepositoryException] - Exception thrown by repository operations
-abstract interface class Repository<T extends AggregateRoot> {
+abstract interface class Repository<T extends AggregateRoot<I>,
+    I extends Identity> {
   /// Retrieves an aggregate root by its ID.
   ///
   /// Returns the aggregate root with the given [id].
   ///
   /// Throws [RepositoryException] with type [RepositoryExceptionType.notFound]
-  /// if no aggregate with the given ID exists. The rationale for throwing an
-  /// exception rather than returning null is that if you have a UUID, you
-  /// typically expect it to exist. UUIDs come from somewhere (user input,
-  /// another system, etc.), and if you're looking it up, you expect to find it.
+  /// if no aggregate with the given ID exists. Lookup returns an aggregate or
+  /// throws; an externally assigned identity does not change this contract.
   ///
   /// May throw [RepositoryException] with other types if the operation fails
   /// for other reasons (e.g., connection errors, timeout).
@@ -200,7 +200,7 @@ abstract interface class Repository<T extends AggregateRoot> {
   ///   }
   /// }
   /// ```
-  Future<T> getById(UuidValue id);
+  Future<T> getById(I id);
 
   /// Saves an aggregate root to the repository.
   ///
@@ -262,5 +262,5 @@ abstract interface class Repository<T extends AggregateRoot> {
   ///   }
   /// }
   /// ```
-  Future<void> deleteById(UuidValue id);
+  Future<void> deleteById(I id);
 }

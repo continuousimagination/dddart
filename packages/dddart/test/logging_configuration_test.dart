@@ -4,7 +4,7 @@ import 'package:logging/logging.dart';
 import 'package:test/test.dart';
 
 // Test event for EventBus logging
-class ConfigTestEvent extends DomainEvent {
+class ConfigTestEvent extends DomainEvent<UuidValue> {
   ConfigTestEvent({
     required super.aggregateId,
     required this.message,
@@ -13,7 +13,7 @@ class ConfigTestEvent extends DomainEvent {
 }
 
 // Test aggregate for Repository logging
-class ConfigTestAggregate extends AggregateRoot {
+class ConfigTestAggregate extends UuidAggregateRoot {
   ConfigTestAggregate({
     required this.name,
     super.id,
@@ -59,7 +59,7 @@ void main() {
         Logger.root.level = Level.ALL;
 
         final eventBus = EventBus();
-        final repository = InMemoryRepository<ConfigTestAggregate>();
+        final repository = InMemoryRepository<ConfigTestAggregate, UuidValue>();
 
         // Perform operations that log at FINE level (below INFO)
         final event = ConfigTestEvent(
@@ -108,7 +108,7 @@ void main() {
         Logger.root.level = Level.ALL;
 
         final eventBus = EventBus();
-        final repository = InMemoryRepository<ConfigTestAggregate>();
+        final repository = InMemoryRepository<ConfigTestAggregate, UuidValue>();
 
         // Perform operations that log at FINE level
         final event = ConfigTestEvent(
@@ -160,7 +160,7 @@ void main() {
         });
 
         final eventBus = EventBus();
-        final repository = InMemoryRepository<ConfigTestAggregate>();
+        final repository = InMemoryRepository<ConfigTestAggregate, UuidValue>();
 
         // Perform operations that log at FINE and INFO levels
         final event = ConfigTestEvent(
@@ -214,7 +214,7 @@ void main() {
         Logger.root.level = Level.ALL;
 
         final eventBus = EventBus();
-        final repository = InMemoryRepository<ConfigTestAggregate>();
+        final repository = InMemoryRepository<ConfigTestAggregate, UuidValue>();
 
         // Perform operations
         final event = ConfigTestEvent(
@@ -375,7 +375,7 @@ void main() {
             Logger('dddart.repository').onRecord.listen(repositoryRecords.add);
 
         final eventBus = EventBus();
-        final repository = InMemoryRepository<ConfigTestAggregate>();
+        final repository = InMemoryRepository<ConfigTestAggregate, UuidValue>();
 
         final event = ConfigTestEvent(
           aggregateId: UuidValue.generate(),
@@ -414,7 +414,7 @@ void main() {
         Logger.root.clearListeners();
 
         final eventBus = EventBus();
-        final repository = InMemoryRepository<ConfigTestAggregate>();
+        final repository = InMemoryRepository<ConfigTestAggregate, UuidValue>();
 
         // Perform normal operations
         final event = ConfigTestEvent(
@@ -452,7 +452,7 @@ void main() {
         final sub = Logger('dddart').onRecord.listen(capturedRecords.add);
 
         final eventBus = EventBus();
-        final repository = InMemoryRepository<ConfigTestAggregate>();
+        final repository = InMemoryRepository<ConfigTestAggregate, UuidValue>();
 
         // Perform operations
         final event = ConfigTestEvent(
@@ -480,7 +480,7 @@ void main() {
         Logger.root.clearListeners();
 
         final eventBus = EventBus();
-        final repository = InMemoryRepository<ConfigTestAggregate>();
+        final repository = InMemoryRepository<ConfigTestAggregate, UuidValue>();
 
         // Measure time with logging disabled
         final stopwatch = Stopwatch()..start();
@@ -595,7 +595,7 @@ void main() {
         final dddartSub = Logger('dddart').onRecord.listen(dddartRecords.add);
 
         final eventBus = EventBus();
-        final repository = InMemoryRepository<ConfigTestAggregate>();
+        final repository = InMemoryRepository<ConfigTestAggregate, UuidValue>();
 
         final event = ConfigTestEvent(
           aggregateId: UuidValue.generate(),

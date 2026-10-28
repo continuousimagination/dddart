@@ -197,7 +197,7 @@ void _messageQueueSimulation() {
 
 // Example serializable events
 
-class UserRegisteredEvent extends DomainEvent {
+class UserRegisteredEvent extends DomainEvent<UuidValue> {
   final String email;
   final String fullName;
   final String organizationId;
@@ -238,7 +238,7 @@ class UserRegisteredEvent extends DomainEvent {
   }
 }
 
-class UserEmailVerifiedEvent extends DomainEvent {
+class UserEmailVerifiedEvent extends DomainEvent<UuidValue> {
   final String email;
 
   UserEmailVerifiedEvent({
@@ -262,7 +262,7 @@ class UserEmailVerifiedEvent extends DomainEvent {
   }
 }
 
-class UserProfileUpdatedEvent extends DomainEvent {
+class UserProfileUpdatedEvent extends DomainEvent<UuidValue> {
   final String fullName;
 
   UserProfileUpdatedEvent({
@@ -286,7 +286,7 @@ class UserProfileUpdatedEvent extends DomainEvent {
   }
 }
 
-class OrderPlacedEvent extends DomainEvent {
+class OrderPlacedEvent extends DomainEvent<UuidValue> {
   final String customerId;
   final double totalAmount;
   final String currency;
@@ -330,7 +330,7 @@ class OrderPlacedEvent extends DomainEvent {
   }
 }
 
-class OrderShippedEvent extends DomainEvent {
+class OrderShippedEvent extends DomainEvent<UuidValue> {
   final String trackingNumber;
   final String carrier;
   final DateTime estimatedDelivery;

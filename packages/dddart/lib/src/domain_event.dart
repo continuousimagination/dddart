@@ -1,10 +1,11 @@
+import 'package:dddart/src/identity.dart';
 import 'package:dddart/src/uuid_value.dart';
 
 /// Base class for domain events in the DDD framework.
 ///
 /// A domain event represents something significant that happened in the domain.
 /// Events are immutable and contain metadata for traceability and filtering.
-abstract class DomainEvent {
+abstract class DomainEvent<I extends Identity> {
   /// Creates a new domain event.
   ///
   /// [aggregateId] is required and identifies the aggregate that raised the event.
@@ -26,7 +27,7 @@ abstract class DomainEvent {
   final DateTime occurredAt;
 
   /// Identifier of the aggregate that raised this event.
-  final UuidValue aggregateId;
+  final I aggregateId;
 
   /// Additional context data for filtering and metadata.
   /// This map can contain arbitrary key-value pairs that provide
@@ -41,7 +42,7 @@ abstract class DomainEvent {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is DomainEvent && other.eventId == eventId;
+    return other is DomainEvent<Identity> && other.eventId == eventId;
   }
 
   @override

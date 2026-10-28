@@ -11,6 +11,7 @@ import 'dart:math';
 
 import 'package:dddart/dddart.dart';
 import 'package:dddart_events_distributed/src/event_bus_client.dart';
+import 'package:dddart_events_distributed/src/event_registry.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:test/test.dart';
@@ -58,7 +59,7 @@ void main() {
           final client = EventBusClient(
             localEventBus: eventBus,
             serverUrl: 'http://test-server',
-            eventRegistry: {},
+            eventRegistry: _testRegistry(),
             pollingInterval: const Duration(seconds: 10), // Long interval
             autoForward: true,
             httpClient: mockClient,
@@ -98,7 +99,9 @@ void main() {
             );
             expect(
               forwardedEvent['aggregateId'],
-              equals(publishedEvent.aggregateId.toString()),
+              equals(
+                {'type': 'uuid', 'value': publishedEvent.aggregateId.uuid},
+              ),
               reason: 'Iteration $i, Event $j: aggregateId should match',
             );
 
@@ -156,7 +159,7 @@ void main() {
           final client = EventBusClient(
             localEventBus: eventBus,
             serverUrl: 'http://test-server',
-            eventRegistry: {},
+            eventRegistry: _testRegistry(),
             pollingInterval: const Duration(seconds: 10),
             autoForward: true,
             httpClient: mockClient,
@@ -267,7 +270,7 @@ void main() {
           final client = EventBusClient(
             localEventBus: eventBus,
             serverUrl: 'http://test-server',
-            eventRegistry: {},
+            eventRegistry: _testRegistry(),
             pollingInterval: const Duration(seconds: 10),
             autoForward: true,
             httpClient: mockClient,
@@ -342,7 +345,7 @@ void main() {
           final client = EventBusClient(
             localEventBus: eventBus,
             serverUrl: 'http://test-server',
-            eventRegistry: {},
+            eventRegistry: _testRegistry(),
             pollingInterval: const Duration(seconds: 10),
             autoForward: true,
             httpClient: mockClient,
@@ -406,7 +409,7 @@ TestEvent _generateRandomTestEvent(Random random) {
 // Test event class
 
 /// Test event for property testing.
-class TestEvent extends DomainEvent {
+class TestEvent extends DomainEvent<UuidValue> {
   TestEvent({
     required super.aggregateId,
     required this.data,
@@ -416,4 +419,27 @@ class TestEvent extends DomainEvent {
   });
 
   final String data;
+
+  Map<String, dynamic> toJson() => {
+        'eventId': eventId.uuid,
+        'occurredAt': occurredAt.toIso8601String(),
+        'aggregateId': aggregateId.uuid,
+        'context': context,
+        'data': data,
+      };
+
+  static TestEvent fromJson(Map<String, dynamic> json) => TestEvent(
+        aggregateId: UuidValue.fromString(json['aggregateId'] as String),
+        eventId: UuidValue.fromString(json['eventId'] as String),
+        occurredAt: DateTime.parse(json['occurredAt'] as String),
+        context: Map<String, dynamic>.from(json['context'] as Map),
+        data: json['data'] as String,
+      );
 }
+
+EventRegistry _testRegistry() => EventRegistry()
+  ..register<TestEvent>(
+    'TestEvent',
+    encode: (event) => event.toJson(),
+    decode: TestEvent.fromJson,
+  );

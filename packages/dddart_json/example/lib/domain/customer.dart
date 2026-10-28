@@ -8,7 +8,7 @@ part 'customer.g.dart';
 
 /// Aggregate root representing a customer.
 @Serializable()
-class Customer extends AggregateRoot {
+class Customer extends UuidAggregateRoot {
   Customer({
     required this.firstName,
     required this.lastName,

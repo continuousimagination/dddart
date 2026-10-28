@@ -1,5 +1,27 @@
 # dddart_repository_rest
 
+## Typed identities (pre-release breaking change)
+
+Use `UuidAggregateRoot` for existing UUID models and `Repository<User, UuidValue>`
+for UUID CRUD. Native models extend `AggregateRoot<IssueId>` with a required ID.
+Register explicit `IdentityCodec<IssueId>` implementations in an instance-local
+`IdentityCodecRegistry`; configure the server's `JsonSerializer` and
+`CrudResource<Issue, IssueId, void>` with the same registry. Generated REST
+repositories accept `identityCodecs: registry` and share it with body serialization.
+
+`CrudResource<T, I, TClaims>`, `AuthorizationHandler<T, I, TClaims>` and
+`QueryHandler<T, I>` retain concrete identity types. Delete authorization receives
+I. Query selection, pagination and authentication semantics are unchanged.
+
+Client paths URI-encode canonical codec keys once. `HttpServer` decodes one
+segment once; direct `CrudResource.handleGetById/handleUpdate/handleDelete`
+callers supply decoded canonical keys. Slash, percent, punctuation and Unicode
+remain data. Empty, malformed UTF-8 and dot-only (`.`/`..`) keys are unsupported
+and fail before client I/O. Invalid/noncanonical server keys yield problem+json
+400; valid missing IDs keep 404. Client 400 and 422 map to repository constraint
+errors. A get response with a different typed identity is rejected.
+
+
 REST API-backed repository implementation for DDDart aggregate roots with code generation support.
 
 ## Overview
@@ -51,7 +73,7 @@ import 'package:dddart_repository_rest/dddart_repository_rest.dart';
 
 @Serializable()
 @GenerateRestRepository(resourcePath: '/users')
-class User extends AggregateRoot {
+class User extends UuidAggregateRoot {
   User({
     UuidValue? id,
     required this.firstName,
@@ -240,7 +262,7 @@ Specifies the REST API resource path for the aggregate:
 
 ```dart
 @GenerateRestRepository(resourcePath: '/users')
-class User extends AggregateRoot { ... }
+class User extends UuidAggregateRoot { ... }
 ```
 
 If omitted, the path is generated from the class name:
@@ -254,7 +276,7 @@ Specifies a custom repository interface for domain-specific query methods:
 
 ```dart
 // Define custom interface
-abstract interface class UserRepository implements Repository<User> {
+abstract interface class UserRepository implements Repository<User, UuidValue> {
   Future<User?> findByEmail(String email);
   Future<List<User>> findByLastName(String lastName);
 }
@@ -262,7 +284,7 @@ abstract interface class UserRepository implements Repository<User> {
 // Use in annotation
 @Serializable()
 @GenerateRestRepository(implements: UserRepository)
-class User extends AggregateRoot { ... }
+class User extends UuidAggregateRoot { ... }
 ```
 
 When `implements` is specified with custom methods, the generator creates an **abstract base class** that you must extend. See [Custom Repository Interface Pattern](#custom-repository-interface-pattern) below.
@@ -274,7 +296,7 @@ For domain-specific queries beyond basic CRUD, define a custom repository interf
 ### 1. Define the Interface
 
 ```dart
-abstract interface class ProductRepository implements Repository<Product> {
+abstract interface class ProductRepository implements Repository<Product, UuidValue> {
   Future<List<Product>> findByCategory(String category);
   Future<List<Product>> findByPriceRange(double minPrice, double maxPrice);
 }
@@ -285,7 +307,7 @@ abstract interface class ProductRepository implements Repository<Product> {
 ```dart
 @Serializable()
 @GenerateRestRepository(implements: ProductRepository)
-class Product extends AggregateRoot {
+class Product extends UuidAggregateRoot {
   Product({
     UuidValue? id,
     required this.name,
@@ -500,7 +522,7 @@ Future<User?> findUserSafely(
 
 ### Custom Repositories
 
-1. **Use protected members** (`_connection`, `_serializer`, `_mapHttpException`)
+1. **Use library-private members within the same Dart library** (`_connection`, `_serializer`, `_mapHttpException`)
 2. **Follow the same error handling pattern** as generated methods
 3. **Validate query parameters** before making requests
 4. **Document custom methods** with clear examples
@@ -543,7 +565,7 @@ class GenerateRestRepository {
 
 ### Generated Repository Methods
 
-All generated repositories implement `Repository<T>`:
+All generated repositories implement `Repository<T, UuidValue>`:
 
 ```dart
 abstract interface class Repository<T extends AggregateRoot> {
@@ -593,7 +615,7 @@ dart run build_runner build --delete-conflicting-outputs
 
 **Solution**: Ensure your class extends `AggregateRoot` from `dddart`:
 ```dart
-class User extends AggregateRoot { ... }
+class User extends UuidAggregateRoot { ... }
 ```
 
 **Problem**: "Class must have @Serializable annotation" error
@@ -602,7 +624,7 @@ class User extends AggregateRoot { ... }
 ```dart
 @Serializable()
 @GenerateRestRepository()
-class User extends AggregateRoot { ... }
+class User extends UuidAggregateRoot { ... }
 ```
 
 ### Connection Issues
@@ -639,7 +661,7 @@ class User extends AggregateRoot { ... }
 
 ### Custom Repository Issues
 
-**Problem**: Cannot access protected members
+**Problem**: Cannot access library-private members
 
 **Solution**: Ensure your custom repository class is in the same library as the generated base class (same file or use `part`/`part of`).
 

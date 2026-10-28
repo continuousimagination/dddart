@@ -18,7 +18,7 @@ import 'package:dddart_rest/src/authorization_result.dart';
 /// Example:
 /// ```dart
 /// class PlayerAuthorizationHandler
-///     extends AuthorizationHandler<Player, StandardClaims> {
+///     extends AuthorizationHandler<Player, UuidValue, StandardClaims> {
 ///   @override
 ///   Future<AuthorizationResult> authorizeUpdate(
 ///     Player player,
@@ -34,7 +34,8 @@ import 'package:dddart_rest/src/authorization_result.dart';
 ///   }
 /// }
 /// ```
-abstract class AuthorizationHandler<TAggregate extends AggregateRoot, TClaims> {
+abstract class AuthorizationHandler<TAggregate extends AggregateRoot<I>,
+    I extends Identity, TClaims> {
   /// Authorizes a CREATE operation
   ///
   /// [aggregate] is the new aggregate being created
@@ -70,7 +71,7 @@ abstract class AuthorizationHandler<TAggregate extends AggregateRoot, TClaims> {
   /// Returns [AuthorizationResult.allow] if authorized,
   /// or [AuthorizationResult.deny] with an error message if not authorized
   Future<AuthorizationResult> authorizeDelete(
-    UuidValue aggregateId,
+    I aggregateId,
     AuthenticationResult<TClaims> authResult,
   );
 

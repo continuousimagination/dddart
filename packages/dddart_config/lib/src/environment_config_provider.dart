@@ -1,154 +1,72 @@
 import 'dart:io';
 
+import 'package:dddart_config/src/config_lookup.dart';
 import 'package:dddart_config/src/config_provider.dart';
+import 'package:dddart_config/src/exceptions.dart';
 
-/// Configuration provider that reads from environment variables.
+/// Hierarchical configuration backed by environment strings.
 ///
-/// This provider reads configuration values from the system environment,
-/// making it ideal for containerized deployments and following 12-factor
-/// app principles.
-///
-/// Environment variable names are converted to configuration keys by:
-/// 1. Removing the optional prefix
-/// 2. Converting to lowercase
-/// 3. Replacing single underscores with dots (for hierarchy)
-/// 4. Replacing double underscores with single underscores (for keys with underscores)
-///
-/// For example, with prefix 'MYAPP':
-/// - `MYAPP_DATABASE_HOST` → `database.host`
-/// - `MYAPP_DATABASE_PORT` → `database.port`
-/// - `MYAPP_SLACK_BOT__TOKEN` → `slack.bot_token`
-///
-/// Example usage:
-/// ```dart
-/// // With prefix
-/// final provider = EnvironmentConfigProvider(prefix: 'MYAPP');
-/// final host = provider.getString('database.host');
-/// // Reads from MYAPP_DATABASE_HOST environment variable
-///
-/// // Keys with underscores
-/// final token = provider.getString('slack.bot_token');
-/// // Reads from MYAPP_SLACK_BOT__TOKEN environment variable
-///
-/// // Without prefix
-/// final provider = EnvironmentConfigProvider();
-/// final host = provider.getString('database.host');
-/// // Reads from DATABASE_HOST environment variable
-/// ```
-class EnvironmentConfigProvider implements ConfigProvider {
-  /// Creates an environment provider with optional prefix.
+/// A single underscore separates path segments; a double underscore represents
+/// a literal underscore. Values remain strings, including commas and JSON text.
+/// Without a prefix, names mapping to empty path segments (such as shell `_`)
+/// are ignored. Names selected by an explicit prefix remain strictly validated.
+class EnvironmentConfigProvider extends ConfigProvider {
+  /// Loads the process environment, optionally restricting names to [prefix].
   ///
-  /// If [prefix] is provided, only environment variables starting with
-  /// `{prefix}_` are considered. The prefix is removed when converting
-  /// to configuration keys.
-  ///
-  /// Example:
-  /// ```dart
-  /// // Only reads MYAPP_* environment variables
-  /// final provider = EnvironmentConfigProvider(prefix: 'MYAPP');
-  ///
-  /// // Reads all environment variables
-  /// final provider = EnvironmentConfigProvider();
-  /// ```
-  EnvironmentConfigProvider({this.prefix}) {
-    _loadEnvironment();
+  /// [environment] supplies an explicit environment for tests or embedding.
+  /// Reload reads its current entries, or Platform.environment when omitted.
+  EnvironmentConfigProvider({this.prefix, Map<String, String>? environment})
+      : _environment = environment {
+    _load();
   }
 
-  /// Optional prefix for environment variable names.
-  ///
-  /// If provided, only environment variables starting with this prefix
-  /// (followed by an underscore) are considered. The prefix and underscore
-  /// are removed when converting to configuration keys.
+  /// Environment variable prefix, before the separating underscore.
   final String? prefix;
+  final Map<String, String>? _environment;
+  ConfigLookup _root = ConfigLookup.present(<String, Object?>{});
 
-  /// Cache of environment variables converted to configuration keys.
-  Map<String, String> _cache = {};
-
-  /// Loads environment variables into the cache.
-  void _loadEnvironment() {
-    _cache = {};
-    final env = Platform.environment;
-
-    for (final entry in env.entries) {
-      final envKey = entry.key;
-      final envValue = entry.value;
-
-      // Check if we should process this environment variable
+  void _load() {
+    final root = <String, Object?>{};
+    final entries = (_environment ?? Platform.environment).entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+    for (final entry in entries) {
+      var name = entry.key;
       if (prefix != null) {
-        // With prefix: must start with PREFIX_
-        final expectedPrefix = '${prefix}_';
-        if (!envKey.startsWith(expectedPrefix)) {
-          continue;
+        if (!name.startsWith('${prefix}_')) continue;
+        name = name.substring(prefix!.length + 1);
+      }
+      final path = name
+          .toLowerCase()
+          .replaceAll('__', '\u0000')
+          .replaceAll('_', '.')
+          .replaceAll('\u0000', '_');
+      final segments = path.split('.');
+      if (segments.any((segment) => segment.isEmpty)) {
+        if (prefix == null) continue;
+        throw ConfigException('Empty environment path segment', key: path);
+      }
+      var map = root;
+      for (var i = 0; i < segments.length - 1; i++) {
+        final segment = segments[i];
+        if (!map.containsKey(segment)) map[segment] = <String, Object?>{};
+        final child = map[segment];
+        if (child is! Map<String, Object?>) {
+          throw ConfigException('Conflicting environment paths', key: path);
         }
-        // Remove prefix and convert to config key
-        final withoutPrefix = envKey.substring(expectedPrefix.length);
-        final configKey = _envKeyToConfigKey(withoutPrefix);
-        _cache[configKey] = envValue;
-      } else {
-        // Without prefix: convert all environment variables
-        final configKey = _envKeyToConfigKey(envKey);
-        _cache[configKey] = envValue;
+        map = child;
       }
-    }
-  }
-
-  /// Converts an environment variable name to a configuration key.
-  ///
-  /// Conversion rules:
-  /// 1. Convert to lowercase
-  /// 2. Replace double underscores (`__`) with a placeholder
-  /// 3. Replace single underscores with dots
-  /// 4. Restore double underscores as single underscores
-  ///
-  /// This allows representing configuration keys that contain underscores:
-  /// - Single underscore (`_`) → dot (`.`) for hierarchy
-  /// - Double underscore (`__`) → single underscore (`_`) in the key
-  ///
-  /// Examples:
-  /// - `DATABASE_HOST` → `database.host`
-  /// - `DATABASE_CONNECTION_TIMEOUT` → `database.connection.timeout`
-  /// - `SLACK_BOT__TOKEN` → `slack.bot_token`
-  /// - `API__KEY_VALUE` → `api_key.value`
-  String _envKeyToConfigKey(String envKey) {
-    const placeholder = '\u0000'; // Null character as temporary placeholder
-    return envKey
-        .toLowerCase()
-        .replaceAll('__', placeholder) // Protect double underscores
-        .replaceAll('_', '.') // Convert single underscores to dots
-        .replaceAll(placeholder, '_'); // Restore double underscores as single
-  }
-
-  /// Converts a configuration key to an environment variable name.
-  ///
-  /// This is the reverse of [_envKeyToConfigKey] and is used for lookups.
-  ///
-  /// Conversion rules:
-  /// 1. Convert to uppercase
-  /// 2. Replace dots with underscores
-  /// 3. Add prefix if configured
-  @override
-  String? getString(String key) {
-    return _cache[key];
-  }
-
-  @override
-  Map<String, String> getSection(String prefix) {
-    final result = <String, String>{};
-    final prefixWithDot = prefix.endsWith('.') ? prefix : '$prefix.';
-
-    for (final entry in _cache.entries) {
-      if (entry.key.startsWith(prefixWithDot)) {
-        // Remove prefix from key
-        final keyWithoutPrefix = entry.key.substring(prefixWithDot.length);
-        result[keyWithoutPrefix] = entry.value;
+      final leaf = segments.last;
+      if (map.containsKey(leaf)) {
+        throw ConfigException('Conflicting environment paths', key: path);
       }
+      map[leaf] = entry.value;
     }
-
-    return result;
+    _root = ConfigLookup.present(root);
   }
 
   @override
-  Future<void> reload() async {
-    _loadEnvironment();
-  }
+  ConfigLookup lookup(String path) => _root.at(path);
+
+  @override
+  Future<void> reload() async => _load();
 }

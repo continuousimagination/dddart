@@ -9,7 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **BREAKING:** `CrudResource<T, TClaims>` no longer enumerates repositories for
+- POST validates the final aggregate's canonical REST key after preCreate and
+  before authorization/persistence. Unsupported request identities return 400
+  Problem Details without writes, matching the other CRUD routing constraints.
+- **BREAKING:** CRUD resources, query callbacks and authorization handlers carry
+  concrete identity types. Configure explicit key codecs for native/scoped IDs;
+  routing URI-decodes one segment once and direct handlers accept canonical keys.
+- Stock auth aggregates explicitly use UUID identities and own generated JSON
+  parts. Invalid UUID path keys now follow the codec's DeserializationException
+  path while retaining HTTP 400 behavior.
+
+- **BREAKING:** `CrudResource<T, I, TClaims>` no longer enumerates repositories for
   unfiltered collection GETs. Configure `collectionHandler` to perform
   datastore-side selection, ordering, pagination, and total counting; without
   one, the request returns 400.
@@ -21,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   as token misses.
 - `InMemoryRefreshTokenRepository<T>` is the reference adapter for examples and
   tests.
-- **BREAKING:** `CrudResource<T, TClaims>` now requires one `JsonSerializer<T>` through
+- **BREAKING:** `CrudResource<T, I, TClaims>` now requires one `JsonSerializer<T>` through
   `serializer` instead of a content-type-to-serializer map.
 - **BREAKING:** `ResponseBuilder<T>.ok`, `.created`, and `.okList` now accept a
   `JsonSerializer<T>` and no longer take a positional content-type argument.

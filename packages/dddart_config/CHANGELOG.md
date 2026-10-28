@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Unprefixed environment loading ignores non-addressable ambient names such as
+  shell `_` during construction/reload. Explicitly prefixed malformed paths,
+  normalized duplicates and ancestor/descendant conflicts remain errors.
+- **BREAKING**: Providers expose immutable structural values through `lookup`,
+  preserving YAML maps, ordered lists, scalar types and explicit null.
+- **BREAKING**: List getters require real lists and return `List<Object?>`;
+  comma-containing strings are no longer split into elements.
+- Maps merge recursively, lists replace wholesale, and explicit null or a
+  different shape masks lower descendants, including in intermediate providers.
+- Required getters distinguish missing values from present null/wrong types.
+  Conversion, file, reload and validation error messages omit sensitive values.
+- Environment path collisions are deterministic errors; an explicit environment
+  map may be supplied for embedding and isolated tests.
+
 - **BREAKING**: `EnvironmentConfigProvider` now uses double underscore (`__`) convention for keys containing underscores
   - Single underscore (`_`) → dot (`.`) for hierarchical keys (unchanged)
   - Double underscore (`__`) → single underscore (`_`) in the configuration key (new)
@@ -18,6 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `ConfigLookup`, presence-aware access, structural map getters and map validation.
+- Ordered-record and three-provider masking examples and regression tests.
 - Comprehensive test coverage for double underscore convention
 - New example demonstrating underscore conversion (`example/underscore_demo.dart`)
 - Documentation for underscore naming convention in README

@@ -66,7 +66,7 @@ database:
         );
       });
 
-      test('should convert YAML lists to comma-separated strings', () {
+      test('should preserve YAML lists as structured values', () {
         final file = createYamlFile(
           'config.yaml',
           '''
@@ -83,10 +83,13 @@ servers:
         final provider = YamlConfigProvider(file.path);
 
         expect(
-          provider.getString('features'),
-          equals('feature1,feature2,feature3'),
+          provider.lookup('features').value,
+          equals(['feature1', 'feature2', 'feature3']),
         );
-        expect(provider.getString('servers'), equals('server1,server2'));
+        expect(
+          provider.lookup('servers').value,
+          equals(['server1', 'server2']),
+        );
       });
 
       test('should handle empty YAML file', () {
@@ -168,7 +171,7 @@ disabled: false
         expect(provider.getString('disabled'), equals('false'));
       });
 
-      test('should not store null values', () {
+      test('should retain explicit null values', () {
         final file = createYamlFile(
           'config.yaml',
           '''
@@ -181,6 +184,7 @@ key_with_null: null
 
         expect(provider.getString('key_with_value'), equals('value'));
         expect(provider.getString('key_with_null'), isNull);
+        expect(provider.lookup('key_with_null').isPresent, isTrue);
       });
     });
 
@@ -374,15 +378,18 @@ app:
         final provider = YamlConfigProvider(file.path);
 
         expect(provider.getString('app.name'), equals('MyApp'));
-        expect(provider.getString('app.features'), equals('auth,logging'));
+        expect(
+          provider.lookup('app.features').value,
+          equals(['auth', 'logging']),
+        );
         expect(
           provider.getString('app.database.primary.host'),
           equals('localhost'),
         );
         expect(provider.getString('app.database.primary.port'), equals('5432'));
         expect(
-          provider.getString('app.database.replicas'),
-          equals('replica1,replica2'),
+          provider.lookup('app.database.replicas').value,
+          equals(['replica1', 'replica2']),
         );
       });
 
@@ -396,7 +403,7 @@ empty_list: []
 
         final provider = YamlConfigProvider(file.path);
 
-        expect(provider.getString('empty_list'), equals(''));
+        expect(provider.lookup('empty_list').value, isEmpty);
       });
     });
   });

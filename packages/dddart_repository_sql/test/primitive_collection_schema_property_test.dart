@@ -35,7 +35,7 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 @Serializable()
-class TestAggregate extends AggregateRoot {
+class TestAggregate extends UuidAggregateRoot {
   TestAggregate({required this.favoriteNumbers}) : super();
   final List<int> favoriteNumbers;
 }
@@ -109,7 +109,7 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 @Serializable()
-class TestAggregate extends AggregateRoot {
+class TestAggregate extends UuidAggregateRoot {
   TestAggregate({required this.tags}) : super();
   final List<String> tags;
 }
@@ -153,7 +153,7 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 @Serializable()
-class TestAggregate extends AggregateRoot {
+class TestAggregate extends UuidAggregateRoot {
   TestAggregate({required this.measurements}) : super();
   final List<double> measurements;
 }
@@ -198,7 +198,7 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 @Serializable()
-class TestAggregate extends AggregateRoot {
+class TestAggregate extends UuidAggregateRoot {
   TestAggregate({required this.flags}) : super();
   final List<bool> flags;
 }
@@ -243,7 +243,7 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 @Serializable()
-class TestAggregate extends AggregateRoot {
+class TestAggregate extends UuidAggregateRoot {
   TestAggregate({required this.timestamps}) : super();
   final List<DateTime> timestamps;
 }
@@ -288,7 +288,7 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 @Serializable()
-class TestAggregate extends AggregateRoot {
+class TestAggregate extends UuidAggregateRoot {
   TestAggregate({required this.relatedIds}) : super();
   final List<UuidValue> relatedIds;
 }
@@ -337,7 +337,7 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 @Serializable()
-class TestAggregate extends AggregateRoot {
+class TestAggregate extends UuidAggregateRoot {
   TestAggregate({required this.uniqueNumbers}) : super();
   final Set<int> uniqueNumbers;
 }
@@ -405,7 +405,7 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 @Serializable()
-class TestAggregate extends AggregateRoot {
+class TestAggregate extends UuidAggregateRoot {
   TestAggregate({required this.categories}) : super();
   final Set<String> categories;
 }
@@ -454,7 +454,7 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 @Serializable()
-class TestAggregate extends AggregateRoot {
+class TestAggregate extends UuidAggregateRoot {
   TestAggregate({required this.uniqueScores}) : super();
   final Set<double> uniqueScores;
 }
@@ -502,7 +502,7 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 @Serializable()
-class TestAggregate extends AggregateRoot {
+class TestAggregate extends UuidAggregateRoot {
   TestAggregate({required this.scoresByGame}) : super();
   final Map<String, int> scoresByGame;
 }
@@ -579,7 +579,7 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 @Serializable()
-class TestAggregate extends AggregateRoot {
+class TestAggregate extends UuidAggregateRoot {
   TestAggregate({required this.namesByCode}) : super();
   final Map<int, String> namesByCode;
 }
@@ -630,7 +630,7 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 @Serializable()
-class TestAggregate extends AggregateRoot {
+class TestAggregate extends UuidAggregateRoot {
   TestAggregate({required this.ratesByCountry}) : super();
   final Map<String, double> ratesByCountry;
 }
@@ -680,7 +680,7 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 @Serializable()
-class TestAggregate extends AggregateRoot {
+class TestAggregate extends UuidAggregateRoot {
   TestAggregate({required this.flagsById}) : super();
   final Map<int, bool> flagsById;
 }
@@ -718,7 +718,7 @@ class TestAggregate extends AggregateRoot {
 }
 
 /// Mock SQL dialect for testing.
-class MockSqlDialect implements SqlDialect {
+class MockSqlDialect extends SqlDialect {
   @override
   String get uuidColumnType => 'BLOB';
 

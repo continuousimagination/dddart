@@ -16,7 +16,7 @@ void main() {
       test('should return events with valid timestamp', () async {
         // Arrange
         final repository = InMemoryEventRepository();
-        final event1 = StoredEvent(
+        final event1 = StoredEvent<Identity>(
           id: UuidValue.generate(),
           createdAt: DateTime(2024, 1, 1, 10),
           aggregateId: UuidValue.generate(),
@@ -24,7 +24,7 @@ void main() {
           eventJson: '{"data":"test1"}',
           userId: 'user-1',
         );
-        final event2 = StoredEvent(
+        final event2 = StoredEvent<Identity>(
           id: UuidValue.generate(),
           createdAt: DateTime(2024, 1, 1, 11),
           aggregateId: UuidValue.generate(),
@@ -35,7 +35,7 @@ void main() {
         await repository.save(event1);
         await repository.save(event2);
 
-        final endpoints = EventHttpEndpoints<StoredEvent>(
+        final endpoints = EventHttpEndpoints<StoredEvent<Identity>>(
           eventRepository: repository,
         );
 
@@ -62,7 +62,7 @@ void main() {
       test('should return 400 when "since" parameter is missing', () async {
         // Arrange
         final repository = InMemoryEventRepository();
-        final endpoints = EventHttpEndpoints<StoredEvent>(
+        final endpoints = EventHttpEndpoints<StoredEvent<Identity>>(
           eventRepository: repository,
         );
 
@@ -89,7 +89,7 @@ void main() {
       test('should return 400 when timestamp format is invalid', () async {
         // Arrange
         final repository = InMemoryEventRepository();
-        final endpoints = EventHttpEndpoints<StoredEvent>(
+        final endpoints = EventHttpEndpoints<StoredEvent<Identity>>(
           eventRepository: repository,
         );
 
@@ -116,7 +116,7 @@ void main() {
       test('should apply authorization filter when configured', () async {
         // Arrange
         final repository = InMemoryEventRepository();
-        final event1 = StoredEvent(
+        final event1 = StoredEvent<Identity>(
           id: UuidValue.generate(),
           createdAt: DateTime(2024, 1, 1, 10),
           aggregateId: UuidValue.generate(),
@@ -124,7 +124,7 @@ void main() {
           eventJson: '{"data":"test1"}',
           userId: 'user-1',
         );
-        final event2 = StoredEvent(
+        final event2 = StoredEvent<Identity>(
           id: UuidValue.generate(),
           createdAt: DateTime(2024, 1, 1, 11),
           aggregateId: UuidValue.generate(),
@@ -135,7 +135,7 @@ void main() {
         await repository.save(event1);
         await repository.save(event2);
 
-        final endpoints = EventHttpEndpoints<StoredEvent>(
+        final endpoints = EventHttpEndpoints<StoredEvent<Identity>>(
           eventRepository: repository,
           authorizationFilter: (event, request) {
             // Only allow events for user-1
@@ -164,7 +164,7 @@ void main() {
           () async {
         // Arrange
         final repository = InMemoryEventRepository();
-        final event = StoredEvent(
+        final event = StoredEvent<Identity>(
           id: UuidValue.generate(),
           createdAt: DateTime(2024, 1, 1, 10),
           aggregateId: UuidValue.generate(),
@@ -174,7 +174,7 @@ void main() {
         );
         await repository.save(event);
 
-        final endpoints = EventHttpEndpoints<StoredEvent>(
+        final endpoints = EventHttpEndpoints<StoredEvent<Identity>>(
           eventRepository: repository,
         );
 
@@ -197,7 +197,7 @@ void main() {
       test('should handle repository errors gracefully', () async {
         // Arrange
         final repository = FailingEventRepository();
-        final endpoints = EventHttpEndpoints<StoredEvent>(
+        final endpoints = EventHttpEndpoints<StoredEvent<Identity>>(
           eventRepository: repository,
         );
 
@@ -226,7 +226,7 @@ void main() {
       test('should save valid event and return 201', () async {
         // Arrange
         final repository = InMemoryEventRepository();
-        final endpoints = EventHttpEndpoints<StoredEvent>(
+        final endpoints = EventHttpEndpoints<StoredEvent<Identity>>(
           eventRepository: repository,
         );
 
@@ -235,7 +235,7 @@ void main() {
         final eventJson = jsonEncode({
           'id': eventId.toString(),
           'createdAt': createdAt.toIso8601String(),
-          'aggregateId': UuidValue.generate().toString(),
+          'aggregateId': {'type': 'uuid', 'value': UuidValue.generate().uuid},
           'eventType': 'TestEvent',
           'eventJson': '{"data":"test"}',
           'userId': 'user-1',
@@ -274,7 +274,7 @@ void main() {
       test('should return 400 when JSON is invalid', () async {
         // Arrange
         final repository = InMemoryEventRepository();
-        final endpoints = EventHttpEndpoints<StoredEvent>(
+        final endpoints = EventHttpEndpoints<StoredEvent<Identity>>(
           eventRepository: repository,
         );
 
@@ -303,14 +303,14 @@ void main() {
       test('should return 400 when event data is invalid', () async {
         // Arrange
         final repository = InMemoryEventRepository();
-        final endpoints = EventHttpEndpoints<StoredEvent>(
+        final endpoints = EventHttpEndpoints<StoredEvent<Identity>>(
           eventRepository: repository,
         );
 
         final invalidEventJson = jsonEncode({
           'id': 'not-a-uuid', // Invalid UUID
           'createdAt': '2024-01-01T10:00:00.000Z',
-          'aggregateId': UuidValue.generate().toString(),
+          'aggregateId': {'type': 'uuid', 'value': UuidValue.generate().uuid},
           'eventType': 'TestEvent',
           'eventJson': '{"data":"test"}',
         });
@@ -340,14 +340,14 @@ void main() {
       test('should handle repository save errors gracefully', () async {
         // Arrange
         final repository = FailingEventRepository();
-        final endpoints = EventHttpEndpoints<StoredEvent>(
+        final endpoints = EventHttpEndpoints<StoredEvent<Identity>>(
           eventRepository: repository,
         );
 
         final eventJson = jsonEncode({
           'id': UuidValue.generate().toString(),
           'createdAt': DateTime.now().toIso8601String(),
-          'aggregateId': UuidValue.generate().toString(),
+          'aggregateId': {'type': 'uuid', 'value': UuidValue.generate().uuid},
           'eventType': 'TestEvent',
           'eventJson': '{"data":"test"}',
           'userId': 'user-1',
@@ -381,16 +381,17 @@ void main() {
 }
 
 /// In-memory implementation of EventRepository for testing.
-class InMemoryEventRepository implements EventRepository<StoredEvent> {
-  final List<StoredEvent> _events = [];
+class InMemoryEventRepository
+    implements EventRepository<StoredEvent<Identity>> {
+  final List<StoredEvent<Identity>> _events = [];
 
   @override
-  Future<void> save(StoredEvent entity) async {
+  Future<void> save(StoredEvent<Identity> entity) async {
     _events.add(entity);
   }
 
   @override
-  Future<StoredEvent> getById(UuidValue id) async {
+  Future<StoredEvent<Identity>> getById(UuidValue id) async {
     try {
       return _events.firstWhere((e) => e.id == id);
     } catch (_) {
@@ -404,7 +405,7 @@ class InMemoryEventRepository implements EventRepository<StoredEvent> {
   }
 
   @override
-  Future<List<StoredEvent>> findSince(DateTime timestamp) async {
+  Future<List<StoredEvent<Identity>>> findSince(DateTime timestamp) async {
     return _events
         .where(
           (e) =>
@@ -420,20 +421,20 @@ class InMemoryEventRepository implements EventRepository<StoredEvent> {
   }
 
   /// Helper method for testing - not part of Repository interface.
-  Future<List<StoredEvent>> findAll() async {
+  Future<List<StoredEvent<Identity>>> findAll() async {
     return List.from(_events);
   }
 }
 
 /// Repository that always fails for testing error handling.
-class FailingEventRepository implements EventRepository<StoredEvent> {
+class FailingEventRepository implements EventRepository<StoredEvent<Identity>> {
   @override
-  Future<void> save(StoredEvent entity) async {
+  Future<void> save(StoredEvent<Identity> entity) async {
     throw Exception('Repository save failed');
   }
 
   @override
-  Future<StoredEvent> getById(UuidValue id) async {
+  Future<StoredEvent<Identity>> getById(UuidValue id) async {
     throw Exception('Repository getById failed');
   }
 
@@ -443,7 +444,7 @@ class FailingEventRepository implements EventRepository<StoredEvent> {
   }
 
   @override
-  Future<List<StoredEvent>> findSince(DateTime timestamp) async {
+  Future<List<StoredEvent<Identity>>> findSince(DateTime timestamp) async {
     throw Exception('Repository findSince failed');
   }
 

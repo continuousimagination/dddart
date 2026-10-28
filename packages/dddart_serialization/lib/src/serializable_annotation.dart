@@ -14,7 +14,7 @@ import 'package:dddart_serialization/src/serialization_config.dart';
 /// import 'package:dddart_serialization/dddart_serialization.dart';
 ///
 /// @Serializable()
-/// class User extends AggregateRoot {
+/// class User extends UuidAggregateRoot {
 ///   final String firstName;
 ///   final String lastName;
 /// }

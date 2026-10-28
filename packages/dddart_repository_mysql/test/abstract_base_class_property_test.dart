@@ -35,13 +35,13 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
 
-abstract class CustomOrderRepository implements Repository<Order> {
+abstract class CustomOrderRepository implements Repository<Order, UuidValue> {
   Future<List<Order>> findByStatus(String status);
 }
 
 @Serializable()
 @GenerateMysqlRepository(implements: CustomOrderRepository)
-class Order extends AggregateRoot {
+class Order extends UuidAggregateRoot {
   Order({required this.status}) : super();
   final String status;
 }
@@ -91,13 +91,13 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
 
-abstract class CustomProductRepository implements Repository<Product> {
+abstract class CustomProductRepository implements Repository<Product, UuidValue> {
   Future<List<Product>> findByCategory(String category);
 }
 
 @Serializable()
 @GenerateMysqlRepository(implements: CustomProductRepository)
-class Product extends AggregateRoot {
+class Product extends UuidAggregateRoot {
   Product({required this.category}) : super();
   final String category;
 }
@@ -146,13 +146,13 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
 
-abstract class CustomCustomerRepository implements Repository<Customer> {
+abstract class CustomCustomerRepository implements Repository<Customer, UuidValue> {
   Future<List<Customer>> findByEmail(String email);
 }
 
 @Serializable()
 @GenerateMysqlRepository(implements: CustomCustomerRepository)
-class Customer extends AggregateRoot {
+class Customer extends UuidAggregateRoot {
   Customer({required this.email}) : super();
   final String email;
 }
@@ -205,7 +205,7 @@ import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
 
 @Serializable()
 @GenerateMysqlRepository()
-class SimpleAggregate extends AggregateRoot {
+class SimpleAggregate extends UuidAggregateRoot {
   SimpleAggregate({required this.name}) : super();
   final String name;
 }
@@ -242,7 +242,7 @@ class SimpleAggregate extends AggregateRoot {
         // Verify it implements Repository directly
         expect(
           generated,
-          contains('implements Repository<SimpleAggregate>'),
+          contains('implements Repository<SimpleAggregate, UuidValue>'),
         );
       });
 
@@ -256,7 +256,7 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
 
-abstract class ComplexRepository implements Repository<ComplexAggregate> {
+abstract class ComplexRepository implements Repository<ComplexAggregate, UuidValue> {
   Future<List<ComplexAggregate>> findByStatus(String status);
   Future<List<ComplexAggregate>> findByDateRange(DateTime start, DateTime end);
   Future<int> countByStatus(String status);
@@ -264,7 +264,7 @@ abstract class ComplexRepository implements Repository<ComplexAggregate> {
 
 @Serializable()
 @GenerateMysqlRepository(implements: ComplexRepository)
-class ComplexAggregate extends AggregateRoot {
+class ComplexAggregate extends UuidAggregateRoot {
   ComplexAggregate({required this.status, required this.date}) : super();
   final String status;
   final DateTime date;
@@ -319,19 +319,19 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
 
-abstract class CustomOrderRepository implements Repository<Order> {
+abstract class CustomOrderRepository implements Repository<Order, UuidValue> {
   Future<List<Order>> findByCustomer(String customerId);
 }
 
 @Serializable()
-class OrderItem extends Entity {
+class OrderItem extends UuidEntity {
   OrderItem({required this.productId}) : super();
   final String productId;
 }
 
 @Serializable()
 @GenerateMysqlRepository(implements: CustomOrderRepository)
-class Order extends AggregateRoot {
+class Order extends UuidAggregateRoot {
   Order({required this.customerId, required this.items}) : super();
   final String customerId;
   final List<OrderItem> items;
@@ -357,7 +357,7 @@ class Order extends AggregateRoot {
         );
 
         // Verify _rowToJson helper is available
-        expect(generated, contains('Map<String, dynamic> _rowToJson'));
+        expect(generated, contains('Map<String,dynamic> _rowToJson'));
 
         // Verify _loadOrderItem helper is available for loading entities
         expect(
@@ -366,7 +366,7 @@ class Order extends AggregateRoot {
         );
 
         // Verify _flattenForTable helper is available
-        expect(generated, contains('Map<String, dynamic> _flattenForTable'));
+        expect(generated, contains('Map<String,dynamic> _flattenForTable'));
 
         // Verify _decodeValue helper is available
         expect(generated, contains('dynamic _decodeValue'));
@@ -384,13 +384,13 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
 
-abstract class CustomProductRepository implements Repository<Product> {
+abstract class CustomProductRepository implements Repository<Product, UuidValue> {
   Future<List<Product>> searchByName(String name);
 }
 
 @Serializable()
 @GenerateMysqlRepository(implements: CustomProductRepository)
-class Product extends AggregateRoot {
+class Product extends UuidAggregateRoot {
   Product({required this.name}) : super();
   final String name;
 }
@@ -431,13 +431,13 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
 
-abstract class CustomCustomerRepository implements Repository<Customer> {
+abstract class CustomCustomerRepository implements Repository<Customer, UuidValue> {
   Future<List<Customer>> findActive();
 }
 
 @Serializable()
 @GenerateMysqlRepository(implements: CustomCustomerRepository)
-class Customer extends AggregateRoot {
+class Customer extends UuidAggregateRoot {
   Customer({required this.active}) : super();
   final bool active;
 }
@@ -479,13 +479,13 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
 
-abstract class CustomEventRepository implements Repository<Event> {
+abstract class CustomEventRepository implements Repository<Event, UuidValue> {
   Future<List<Event>> findByDateRange(DateTime start, DateTime end);
 }
 
 @Serializable()
 @GenerateMysqlRepository(implements: CustomEventRepository)
-class Event extends AggregateRoot {
+class Event extends UuidAggregateRoot {
   Event({required this.eventDate}) : super();
   final DateTime eventDate;
 }
@@ -513,7 +513,7 @@ class Event extends AggregateRoot {
         expect(generated, contains('final _dialect = MysqlDialect()'));
 
         // Verify dialect methods are used for encoding
-        expect(generated, contains('_dialect.encodeUuid'));
+        expect(generated, contains('_dialect.encodeIdentityKey'));
         expect(generated, contains('_dialect.encodeDateTime'));
       });
 
@@ -527,12 +527,12 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
 
-abstract class CustomCartRepository implements Repository<Cart> {
+abstract class CustomCartRepository implements Repository<Cart, UuidValue> {
   Future<List<Cart>> findByUser(String userId);
 }
 
 @Serializable()
-class CartItem extends Entity {
+class CartItem extends UuidEntity {
   CartItem({required this.productId, required this.quantity}) : super();
   final String productId;
   final int quantity;
@@ -540,7 +540,7 @@ class CartItem extends Entity {
 
 @Serializable()
 @GenerateMysqlRepository(implements: CustomCartRepository)
-class Cart extends AggregateRoot {
+class Cart extends UuidAggregateRoot {
   Cart({required this.userId, required this.items}) : super();
   final String userId;
   final List<CartItem> items;
@@ -584,13 +584,13 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
 
-abstract class CustomAccountRepository implements Repository<Account> {
+abstract class CustomAccountRepository implements Repository<Account, UuidValue> {
   Future<List<Account>> findByType(String type);
 }
 
 @Serializable()
 @GenerateMysqlRepository(implements: CustomAccountRepository)
-class Account extends AggregateRoot {
+class Account extends UuidAggregateRoot {
   Account({required this.type}) : super();
   final String type;
 }
@@ -633,13 +633,13 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
 
-abstract class CustomOrderRepository implements Repository<Order> {
+abstract class CustomOrderRepository implements Repository<Order, UuidValue> {
   Future<List<Order>> findPending();
 }
 
 @Serializable()
 @GenerateMysqlRepository(implements: CustomOrderRepository)
-class Order extends AggregateRoot {
+class Order extends UuidAggregateRoot {
   Order({required this.status}) : super();
   final String status;
 }

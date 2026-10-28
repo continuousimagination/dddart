@@ -9,7 +9,7 @@ part 'order_item.g.dart';
 
 /// Entity representing an item in an order.
 @Serializable()
-class OrderItem extends Entity {
+class OrderItem extends UuidEntity {
   /// Creates a new OrderItem entity.
   OrderItem({
     required this.productName,

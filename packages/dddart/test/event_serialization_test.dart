@@ -3,7 +3,7 @@ import 'package:dddart/dddart.dart';
 import 'package:test/test.dart';
 
 // Test domain events for serialization testing
-class UserRegisteredEvent extends DomainEvent {
+class UserRegisteredEvent extends DomainEvent<UuidValue> {
   UserRegisteredEvent({
     required UuidValue userId,
     required this.email,
@@ -51,7 +51,7 @@ class UserRegisteredEvent extends DomainEvent {
   }
 }
 
-class OrderPlacedEvent extends DomainEvent {
+class OrderPlacedEvent extends DomainEvent<UuidValue> {
   OrderPlacedEvent({
     required UuidValue orderId,
     required this.customerId,
@@ -394,7 +394,7 @@ void main() {
 }
 
 // Test aggregate for integration testing
-class TestAggregate extends AggregateRoot {
+class TestAggregate extends UuidAggregateRoot {
   TestAggregate({super.id});
 
   void registerUser(String email, String organizationId, String fullName) {

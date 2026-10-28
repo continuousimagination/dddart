@@ -1,8 +1,14 @@
 targets:
   $default:
     builders:
+      # Generate the fixture's combined part and handwritten library/example
+      # inputs. Generator tests supply their own source through build_test;
+      # unrelated test-library annotations are not generation inputs.
+      dddart_json:json_serializable:
+        generate_for: [lib/**, example/lib/**, test/test_models.dart]
       dddart_repository_sqlite:sqlite_repository:
         enabled: true
+        generate_for: [lib/**, example/lib/**, test/test_models.dart]
 
 builders:
   sqlite_repository:

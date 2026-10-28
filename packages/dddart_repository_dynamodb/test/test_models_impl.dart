@@ -22,10 +22,7 @@ class TestOrderDynamoRepositoryImpl extends TestOrderDynamoRepositoryBase {
       return [];
     }
 
-    return response.items!.map((item) {
-      final json = AttributeValueConverter.attributeMapToJsonMap(item);
-      return _serializer.fromJson(json);
-    }).toList();
+    return response.items!.map(fromItem).toList();
   }
 
   @override
@@ -45,7 +42,26 @@ class TestOrderDynamoRepositoryImpl extends TestOrderDynamoRepositoryBase {
     }
 
     final item = response.items!.first;
-    final json = AttributeValueConverter.attributeMapToJsonMap(item);
-    return _serializer.fromJson(json);
+    return fromItem(item);
+  }
+}
+
+/// Custom implementation keeps typed ID and named parameters from its interface.
+class ScopedIssueDynamoRepositoryImpl extends ScopedIssueDynamoRepositoryBase {
+  /// Creates a repository with its application codecs.
+  ScopedIssueDynamoRepositoryImpl(super.connection, {super.identityCodecs});
+  @override
+  Future<ScopedIssue?> findScoped(ScopedId id, {String? label}) async {
+    final response = await _connection.client.getItem(
+      tableName: tableName,
+      key: {
+        'id': AttributeValue(
+          s: encodeDynamoIdentityKey<ScopedId>(_identityCodecs, id),
+        ),
+      },
+    );
+    if (response.item == null || response.item!.isEmpty) return null;
+    final issue = fromItem(response.item!);
+    return label == null || issue.label == label ? issue : null;
   }
 }
