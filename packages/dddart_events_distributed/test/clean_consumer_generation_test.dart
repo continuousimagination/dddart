@@ -34,13 +34,13 @@ dependency_overrides:
 ''');
       final lib = Directory('${fixture.path}/lib')..createSync();
       final input = File('${lib.path}/events.dart');
-      const source = '''
+      final source = '''
 import 'dart:convert';
 import 'package:dddart/dddart.dart';
 import 'package:dddart_events_distributed/dddart_events_distributed.dart';
 import 'package:dddart_json/dddart_json.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
-part 'events.g.dart';
+__GENERATED_PART_DIRECTIVE__
 
 class RemoteId extends Identity {
   const RemoteId(this.value);
@@ -59,7 +59,7 @@ class RemoteIssueOpened extends DomainEvent<RemoteId> {
   RemoteIssueOpened({required super.aggregateId,required this.title,super.eventId,super.occurredAt,super.context});
   final String title;
 }
-''';
+'''.replaceFirst('__GENERATED_PART_DIRECTIVE__', "part 'events.g.dart';");
       input.writeAsStringSync(source);
       Directory('${fixture.path}/bin').createSync();
       File('${fixture.path}/bin/main.dart').writeAsStringSync('''
