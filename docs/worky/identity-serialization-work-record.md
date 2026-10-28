@@ -54,6 +54,36 @@ tests pass, including four native/scoped identity round trips, clean external
 package generation and three unsupported declaration diagnostics. The clean
 fixture includes a custom identity named UuidValue to prove type-based dispatch.
 
-The serialization package, example and minimal-consumer validator lanes, immutable
-Git consumer and final analysis/format results are recorded below after they run.
-This is not complete adapter support or final parent integration evidence.
+All 22 serialization tests pass, including six codec cases. Fatal-info analysis
+and formatting pass for both packages. The workspace-derived serialization and
+JSON package gates, JSON example gate and both archive/minimal-consumer lanes
+pass. The JSON example's generated combined parts are current, analyzed and its
+supported finite entrypoints run successfully. Publication dry-run is exempt
+for these packages because their manifests set publish_to: none.
+
+A clean consumer with no dependency overrides pins core, serialization and JSON
+to b94bf700e31553e0b625ecd1169f9be1356e8a9a. Pub resolution, build_runner generation,
+fatal-info analysis (including generated output) and execution pass for scoped
+JSON with nullable identity collections, typed repository CRUD, canonical keys
+and tagged identities. Fixture: /private/tmp/dddart-worky-json-consumer-acabce7.
+Logs: /private/tmp/dddart-worky-implementation-20261028/json-git-consumer-final.log.
+
+The initial immutable probe exposed a redundant null assertion in generated
+collection callbacks. The corrected generator promotes local callback variables,
+and the clean-package regression now covers nullable identity list/map elements.
+The initial sandboxed fixture run could not write Pub's active_roots metadata;
+the same six focused cases pass with normal pub-cache access. Neither failure
+was counted as successful validation.
+
+Commands:
+
+```bash
+dart run tool/validation/validate.dart package dddart_serialization --mode=local
+dart run tool/validation/validate.dart consumer dddart_serialization
+dart run tool/validation/validate.dart package dddart_json --mode=local
+dart run tool/validation/validate.dart example dddart_json_example --mode=local
+dart run tool/validation/validate.dart consumer dddart_json
+```
+
+This completes the owned serializer boundary. Document/SQL/REST/event adapter
+migration and the final parent integration/review remain in #41–#44 and #37.
