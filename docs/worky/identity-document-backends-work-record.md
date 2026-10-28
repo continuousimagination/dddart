@@ -60,3 +60,17 @@ Native UTF-8 byte boundaries and malformed/noncanonical item keys are tested.
 Initial full runs passed all existing service behavior but exposed a stale
 generator-text expectation and generated Mongo error-message nullability warnings
 in the new clean consumer. These are corrected; final full/gate results follow.
+
+Both provisioned-service package gates pass with zero-warning publish dry-runs.
+Both archive/minimal-consumer lanes pass. The MongoDB example's actual service
+lane exposed an unrelated ambient environment key (`_`) in its unfiltered
+configuration fallback. The example now selects only MONGODB_ settings before
+constructing the strict tree provider, retaining its mongodb.* configuration
+paths. This owned example migration is required for the service gate.
+
+An initial Git probe without overrides failed Pub resolution because these
+adapter manifests still declare hosted internal dddart dependencies. The existing
+Git installation guide explicitly documents pinned overrides for those siblings.
+The external adapter proof uses that documented approach; the no-override JSON
+proof remains separately recorded under #40. No publication conversion is hidden
+in this identity change.

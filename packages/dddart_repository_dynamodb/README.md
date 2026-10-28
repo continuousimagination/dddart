@@ -6,6 +6,10 @@ DynamoDB repository implementation for DDDart aggregate roots with code generati
 
 ### Typed identities and migration
 
+Until publication, use the [Git installation guide](../../docs/GIT_INSTALLATION.md).
+The adapter still declares hosted internal dependencies, so use the guide's
+overrides pinned to the same immutable Git revision.
+
 Generated repositories implement `Repository<T, I>` using the aggregate's
 concrete identity type. UUID consumers use `UuidAggregateRoot`; externally
 identified consumers extend `AggregateRoot<IssueId>` with a required ID.

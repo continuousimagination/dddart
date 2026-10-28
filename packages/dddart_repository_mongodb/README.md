@@ -6,6 +6,10 @@ MongoDB repository implementation for DDDart - Domain-Driven Design for Dart.
 
 ### Typed identities and migration
 
+Until publication, use the [Git installation guide](../../docs/GIT_INSTALLATION.md).
+The adapter still declares hosted internal dependencies, so use the guide's
+overrides pinned to the same immutable Git revision.
+
 Generated repositories implement `Repository<T, I>`, where `I` is the concrete
 identity on the aggregate. Use `UuidAggregateRoot` for optional generated UUIDs,
 or `AggregateRoot<IssueId>` with a required native/scoped ID. Register application
