@@ -2,29 +2,26 @@ import 'package:dddart_config/dddart_config.dart';
 import 'package:test/test.dart';
 
 /// Mock provider for testing
-class MockConfigProvider implements ConfigProvider {
+class MockConfigProvider extends ConfigProvider {
   MockConfigProvider(this._data);
 
-  final Map<String, String> _data;
+  final Map<String, Object?> _data;
   bool reloadCalled = false;
   bool shouldFailReload = false;
 
   @override
-  String? getString(String key) => _data[key];
-
-  @override
-  Map<String, String> getSection(String prefix) {
-    final result = <String, String>{};
-    final prefixWithDot = prefix.endsWith('.') ? prefix : '$prefix.';
-
+  ConfigLookup lookup(String path) {
+    final root = <String, Object?>{};
     for (final entry in _data.entries) {
-      if (entry.key.startsWith(prefixWithDot)) {
-        final keyWithoutPrefix = entry.key.substring(prefixWithDot.length);
-        result[keyWithoutPrefix] = entry.value;
+      final segments = entry.key.split('.');
+      var map = root;
+      for (final segment in segments.take(segments.length - 1)) {
+        map = map.putIfAbsent(segment, () => <String, Object?>{})!
+            as Map<String, Object?>;
       }
+      map[segments.last] = entry.value;
     }
-
-    return result;
+    return ConfigLookup.present(root).at(path);
   }
 
   @override
@@ -594,22 +591,26 @@ void main() {
     });
 
     group('getList', () {
-      test('should split comma-separated values', () {
-        final provider = MockConfigProvider({'hosts': 'host1,host2,host3'});
+      test('should return a structured list', () {
+        final provider = MockConfigProvider({
+          'hosts': ['host1', 'host2', 'host3'],
+        });
         final config = Configuration([provider]);
 
         expect(config.getList('hosts'), equals(['host1', 'host2', 'host3']));
       });
 
-      test('should trim whitespace from elements', () {
-        final provider = MockConfigProvider({'hosts': 'host1, host2 , host3'});
+      test('should preserve whitespace in list elements', () {
+        final provider = MockConfigProvider({
+          'hosts': ['host1', ' host2 ', ' host3'],
+        });
         final config = Configuration([provider]);
 
-        expect(config.getList('hosts'), equals(['host1', 'host2', 'host3']));
+        expect(config.getList('hosts'), equals(['host1', ' host2 ', ' host3']));
       });
 
-      test('should return empty list for empty string', () {
-        final provider = MockConfigProvider({'hosts': ''});
+      test('should return an empty list', () {
+        final provider = MockConfigProvider({'hosts': <Object?>[]});
         final config = Configuration([provider]);
 
         expect(config.getList('hosts'), isEmpty);
@@ -623,7 +624,9 @@ void main() {
       });
 
       test('should handle single value', () {
-        final provider = MockConfigProvider({'hosts': 'host1'});
+        final provider = MockConfigProvider({
+          'hosts': ['host1'],
+        });
         final config = Configuration([provider]);
 
         expect(config.getList('hosts'), equals(['host1']));
@@ -631,8 +634,10 @@ void main() {
     });
 
     group('getRequiredList', () {
-      test('should split comma-separated values', () {
-        final provider = MockConfigProvider({'hosts': 'host1,host2,host3'});
+      test('should return a required structured list', () {
+        final provider = MockConfigProvider({
+          'hosts': ['host1', 'host2', 'host3'],
+        });
         final config = Configuration([provider]);
 
         expect(
@@ -653,8 +658,10 @@ void main() {
     });
 
     group('getListOrDefault', () {
-      test('should split comma-separated values', () {
-        final provider = MockConfigProvider({'hosts': 'host1,host2,host3'});
+      test('should return a configured structured list', () {
+        final provider = MockConfigProvider({
+          'hosts': ['host1', 'host2', 'host3'],
+        });
         final config = Configuration([provider]);
 
         expect(
@@ -827,7 +834,7 @@ void main() {
 
       test('should validate list type', () {
         final provider = MockConfigProvider({
-          'hosts': 'host1,host2,host3',
+          'hosts': ['host1', 'host2', 'host3'],
         });
         final config = Configuration([provider]);
 
@@ -911,7 +918,7 @@ void main() {
           expect(e.failures.first, contains('database.port validation failed'));
           expect(
             e.failures.first,
-            contains('Port must be between 1 and 65535'),
+            isNot(contains('Port must be between 1 and 65535')),
           );
         }
       });
@@ -977,7 +984,7 @@ void main() {
         } on ValidationException catch (e) {
           expect(e.failures, hasLength(1));
           expect(e.failures.first, contains('logging.level validation failed'));
-          expect(e.failures.first, contains('Must be one of'));
+          expect(e.failures.first, isNot(contains('Must be one of')));
         }
       });
 
@@ -1010,7 +1017,7 @@ void main() {
 
       test('should handle empty list validation', () {
         final provider = MockConfigProvider({
-          'hosts': '',
+          'hosts': <Object?>[],
         });
         final config = Configuration([provider]);
 

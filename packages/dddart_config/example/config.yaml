@@ -32,6 +32,13 @@ app:
     - notifications
     - analytics
 
+# Ordered application records
+projects:
+  - organization: continuousimagination
+    number: 12
+  - organization: continuousimagination
+    number: 34
+
 # API configuration
 api:
   base_url: https://api.example.com
