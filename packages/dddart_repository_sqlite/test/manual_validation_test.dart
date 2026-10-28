@@ -11,7 +11,7 @@ library;
 // Test 1: Nested collections - should fail with clear error
 // @Serializable()
 // @GenerateSqliteRepository(tableName: 'test_nested')
-// class TestNested extends AggregateRoot {
+// class TestNested extends UuidAggregateRoot {
 //   TestNested({
 //     required this.matrix,
 //     super.id,
@@ -25,7 +25,7 @@ library;
 // Test 2: Dynamic collections - should fail with clear error
 // @Serializable()
 // @GenerateSqliteRepository(tableName: 'test_dynamic')
-// class TestDynamic extends AggregateRoot {
+// class TestDynamic extends UuidAggregateRoot {
 //   TestDynamic({
 //     required this.stuff,
 //     super.id,
@@ -39,7 +39,7 @@ library;
 // Test 3: Object collections - should fail with clear error
 // @Serializable()
 // @GenerateSqliteRepository(tableName: 'test_object')
-// class TestObject extends AggregateRoot {
+// class TestObject extends UuidAggregateRoot {
 //   TestObject({
 //     required this.things,
 //     super.id,
@@ -61,7 +61,7 @@ library;
 //
 // @Serializable()
 // @GenerateSqliteRepository(tableName: 'test_value_key')
-// class TestValueKey extends AggregateRoot {
+// class TestValueKey extends UuidAggregateRoot {
 //   TestValueKey({
 //     required this.items,
 //     super.id,
@@ -74,7 +74,7 @@ library;
 
 // Test 5: Aggregate root in collection - should fail with clear error
 // @Serializable()
-// class OtherRoot extends AggregateRoot {
+// class OtherRoot extends UuidAggregateRoot {
 //   OtherRoot({
 //     required this.name,
 //     super.id,
@@ -86,7 +86,7 @@ library;
 //
 // @Serializable()
 // @GenerateSqliteRepository(tableName: 'test_aggregate')
-// class TestAggregateCollection extends AggregateRoot {
+// class TestAggregateCollection extends UuidAggregateRoot {
 //   TestAggregateCollection({
 //     required this.others,
 //     super.id,

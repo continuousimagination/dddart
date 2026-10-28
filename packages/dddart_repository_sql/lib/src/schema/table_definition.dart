@@ -42,6 +42,7 @@ class ColumnDefinition {
     required this.isNullable,
     required this.isPrimaryKey,
     required this.isForeignKey,
+    this.jsonPath,
   });
 
   /// The column name.
@@ -61,6 +62,11 @@ class ColumnDefinition {
 
   /// Whether this is a foreign key column.
   final bool isForeignKey;
+
+  /// Structural JSON path for this atomic column value, when known.
+  ///
+  /// Identity codec objects/lists remain leaves rather than embedded columns.
+  final List<String>? jsonPath;
 }
 
 /// Represents a foreign key constraint.

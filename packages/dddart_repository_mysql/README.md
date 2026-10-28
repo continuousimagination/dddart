@@ -1,5 +1,46 @@
 # dddart_repository_mysql
 
+## Typed identity migration
+
+Generated repositories implement `Repository<T, I>` with concrete identity
+lookup/deletion. UUID consumers use `UuidAggregateRoot`/`UuidEntity`; application
+identities use `AggregateRoot<IssueId>`/`Entity<CommentId>` with required IDs.
+
+```dart
+final codecs = IdentityCodecRegistry()
+  ..register<IssueId>('github.issue.v1', IssueIdCodec());
+final repository = IssueMysqlRepository(connection, identityCodecs: codecs);
+```
+
+The registry is shared with generated JSON. Follow the
+[explicit JSON/key contract](../dddart_serialization/README.md#identity-codecs).
+All identity keys use canonical UTF-8 bytes in VARBINARY(1024), preserving case,
+trailing spaces, numeric strings and scope through primary/foreign keys. The
+1024-byte adapter budget is checked before storage, including outside strict SQL
+mode. Malformed keys fail; nested key failures roll back persisted changes.
+Declared identity column types/widths are checked before repository operations;
+an incompatible old padded schema fails with a migration error before writing.
+Complete schema, index and row constraints remain service-enforced. See
+[MySQL binary comparison](https://dev.mysql.com/doc/refman/8.0/en/binary-varbinary.html)
+and [InnoDB limits](https://dev.mysql.com/doc/refman/8.0/en/innodb-limits.html).
+
+This changes former 16-byte UUID schemas/data. Migrate or recreate them explicitly,
+regenerate all owning parts, and replace manual UUID_TO_BIN/BIN_TO_UUID SQL with
+canonical key parameters and typed decoding. Stock UUID text case is retained.
+`MysqlConnection` uses column metadata for numeric conversion, preserving native
+text keys such as `12` and `0012`.
+
+The selected generator retains its dedicated table for `List<Entity>` and `_items`
+junctions for primitive/value/identity collections. `Set<Entity>` and
+`Map<..., Entity>` are currently rejected at generation; those later examples
+describe deferred designs. Nullable collection containers still load as empty.
+Persistence fixes Dart field names and includes null scalar identity fields so
+updates clear stored optional values. Custom method signatures remain typed.
+
+Until publication, use the [Git installation guide](../../docs/GIT_INSTALLATION.md)
+with internal overrides pinned to the same Git revision. Underscore members are
+available to custom implementations only within the same Dart library/parts.
+
 MySQL database repository implementation for DDDart aggregate roots with automatic code generation support.
 
 ## Features
@@ -13,7 +54,7 @@ MySQL database repository implementation for DDDart aggregate roots with automat
 - 🔌 **Connection Lifecycle**: Explicit lifecycle for one MySQL connection
 - 🎯 **Type Safety**: Compile-time code generation ensures type-safe operations
 - 🚀 **Zero Boilerplate**: Annotate your aggregate roots and generate repositories
-- 🔐 **Efficient UUID Storage**: UUIDs stored as BINARY(16) for optimal performance
+- 🔐 **Exact identity storage**: Canonical identity keys use VARBINARY(1024)
 - 📅 **Native DateTime**: DateTime fields stored as DATETIME in UTC for database-native operations
 - 🌐 **Production Ready**: Built for MySQL 5.7+ with best practices
 
@@ -43,7 +84,7 @@ import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
 
 @Serializable()
 @GenerateMysqlRepository(tableName: 'orders')
-class Order extends AggregateRoot {
+class Order extends UuidAggregateRoot {
   Order({
     required UuidValue id,
     required this.customerId,
@@ -138,19 +179,19 @@ The generator analyzes your aggregate root and creates normalized MySQL tables:
 ```sql
 -- Value objects are embedded as columns with prefixes
 CREATE TABLE IF NOT EXISTS orders (
-  id BINARY(16) PRIMARY KEY NOT NULL,
+  id VARBINARY(1024) PRIMARY KEY NOT NULL,
   createdAt TIMESTAMP NOT NULL,
   updatedAt TIMESTAMP NOT NULL,
-  customerId BINARY(16) NOT NULL,
+  customerId VARBINARY(1024) NOT NULL,
   totalAmount_amount DOUBLE NOT NULL,      -- Embedded Money
   totalAmount_currency VARCHAR(255) NOT NULL     -- Embedded Money
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Entities get their own tables with foreign keys
 CREATE TABLE IF NOT EXISTS order_items (
-  id BINARY(16) PRIMARY KEY NOT NULL,
-  order_id BINARY(16) NOT NULL,
-  productId BINARY(16) NOT NULL,
+  id VARBINARY(1024) PRIMARY KEY NOT NULL,
+  order_id VARBINARY(1024) NOT NULL,
+  productId VARBINARY(1024) NOT NULL,
   quantity BIGINT NOT NULL,
   price_amount DOUBLE NOT NULL,            -- Embedded Money
   price_currency VARCHAR(255) NOT NULL,          -- Embedded Money
@@ -170,10 +211,10 @@ CREATE TABLE IF NOT EXISTS order_items (
 - 4-byte UTF-8 encoding
 - International character support
 
-**BINARY(16) for UUIDs:**
-- 16 bytes vs 36 bytes for string representation
-- Faster indexing and lookups
-- Maintains sortability
+**VARBINARY(1024) for identities:**
+- Exact canonical UTF-8 bytes, including complete UUID text
+- Case and trailing bytes remain significant
+- Key sizes are checked before storage
 
 **INSERT ... ON DUPLICATE KEY UPDATE:**
 - Efficient upsert operations
@@ -206,7 +247,7 @@ class Address {
 **Generated Schema:**
 ```sql
 CREATE TABLE orders (
-  id BINARY(16) PRIMARY KEY,
+  id VARBINARY(1024) PRIMARY KEY,
   -- Money value object embedded with prefix
   totalAmount_amount DOUBLE NOT NULL,
   totalAmount_currency VARCHAR(255) NOT NULL,
@@ -373,7 +414,7 @@ You can extend generated repositories with custom query methods for domain-speci
 ### Define Custom Interface
 
 ```dart
-abstract class OrderRepository implements Repository<Order> {
+abstract class OrderRepository implements Repository<Order, UuidValue> {
   Future<List<Order>> findByCustomerId(UuidValue customerId);
   Future<List<Order>> findByDateRange(DateTime start, DateTime end);
   Future<double> getTotalRevenue();
@@ -384,7 +425,7 @@ abstract class OrderRepository implements Repository<Order> {
   tableName: 'orders',
   implements: OrderRepository,
 )
-class Order extends AggregateRoot {
+class Order extends UuidAggregateRoot {
   Order({
     required UuidValue id,
     required this.customerId,
@@ -439,7 +480,7 @@ class OrderMysqlRepositoryImpl extends OrderMysqlRepository {
 
 ### Protected Members
 
-The generated base class exposes protected members for custom implementations:
+Generated underscore members are library-private and available in the same Dart library or its parts:
 
 - `connection`: The `MysqlConnection` instance
 - `dialect`: The `MysqlDialect` instance for encoding/decoding
@@ -628,11 +669,11 @@ dependencies:
 ```dart
 // Before
 @GenerateSqliteRepository()
-class Order extends AggregateRoot { /* ... */ }
+class Order extends UuidAggregateRoot { /* ... */ }
 
 // After
 @GenerateMysqlRepository(tableName: 'orders')
-class Order extends AggregateRoot { /* ... */ }
+class Order extends UuidAggregateRoot { /* ... */ }
 ```
 
 ### 3. Update Connection Type
@@ -680,7 +721,7 @@ does not supply a full-store export or generic pagination contract.
 | Feature | SQLite | MySQL |
 |---------|--------|-------|
 | Connection | File or in-memory | Network (host, port, credentials) |
-| UUID Storage | BLOB | BINARY(16) |
+| UUID Storage | BLOB | VARBINARY(1024) |
 | DateTime Storage | INTEGER (Unix timestamp) | TIMESTAMP |
 | Engine | N/A | InnoDB |
 | Charset | N/A | utf8mb4 |
@@ -722,7 +763,7 @@ DDDart MySQL repositories provide comprehensive support for collections in your 
 ```dart
 @Serializable()
 @GenerateMysqlRepository(tableName: 'users')
-class User extends AggregateRoot {
+class User extends UuidAggregateRoot {
   User({
     required UuidValue id,
     required this.name,
@@ -757,7 +798,7 @@ print(loaded.scoresByGame);    // {chess: 1200, go: 1500}
 ```sql
 -- List maintains order with position column
 CREATE TABLE IF NOT EXISTS users_favoriteNumbers_items (
-  users_id BINARY(16) NOT NULL,
+  users_id VARBINARY(1024) NOT NULL,
   position BIGINT NOT NULL,
   value BIGINT NOT NULL,
   FOREIGN KEY (users_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -766,7 +807,7 @@ CREATE TABLE IF NOT EXISTS users_favoriteNumbers_items (
 
 -- Set enforces uniqueness
 CREATE TABLE IF NOT EXISTS users_tags_items (
-  users_id BINARY(16) NOT NULL,
+  users_id VARBINARY(1024) NOT NULL,
   value VARCHAR(255) NOT NULL,
   FOREIGN KEY (users_id) REFERENCES users(id) ON DELETE CASCADE,
   UNIQUE (users_id, value)
@@ -774,7 +815,7 @@ CREATE TABLE IF NOT EXISTS users_tags_items (
 
 -- Map stores key-value pairs
 CREATE TABLE IF NOT EXISTS users_scoresByGame_items (
-  users_id BINARY(16) NOT NULL,
+  users_id VARBINARY(1024) NOT NULL,
   map_key VARCHAR(255) NOT NULL,
   value BIGINT NOT NULL,
   FOREIGN KEY (users_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -802,7 +843,7 @@ class Address {
 
 @Serializable()
 @GenerateMysqlRepository(tableName: 'orders')
-class Order extends AggregateRoot {
+class Order extends UuidAggregateRoot {
   Order({
     required UuidValue id,
     required this.payments,
@@ -839,7 +880,7 @@ await repository.save(order);
 ```sql
 -- Value objects are flattened into junction table columns
 CREATE TABLE IF NOT EXISTS orders_payments_items (
-  orders_id BINARY(16) NOT NULL,
+  orders_id VARBINARY(1024) NOT NULL,
   position BIGINT NOT NULL,
   amount DOUBLE NOT NULL,
   currency VARCHAR(255) NOT NULL,
@@ -848,7 +889,7 @@ CREATE TABLE IF NOT EXISTS orders_payments_items (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS orders_deliveryLocations_items (
-  orders_id BINARY(16) NOT NULL,
+  orders_id VARBINARY(1024) NOT NULL,
   street VARCHAR(255) NOT NULL,
   city VARCHAR(255) NOT NULL,
   country VARCHAR(255) NOT NULL,
@@ -857,7 +898,7 @@ CREATE TABLE IF NOT EXISTS orders_deliveryLocations_items (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS orders_discountsByCode_items (
-  orders_id BINARY(16) NOT NULL,
+  orders_id VARBINARY(1024) NOT NULL,
   map_key VARCHAR(255) NOT NULL,
   amount DOUBLE NOT NULL,
   currency VARCHAR(255) NOT NULL,
@@ -870,7 +911,7 @@ CREATE TABLE IF NOT EXISTS orders_discountsByCode_items (
 
 ```dart
 @Serializable()
-class CartItem extends Entity {
+class CartItem extends UuidEntity {
   CartItem({
     required UuidValue id,
     required this.productId,
@@ -882,7 +923,7 @@ class CartItem extends Entity {
 }
 
 @Serializable()
-class Discount extends Entity {
+class Discount extends UuidEntity {
   Discount({
     required UuidValue id,
     required this.code,
@@ -895,7 +936,7 @@ class Discount extends Entity {
 
 @Serializable()
 @GenerateMysqlRepository(tableName: 'shopping_carts')
-class ShoppingCart extends AggregateRoot {
+class ShoppingCart extends UuidAggregateRoot {
   ShoppingCart({
     required UuidValue id,
     required this.items,
@@ -930,27 +971,27 @@ await repository.save(cart);
 ```sql
 -- Entities get their own tables with foreign keys
 CREATE TABLE IF NOT EXISTS cart_items (
-  id BINARY(16) PRIMARY KEY NOT NULL,
-  shopping_cart_id BINARY(16) NOT NULL,
+  id VARBINARY(1024) PRIMARY KEY NOT NULL,
+  shopping_cart_id VARBINARY(1024) NOT NULL,
   position BIGINT,  -- Only for List<Entity>
-  productId BINARY(16) NOT NULL,
+  productId VARBINARY(1024) NOT NULL,
   quantity BIGINT NOT NULL,
   FOREIGN KEY (shopping_cart_id) REFERENCES shopping_carts(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS discounts (
-  id BINARY(16) PRIMARY KEY NOT NULL,
-  shopping_cart_id BINARY(16) NOT NULL,
+  id VARBINARY(1024) PRIMARY KEY NOT NULL,
+  shopping_cart_id VARBINARY(1024) NOT NULL,
   code VARCHAR(255) NOT NULL,
   percentage DOUBLE NOT NULL,
   FOREIGN KEY (shopping_cart_id) REFERENCES shopping_carts(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS saved_cart_items (
-  id BINARY(16) PRIMARY KEY NOT NULL,
-  shopping_cart_id BINARY(16) NOT NULL,
+  id VARBINARY(1024) PRIMARY KEY NOT NULL,
+  shopping_cart_id VARBINARY(1024) NOT NULL,
   map_key VARCHAR(255) NOT NULL,
-  productId BINARY(16) NOT NULL,
+  productId VARBINARY(1024) NOT NULL,
   quantity BIGINT NOT NULL,
   FOREIGN KEY (shopping_cart_id) REFERENCES shopping_carts(id) ON DELETE CASCADE,
   UNIQUE (shopping_cart_id, map_key)
@@ -998,7 +1039,7 @@ CREATE TABLE IF NOT EXISTS saved_cart_items (
 ```dart
 @Serializable()
 @GenerateMysqlRepository(tableName: 'events')
-class Event extends AggregateRoot {
+class Event extends UuidAggregateRoot {
   Event({
     required UuidValue id,
     required this.scheduledFor,
@@ -1027,7 +1068,7 @@ final rows = await connection.query('''
 ```dart
 @Serializable()
 @GenerateMysqlRepository(tableName: 'tasks')
-class Task extends AggregateRoot {
+class Task extends UuidAggregateRoot {
   Task({
     required UuidValue id,
     required this.completed,
@@ -1103,7 +1144,7 @@ Collection support works identically in both SQLite and MySQL repositories:
 ```dart
 // Works with both @GenerateSqliteRepository() and @GenerateMysqlRepository()
 @Serializable()
-class Order extends AggregateRoot {
+class Order extends UuidAggregateRoot {
   final List<int> itemIds;
   final Set<String> tags;
   final Map<String, double> prices;
@@ -1112,7 +1153,7 @@ class Order extends AggregateRoot {
 
 **Database-Specific SQL:**
 - SQLite: `BLOB` for UUIDs, `TEXT` for DateTime, `INTEGER` for booleans
-- MySQL: `BINARY(16)` for UUIDs, `DATETIME` for DateTime, `TINYINT(1)` for booleans
+- MySQL: `VARBINARY(1024)` for UUIDs, `DATETIME` for DateTime, `TINYINT(1)` for booleans
 - Junction table structure is identical
 - Save/load behavior is identical
 - No code changes needed when switching databases

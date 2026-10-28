@@ -154,10 +154,8 @@ class MysqlConnection implements SqlConnection {
         result = await _connection!.execute(convertedSql, params);
       }
 
-      // Convert IResultSet to List<Map<String, Object?>>
-      // mysql_client may return numeric values as strings when using named
-      // parameters, so we need to convert them back to proper types for
-      // consistency with mysql1
+      // The driver exposes values as strings. Convert only columns whose
+      // database metadata is numeric; native string/binary IDs stay exact.
       final resultList = <Map<String, Object?>>[];
 
       for (final row in result.rows) {
@@ -165,40 +163,12 @@ class MysqlConnection implements SqlConnection {
         for (final column in result.cols) {
           Object? value = row.colByName(column.name);
 
-          // Convert string values to proper types based on heuristics
-          // This is needed because mysql_client returns numeric values as
-          // strings when using named parameters
-          if (value is String && value.isNotEmpty) {
-            final columnName = column.name.toLowerCase();
-
-            // Don't convert fields that are likely to be string identifiers
-            // even if they contain only digits (like zipCode, phone, etc.)
-            final isLikelyStringField = columnName.contains('code') ||
-                columnName.contains('zip') ||
-                columnName.contains('phone') ||
-                columnName.contains('ssn') ||
-                columnName.contains('id') && columnName != 'id';
-
-            if (!isLikelyStringField) {
-              // Only convert if it looks like a pure number
-              final isNumericString =
-                  RegExp(r'^-?(?:0|[1-9]\d*)(?:\.\d+)?$').hasMatch(value);
-
-              if (isNumericString) {
-                // Try to parse as int first (for BIGINT, INT, etc.)
-                if (!value.contains('.')) {
-                  final intValue = int.tryParse(value);
-                  if (intValue != null) {
-                    value = intValue;
-                  }
-                } else {
-                  // Parse as double (for DOUBLE, FLOAT, DECIMAL)
-                  final doubleValue = double.tryParse(value);
-                  if (doubleValue != null) {
-                    value = doubleValue;
-                  }
-                }
-              }
+          if (value is String) {
+            final type = column.type.getBestMatchDartType(column.length);
+            if (type == int || type == bool) {
+              value = int.parse(value);
+            } else if (type == double) {
+              value = double.parse(value);
             }
           }
 

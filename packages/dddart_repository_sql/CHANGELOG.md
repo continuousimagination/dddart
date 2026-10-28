@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Changed
+
+- Add exact identity key encoding/decoding to SqlDialect with explicit adapter
+  byte budgets, concrete identity/type analysis and structural column JSON paths.
+- Schema and collection metadata carry actual identity types for primary and
+  foreign keys; identity codec JSON is stored as an atomic key value.
+- Breaking SQL storage migration: UUID identity keys retain exact text bytes,
+  including case, rather than normalize into 16-byte values.
+
 ## [0.9.0] - 2025-01-XX
 
 ### Added
