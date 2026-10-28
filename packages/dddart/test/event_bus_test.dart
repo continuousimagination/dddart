@@ -4,7 +4,7 @@ import 'package:logging/logging.dart';
 import 'package:test/test.dart';
 
 // Test event classes
-class TestEvent extends DomainEvent {
+class TestEvent extends DomainEvent<UuidValue> {
   TestEvent({
     required super.aggregateId,
     required this.message,
@@ -12,7 +12,7 @@ class TestEvent extends DomainEvent {
   final String message;
 }
 
-class AnotherTestEvent extends DomainEvent {
+class AnotherTestEvent extends DomainEvent<UuidValue> {
   AnotherTestEvent({
     required super.aggregateId,
     required this.value,

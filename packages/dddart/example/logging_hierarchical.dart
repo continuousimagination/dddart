@@ -160,7 +160,7 @@ Future<void> _performOperations(String scenario) async {
   });
 
   // Create repository
-  final repository = InMemoryRepository<UserAggregate>();
+  final repository = InMemoryRepository<UserAggregate, UuidValue>();
 
   // Register user
   final user = UserAggregate.register(

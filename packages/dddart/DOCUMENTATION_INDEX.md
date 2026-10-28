@@ -4,6 +4,9 @@ Complete guide to all DDDart documentation and resources.
 
 ## 📚 Core Documentation
 
+For externally assigned IDs, scoped/composite keys, or the breaking migration
+from UUID-only types, see [IDENTITY_GUIDE.md](IDENTITY_GUIDE.md).
+
 ### For New Users
 
 1. **[README.md](README.md)**

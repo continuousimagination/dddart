@@ -1,25 +1,27 @@
 import 'package:dddart/src/domain_event.dart';
 import 'package:dddart/src/entity.dart';
+import 'package:dddart/src/identity.dart';
+import 'package:dddart/src/uuid_value.dart';
 
 /// Base class for aggregate roots in the DDD framework.
 ///
-/// An aggregate root is the entry point to an aggregate and extends Entity
+/// An aggregate root is the entry point to an aggregate and extends UuidEntity
 /// to provide identity and lifecycle management. It serves as the boundary
 /// for consistency and transaction management within the aggregate.
-abstract class AggregateRoot extends Entity {
-  /// Creates a new AggregateRoot with optional parameters.
+abstract class AggregateRoot<I extends Identity> extends Entity<I> {
+  /// Creates an aggregate root with an explicit identity.
   ///
-  /// If [id] is not provided, a new UUID will be generated.
+  /// Use [UuidAggregateRoot] for automatic UUID generation.
   /// If [createdAt] is not provided, the current time will be used.
   /// If [updatedAt] is not provided, the current time will be used.
   AggregateRoot({
-    super.id,
+    required super.id,
     super.createdAt,
     super.updatedAt,
   });
 
   /// Private list to store uncommitted domain events.
-  final List<DomainEvent> _uncommittedEvents = [];
+  final List<DomainEvent<I>> _uncommittedEvents = [];
 
   /// Raises a domain event and adds it to the uncommitted events list.
   ///
@@ -27,7 +29,7 @@ abstract class AggregateRoot extends Entity {
   /// significant happens that other parts of the system need to know about.
   /// Events are collected but not automatically published, allowing for
   /// transaction boundaries and batch publishing.
-  void raiseEvent(DomainEvent event) {
+  void raiseEvent(DomainEvent<I> event) {
     _uncommittedEvents.add(event);
   }
 
@@ -36,7 +38,7 @@ abstract class AggregateRoot extends Entity {
   /// These are events that have been raised but not yet published.
   /// This method is typically called by infrastructure code to retrieve
   /// events for publishing to an event bus or message broker.
-  List<DomainEvent> getUncommittedEvents() {
+  List<DomainEvent<I>> getUncommittedEvents() {
     return List.unmodifiable(_uncommittedEvents);
   }
 
@@ -48,4 +50,11 @@ abstract class AggregateRoot extends Entity {
   void markEventsAsCommitted() {
     _uncommittedEvents.clear();
   }
+}
+
+/// An aggregate with a supplied or automatically generated UUID identity.
+abstract class UuidAggregateRoot extends AggregateRoot<UuidValue> {
+  /// Creates a UUID aggregate, generating [id] when omitted.
+  UuidAggregateRoot({UuidValue? id, super.createdAt, super.updatedAt})
+      : super(id: id ?? UuidValue.generate());
 }

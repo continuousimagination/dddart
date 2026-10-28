@@ -1,7 +1,7 @@
 import 'package:dddart/src/aggregate_root.dart';
+import 'package:dddart/src/identity.dart';
 import 'package:dddart/src/repository.dart';
 import 'package:dddart/src/repository_exception.dart';
-import 'package:dddart/src/uuid_value.dart';
 import 'package:logging/logging.dart';
 
 /// In-memory implementation of [Repository] for testing purposes.
@@ -22,12 +22,13 @@ import 'package:logging/logging.dart';
 ///
 /// * [T] - The aggregate root type managed by this repository. Must extend
 ///   [AggregateRoot].
+/// * [I] - The aggregate identity type used as the in-memory map key.
 ///
 /// ## Usage Example
 ///
 /// ```dart
 /// // Create a repository for User aggregates
-/// final userRepository = InMemoryRepository<User>();
+/// final userRepository = InMemoryRepository<User, UuidValue>();
 ///
 /// // Save a user
 /// final user = User(name: 'John Doe', email: 'john@example.com');
@@ -54,7 +55,7 @@ import 'package:logging/logging.dart';
 ///
 /// ```dart
 /// test('repository operations', () async {
-///   final repository = InMemoryRepository<User>();
+///   final repository = InMemoryRepository<User, UuidValue>();
 ///
 ///   // Add test data
 ///   final user1 = User(name: 'Alice');
@@ -84,8 +85,8 @@ import 'package:logging/logging.dart';
 /// Different instances do not share data, even for the same aggregate type:
 ///
 /// ```dart
-/// final repo1 = InMemoryRepository<User>();
-/// final repo2 = InMemoryRepository<User>();
+/// final repo1 = InMemoryRepository<User, UuidValue>();
+/// final repo2 = InMemoryRepository<User, UuidValue>();
 ///
 /// final user = User(name: 'Alice');
 /// await repo1.save(user);
@@ -98,15 +99,16 @@ import 'package:logging/logging.dart';
 /// * [Repository] - The base repository interface
 /// * [AggregateRoot] - The base class for aggregate roots
 /// * [RepositoryException] - Exception thrown by repository operations
-class InMemoryRepository<T extends AggregateRoot> implements Repository<T> {
+class InMemoryRepository<T extends AggregateRoot<I>, I extends Identity>
+    implements Repository<T, I> {
   /// Logger instance for repository operations.
   final Logger _logger = Logger('dddart.repository');
 
   /// Internal storage map that holds aggregates keyed by their ID.
-  final Map<UuidValue, T> _storage = {};
+  final Map<I, T> _storage = {};
 
   @override
-  Future<T> getById(UuidValue id) async {
+  Future<T> getById(I id) async {
     try {
       _logger.fine('Retrieving $T with ID: $id');
       final aggregate = _storage[id];
@@ -139,7 +141,7 @@ class InMemoryRepository<T extends AggregateRoot> implements Repository<T> {
   }
 
   @override
-  Future<void> deleteById(UuidValue id) async {
+  Future<void> deleteById(I id) async {
     try {
       _logger.fine('Deleting $T with ID: $id');
       if (!_storage.containsKey(id)) {
@@ -164,7 +166,7 @@ class InMemoryRepository<T extends AggregateRoot> implements Repository<T> {
   /// Example:
   /// ```dart
   /// test('user operations', () async {
-  ///   final repository = InMemoryRepository<User>();
+  ///   final repository = InMemoryRepository<User, UuidValue>();
   ///
   ///   // Perform test operations
   ///   await repository.save(User(name: 'Test User'));
@@ -194,7 +196,7 @@ class InMemoryRepository<T extends AggregateRoot> implements Repository<T> {
   ///
   /// Example:
   /// ```dart
-  /// final repository = InMemoryRepository<User>();
+  /// final repository = InMemoryRepository<User, UuidValue>();
   /// await repository.save(User(name: 'Alice'));
   /// await repository.save(User(name: 'Bob'));
   ///

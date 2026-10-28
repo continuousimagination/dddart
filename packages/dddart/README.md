@@ -5,11 +5,12 @@ A lightweight Domain-Driven Design (DDD) framework for Dart that provides base c
 ## Features
 
 - **Entity**: Base class for domain entities with identity and lifecycle timestamps
+- **Typed Identity**: Native string or scoped/composite IDs with UUID supplied as a stock implementation
 - **Aggregate Root**: Base class for aggregate root entities with domain event support
 - **Value Object**: Base class for immutable value types
 - **Domain Events**: Event-driven architecture with local publish/subscribe
 - **Event Bus**: Type-safe event distribution system
-- Automatic GUID generation for entity IDs and event IDs
+- Optional automatic UUID generation through UUID entity/aggregate specializations; event occurrence IDs remain UUIDs
 - Automatic timestamp management (createdAt, updatedAt, occurredAt)
 
 ## Installation
@@ -27,12 +28,17 @@ dart pub get
 
 ## Quick Start
 
+General domain types use `Entity<I>` and `AggregateRoot<I>`, with a required
+identity. `UuidEntity` and `UuidAggregateRoot` preserve convenient generated UUIDs.
+Repositories use `Repository<T, I>` and reject unrelated identity types in typed
+code. See [native identity and UUID migration](IDENTITY_GUIDE.md).
+
 ### Creating Entities
 
 ```dart
 import 'package:dddart/dddart.dart';
 
-class User extends Entity {
+class User extends UuidEntity {
   final String name;
   final String email;
   
@@ -52,7 +58,7 @@ class User extends Entity {
 import 'package:dddart/dddart.dart';
 
 // Define a domain event
-class OrderPlaced extends DomainEvent {
+class OrderPlaced extends DomainEvent<UuidValue> {
   final String customerId;
   final double totalAmount;
   
@@ -64,7 +70,7 @@ class OrderPlaced extends DomainEvent {
 }
 
 // Create an aggregate that raises events
-class Order extends AggregateRoot {
+class Order extends UuidAggregateRoot {
   final String customerId;
   final List<OrderItem> items;
   
@@ -228,7 +234,7 @@ void main() {
   
   // Use DDDart components - they will log automatically
   final eventBus = EventBus();
-  final repository = InMemoryRepository<User>();
+  final repository = InMemoryRepository<User, UuidValue>();
   
   // Logs will appear in console:
   // FINE: 2024-01-15 10:30:45.123: Publishing event: OrderPlaced for aggregate abc-123
@@ -253,7 +259,7 @@ void main() async {
   
   // Use DDDart components
   final eventBus = EventBus();
-  final repository = InMemoryRepository<User>();
+  final repository = InMemoryRepository<User, UuidValue>();
   
   // Logs will be written to app.log with format:
   // [2024-01-15T10:30:45.123456] [FINE] [dddart.eventbus] Publishing event: OrderPlaced
@@ -372,7 +378,7 @@ import 'package:dddart/dddart.dart';
 void main() {
   // No logging configuration needed
   final eventBus = EventBus();
-  final repository = InMemoryRepository<User>();
+  final repository = InMemoryRepository<User, UuidValue>();
   
   // Components work normally, logging is a no-op
 }
@@ -406,7 +412,7 @@ Follow these best practices when creating domain events:
 
 ```dart
 // ✅ Good: Clear, past-tense name with relevant data
-class UserRegistered extends DomainEvent {
+class UserRegistered extends DomainEvent<UuidValue> {
   final String email;
   final String fullName;
   final String organizationId;
@@ -423,7 +429,7 @@ class UserRegistered extends DomainEvent {
 }
 
 // ❌ Bad: Present tense, missing context
-class RegisterUser extends DomainEvent {
+class RegisterUser extends DomainEvent<UuidValue> {
   final String email;
   
   RegisterUser(this.email) : super(aggregateId: '');
@@ -442,7 +448,7 @@ class RegisterUser extends DomainEvent {
 Events should be raised when significant business operations occur:
 
 ```dart
-class User extends AggregateRoot {
+class User extends UuidAggregateRoot {
   String email;
   String fullName;
   bool isActive;
@@ -619,10 +625,10 @@ eventBus.on<OrderPlaced>().listen(
 Base class for all domain events.
 
 ```dart
-abstract class DomainEvent {
+abstract class DomainEvent<I extends Identity> {
   final UuidValue eventId;        // Unique event identifier (auto-generated)
   final DateTime occurredAt;      // When the event occurred (auto-generated)
-  final UuidValue aggregateId;    // ID of the aggregate that raised the event
+  final I aggregateId;            // Concrete identity of the aggregate
   final Map<String, dynamic> context;  // Additional context for filtering
   
   DomainEvent({
@@ -639,12 +645,12 @@ abstract class DomainEvent {
 Base class for aggregate roots with event support.
 
 ```dart
-abstract class AggregateRoot extends Entity {
+abstract class AggregateRoot<I extends Identity> extends Entity<I> {
   // Raise a domain event
-  void raiseEvent(DomainEvent event);
+  void raiseEvent(DomainEvent<I> event);
   
   // Get all uncommitted events
-  List<DomainEvent> getUncommittedEvents();
+  List<DomainEvent<I>> getUncommittedEvents();
   
   // Clear uncommitted events after publishing
   void markEventsAsCommitted();
@@ -658,10 +664,10 @@ Local event bus for publish/subscribe.
 ```dart
 class EventBus {
   // Publish an event to all subscribers
-  void publish(DomainEvent event);
+  void publish(DomainEvent<Identity> event);
   
   // Subscribe to events of a specific type
-  Stream<T> on<T extends DomainEvent>();
+  Stream<T> on<T extends DomainEvent<Identity>>();
   
   // Close the event bus and release resources
   Future<void> close();
@@ -678,7 +684,7 @@ class EventBus {
 Use the context map to include metadata for filtering:
 
 ```dart
-class OrderPlaced extends DomainEvent {
+class OrderPlaced extends DomainEvent<UuidValue> {
   final String customerId;
   final String region;
   final double totalAmount;
@@ -712,7 +718,7 @@ Events can be serialized using the `dddart_serialization` package:
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 @Serializable()
-class UserRegistered extends DomainEvent {
+class UserRegistered extends DomainEvent<UuidValue> {
   final String email;
   final String fullName;
   
@@ -746,7 +752,7 @@ The architecture supports future remote event capabilities:
 // Future interface for remote event transport
 abstract interface class EventTransport {
   Future<void> send(DomainEvent event);
-  Stream<DomainEvent> receive();
+  Stream<DomainEvent<UuidValue>> receive();
   Future<void> subscribe(EventSubscription subscription);
   Future<void> close();
 }
@@ -755,7 +761,7 @@ abstract interface class EventTransport {
 abstract interface class RemoteEventClient {
   Future<void> subscribe(EventSubscription subscription);
   Future<void> unsubscribe(Type eventType);
-  Stream<T> on<T extends DomainEvent>();
+  Stream<T> on<T extends DomainEvent<Identity>>();
 }
 ```
 
