@@ -59,7 +59,11 @@ class RemoteIssueOpened extends DomainEvent<RemoteId> {
   RemoteIssueOpened({required super.aggregateId,required this.title,super.eventId,super.occurredAt,super.context});
   final String title;
 }
-'''.replaceFirst('__GENERATED_PART_DIRECTIVE__', "part 'events.g.dart';");
+'''
+          .replaceFirst(
+        '__GENERATED_PART_DIRECTIVE__',
+        "part 'events.g.dart';",
+      );
       input.writeAsStringSync(source);
       Directory('${fixture.path}/bin').createSync();
       File('${fixture.path}/bin/main.dart').writeAsStringSync('''

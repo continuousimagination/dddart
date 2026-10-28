@@ -40,3 +40,30 @@ One owner controls event-registry plus JSON generation and each owning part/cach
 Focused fake-transport/registry cases precede the routed integration and package,
 example, archive-consumer and immutable Git gates. Real AWS resources remain
 optional and unrun unless explicitly configured; no production hardening is added.
+
+## Evidence recorded before the final package gate
+
+- The complete JSON suite passes all 114 tests; native inherited event IDs,
+  occurrence UUID/time/context and malformed identity payload cases pass.
+- Distributed runtime/regression checks pass all 87 tests before the final typed
+  custom-ingestion case; that five-case focused identity suite also passes.
+- Fresh outside-workspace event generation compiles and runs. Its negative cases
+  reject wrong ID types, erased aggregate identities and duplicate wire keys.
+- Both JSON and event archive-consumer lanes pass with declared local closures.
+- A comprehensive outside-workspace consumer resolves 13 packages from immutable
+  Git revision 81313391f7f8348ec5c4d4f17d594b72419581a7, with documented Git
+  dependency overrides keeping the complete closure at that revision. One
+  combined part contains JSON, SQLite, MySQL, MongoDB, DynamoDB, REST repositories
+  and event registrations. It generates, analyzes and runs successfully.
+- That immutable consumer proves structured configuration presence/null/list and
+  three-provider masking; native/scoped case-sensitive CRUD, nullable identity
+  updates and deletion isolation in SQLite, MySQL, MongoDB and DynamoDB Local;
+  generated REST clients through registered server routes backed by real SQLite;
+  and mixed native/scoped/UUID event envelope ingestion and reconstruction.
+  The services use isolated probe databases/tables; Dynamo tables and the Mongo
+  probe database are cleaned after success. No real AWS/OIDC services are used.
+
+The following fixture-only commit 88b9c77 prevents embedded part directives from
+being mistaken for package generation inputs; it does not change library code.
+Logs are retained under /private/tmp/dddart-worky-implementation-20261028 and the
+immutable fixture under /private/tmp/dddart-worky-integrated-consumer-8131339.
