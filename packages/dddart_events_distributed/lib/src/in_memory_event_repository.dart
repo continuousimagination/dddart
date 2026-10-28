@@ -13,10 +13,11 @@ import 'package:dddart_events_distributed/src/stored_event.dart';
 ///
 /// Like [InMemoryRepository], this should not be used in production as data
 /// is not persisted and will be lost when the application terminates.
-class InMemoryEventRepository extends InMemoryRepository<StoredEvent>
-    implements EventRepository<StoredEvent> {
+class InMemoryEventRepository
+    extends InMemoryRepository<StoredEvent<Identity>, UuidValue>
+    implements EventRepository<StoredEvent<Identity>> {
   @override
-  Future<List<StoredEvent>> findSince(DateTime timestamp) async {
+  Future<List<StoredEvent<Identity>>> findSince(DateTime timestamp) async {
     final allEvents = getAllSync();
     return allEvents
         .where(
@@ -44,7 +45,7 @@ class InMemoryEventRepository extends InMemoryRepository<StoredEvent>
   /// Returns all events in the repository.
   ///
   /// Useful for testing and debugging.
-  Future<List<StoredEvent>> findAll() async {
+  Future<List<StoredEvent<Identity>>> findAll() async {
     return getAllSync();
   }
 

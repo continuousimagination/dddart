@@ -1,5 +1,27 @@
 # dddart_rest
 
+## Typed identities (pre-release breaking change)
+
+Use `UuidAggregateRoot` for existing UUID models and `Repository<User, UuidValue>`
+for UUID CRUD. Native models extend `AggregateRoot<IssueId>` with a required ID.
+Register explicit `IdentityCodec<IssueId>` implementations in an instance-local
+`IdentityCodecRegistry`; configure the server's `JsonSerializer` and
+`CrudResource<Issue, IssueId, void>` with the same registry. Generated REST
+repositories accept `identityCodecs: registry` and share it with body serialization.
+
+`CrudResource<T, I, TClaims>`, `AuthorizationHandler<T, I, TClaims>` and
+`QueryHandler<T, I>` retain concrete identity types. Delete authorization receives
+I. Query selection, pagination and authentication semantics are unchanged.
+
+Client paths URI-encode canonical codec keys once. `HttpServer` decodes one
+segment once; direct `CrudResource.handleGetById/handleUpdate/handleDelete`
+callers supply decoded canonical keys. Slash, percent, punctuation and Unicode
+remain data. Empty, malformed UTF-8 and dot-only (`.`/`..`) keys are unsupported
+and fail before client I/O. Invalid/noncanonical server keys yield problem+json
+400; valid missing IDs keep 404. Client 400 and 422 map to repository constraint
+errors. A get response with a different typed identity is rejected.
+
+
 RESTful CRUD API framework for DDDart - Provides REST endpoints for aggregate roots with minimal boilerplate.
 
 > **Note:** This package was previously named `dddart_http`. See the [Migration Guide](#migration-from-dddart_http) below.
@@ -45,7 +67,7 @@ void main() async {
   final server = HttpServer(port: 8080);
   
   server.registerResource(
-    CrudResource<User, void>(
+    CrudResource<User, UuidValue, void>(
       path: '/users',
       repository: repository,
       serializer: serializer,
@@ -209,7 +231,7 @@ Each CRUD resource uses one `JsonSerializer<T>`:
 
 ```dart
 server.registerResource(
-  CrudResource<User, void>(
+  CrudResource<User, UuidValue, void>(
     path: '/users',
     repository: repository,
     serializer: jsonSerializer,
@@ -279,7 +301,7 @@ Content-Type: application/json
 Configure pagination defaults when registering a resource:
 
 ```dart
-CrudResource<User, void>(
+CrudResource<User, UuidValue, void>(
   path: '/users',
   repository: repository,
   serializer: serializer,
@@ -300,7 +322,7 @@ Define explicit application read contracts and adapt them to collection and
 filter handlers:
 
 ```dart
-abstract interface class UserReadRepository implements Repository<User> {
+abstract interface class UserReadRepository implements Repository<User, UuidValue> {
   Future<QueryResult<User>> listPage({
     required int skip,
     required int take,
@@ -314,7 +336,7 @@ abstract interface class UserReadRepository implements Repository<User> {
 }
 
 Future<QueryResult<User>> listUsers(
-  Repository<User> repository,
+  Repository<User, UuidValue> repository,
   Map<String, String> queryParams,
   int skip,
   int take,
@@ -327,7 +349,7 @@ Future<QueryResult<User>> listUsers(
 }
 
 Future<QueryResult<User>> firstNameHandler(
-  Repository<User> repository,
+  Repository<User, UuidValue> repository,
   Map<String, String> queryParams,
   int skip,
   int take,
@@ -343,7 +365,7 @@ Future<QueryResult<User>> firstNameHandler(
 
 // Register the handler
 server.registerResource(
-  CrudResource<User, void>(
+  CrudResource<User, UuidValue, void>(
     path: '/users',
     repository: repository,
     serializer: serializer,
@@ -456,7 +478,7 @@ Response handleDuplicateEmail(Object error) {
 
 // Register handlers
 server.registerResource(
-  CrudResource<User, void>(
+  CrudResource<User, UuidValue, void>(
     path: '/users',
     repository: repository,
     serializer: serializer,
@@ -525,7 +547,7 @@ detection, not guaranteed optimistic locking.
 ```dart
 // Configure resource with ETag support (enabled by default)
 server.registerResource(
-  CrudResource<User, void>(
+  CrudResource<User, UuidValue, void>(
     path: '/users',
     repository: repository,
     serializer: serializer,
@@ -698,7 +720,7 @@ class HttpServer {
 }
 ```
 
-### CrudResource<T, TClaims>
+### CrudResource<T, UuidValue, TClaims>
 
 Configures and handles CRUD operations for an aggregate root type.
 
@@ -706,10 +728,10 @@ Configures and handles CRUD operations for an aggregate root type.
 class CrudResource<T extends AggregateRoot, TClaims> {
   CrudResource({
     required String path,
-    required Repository<T> repository,
+    required Repository<T, UuidValue> repository,
     required JsonSerializer<T> serializer,
-    QueryHandler<T>? collectionHandler,
-    Map<String, QueryHandler<T>> queryHandlers = const {},
+    QueryHandler<T, UuidValue>? collectionHandler,
+    Map<String, QueryHandler<T, UuidValue>> queryHandlers = const {},
     Map<Type, Response Function(Object)> customExceptionHandlers = const {},
     int defaultSkip = 0,
     int defaultTake = 50,
@@ -738,13 +760,13 @@ class CrudResource<T extends AggregateRoot, TClaims> {
 - `defaultTake` - Default take value for pagination (default: 50)
 - `maxTake` - Maximum allowed take value (default: 100)
 
-### QueryHandler<T>
+### QueryHandler<T, UuidValue>
 
 Function signature for custom query handlers.
 
 ```dart
 typedef QueryHandler<T extends AggregateRoot> = Future<QueryResult<T>> Function(
-  Repository<T> repository,
+  Repository<T, UuidValue> repository,
   Map<String, String> queryParams,
   int skip,
   int take,
@@ -1066,7 +1088,7 @@ server.addRoute('POST', '/auth/token', authEndpoints.handleToken);
 
 ```dart
 server.registerResource(
-  CrudResource<User, UserClaims>(
+  CrudResource<User, UuidValue, UserClaims>(
     path: '/users',
     repository: userRepo,
     serializer: serializer,
@@ -1076,7 +1098,7 @@ server.registerResource(
 
 // Public resource (no auth required)
 server.registerResource(
-  CrudResource<Product, void>(
+  CrudResource<Product, UuidValue, void>(
     path: '/products',
     repository: productRepo,
     serializer: serializer,
@@ -1127,7 +1149,7 @@ allowance in both directions and defaults to zero.
 
 ```dart
 server.registerResource(
-  CrudResource<User, CognitoClaims>(
+  CrudResource<User, UuidValue, CognitoClaims>(
     path: '/users',
     repository: userRepo,
     serializer: serializer,

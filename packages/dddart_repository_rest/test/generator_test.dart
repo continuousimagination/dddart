@@ -112,7 +112,7 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_repository_rest/dddart_repository_rest.dart';
 
 @GenerateRestRepository()
-class User extends AggregateRoot {
+class User extends UuidAggregateRoot {
   final String name;
   User({required this.name});
 }
@@ -159,7 +159,7 @@ import 'package:dddart_repository_rest/dddart_repository_rest.dart';
 
 @Serializable()
 @GenerateRestRepository(resourcePath: '/users')
-class User extends AggregateRoot {
+class User extends UuidAggregateRoot {
   final String name;
   User({required this.name});
 }
@@ -186,12 +186,17 @@ class User extends AggregateRoot {
 
       // Assert: Verify generated code contains expected elements
       expect(output, contains('class UserRestRepository'));
-      expect(output, contains('implements Repository<User>'));
+      expect(output, contains('implements Repository<User, UuidValue>'));
       expect(output, contains('Future<User> getById(UuidValue id)'));
       expect(output, contains('Future<void> save(User aggregate)'));
       expect(output, contains('Future<void> deleteById(UuidValue id)'));
       expect(output, contains("String get _resourcePath => '/users'"));
-      expect(output, contains('final _serializer = UserJsonSerializer()'));
+      expect(
+        output,
+        contains(
+          'late final _serializer = UserJsonSerializer.withIdentityCodecs(_identityCodecs)',
+        ),
+      );
       expect(output, contains('RepositoryException _mapHttpException'));
       expect(
         output,
@@ -217,7 +222,7 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:dddart_repository_rest/dddart_repository_rest.dart';
 
-abstract interface class UserRepository implements Repository<User> {
+abstract interface class UserRepository implements Repository<User, UuidValue> {
   Future<R> transform<R extends Object>(
     R value, {
     required bool enabled,
@@ -229,7 +234,7 @@ abstract interface class UserRepository implements Repository<User> {
 
 @Serializable()
 @GenerateRestRepository(implements: UserRepository)
-class User extends AggregateRoot {
+class User extends UuidAggregateRoot {
   User({required this.name});
 
   final String name;

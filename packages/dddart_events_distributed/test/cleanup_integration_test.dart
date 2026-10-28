@@ -15,7 +15,7 @@ import 'test_helpers.dart';
 void main() {
   group('Cleanup Integration Tests', () {
     late InMemoryEventRepository repository;
-    late EventBusServer<StoredEvent> server;
+    late EventBusServer<StoredEvent<Identity>> server;
     late EventBus eventBus;
 
     setUp(() {
@@ -34,11 +34,14 @@ void main() {
         // Requirements: 12.1, 12.2, 12.3
         // Arrange: Create server with retention duration
         const retentionDuration = Duration(hours: 1);
-        server = EventBusServer<StoredEvent>(
+        server = EventBusServer<StoredEvent<Identity>>(
           localEventBus: eventBus,
           eventRepository: repository,
           retentionDuration: retentionDuration,
-          storedEventFactory: StoredEvent.fromDomainEvent,
+          storedEventFactory: (event) => StoredEvent<Identity>.fromDomainEvent(
+            event,
+            registry: _testRegistry(),
+          ),
         );
 
         // Create events with various timestamps
@@ -49,7 +52,7 @@ void main() {
         final recentTimestamp2 = now.subtract(const Duration(minutes: 10));
 
         // Create old events (should be deleted)
-        final oldEvent1 = StoredEvent(
+        final oldEvent1 = StoredEvent<Identity>(
           id: UuidValue.generate(),
           createdAt: oldTimestamp1,
           aggregateId: UuidValue.generate(),
@@ -57,7 +60,7 @@ void main() {
           eventJson: '{"email":"old1@example.com"}',
           userId: 'user-1',
         );
-        final oldEvent2 = StoredEvent(
+        final oldEvent2 = StoredEvent<Identity>(
           id: UuidValue.generate(),
           createdAt: oldTimestamp2,
           aggregateId: UuidValue.generate(),
@@ -67,7 +70,7 @@ void main() {
         );
 
         // Create recent events (should be retained)
-        final recentEvent1 = StoredEvent(
+        final recentEvent1 = StoredEvent<Identity>(
           id: UuidValue.generate(),
           createdAt: recentTimestamp1,
           aggregateId: UuidValue.generate(),
@@ -75,7 +78,7 @@ void main() {
           eventJson: '{"email":"recent1@example.com"}',
           userId: 'user-3',
         );
-        final recentEvent2 = StoredEvent(
+        final recentEvent2 = StoredEvent<Identity>(
           id: UuidValue.generate(),
           createdAt: recentTimestamp2,
           aggregateId: UuidValue.generate(),
@@ -114,11 +117,14 @@ void main() {
       () async {
         // Requirements: 12.1, 12.2
         // Arrange: Create server WITHOUT retention duration
-        server = EventBusServer<StoredEvent>(
+        server = EventBusServer<StoredEvent<Identity>>(
           localEventBus: eventBus,
           eventRepository: repository,
           // No retentionDuration provided
-          storedEventFactory: StoredEvent.fromDomainEvent,
+          storedEventFactory: (event) => StoredEvent<Identity>.fromDomainEvent(
+            event,
+            registry: _testRegistry(),
+          ),
         );
 
         // Create some events
@@ -155,11 +161,14 @@ void main() {
         // Requirements: 12.1, 12.2, 12.3
         // Arrange: Create server with retention duration
         const retentionDuration = Duration(hours: 1);
-        server = EventBusServer<StoredEvent>(
+        server = EventBusServer<StoredEvent<Identity>>(
           localEventBus: eventBus,
           eventRepository: repository,
           retentionDuration: retentionDuration,
-          storedEventFactory: StoredEvent.fromDomainEvent,
+          storedEventFactory: (event) => StoredEvent<Identity>.fromDomainEvent(
+            event,
+            registry: _testRegistry(),
+          ),
         );
 
         // Create events relative to a fixed point in the past
@@ -167,7 +176,7 @@ void main() {
         final baseTime = DateTime.now().subtract(const Duration(hours: 2));
 
         // These events are 2 hours old
-        final veryOldEvent = StoredEvent(
+        final veryOldEvent = StoredEvent<Identity>(
           id: UuidValue.generate(),
           createdAt: baseTime,
           aggregateId: UuidValue.generate(),
@@ -176,7 +185,7 @@ void main() {
         );
 
         // This event is 1 hour and 1 second old (should be deleted)
-        final justOldEnough = StoredEvent(
+        final justOldEnough = StoredEvent<Identity>(
           id: UuidValue.generate(),
           createdAt: baseTime.add(const Duration(hours: 1, seconds: -1)),
           aggregateId: UuidValue.generate(),
@@ -185,7 +194,7 @@ void main() {
         );
 
         // This event is 59 minutes old (should be retained)
-        final justYoungEnough = StoredEvent(
+        final justYoungEnough = StoredEvent<Identity>(
           id: UuidValue.generate(),
           createdAt: baseTime.add(const Duration(minutes: 61)),
           aggregateId: UuidValue.generate(),
@@ -220,11 +229,14 @@ void main() {
         // Requirements: 12.1, 12.2, 12.3
         // Arrange: Create server with retention duration
         const retentionDuration = Duration(hours: 1);
-        server = EventBusServer<StoredEvent>(
+        server = EventBusServer<StoredEvent<Identity>>(
           localEventBus: eventBus,
           eventRepository: repository,
           retentionDuration: retentionDuration,
-          storedEventFactory: StoredEvent.fromDomainEvent,
+          storedEventFactory: (event) => StoredEvent<Identity>.fromDomainEvent(
+            event,
+            registry: _testRegistry(),
+          ),
         );
 
         final now = DateTime.now();
@@ -233,7 +245,7 @@ void main() {
 
         // Create 50 old events and 50 recent events
         for (var i = 0; i < 50; i++) {
-          final oldEvent = StoredEvent(
+          final oldEvent = StoredEvent<Identity>(
             id: UuidValue.generate(),
             createdAt: oldTimestamp,
             aggregateId: UuidValue.generate(),
@@ -244,7 +256,7 @@ void main() {
         }
 
         for (var i = 0; i < 50; i++) {
-          final recentEvent = StoredEvent(
+          final recentEvent = StoredEvent<Identity>(
             id: UuidValue.generate(),
             createdAt: recentTimestamp,
             aggregateId: UuidValue.generate(),
@@ -276,11 +288,14 @@ void main() {
         // Requirements: 12.1, 12.2, 12.3
         // Arrange: Create server with retention duration
         const retentionDuration = Duration(hours: 1);
-        server = EventBusServer<StoredEvent>(
+        server = EventBusServer<StoredEvent<Identity>>(
           localEventBus: eventBus,
           eventRepository: repository,
           retentionDuration: retentionDuration,
-          storedEventFactory: StoredEvent.fromDomainEvent,
+          storedEventFactory: (event) => StoredEvent<Identity>.fromDomainEvent(
+            event,
+            registry: _testRegistry(),
+          ),
         );
 
         final now = DateTime.now();
@@ -288,14 +303,14 @@ void main() {
         final recentTimestamp = now.subtract(const Duration(minutes: 30));
 
         // Create old and recent events
-        final oldEvent = StoredEvent(
+        final oldEvent = StoredEvent<Identity>(
           id: UuidValue.generate(),
           createdAt: oldTimestamp,
           aggregateId: UuidValue.generate(),
           eventType: 'UserCreatedEvent',
           eventJson: '{"email":"old@example.com"}',
         );
-        final recentEvent = StoredEvent(
+        final recentEvent = StoredEvent<Identity>(
           id: UuidValue.generate(),
           createdAt: recentTimestamp,
           aggregateId: UuidValue.generate(),
@@ -325,3 +340,20 @@ void main() {
     );
   });
 }
+
+EventRegistry _testRegistry() => EventRegistry()
+  ..register<UserCreatedEvent>(
+    'UserCreatedEvent',
+    encode: (event) => event.toJson(),
+    decode: UserCreatedEvent.fromJson,
+  )
+  ..register<OrderPlacedEvent>(
+    'OrderPlacedEvent',
+    encode: (event) => event.toJson(),
+    decode: OrderPlacedEvent.fromJson,
+  )
+  ..register<PaymentProcessedEvent>(
+    'PaymentProcessedEvent',
+    encode: (event) => event.toJson(),
+    decode: PaymentProcessedEvent.fromJson,
+  );

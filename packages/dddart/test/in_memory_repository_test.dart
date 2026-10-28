@@ -7,7 +7,7 @@ import 'package:logging/logging.dart';
 import 'package:test/test.dart';
 
 // Test aggregate classes for testing repository functionality
-class TestAggregate extends AggregateRoot {
+class TestAggregate extends UuidAggregateRoot {
   TestAggregate({
     required this.name,
     super.id,
@@ -18,7 +18,7 @@ class TestAggregate extends AggregateRoot {
   final String name;
 }
 
-class AnotherTestAggregate extends AggregateRoot {
+class AnotherTestAggregate extends UuidAggregateRoot {
   AnotherTestAggregate({
     required this.value,
     super.id,
@@ -31,10 +31,10 @@ class AnotherTestAggregate extends AggregateRoot {
 
 void main() {
   group('InMemoryRepository', () {
-    late InMemoryRepository<TestAggregate> repository;
+    late InMemoryRepository<TestAggregate, UuidValue> repository;
 
     setUp(() {
-      repository = InMemoryRepository<TestAggregate>();
+      repository = InMemoryRepository<TestAggregate, UuidValue>();
     });
 
     group('getById', () {
@@ -223,7 +223,7 @@ void main() {
 
     group('getAll', () {
       test('is a concrete convenience on a Repository implementation', () {
-        final Repository<TestAggregate> baseRepository = repository;
+        final Repository<TestAggregate, UuidValue> baseRepository = repository;
 
         expect(baseRepository, same(repository));
       });
@@ -296,8 +296,8 @@ void main() {
 
     group('storage isolation', () {
       test('different repository instances have separate storage', () async {
-        final repository1 = InMemoryRepository<TestAggregate>();
-        final repository2 = InMemoryRepository<TestAggregate>();
+        final repository1 = InMemoryRepository<TestAggregate, UuidValue>();
+        final repository2 = InMemoryRepository<TestAggregate, UuidValue>();
 
         final aggregate = TestAggregate(name: 'Test User');
         await repository1.save(aggregate);
@@ -311,8 +311,8 @@ void main() {
       });
 
       test('operations on one instance do not affect another', () async {
-        final repository1 = InMemoryRepository<TestAggregate>();
-        final repository2 = InMemoryRepository<TestAggregate>();
+        final repository1 = InMemoryRepository<TestAggregate, UuidValue>();
+        final repository2 = InMemoryRepository<TestAggregate, UuidValue>();
 
         final aggregate1 = TestAggregate(name: 'User 1');
         final aggregate2 = TestAggregate(name: 'User 2');
@@ -329,8 +329,9 @@ void main() {
 
     group('type safety', () {
       test('repository works with different aggregate types', () async {
-        final testRepository = InMemoryRepository<TestAggregate>();
-        final anotherRepository = InMemoryRepository<AnotherTestAggregate>();
+        final testRepository = InMemoryRepository<TestAggregate, UuidValue>();
+        final anotherRepository =
+            InMemoryRepository<AnotherTestAggregate, UuidValue>();
 
         final testAggregate = TestAggregate(name: 'Test');
         final anotherAggregate = AnotherTestAggregate(value: 42);
@@ -349,14 +350,14 @@ void main() {
       });
 
       test('repository maintains type constraints', () async {
-        final repository = InMemoryRepository<TestAggregate>();
+        final repository = InMemoryRepository<TestAggregate, UuidValue>();
         final aggregate = TestAggregate(name: 'Typed Aggregate');
 
         await repository.save(aggregate);
         final retrieved = await repository.getById(aggregate.id);
 
         expect(retrieved, isA<TestAggregate>());
-        expect(retrieved, isA<AggregateRoot>());
+        expect(retrieved, isA<AggregateRoot<UuidValue>>());
       });
     });
 
@@ -399,11 +400,11 @@ void main() {
 
     group('logging integration', () {
       late List<LogRecord> logRecords;
-      late InMemoryRepository<TestAggregate> loggingRepository;
+      late InMemoryRepository<TestAggregate, UuidValue> loggingRepository;
 
       setUp(() {
         logRecords = [];
-        loggingRepository = InMemoryRepository<TestAggregate>();
+        loggingRepository = InMemoryRepository<TestAggregate, UuidValue>();
 
         // Set up logging to capture log records
         Logger.root.level = Level.ALL;

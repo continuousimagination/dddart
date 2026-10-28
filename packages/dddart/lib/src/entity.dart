@@ -1,27 +1,26 @@
+import 'package:dddart/src/identity.dart';
 import 'package:dddart/src/uuid_value.dart';
-import 'package:uuid/uuid.dart' hide UuidValue;
 
 /// Base class for all domain entities in the DDD framework.
 ///
 /// Entities have identity and lifecycle timestamps. They are equal based on their ID,
 /// not their properties. Each entity has a unique identifier and tracks when it was
 /// created and last updated.
-abstract class Entity {
-  /// Creates a new Entity with optional parameters.
+abstract class Entity<I extends Identity> {
+  /// Creates an entity with an explicitly supplied identity.
   ///
-  /// If [id] is not provided, a new UUID will be generated.
+  /// Use [UuidEntity] for automatic UUID generation.
   /// If [createdAt] is not provided, the current time will be used.
   /// If [updatedAt] is not provided, the current time will be used.
   Entity({
-    UuidValue? id,
+    required this.id,
     DateTime? createdAt,
     DateTime? updatedAt,
-  })  : id = id ?? UuidValue.fromString(const Uuid().v4()),
-        createdAt = createdAt ?? DateTime.now(),
+  })  : createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now();
 
   /// Unique identifier for this entity
-  final UuidValue id;
+  final I id;
 
   /// Timestamp when this entity was created
   final DateTime createdAt;
@@ -41,7 +40,9 @@ abstract class Entity {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is Entity && runtimeType == other.runtimeType && id == other.id;
+      other is Entity<Identity> &&
+          runtimeType == other.runtimeType &&
+          id == other.id;
 
   /// Hash code is based on the entity's ID.
   @override
@@ -50,4 +51,11 @@ abstract class Entity {
   /// String representation of the entity showing its type and ID.
   @override
   String toString() => '$runtimeType(id: $id)';
+}
+
+/// An entity whose identity is a supplied or automatically generated UUID.
+abstract class UuidEntity extends Entity<UuidValue> {
+  /// Creates a UUID entity, generating [id] when omitted.
+  UuidEntity({UuidValue? id, super.createdAt, super.updatedAt})
+      : super(id: id ?? UuidValue.generate());
 }

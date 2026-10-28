@@ -11,7 +11,7 @@ part 'test_models.g.dart';
 
 /// Test AggregateRoot for serialization.
 @Serializable()
-class TestUser extends AggregateRoot {
+class TestUser extends UuidAggregateRoot {
   TestUser({
     required this.name,
     required this.email,
@@ -43,7 +43,7 @@ class TestAddress extends Value {
 
 /// Test AggregateRoot with nested Value.
 @Serializable()
-class TestUserWithAddress extends AggregateRoot {
+class TestUserWithAddress extends UuidAggregateRoot {
   TestUserWithAddress({
     required this.name,
     required this.email,
@@ -60,7 +60,7 @@ class TestUserWithAddress extends AggregateRoot {
 
 /// Test AggregateRoot with snake_case field naming.
 @Serializable()
-class TestUserSnakeCase extends AggregateRoot {
+class TestUserSnakeCase extends UuidAggregateRoot {
   TestUserSnakeCase({
     required this.firstName,
     required this.lastName,
@@ -77,7 +77,7 @@ class TestUserSnakeCase extends AggregateRoot {
 
 /// Test AggregateRoot with kebab-case field naming.
 @Serializable()
-class TestUserKebabCase extends AggregateRoot {
+class TestUserKebabCase extends UuidAggregateRoot {
   TestUserKebabCase({
     required this.firstName,
     required this.lastName,
@@ -127,7 +127,7 @@ class TestContactInfo extends Value {
 }
 
 /// Test Entity for nested serialization within AggregateRoots.
-class TestProfile extends Entity {
+class TestProfile extends UuidEntity {
   TestProfile({
     required this.bio,
     required this.preferences,
@@ -142,7 +142,7 @@ class TestProfile extends Entity {
 
 /// Complex AggregateRoot with multiple nested entities and values.
 @Serializable()
-class TestComplexUser extends AggregateRoot {
+class TestComplexUser extends UuidAggregateRoot {
   TestComplexUser({
     required this.name,
     required this.contactInfo,
@@ -163,7 +163,7 @@ class TestComplexUser extends AggregateRoot {
 
 /// AggregateRoot with collections of different types.
 @Serializable()
-class TestProject extends AggregateRoot {
+class TestProject extends UuidAggregateRoot {
   TestProject({
     required this.title,
     required this.description,
@@ -209,7 +209,7 @@ enum GameState {
 
 /// Test AggregateRoot with enum field.
 @Serializable()
-class TestGame extends AggregateRoot {
+class TestGame extends UuidAggregateRoot {
   TestGame({
     required this.state,
     super.id,
@@ -250,4 +250,82 @@ class TestPlayer extends Value {
 
   @override
   List<Object?> get props => [name, role, status];
+}
+
+/// A native identity whose debug representation is deliberately not its key.
+class TestNativeIdentity extends Identity {
+  const TestNativeIdentity(this.value);
+  final String value;
+  @override
+  List<Object?> get props => [value];
+  @override
+  String toString() => 'debug-only identity';
+}
+
+/// A repository-scoped identity with a numeric native component.
+class TestScopedIdentity extends Identity {
+  const TestScopedIdentity(this.repository, this.number);
+  final String repository;
+  final int number;
+  @override
+  List<Object?> get props => [repository, number];
+}
+
+/// Generic application state must be substituted in the concrete consumer.
+abstract class IdentityStateBase<I extends Identity> extends AggregateRoot<I> {
+  IdentityStateBase({
+    required super.id,
+    required this.reference,
+    super.createdAt,
+    super.updatedAt,
+  });
+  final I reference;
+}
+
+/// A nested value that needs the same injected identity registry.
+@Serializable()
+class TestIdentityHolder extends Value {
+  const TestIdentityHolder({required this.identity});
+  final TestNativeIdentity identity;
+  @override
+  List<Object?> get props => [identity];
+}
+
+/// A generated consumer covering custom identity fields and collections.
+@Serializable()
+class TestNativeIdentityAggregate
+    extends IdentityStateBase<TestNativeIdentity> {
+  TestNativeIdentityAggregate({
+    required super.id,
+    required super.reference,
+    required this.child,
+    this.optionalIdentity,
+    this.history = const [],
+    this.identities = const {},
+    this.byName = const {},
+    this.byIdentity = const {},
+    this.nested = const [],
+    super.createdAt,
+    super.updatedAt,
+  });
+
+  final TestIdentityHolder child;
+  final TestNativeIdentity? optionalIdentity;
+  final List<TestNativeIdentity?> history;
+  final Set<TestNativeIdentity> identities;
+  final Map<String, TestNativeIdentity?> byName;
+  final Map<TestNativeIdentity, String> byIdentity;
+  final List<List<TestNativeIdentity?>> nested;
+}
+
+/// A generated consumer whose aggregate identity has structural JSON.
+@Serializable()
+class TestScopedIdentityAggregate extends AggregateRoot<TestScopedIdentity> {
+  TestScopedIdentityAggregate({
+    required super.id,
+    required this.label,
+    super.createdAt,
+    super.updatedAt,
+  });
+  final String label;
 }

@@ -33,7 +33,7 @@ void main() async {
 
   // Register CRUD resource with all features
   server.registerResource(
-    CrudResource<User, void>(
+    CrudResource<User, UuidValue, void>(
       path: '/users',
       repository: repository,
       serializer: serializer,
@@ -105,7 +105,7 @@ void main() async {
 /// - Don't seed data in application startup
 /// - Use environment variables to control seeding (dev vs prod)
 /// - Consider using factories or builders for test data
-Future<void> _seedSampleData(Repository<User> repository) async {
+Future<void> _seedSampleData(Repository<User, UuidValue> repository) async {
   final users = [
     // User 1: John Doe - has profile, used for firstName query testing
     User(

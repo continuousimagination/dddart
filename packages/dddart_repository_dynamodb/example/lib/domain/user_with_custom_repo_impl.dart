@@ -95,8 +95,7 @@ class UserWithCustomRepoDynamoRepository
       }
 
       final item = response.items!.first;
-      final json = AttributeValueConverter.attributeMapToJsonMap(item);
-      return _serializer.fromJson(json);
+      return fromItem(item);
     } catch (e) {
       throw _mapDynamoException(e, 'findByEmail');
     }
@@ -130,10 +129,7 @@ class UserWithCustomRepoDynamoRepository
         return [];
       }
 
-      return response.items!.map((item) {
-        final json = AttributeValueConverter.attributeMapToJsonMap(item);
-        return _serializer.fromJson(json);
-      }).toList();
+      return response.items!.map(fromItem).toList();
     } catch (e) {
       throw _mapDynamoException(e, 'findByLastName');
     }

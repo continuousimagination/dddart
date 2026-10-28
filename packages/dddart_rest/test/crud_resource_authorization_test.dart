@@ -13,7 +13,7 @@ import 'package:test/test.dart';
 import 'json_serializer_test_support.dart';
 
 // Test aggregate root
-class TestUser extends AggregateRoot {
+class TestUser extends UuidAggregateRoot {
   TestUser({
     required this.name,
     required this.email,
@@ -63,7 +63,7 @@ class TestUserSerializer extends TestJsonSerializer<TestUser> {
 }
 
 // Mock repository
-class MockRepository implements Repository<TestUser> {
+class MockRepository implements Repository<TestUser, UuidValue> {
   final Map<UuidValue, TestUser> _storage = {};
 
   @override
@@ -121,7 +121,7 @@ class MockAuthenticationHandler implements AuthenticationHandler<TestClaims> {
 
 // Mock authorization handler
 class MockAuthorizationHandler
-    implements AuthorizationHandler<TestUser, TestClaims> {
+    implements AuthorizationHandler<TestUser, UuidValue, TestClaims> {
   bool shouldAuthorize = true;
   String? errorMessage;
 
@@ -264,7 +264,7 @@ void main() {
     group('handleCreate', () {
       test('calls authorization handler after authentication', () async {
         // Arrange
-        final resource = CrudResource<TestUser, TestClaims>(
+        final resource = CrudResource<TestUser, UuidValue, TestClaims>(
           path: '/users',
           repository: repository,
           serializer: serializer,
@@ -292,7 +292,7 @@ void main() {
         // Arrange
         authzHandler.shouldAuthorize = true;
 
-        final resource = CrudResource<TestUser, TestClaims>(
+        final resource = CrudResource<TestUser, UuidValue, TestClaims>(
           path: '/users',
           repository: repository,
           serializer: serializer,
@@ -324,7 +324,7 @@ void main() {
         authzHandler.errorMessage =
             'You do not have permission to create this user';
 
-        final resource = CrudResource<TestUser, TestClaims>(
+        final resource = CrudResource<TestUser, UuidValue, TestClaims>(
           path: '/users',
           repository: repository,
           serializer: serializer,
@@ -360,7 +360,7 @@ void main() {
         authzHandler.shouldAuthorize = false;
         authzHandler.errorMessage = 'Custom authorization error message';
 
-        final resource = CrudResource<TestUser, TestClaims>(
+        final resource = CrudResource<TestUser, UuidValue, TestClaims>(
           path: '/users',
           repository: repository,
           serializer: serializer,
@@ -395,7 +395,7 @@ void main() {
 
       test('authorization is skipped when no handler provided', () async {
         // Arrange
-        final resource = CrudResource<TestUser, TestClaims>(
+        final resource = CrudResource<TestUser, UuidValue, TestClaims>(
           path: '/users',
           repository: repository,
           serializer: serializer,
@@ -428,7 +428,7 @@ void main() {
         // Arrange
         await repository.save(testUser);
 
-        final resource = CrudResource<TestUser, TestClaims>(
+        final resource = CrudResource<TestUser, UuidValue, TestClaims>(
           path: '/users',
           repository: repository,
           serializer: serializer,
@@ -467,7 +467,7 @@ void main() {
         await repository.save(testUser);
         authzHandler.shouldAuthorize = true;
 
-        final resource = CrudResource<TestUser, TestClaims>(
+        final resource = CrudResource<TestUser, UuidValue, TestClaims>(
           path: '/users',
           repository: repository,
           serializer: serializer,
@@ -511,7 +511,7 @@ void main() {
         authzHandler.errorMessage =
             'You do not have permission to update this user';
 
-        final resource = CrudResource<TestUser, TestClaims>(
+        final resource = CrudResource<TestUser, UuidValue, TestClaims>(
           path: '/users',
           repository: repository,
           serializer: serializer,
@@ -555,7 +555,7 @@ void main() {
         authzHandler.shouldAuthorize = false;
         authzHandler.errorMessage = 'Custom update authorization error';
 
-        final resource = CrudResource<TestUser, TestClaims>(
+        final resource = CrudResource<TestUser, UuidValue, TestClaims>(
           path: '/users',
           repository: repository,
           serializer: serializer,
@@ -603,7 +603,7 @@ void main() {
         // Arrange
         await repository.save(testUser);
 
-        final resource = CrudResource<TestUser, TestClaims>(
+        final resource = CrudResource<TestUser, UuidValue, TestClaims>(
           path: '/users',
           repository: repository,
           serializer: serializer,
@@ -647,7 +647,7 @@ void main() {
         // Arrange
         await repository.save(testUser);
 
-        final resource = CrudResource<TestUser, TestClaims>(
+        final resource = CrudResource<TestUser, UuidValue, TestClaims>(
           path: '/users',
           repository: repository,
           serializer: serializer,
@@ -674,7 +674,7 @@ void main() {
         await repository.save(testUser);
         authzHandler.shouldAuthorize = true;
 
-        final resource = CrudResource<TestUser, TestClaims>(
+        final resource = CrudResource<TestUser, UuidValue, TestClaims>(
           path: '/users',
           repository: repository,
           serializer: serializer,
@@ -710,7 +710,7 @@ void main() {
         authzHandler.errorMessage =
             'You do not have permission to delete this user';
 
-        final resource = CrudResource<TestUser, TestClaims>(
+        final resource = CrudResource<TestUser, UuidValue, TestClaims>(
           path: '/users',
           repository: repository,
           serializer: serializer,
@@ -742,7 +742,7 @@ void main() {
         authzHandler.shouldAuthorize = false;
         authzHandler.errorMessage = 'Custom delete authorization error';
 
-        final resource = CrudResource<TestUser, TestClaims>(
+        final resource = CrudResource<TestUser, UuidValue, TestClaims>(
           path: '/users',
           repository: repository,
           serializer: serializer,
@@ -778,7 +778,7 @@ void main() {
         // Arrange
         await repository.save(testUser);
 
-        final resource = CrudResource<TestUser, TestClaims>(
+        final resource = CrudResource<TestUser, UuidValue, TestClaims>(
           path: '/users',
           repository: repository,
           serializer: serializer,
@@ -812,7 +812,7 @@ void main() {
     group('handleQuery', () {
       test('calls authorization handler for filtered queries', () async {
         // Arrange
-        final resource = CrudResource<TestUser, TestClaims>(
+        final resource = CrudResource<TestUser, UuidValue, TestClaims>(
           path: '/users',
           repository: repository,
           serializer: serializer,
@@ -842,7 +842,7 @@ void main() {
         // Arrange
         authzHandler.shouldAuthorize = true;
 
-        final resource = CrudResource<TestUser, TestClaims>(
+        final resource = CrudResource<TestUser, UuidValue, TestClaims>(
           path: '/users',
           repository: repository,
           serializer: serializer,
@@ -876,7 +876,7 @@ void main() {
         authzHandler.errorMessage =
             'You do not have permission to query this resource';
 
-        final resource = CrudResource<TestUser, TestClaims>(
+        final resource = CrudResource<TestUser, UuidValue, TestClaims>(
           path: '/users',
           repository: repository,
           serializer: serializer,
@@ -906,7 +906,7 @@ void main() {
         authzHandler.shouldAuthorize = false;
         authzHandler.errorMessage = 'Custom query authorization error';
 
-        final resource = CrudResource<TestUser, TestClaims>(
+        final resource = CrudResource<TestUser, UuidValue, TestClaims>(
           path: '/users',
           repository: repository,
           serializer: serializer,
@@ -943,10 +943,10 @@ void main() {
 
       test('authorization is skipped for unfiltered queries', () async {
         // Arrange
-        final inMemoryRepo = InMemoryRepository<TestUser>();
+        final inMemoryRepo = InMemoryRepository<TestUser, UuidValue>();
         await inMemoryRepo.save(testUser);
 
-        final resource = CrudResource<TestUser, TestClaims>(
+        final resource = CrudResource<TestUser, UuidValue, TestClaims>(
           path: '/users',
           repository: inMemoryRepo,
           serializer: serializer,
@@ -969,7 +969,7 @@ void main() {
 
       test('authorization is skipped when no handler provided', () async {
         // Arrange
-        final resource = CrudResource<TestUser, TestClaims>(
+        final resource = CrudResource<TestUser, UuidValue, TestClaims>(
           path: '/users',
           repository: repository,
           serializer: serializer,
@@ -999,7 +999,7 @@ void main() {
       test('authorization is skipped when authentication handler not provided',
           () async {
         // Arrange
-        final resource = CrudResource<TestUser, TestClaims>(
+        final resource = CrudResource<TestUser, UuidValue, TestClaims>(
           path: '/users',
           repository: repository,
           serializer: serializer,
@@ -1028,7 +1028,7 @@ void main() {
         // Arrange
         authHandler.shouldAuthenticate = false;
 
-        final resource = CrudResource<TestUser, TestClaims>(
+        final resource = CrudResource<TestUser, UuidValue, TestClaims>(
           path: '/users',
           repository: repository,
           serializer: serializer,

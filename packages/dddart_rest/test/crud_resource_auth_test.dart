@@ -11,7 +11,7 @@ import 'package:test/test.dart';
 import 'json_serializer_test_support.dart';
 
 // Test aggregate root
-class TestUser extends AggregateRoot {
+class TestUser extends UuidAggregateRoot {
   TestUser({
     required this.name,
     required this.email,
@@ -51,7 +51,7 @@ class TestUserSerializer extends TestJsonSerializer<TestUser> {
 }
 
 // Mock repository for testing
-class MockRepository implements Repository<TestUser> {
+class MockRepository implements Repository<TestUser, UuidValue> {
   final Map<UuidValue, TestUser> _storage = {};
 
   @override
@@ -157,7 +157,7 @@ void main() {
         shouldAuthenticate: false,
         errorMessage: 'Invalid token',
       );
-      final resource = CrudResource<TestUser, String>(
+      final resource = CrudResource<TestUser, UuidValue, String>(
         path: '/users',
         repository: repository,
         serializer: serializer,
@@ -181,7 +181,7 @@ void main() {
     test('handleGetById succeeds when authentication passes', () async {
       // Arrange
       final authHandler = MockAuthHandler();
-      final resource = CrudResource<TestUser, String>(
+      final resource = CrudResource<TestUser, UuidValue, String>(
         path: '/users',
         repository: repository,
         serializer: serializer,
@@ -201,7 +201,7 @@ void main() {
     test('handleCreate returns 401 when authentication fails', () async {
       // Arrange
       final authHandler = MockAuthHandler(shouldAuthenticate: false);
-      final resource = CrudResource<TestUser, String>(
+      final resource = CrudResource<TestUser, UuidValue, String>(
         path: '/users',
         repository: repository,
         serializer: serializer,
@@ -223,7 +223,7 @@ void main() {
     test('handleUpdate returns 401 when authentication fails', () async {
       // Arrange
       final authHandler = MockAuthHandler(shouldAuthenticate: false);
-      final resource = CrudResource<TestUser, String>(
+      final resource = CrudResource<TestUser, UuidValue, String>(
         path: '/users',
         repository: repository,
         serializer: serializer,
@@ -247,7 +247,7 @@ void main() {
     test('handleDelete returns 401 when authentication fails', () async {
       // Arrange
       final authHandler = MockAuthHandler(shouldAuthenticate: false);
-      final resource = CrudResource<TestUser, String>(
+      final resource = CrudResource<TestUser, UuidValue, String>(
         path: '/users',
         repository: repository,
         serializer: serializer,
@@ -270,7 +270,7 @@ void main() {
     test('handleQuery returns 401 when authentication fails', () async {
       // Arrange
       final authHandler = MockAuthHandler(shouldAuthenticate: false);
-      final resource = CrudResource<TestUser, String>(
+      final resource = CrudResource<TestUser, UuidValue, String>(
         path: '/users',
         repository: repository,
         serializer: serializer,
@@ -288,7 +288,7 @@ void main() {
     test('collection handler receives the authentication result', () async {
       final authHandler = MockAuthHandler();
       dynamic receivedAuthResult;
-      final resource = CrudResource<TestUser, String>(
+      final resource = CrudResource<TestUser, UuidValue, String>(
         path: '/users',
         repository: repository,
         serializer: serializer,
@@ -308,7 +308,7 @@ void main() {
     test('resource without auth handler allows unauthenticated access',
         () async {
       // Arrange
-      final resource = CrudResource<TestUser, dynamic>(
+      final resource = CrudResource<TestUser, UuidValue, dynamic>(
         path: '/users',
         repository: repository,
         serializer: serializer,

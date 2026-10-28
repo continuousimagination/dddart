@@ -16,7 +16,7 @@ part 'custom_user.g.dart';
   tableName: 'custom_users',
   implements: CustomUserRepository,
 )
-class CustomUser extends AggregateRoot {
+class CustomUser extends UuidAggregateRoot {
   /// Creates a custom user.
   CustomUser({
     required this.name,
@@ -43,7 +43,7 @@ class CustomUser extends AggregateRoot {
 
 /// Custom repository interface with domain-specific query methods.
 abstract interface class CustomUserRepository
-    implements Repository<CustomUser> {
+    implements Repository<CustomUser, UuidValue> {
   /// Finds all active users.
   Future<List<CustomUser>> findActiveUsers();
 

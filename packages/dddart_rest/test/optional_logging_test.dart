@@ -7,7 +7,7 @@ import 'package:test/test.dart';
 import 'json_serializer_test_support.dart';
 
 // Test domain model
-class TestProduct extends AggregateRoot {
+class TestProduct extends UuidAggregateRoot {
   TestProduct({
     required this.name,
     required this.price,
@@ -55,9 +55,9 @@ void main() {
 
     test('CrudResource works without logging configuration', () async {
       // Requirement 4.1, 4.2, 4.4, 4.5
-      final repository = InMemoryRepository<TestProduct>();
+      final repository = InMemoryRepository<TestProduct, UuidValue>();
       final serializer = TestProductSerializer();
-      final resource = CrudResource<TestProduct, dynamic>(
+      final resource = CrudResource<TestProduct, UuidValue, dynamic>(
         path: 'products',
         repository: repository,
         serializer: serializer,
@@ -85,9 +85,9 @@ void main() {
 
     test('CrudResource handles POST without logging configuration', () async {
       // Requirement 4.1, 4.2, 4.4, 4.5
-      final repository = InMemoryRepository<TestProduct>();
+      final repository = InMemoryRepository<TestProduct, UuidValue>();
       final serializer = TestProductSerializer();
-      final resource = CrudResource<TestProduct, dynamic>(
+      final resource = CrudResource<TestProduct, UuidValue, dynamic>(
         path: 'products',
         repository: repository,
         serializer: serializer,
@@ -115,9 +115,9 @@ void main() {
 
     test('CrudResource handles PUT without logging configuration', () async {
       // Requirement 4.1, 4.2, 4.4, 4.5
-      final repository = InMemoryRepository<TestProduct>();
+      final repository = InMemoryRepository<TestProduct, UuidValue>();
       final serializer = TestProductSerializer();
-      final resource = CrudResource<TestProduct, dynamic>(
+      final resource = CrudResource<TestProduct, UuidValue, dynamic>(
         path: 'products',
         repository: repository,
         serializer: serializer,
@@ -149,9 +149,9 @@ void main() {
 
     test('CrudResource handles DELETE without logging configuration', () async {
       // Requirement 4.1, 4.2, 4.4, 4.5
-      final repository = InMemoryRepository<TestProduct>();
+      final repository = InMemoryRepository<TestProduct, UuidValue>();
       final serializer = TestProductSerializer();
-      final resource = CrudResource<TestProduct, dynamic>(
+      final resource = CrudResource<TestProduct, UuidValue, dynamic>(
         path: 'products',
         repository: repository,
         serializer: serializer,
@@ -173,9 +173,9 @@ void main() {
 
     test('CrudResource handles errors without logging configuration', () async {
       // Requirement 4.1, 4.2, 4.4, 4.5
-      final repository = InMemoryRepository<TestProduct>();
+      final repository = InMemoryRepository<TestProduct, UuidValue>();
       final serializer = TestProductSerializer();
-      final resource = CrudResource<TestProduct, dynamic>(
+      final resource = CrudResource<TestProduct, UuidValue, dynamic>(
         path: 'products',
         repository: repository,
         serializer: serializer,
@@ -196,9 +196,9 @@ void main() {
 
     test('Multiple HTTP operations work without logging', () async {
       // Requirement 4.1, 4.2, 4.3, 4.4, 4.5
-      final repository = InMemoryRepository<TestProduct>();
+      final repository = InMemoryRepository<TestProduct, UuidValue>();
       final serializer = TestProductSerializer();
-      final resource = CrudResource<TestProduct, dynamic>(
+      final resource = CrudResource<TestProduct, UuidValue, dynamic>(
         path: 'products',
         repository: repository,
         serializer: serializer,
@@ -225,9 +225,9 @@ void main() {
       // Requirement 4.1, 4.2, 4.3
       Logger.root.level = Level.OFF;
 
-      final repository = InMemoryRepository<TestProduct>();
+      final repository = InMemoryRepository<TestProduct, UuidValue>();
       final serializer = TestProductSerializer();
-      final resource = CrudResource<TestProduct, dynamic>(
+      final resource = CrudResource<TestProduct, UuidValue, dynamic>(
         path: 'products',
         repository: repository,
         serializer: serializer,
@@ -252,9 +252,9 @@ void main() {
       Logger.root.level = Level.ALL;
       Logger.root.clearListeners();
 
-      final repository = InMemoryRepository<TestProduct>();
+      final repository = InMemoryRepository<TestProduct, UuidValue>();
       final serializer = TestProductSerializer();
-      final resource = CrudResource<TestProduct, dynamic>(
+      final resource = CrudResource<TestProduct, UuidValue, dynamic>(
         path: 'products',
         repository: repository,
         serializer: serializer,

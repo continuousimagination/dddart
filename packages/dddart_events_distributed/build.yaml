@@ -1,14 +1,15 @@
 targets:
   $default:
     builders:
-      # Runtime tests have no generated parts; generator tests supply source
-      # fixtures directly to build_test. Do not resolve test-library metadata
-      # merely to discover that it has no serialization inputs.
+      # The identity fixture owns one combined part. Other tests provide source
+      # fixtures to build_test. Only example/lib is an input: never scan nested
+      # .dart_tool/cache files. One validation owner runs package/example builds
+      # sequentially against the example combined part.
       dddart_json:json_serializable:
-        generate_for: [lib/**, example/**]
+        generate_for: [lib/**, example/lib/**, test/identity_models.dart]
       dddart_events_distributed:event_registry:
         enabled: true
-        generate_for: [lib/**, example/**]
+        generate_for: [lib/**, test/identity_models.dart]
 
 builders:
   event_registry:

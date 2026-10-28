@@ -82,7 +82,7 @@ void main() {
               try {
                 await helper!.connection.execute(
                   'INSERT INTO simple_product (id, name, price, createdAt, updatedAt) '
-                  'VALUES (UUID_TO_BIN(?), ?, ?, NOW(), NOW())',
+                  'VALUES (?, ?, ?, NOW(), NOW())',
                   [product.id.toString(), 'Duplicate', 99.99],
                 );
                 fail('Should have thrown exception for duplicate key');
@@ -357,7 +357,7 @@ void main() {
           try {
             await helper!.connection.execute(
               'INSERT INTO simple_product (id, name, price, createdAt, updatedAt) '
-              'VALUES (UUID_TO_BIN(?), ?, ?, NOW(), NOW())',
+              'VALUES (?, ?, ?, NOW(), NOW())',
               [product.id.toString(), 'Duplicate', 99.99],
             );
             fail('Should have thrown exception');
@@ -426,7 +426,7 @@ void main() {
           try {
             await helper!.connection.execute(
               'INSERT INTO simple_product (id, name, price, createdAt, updatedAt) '
-              'VALUES (UUID_TO_BIN(?), ?, ?, NOW(), NOW())',
+              'VALUES (?, ?, ?, NOW(), NOW())',
               [product.id.toString(), 'Duplicate', 99.99],
             );
             fail('Should have thrown exception');

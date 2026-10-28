@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
+import 'package:dddart_repository_sql/src/schema/identity_type.dart';
 
 /// Analyzes aggregate root classes to discover all referenced types.
 ///
@@ -67,8 +68,8 @@ class RelationshipAnalyzer {
       visiting.add(element);
 
       // Visit all referenced types first (depth-first)
-      for (final field in element.fields) {
-        final fieldType = field.type;
+      for (final field in IdentityTypeAnalysis.instanceFields(element)) {
+        final fieldType = IdentityTypeAnalysis.fieldType(element, field);
         final referencedClass = _getReferencedClass(fieldType);
 
         if (referencedClass != null && !_isPrimitiveType(referencedClass)) {
@@ -141,7 +142,8 @@ class RelationshipAnalyzer {
   ///
   /// Returns `true` if [element] extends `Value`.
   bool isValueObject(ClassElement element) {
-    return _extendsClass(element, 'Value');
+    return !IdentityTypeAnalysis.isIdentity(element.thisType) &&
+        _extendsClass(element, 'Value');
   }
 
   /// Checks if a type is an entity (has identity).
@@ -157,7 +159,7 @@ class RelationshipAnalyzer {
   ///
   /// Example:
   /// ```dart
-  /// class OrderItem extends Entity {
+  /// class OrderItem extends UuidEntity {
   ///   final UuidValue productId;
   ///   final int quantity;
   /// }
@@ -183,7 +185,7 @@ class RelationshipAnalyzer {
   ///
   /// Example:
   /// ```dart
-  /// class Order extends AggregateRoot {
+  /// class Order extends UuidAggregateRoot {
   ///   final List<OrderItem> items; // Entities within aggregate
   ///   final UuidValue customerId;  // Reference to another aggregate
   /// }
@@ -260,6 +262,7 @@ class RelationshipAnalyzer {
   ///
   /// Primitive types don't need their own tables.
   bool _isPrimitiveType(ClassElement element) {
+    if (IdentityTypeAnalysis.isIdentity(element.thisType)) return true;
     final name = element.name;
     return name == 'String' ||
         name == 'int' ||

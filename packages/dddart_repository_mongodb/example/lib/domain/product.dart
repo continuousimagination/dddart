@@ -13,7 +13,7 @@ part 'product.g.dart';
 /// Example Product aggregate for additional examples.
 @Serializable()
 @GenerateMongoRepository(collectionName: 'products')
-class Product extends AggregateRoot {
+class Product extends UuidAggregateRoot {
   /// Creates a new Product.
   Product({
     required this.name,

@@ -1,9 +1,10 @@
 import 'dart:convert';
 
+import 'package:dddart/dddart.dart';
 import 'package:dddart_events_distributed/src/event_bus_server.dart';
 import 'package:dddart_events_distributed/src/event_repository.dart';
 import 'package:dddart_events_distributed/src/stored_event.dart';
-import 'package:logging/logging.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:shelf/shelf.dart';
 
 /// HTTP endpoints for event distribution.
@@ -11,7 +12,7 @@ import 'package:shelf/shelf.dart';
 /// Provides GET and POST endpoints for retrieving and submitting events
 /// via HTTP. Supports optional authentication and authorization filtering
 /// to control access and event visibility.
-class EventHttpEndpoints<T extends StoredEvent> {
+class EventHttpEndpoints<T extends StoredEvent<Identity>> {
   /// Creates HTTP endpoints for event distribution.
   ///
   /// [eventRepository] is used to query and store events.
@@ -24,10 +25,18 @@ class EventHttpEndpoints<T extends StoredEvent> {
     required this.eventRepository,
     this.authHandler,
     this.authorizationFilter,
-  });
+    IdentityCodecRegistry? identityCodecs,
+    this.storedEventFromJson,
+  }) : identityCodecs = identityCodecs ?? IdentityCodecRegistry();
 
   /// Repository for querying and storing events.
   final EventRepository<T> eventRepository;
+
+  /// Explicit codecs for tagged aggregate references in incoming envelopes.
+  final IdentityCodecRegistry identityCodecs;
+
+  /// Optional typed factory for a custom stored-record subtype.
+  final T Function(Map<String, dynamic>)? storedEventFromJson;
 
   /// Optional authentication handler.
   ///
@@ -190,7 +199,17 @@ class EventHttpEndpoints<T extends StoredEvent> {
       // Deserialize StoredEvent
       T stored;
       try {
-        stored = StoredEvent.fromJson(eventJson) as T;
+        final parsed = storedEventFromJson?.call(eventJson) ??
+            StoredEvent<Identity>.fromJson(
+              eventJson,
+              identityCodecs: identityCodecs,
+            );
+        if (parsed is! T) {
+          throw const DeserializationException(
+            'Configure a typed stored event factory',
+          );
+        }
+        stored = parsed;
       } catch (e) {
         _logger.warning('POST /events: deserialization failed', e);
         return Response(

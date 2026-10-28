@@ -127,14 +127,14 @@ void main() {
       // Create test server with multiple resources
       testServer = await createMultiResourceTestServer(
         resources: {
-          '/users': CrudResource<TestUser, void>(
+          '/users': CrudResource<TestUser, UuidValue, void>(
             path: '/users',
-            repository: InMemoryRepository<TestUser>(),
+            repository: InMemoryRepository<TestUser, UuidValue>(),
             serializer: TestUserJsonSerializer(),
           ),
-          '/products': CrudResource<TestProduct, void>(
+          '/products': CrudResource<TestProduct, UuidValue, void>(
             path: '/products',
-            repository: InMemoryRepository<TestProduct>(),
+            repository: InMemoryRepository<TestProduct, UuidValue>(),
             serializer: TestProductJsonSerializer(),
           ),
         },
@@ -346,14 +346,14 @@ void main() {
       // Arrange
       final testServer = await createMultiResourceTestServer(
         resources: {
-          '/users': CrudResource<TestUser, void>(
+          '/users': CrudResource<TestUser, UuidValue, void>(
             path: '/users',
-            repository: InMemoryRepository<TestUser>(),
+            repository: InMemoryRepository<TestUser, UuidValue>(),
             serializer: TestUserJsonSerializer(),
           ),
-          '/accounts': CrudResource<TestAccount, void>(
+          '/accounts': CrudResource<TestAccount, UuidValue, void>(
             path: '/accounts',
-            repository: InMemoryRepository<TestAccount>(),
+            repository: InMemoryRepository<TestAccount, UuidValue>(),
             serializer: TestAccountJsonSerializer(),
           ),
         },

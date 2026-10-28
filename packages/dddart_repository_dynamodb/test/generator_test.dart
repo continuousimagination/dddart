@@ -108,7 +108,7 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';
 
 @GenerateDynamoRepository()
-class MissingSerializable extends AggregateRoot {
+class MissingSerializable extends UuidAggregateRoot {
   MissingSerializable() : super();
 }
 ''',
@@ -152,7 +152,7 @@ import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';
 
 @Serializable()
 @GenerateDynamoRepository(tableName: 'custom_products')
-class Product extends AggregateRoot {
+class Product extends UuidAggregateRoot {
   Product() : super();
 }
 ''',
@@ -189,7 +189,7 @@ import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';
 
 @Serializable()
 @GenerateDynamoRepository()
-class OrderItem extends AggregateRoot {
+class OrderItem extends UuidAggregateRoot {
   OrderItem() : super();
 }
 ''',
@@ -227,7 +227,7 @@ import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';
 
 @Serializable()
 @GenerateDynamoRepository(tableName: 'users')
-class User extends AggregateRoot {
+class User extends UuidAggregateRoot {
   User() : super();
 }
 ''',
@@ -251,10 +251,15 @@ class User extends AggregateRoot {
       );
 
       expect(output, contains('class UserDynamoRepository'));
-      expect(output, contains('implements Repository<User>'));
+      expect(output, contains('implements Repository<User, UuidValue>'));
       expect(output, contains('final DynamoConnection _connection'));
       expect(output, contains("tableName => 'users'"));
-      expect(output, contains('final _serializer = UserJsonSerializer()'));
+      expect(
+        output,
+        contains(
+          'late final _serializer = UserJsonSerializer.withIdentityCodecs(_identityCodecs)',
+        ),
+      );
 
       // Verify CRUD methods are generated
       expect(output, contains('Future<User> getById(UuidValue id)'));
@@ -285,11 +290,11 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';
 
-abstract interface class UserRepository implements Repository<User> {}
+abstract interface class UserRepository implements Repository<User, UuidValue> {}
 
 @Serializable()
 @GenerateDynamoRepository(tableName: 'users', implements: UserRepository)
-class User extends AggregateRoot {
+class User extends UuidAggregateRoot {
   User() : super();
 }
 ''',
@@ -330,13 +335,13 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';
 
-abstract interface class UserRepository implements Repository<User> {
+abstract interface class UserRepository implements Repository<User, UuidValue> {
   Future<User?> findByEmail(String email);
 }
 
 @Serializable()
 @GenerateDynamoRepository(tableName: 'users', implements: UserRepository)
-class User extends AggregateRoot {
+class User extends UuidAggregateRoot {
   User() : super();
 }
 ''',
@@ -395,7 +400,7 @@ import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';
 
 @Serializable()
 @GenerateDynamoRepository(tableName: 'orders')
-class Order extends AggregateRoot {
+class Order extends UuidAggregateRoot {
   Order() : super();
 }
 ''',
@@ -440,7 +445,7 @@ import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';
 
 @Serializable()
 @GenerateDynamoRepository(tableName: 'customers')
-class Customer extends AggregateRoot {
+class Customer extends UuidAggregateRoot {
   Customer() : super();
 }
 ''',
@@ -485,7 +490,7 @@ import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';
 
 @Serializable()
 @GenerateDynamoRepository(tableName: 'inventory')
-class Inventory extends AggregateRoot {
+class Inventory extends UuidAggregateRoot {
   Inventory() : super();
 }
 ''',
@@ -533,7 +538,7 @@ import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';
 
 @Serializable()
 @GenerateDynamoRepository()
-class TestAggregate extends AggregateRoot {
+class TestAggregate extends UuidAggregateRoot {
   TestAggregate() : super();
 }
 ''',
@@ -573,7 +578,7 @@ import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';
 
 @Serializable()
 @GenerateDynamoRepository()
-class BillingTest extends AggregateRoot {
+class BillingTest extends UuidAggregateRoot {
   BillingTest() : super();
 }
 ''',

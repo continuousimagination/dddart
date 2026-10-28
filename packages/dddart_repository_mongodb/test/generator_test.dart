@@ -65,7 +65,7 @@ import 'package:dddart_repository_mongodb/dddart_repository_mongodb.dart';
 
 @Serializable()
 @GenerateMongoRepository(collectionName: 'test_products')
-class Product extends AggregateRoot {
+class Product extends UuidAggregateRoot {
   Product() : super();
 }
 ''',
@@ -100,7 +100,10 @@ class Product extends AggregateRoot {
         contains('/// Generated MongoDB repository'),
       ); // Documentation
       expect(output, contains('class ProductMongoRepository')); // Class name
-      expect(output, contains('implements Repository<Product>')); // Interface
+      expect(
+        output,
+        contains('implements Repository<Product, UuidValue>'),
+      ); // Interface
       expect(output, contains('final Db _database')); // Database field
       expect(output, contains('final _serializer')); // Serializer field
       expect(
@@ -119,11 +122,11 @@ class Product extends AggregateRoot {
       ); // deleteById method
       expect(
         output,
-        contains("doc['id'] = doc['_id']"),
-      ); // ID mapping in getById
-      expect(output, contains("doc.remove('_id')")); // ID cleanup in getById
-      expect(output, contains("doc['_id'] = doc['id']")); // ID mapping in save
-      expect(output, contains("doc.remove('id')")); // ID cleanup in save
+        contains('final aggregate = fromDocument(doc)'),
+      );
+      expect(output, contains("..remove('_id')"));
+      expect(output, contains("doc['_id'] = key"));
+      expect(output, isNot(contains("doc.remove('id')")));
       expect(
         output,
         contains(

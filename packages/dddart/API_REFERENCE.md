@@ -11,6 +11,7 @@ Complete API reference for the DDDart domain events system.
 - [InMemoryRepository](#inmemoryrepository)
 - [RepositoryException](#repositoryexception)
 - [Entity](#entity)
+- [Identity](IDENTITY_GUIDE.md)
 - [Value](#value)
 - [UuidValue](#uuidvalue)
 
@@ -23,10 +24,10 @@ Base class for all domain events in the DDDart framework.
 ### Class Definition
 
 ```dart
-abstract class DomainEvent {
+abstract class DomainEvent<I extends Identity> {
   final UuidValue eventId;
   final DateTime occurredAt;
-  final UuidValue aggregateId;
+  final I aggregateId;
   final Map<String, dynamic> context;
   
   DomainEvent({
@@ -51,7 +52,7 @@ abstract class DomainEvent {
 - **Read-only:** Yes
 
 #### `aggregateId`
-- **Type:** `UuidValue`
+- **Type:** `I extends Identity`
 - **Description:** Identifier of the aggregate that raised this event. Required.
 - **Read-only:** Yes
 
@@ -72,7 +73,7 @@ DomainEvent({
 ```
 
 **Parameters:**
-- `aggregateId` (required): UuidValue ID of the aggregate that raised the event
+- `aggregateId` (required): The concrete identity of the aggregate that raised the event
 - `eventId` (optional): Custom event ID as UuidValue. Auto-generated if not provided.
 - `occurredAt` (optional): Custom timestamp. Defaults to `DateTime.now()`.
 - `context` (optional): Additional metadata. Defaults to empty map.
@@ -116,7 +117,7 @@ int get hashCode
 
 ```dart
 // Define a custom domain event
-class UserRegistered extends DomainEvent {
+class UserRegistered extends DomainEvent<UuidValue> {
   final String email;
   final String fullName;
   
@@ -145,7 +146,7 @@ print(event.email);          // 'john@example.com'
 ### With Context
 
 ```dart
-class OrderPlaced extends DomainEvent {
+class OrderPlaced extends DomainEvent<UuidValue> {
   final String customerId;
   final double totalAmount;
   
@@ -182,15 +183,15 @@ Base class for aggregate roots with domain event support.
 ### Class Definition
 
 ```dart
-abstract class AggregateRoot extends Entity {
+abstract class AggregateRoot<I extends Identity> extends Entity<I> {
   AggregateRoot({
-    UuidValue? id,
+    required I id,
     DateTime? createdAt,
     DateTime? updatedAt,
   });
   
-  void raiseEvent(DomainEvent event);
-  List<DomainEvent> getUncommittedEvents();
+  void raiseEvent(DomainEvent<I> event);
+  List<DomainEvent<I>> getUncommittedEvents();
   void markEventsAsCommitted();
 }
 ```
@@ -203,14 +204,14 @@ Extends: [`Entity`](#entity)
 
 ```dart
 AggregateRoot({
-  UuidValue? id,
+  required I id,
   DateTime? createdAt,
   DateTime? updatedAt,
 })
 ```
 
 **Parameters:**
-- `id` (optional): Unique identifier. Auto-generated if not provided.
+- `id` (required): The aggregate's concrete identity. Use `UuidAggregateRoot` for optional UUID generation.
 - `createdAt` (optional): Creation timestamp. Defaults to current time.
 - `updatedAt` (optional): Last update timestamp. Defaults to current time.
 
@@ -220,7 +221,7 @@ AggregateRoot({
 Raises a domain event and adds it to the uncommitted events list.
 
 ```dart
-void raiseEvent(DomainEvent event)
+void raiseEvent(DomainEvent<I> event)
 ```
 
 **Parameters:**
@@ -233,7 +234,7 @@ void raiseEvent(DomainEvent event)
 
 **Example:**
 ```dart
-class Order extends AggregateRoot {
+class Order extends UuidAggregateRoot {
   void ship(String trackingNumber) {
     // Update state
     status = OrderStatus.shipped;
@@ -251,7 +252,7 @@ class Order extends AggregateRoot {
 Returns an unmodifiable list of uncommitted events.
 
 ```dart
-List<DomainEvent> getUncommittedEvents()
+List<DomainEvent<I>> getUncommittedEvents()
 ```
 
 **Returns:** Unmodifiable list of domain events that have been raised but not yet committed.
@@ -300,7 +301,7 @@ assert(order.getUncommittedEvents().isEmpty);
 ### Usage Example
 
 ```dart
-class Order extends AggregateRoot {
+class Order extends UuidAggregateRoot {
   final String customerId;
   final List<OrderItem> items;
   OrderStatus status;
@@ -375,8 +376,8 @@ Local event bus for publishing and subscribing to domain events.
 class EventBus {
   EventBus();
   
-  void publish(DomainEvent event);
-  Stream<T> on<T extends DomainEvent>();
+  void publish(DomainEvent<Identity> event);
+  Stream<T> on<T extends DomainEvent<Identity>>();
   Future<void> close();
   bool get isClosed;
 }
@@ -396,7 +397,7 @@ Creates a new EventBus instance with a broadcast stream controller.
 Publishes a domain event to all subscribers.
 
 ```dart
-void publish(DomainEvent event)
+void publish(DomainEvent<Identity> event)
 ```
 
 **Parameters:**
@@ -427,7 +428,7 @@ eventBus.publish(event);
 Subscribes to events of a specific type.
 
 ```dart
-Stream<T> on<T extends DomainEvent>()
+Stream<T> on<T extends DomainEvent<Identity>>()
 ```
 
 **Type Parameters:**
@@ -607,16 +608,17 @@ Base interface for repositories that manage aggregate roots.
 ### Interface Definition
 
 ```dart
-abstract interface class Repository<T extends AggregateRoot> {
-  Future<T> getById(UuidValue id);
+abstract interface class Repository<T extends AggregateRoot<I>, I extends Identity> {
+  Future<T> getById(I id);
   Future<void> save(T aggregate);
-  Future<void> deleteById(UuidValue id);
+  Future<void> deleteById(I id);
 }
 ```
 
 ### Type Parameters
 
-- `T`: The aggregate root type. Must extend `AggregateRoot`.
+- `T`: The aggregate root type. Must extend `AggregateRoot<I>`.
+- `I`: The concrete identity accepted by lookup/deletion and exposed by `T.id`.
 
 ### Methods
 
@@ -624,7 +626,7 @@ abstract interface class Repository<T extends AggregateRoot> {
 Retrieves an aggregate root by its ID.
 
 ```dart
-Future<T> getById(UuidValue id)
+Future<T> getById(I id)
 ```
 
 **Parameters:**
@@ -639,7 +641,7 @@ Future<T> getById(UuidValue id)
 **Description:**
 - Asynchronous operation that retrieves an aggregate from storage
 - Throws an exception if the aggregate doesn't exist (no null returns)
-- Rationale: If you have a UUID, you expect it to exist
+- Returns the aggregate or throws `notFound`; externally assigned identities do not change this contract
 
 **Example:**
 ```dart
@@ -693,7 +695,7 @@ try {
 Deletes an aggregate root by its ID.
 
 ```dart
-Future<void> deleteById(UuidValue id)
+Future<void> deleteById(I id)
 ```
 
 **Parameters:**
@@ -708,7 +710,7 @@ Future<void> deleteById(UuidValue id)
 **Description:**
 - Removes the aggregate from storage
 - Throws an exception if the aggregate doesn't exist
-- Consistent with `getById` behavior (if you have a UUID, it should exist)
+- Consistent with `getById`: a missing identity produces `notFound`
 
 **Example:**
 ```dart
@@ -734,7 +736,7 @@ try {
 import 'package:dddart/dddart.dart';
 
 // Define your aggregate
-class User extends AggregateRoot {
+class User extends UuidAggregateRoot {
   final String name;
   final String email;
   
@@ -747,7 +749,7 @@ class User extends AggregateRoot {
 
 void main() async {
   // Create repository
-  final repository = InMemoryRepository<User>();
+  final repository = InMemoryRepository<User, UuidValue>();
   
   // Create and save
   final user = User(name: 'John Doe', email: 'john@example.com');
@@ -774,7 +776,7 @@ void main() async {
 
 ```dart
 // Define domain-specific repository interface
-abstract interface class UserRepository implements Repository<User> {
+abstract interface class UserRepository implements Repository<User, UuidValue> {
   Future<User?> getByEmail(String email);
   Future<List<User>> getByFirstName(String firstName);
   Future<List<User>> getActiveUsers();
@@ -908,7 +910,7 @@ Future<void> updateUser(UuidValue userId, String newName) async {
 #### Integration with Domain Events
 
 ```dart
-class Order extends AggregateRoot {
+class Order extends UuidAggregateRoot {
   final String customerId;
   final List<OrderItem> items;
   OrderStatus status;
@@ -950,7 +952,7 @@ class Order extends AggregateRoot {
 // Usage with repository and event bus
 Future<void> placeOrder(String customerId, List<OrderItem> items) async {
   final eventBus = EventBus();
-  final orderRepository = InMemoryRepository<Order>();
+  final orderRepository = InMemoryRepository<Order, UuidValue>();
   
   // Create order (raises OrderPlaced event)
   final order = Order.place(
@@ -982,7 +984,7 @@ void main() {
     late UserService service;
     
     setUp(() {
-      repository = InMemoryRepository<User>();
+      repository = InMemoryRepository<User, UuidValue>();
       service = UserService(repository);
     });
     
@@ -1020,17 +1022,17 @@ In-memory implementation of the Repository interface for testing purposes.
 ### Class Definition
 
 ```dart
-class InMemoryRepository<T extends AggregateRoot> implements Repository<T> {
+class InMemoryRepository<T extends AggregateRoot<I>, I extends Identity> implements Repository<T, I> {
   InMemoryRepository();
   
   @override
-  Future<T> getById(UuidValue id);
+  Future<T> getById(I id);
   
   @override
   Future<void> save(T aggregate);
   
   @override
-  Future<void> deleteById(UuidValue id);
+  Future<void> deleteById(I id);
   
   void clear();
   Future<List<T>> getAll();
@@ -1040,7 +1042,8 @@ class InMemoryRepository<T extends AggregateRoot> implements Repository<T> {
 
 ### Type Parameters
 
-- `T`: The aggregate root type. Must extend `AggregateRoot`.
+- `T`: The aggregate root type. Must extend `AggregateRoot<I>`.
+- `I`: The aggregate's concrete identity type; this fake preserves its equality/hash semantics.
 
 ### Constructor
 
@@ -1056,7 +1059,7 @@ Creates a new in-memory repository with empty storage.
 Retrieves an aggregate from memory by its ID.
 
 ```dart
-Future<T> getById(UuidValue id)
+Future<T> getById(I id)
 ```
 
 **Implementation Details:**
@@ -1080,7 +1083,7 @@ Future<void> save(T aggregate)
 Removes an aggregate from memory by its ID.
 
 ```dart
-Future<void> deleteById(UuidValue id)
+Future<void> deleteById(I id)
 ```
 
 **Implementation Details:**
@@ -1102,7 +1105,7 @@ void clear()
 
 **Example:**
 ```dart
-final repository = InMemoryRepository<User>();
+final repository = InMemoryRepository<User, UuidValue>();
 
 // Add some users
 await repository.save(user1);
@@ -1132,7 +1135,7 @@ Future<List<T>> getAll()
 
 **Example:**
 ```dart
-final repository = InMemoryRepository<User>();
+final repository = InMemoryRepository<User, UuidValue>();
 
 await repository.save(user1);
 await repository.save(user2);
@@ -1158,7 +1161,7 @@ Like `getAll()`, this is a concrete testing and inspection convenience on
 ```dart
 void main() {
   test('repository stores and retrieves aggregates', () async {
-    final repository = InMemoryRepository<User>();
+    final repository = InMemoryRepository<User, UuidValue>();
     
     final user = User(name: 'John Doe', email: 'john@example.com');
     await repository.save(user);
@@ -1169,7 +1172,7 @@ void main() {
   });
   
   test('repository throws when aggregate not found', () async {
-    final repository = InMemoryRepository<User>();
+    final repository = InMemoryRepository<User, UuidValue>();
     final nonExistentId = UuidValue.generate();
     
     expect(
@@ -1188,12 +1191,12 @@ void main() {
 ```dart
 void main() {
   group('UserService', () {
-    late InMemoryRepository<User> repository;
+    late InMemoryRepository<User, UuidValue> repository;
     late UserService service;
     
     setUp(() {
       // Fresh repository for each test
-      repository = InMemoryRepository<User>();
+      repository = InMemoryRepository<User, UuidValue>();
       service = UserService(repository);
     });
     
@@ -1223,8 +1226,8 @@ void main() {
 ```dart
 void main() {
   test('different repositories store different types', () async {
-    final userRepo = InMemoryRepository<User>();
-    final orderRepo = InMemoryRepository<Order>();
+    final userRepo = InMemoryRepository<User, UuidValue>();
+    final orderRepo = InMemoryRepository<Order, UuidValue>();
     
     final user = User(name: 'John', email: 'john@example.com');
     final order = Order.place(customerId: 'customer-1', items: []);
@@ -1501,13 +1504,13 @@ Base class for domain entities with identity and lifecycle management.
 ### Class Definition
 
 ```dart
-abstract class Entity {
-  final UuidValue id;
+abstract class Entity<I extends Identity> {
+  final I id;
   final DateTime createdAt;
-  final DateTime updatedAt;
+  DateTime updatedAt;
   
   Entity({
-    UuidValue? id,
+    required I id,
     DateTime? createdAt,
     DateTime? updatedAt,
   });
@@ -1517,8 +1520,8 @@ abstract class Entity {
 ### Properties
 
 #### `id`
-- **Type:** `UuidValue`
-- **Description:** Unique identifier for the entity. Auto-generated if not provided.
+- **Type:** `I extends Identity`
+- **Description:** Required native identity. Use `UuidEntity` for optional UUID generation.
 - **Read-only:** Yes
 
 #### `createdAt`
@@ -1529,13 +1532,13 @@ abstract class Entity {
 #### `updatedAt`
 - **Type:** `DateTime`
 - **Description:** Timestamp when the entity was last updated. Defaults to current time.
-- **Read-only:** Yes
+- **Read-only:** No; `touch()` updates it to the current time.
 
 ### Constructor
 
 ```dart
 Entity({
-  UuidValue? id,
+  required I id,
   DateTime? createdAt,
   DateTime? updatedAt,
 })
@@ -1560,7 +1563,7 @@ int get hashCode
 ### Usage Example
 
 ```dart
-class User extends Entity {
+class User extends UuidEntity {
   final String name;
   final String email;
   
@@ -1644,10 +1647,11 @@ Value object wrapper for UUID strings.
 ### Class Definition
 
 ```dart
-class UuidValue extends Value {
+class UuidValue extends Identity {
   final String uuid;
   
-  UuidValue([String? uuid]);
+  factory UuidValue.generate();
+  factory UuidValue.fromString(String uuid);
   
   @override
   List<Object?> get props => [uuid];
@@ -1664,26 +1668,28 @@ class UuidValue extends Value {
 ### Constructor
 
 ```dart
-UuidValue([String? uuid])
+UuidValue.generate()
+UuidValue.fromString(String uuid)
 ```
 
 **Parameters:**
-- `uuid` (optional): Custom UUID string. Auto-generated using UUID v4 if not provided.
+- `generate` creates a random UUID v4.
+- `fromString` validates an existing UUID string and throws `ArgumentError` for invalid input.
 
 ### Usage Example
 
 ```dart
 // Auto-generated UUID
-final id1 = UuidValue();
+final id1 = UuidValue.generate();
 print(id1.uuid);  // e.g., '123e4567-e89b-12d3-a456-426614174000'
 
 // Custom UUID
-final id2 = UuidValue('custom-id-123');
-print(id2.uuid);  // 'custom-id-123'
+final id2 = UuidValue.fromString('123e4567-e89b-12d3-a456-426614174000');
+print(id2.uuid);
 
 // Equality
-final id3 = UuidValue('same-id');
-final id4 = UuidValue('same-id');
+final id3 = UuidValue.fromString(id1.uuid);
+final id4 = UuidValue.fromString(id1.uuid);
 print(id3 == id4);  // true
 ```
 
@@ -1697,7 +1703,7 @@ Here's a complete example using all the main APIs:
 import 'package:dddart/dddart.dart';
 
 // 1. Define domain event
-class OrderPlaced extends DomainEvent {
+class OrderPlaced extends DomainEvent<UuidValue> {
   final String customerId;
   final double totalAmount;
   
@@ -1709,7 +1715,7 @@ class OrderPlaced extends DomainEvent {
 }
 
 // 2. Define aggregate root
-class Order extends AggregateRoot {
+class Order extends UuidAggregateRoot {
   final String customerId;
   final List<String> items;
   

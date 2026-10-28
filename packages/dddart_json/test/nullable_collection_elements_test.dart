@@ -20,7 +20,7 @@ class CollectionValue extends Value {
 }
 
 @Serializable()
-class NullableElementAggregate extends AggregateRoot {
+class NullableElementAggregate extends UuidAggregateRoot {
   NullableElementAggregate({
     required this.primitiveList,
     required this.dateSet,

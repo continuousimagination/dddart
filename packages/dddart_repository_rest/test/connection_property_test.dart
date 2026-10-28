@@ -59,14 +59,14 @@ void main() {
       // Create test server with multiple resources
       final multiServer = await createMultiResourceTestServer(
         resources: {
-          '/users': CrudResource<TestUser, void>(
+          '/users': CrudResource<TestUser, UuidValue, void>(
             path: '/users',
-            repository: InMemoryRepository<TestUser>(),
+            repository: InMemoryRepository<TestUser, UuidValue>(),
             serializer: TestUserJsonSerializer(),
           ),
-          '/products': CrudResource<TestProduct, void>(
+          '/products': CrudResource<TestProduct, UuidValue, void>(
             path: '/products',
-            repository: InMemoryRepository<TestProduct>(),
+            repository: InMemoryRepository<TestProduct, UuidValue>(),
             serializer: TestProductJsonSerializer(),
           ),
         },

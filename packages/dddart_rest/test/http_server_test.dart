@@ -11,7 +11,7 @@ import 'package:test/test.dart';
 import 'json_serializer_test_support.dart';
 
 // Test aggregate root
-class TestUser extends AggregateRoot {
+class TestUser extends UuidAggregateRoot {
   TestUser({
     required this.name,
     required this.email,
@@ -51,7 +51,7 @@ class TestUserSerializer extends TestJsonSerializer<TestUser> {
 }
 
 // Test product aggregate for multi-resource testing
-class TestProduct extends AggregateRoot {
+class TestProduct extends UuidAggregateRoot {
   TestProduct({
     required this.name,
     required this.price,
@@ -90,14 +90,15 @@ class TestProductSerializer extends TestJsonSerializer<TestProduct> {
   }
 }
 
-Future<QueryResult<T>> inMemoryCollectionHandler<T extends AggregateRoot>(
-  Repository<T> repository,
+Future<QueryResult<T>>
+    inMemoryCollectionHandler<T extends AggregateRoot<UuidValue>>(
+  Repository<T, UuidValue> repository,
   Map<String, String> queryParams,
   int skip,
   int take,
   dynamic authResult,
 ) async {
-  final items = (repository as InMemoryRepository<T>).getAllSync();
+  final items = (repository as InMemoryRepository<T, UuidValue>).getAllSync();
   return QueryResult<T>(
     items.skip(skip).take(take).toList(),
     totalCount: items.length,
@@ -107,12 +108,12 @@ Future<QueryResult<T>> inMemoryCollectionHandler<T extends AggregateRoot>(
 void main() {
   test('buildHandler serves registered repositories without binding a port',
       () async {
-    final repository = InMemoryRepository<TestUser>();
+    final repository = InMemoryRepository<TestUser, UuidValue>();
     final user = TestUser(name: 'Synthetic', email: 'synthetic@example.test');
     await repository.save(user);
     final server = HttpServer()
       ..registerResource(
-        CrudResource<TestUser, void>(
+        CrudResource<TestUser, UuidValue, void>(
           path: '/users',
           repository: repository,
           serializer: TestUserSerializer(),
@@ -128,9 +129,9 @@ void main() {
     test('registerResource() adds resource to internal list', () async {
       // Arrange
       final server = HttpServer(port: 8081);
-      final repository = InMemoryRepository<TestUser>();
+      final repository = InMemoryRepository<TestUser, UuidValue>();
       final serializer = TestUserSerializer();
-      final resource = CrudResource<TestUser, dynamic>(
+      final resource = CrudResource<TestUser, UuidValue, dynamic>(
         path: '/users',
         repository: repository,
         serializer: serializer,
@@ -161,18 +162,18 @@ void main() {
       // Arrange
       final server = HttpServer(port: 8082);
 
-      final userRepository = InMemoryRepository<TestUser>();
+      final userRepository = InMemoryRepository<TestUser, UuidValue>();
       final userSerializer = TestUserSerializer();
-      final userResource = CrudResource<TestUser, dynamic>(
+      final userResource = CrudResource<TestUser, UuidValue, dynamic>(
         path: '/users',
         repository: userRepository,
         serializer: userSerializer,
         collectionHandler: inMemoryCollectionHandler,
       );
 
-      final productRepository = InMemoryRepository<TestProduct>();
+      final productRepository = InMemoryRepository<TestProduct, UuidValue>();
       final productSerializer = TestProductSerializer();
-      final productResource = CrudResource<TestProduct, dynamic>(
+      final productResource = CrudResource<TestProduct, UuidValue, dynamic>(
         path: '/products',
         repository: productRepository,
         serializer: productSerializer,
@@ -209,9 +210,9 @@ void main() {
         () async {
       // Arrange
       final server = HttpServer(port: 8083);
-      final repository = InMemoryRepository<TestUser>();
+      final repository = InMemoryRepository<TestUser, UuidValue>();
       final serializer = TestUserSerializer();
-      final resource = CrudResource<TestUser, dynamic>(
+      final resource = CrudResource<TestUser, UuidValue, dynamic>(
         path: '/users',
         repository: repository,
         serializer: serializer,
@@ -237,9 +238,9 @@ void main() {
     test('stop() closes shelf server cleanly', () async {
       // Arrange
       final server = HttpServer(port: 8084);
-      final repository = InMemoryRepository<TestUser>();
+      final repository = InMemoryRepository<TestUser, UuidValue>();
       final serializer = TestUserSerializer();
-      final resource = CrudResource<TestUser, dynamic>(
+      final resource = CrudResource<TestUser, UuidValue, dynamic>(
         path: '/users',
         repository: repository,
         serializer: serializer,
@@ -284,9 +285,9 @@ void main() {
     test('starting already-running server throws StateError', () async {
       // Arrange
       final server = HttpServer(port: 8085);
-      final repository = InMemoryRepository<TestUser>();
+      final repository = InMemoryRepository<TestUser, UuidValue>();
       final serializer = TestUserSerializer();
-      final resource = CrudResource<TestUser, dynamic>(
+      final resource = CrudResource<TestUser, UuidValue, dynamic>(
         path: '/users',
         repository: repository,
         serializer: serializer,
@@ -334,7 +335,7 @@ void main() {
     test('routes are created for all CRUD operations', () async {
       // Arrange
       final server = HttpServer(port: 8087);
-      final repository = InMemoryRepository<TestUser>();
+      final repository = InMemoryRepository<TestUser, UuidValue>();
       final serializer = TestUserSerializer();
 
       // Create a test user
@@ -347,7 +348,7 @@ void main() {
       );
       await repository.save(testUser);
 
-      final resource = CrudResource<TestUser, dynamic>(
+      final resource = CrudResource<TestUser, UuidValue, dynamic>(
         path: '/users',
         repository: repository,
         serializer: serializer,
@@ -415,7 +416,7 @@ void main() {
       final server = HttpServer(port: 8088);
 
       // Set up users resource
-      final userRepository = InMemoryRepository<TestUser>();
+      final userRepository = InMemoryRepository<TestUser, UuidValue>();
       final userSerializer = TestUserSerializer();
       final testUser = TestUser(
         id: UuidValue.fromString('111e4567-e89b-12d3-a456-426614174111'),
@@ -426,7 +427,7 @@ void main() {
       );
       await userRepository.save(testUser);
 
-      final userResource = CrudResource<TestUser, dynamic>(
+      final userResource = CrudResource<TestUser, UuidValue, dynamic>(
         path: '/users',
         repository: userRepository,
         serializer: userSerializer,
@@ -434,7 +435,7 @@ void main() {
       );
 
       // Set up products resource
-      final productRepository = InMemoryRepository<TestProduct>();
+      final productRepository = InMemoryRepository<TestProduct, UuidValue>();
       final productSerializer = TestProductSerializer();
       final testProduct = TestProduct(
         id: UuidValue.fromString('222e4567-e89b-12d3-a456-426614174222'),
@@ -445,7 +446,7 @@ void main() {
       );
       await productRepository.save(testProduct);
 
-      final productResource = CrudResource<TestProduct, dynamic>(
+      final productResource = CrudResource<TestProduct, UuidValue, dynamic>(
         path: '/products',
         repository: productRepository,
         serializer: productSerializer,
@@ -498,7 +499,7 @@ void main() {
     test('route patterns match expected format', () async {
       // Arrange
       final server = HttpServer(port: 8089);
-      final repository = InMemoryRepository<TestUser>();
+      final repository = InMemoryRepository<TestUser, UuidValue>();
       final serializer = TestUserSerializer();
 
       final testUser = TestUser(
@@ -510,7 +511,7 @@ void main() {
       );
       await repository.save(testUser);
 
-      final resource = CrudResource<TestUser, dynamic>(
+      final resource = CrudResource<TestUser, UuidValue, dynamic>(
         path: '/users',
         repository: repository,
         serializer: serializer,

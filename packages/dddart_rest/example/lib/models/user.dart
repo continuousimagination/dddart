@@ -34,7 +34,7 @@ import 'profile.dart';
 /// - User (root) + Address (value object) + Profile (child entity)
 /// - All changes to Profile or Address must go through User
 /// - Repository operations work on the entire aggregate, not individual parts
-class User extends AggregateRoot {
+class User extends UuidAggregateRoot {
   /// Creates a User with the specified properties
   ///
   /// The constructor enforces required fields (firstName, lastName, email, address)

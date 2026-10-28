@@ -176,8 +176,8 @@ dart run repository_swapping_example.dart
 ```
 
 **Key concepts:**
-- `Repository<T>` interface abstraction
-- `InMemoryRepository<T>` for testing
+- `Repository<T, UuidValue>` interface abstraction
+- `InMemoryRepository<T, UuidValue>` for testing
 - Implementation swapping without code changes
 - Test-driven development patterns
 

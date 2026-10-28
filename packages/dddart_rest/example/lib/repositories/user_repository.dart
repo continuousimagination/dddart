@@ -11,7 +11,7 @@ final class UserPage {
 }
 
 /// Application-specific persistence contract for user collection reads.
-abstract interface class UserRepository implements Repository<User> {
+abstract interface class UserRepository implements Repository<User, UuidValue> {
   Future<UserPage> list({required int skip, required int take});
 
   Future<UserPage> findByFirstName(
@@ -28,7 +28,7 @@ abstract interface class UserRepository implements Repository<User> {
 }
 
 /// Instance-local user repository for this runnable example.
-final class InMemoryUserRepository extends InMemoryRepository<User>
+final class InMemoryUserRepository extends InMemoryRepository<User, UuidValue>
     implements UserRepository {
   @override
   Future<UserPage> list({required int skip, required int take}) async {

@@ -40,31 +40,31 @@ Domain events are a way to explicitly capture and communicate that something sig
 ✅ **Significant business operations occur**
 ```dart
 // User registration is a significant business event
-class UserRegistered extends DomainEvent { ... }
+class UserRegistered extends DomainEvent<UuidValue> { ... }
 ```
 
 ✅ **Multiple systems need to react to the same occurrence**
 ```dart
 // Order placement triggers inventory, email, and analytics
-class OrderPlaced extends DomainEvent { ... }
+class OrderPlaced extends DomainEvent<UuidValue> { ... }
 ```
 
 ✅ **You need an audit trail**
 ```dart
 // Track all state changes for compliance
-class AccountStatusChanged extends DomainEvent { ... }
+class AccountStatusChanged extends DomainEvent<UuidValue> { ... }
 ```
 
 ✅ **Cross-aggregate coordination is needed**
 ```dart
 // Payment processed affects order and inventory aggregates
-class PaymentProcessed extends DomainEvent { ... }
+class PaymentProcessed extends DomainEvent<UuidValue> { ... }
 ```
 
 ✅ **Eventual consistency is acceptable**
 ```dart
 // Email sending can happen asynchronously
-class WelcomeEmailRequested extends DomainEvent { ... }
+class WelcomeEmailRequested extends DomainEvent<UuidValue> { ... }
 ```
 
 ### Don't Use Domain Events When:
@@ -84,7 +84,7 @@ class WelcomeEmailRequested extends DomainEvent { ... }
 For straightforward domain occurrences:
 
 ```dart
-class UserRegistered extends DomainEvent {
+class UserRegistered extends DomainEvent<UuidValue> {
   final String email;
   final String fullName;
   
@@ -101,7 +101,7 @@ class UserRegistered extends DomainEvent {
 Include comprehensive context for complex scenarios:
 
 ```dart
-class OrderPlaced extends DomainEvent {
+class OrderPlaced extends DomainEvent<UuidValue> {
   final String customerId;
   final List<OrderLineItem> items;
   final Money totalAmount;
@@ -135,7 +135,7 @@ class OrderPlaced extends DomainEvent {
 Capture state changes with before/after context:
 
 ```dart
-class OrderStatusChanged extends DomainEvent {
+class OrderStatusChanged extends DomainEvent<UuidValue> {
   final OrderStatus previousStatus;
   final OrderStatus newStatus;
   final String reason;
@@ -163,7 +163,7 @@ class OrderStatusChanged extends DomainEvent {
 For handling failures or rollbacks:
 
 ```dart
-class PaymentFailed extends DomainEvent {
+class PaymentFailed extends DomainEvent<UuidValue> {
   final String orderId;
   final String reason;
   final String errorCode;
@@ -192,7 +192,7 @@ class PaymentFailed extends DomainEvent {
 Create aggregates using factory methods that raise events:
 
 ```dart
-class Order extends AggregateRoot {
+class Order extends UuidAggregateRoot {
   final String customerId;
   final List<OrderItem> items;
   OrderStatus status;
@@ -238,7 +238,7 @@ class Order extends AggregateRoot {
 Raise events when business operations modify state:
 
 ```dart
-class Order extends AggregateRoot {
+class Order extends UuidAggregateRoot {
   OrderStatus status;
   DateTime? shippedAt;
   String? trackingNumber;
@@ -383,27 +383,27 @@ class OrderApplicationService {
 
 ✅ **Use past tense verbs**
 ```dart
-class UserRegistered extends DomainEvent { }  // Good
-class RegisterUser extends DomainEvent { }    // Bad
+class UserRegistered extends DomainEvent<UuidValue> { }  // Good
+class RegisterUser extends DomainEvent<UuidValue> { }    // Bad
 ```
 
 ✅ **Be specific and descriptive**
 ```dart
-class OrderShippedToCustomer extends DomainEvent { }  // Good
-class OrderUpdated extends DomainEvent { }            // Bad (too vague)
+class OrderShippedToCustomer extends DomainEvent<UuidValue> { }  // Good
+class OrderUpdated extends DomainEvent<UuidValue> { }            // Bad (too vague)
 ```
 
 ✅ **Include the aggregate type**
 ```dart
-class OrderPlaced extends DomainEvent { }     // Good
-class Placed extends DomainEvent { }          // Bad (unclear)
+class OrderPlaced extends DomainEvent<UuidValue> { }     // Good
+class Placed extends DomainEvent<UuidValue> { }          // Bad (unclear)
 ```
 
 ### 2. Event Content
 
 ✅ **Include all relevant data**
 ```dart
-class OrderPlaced extends DomainEvent {
+class OrderPlaced extends DomainEvent<UuidValue> {
   final String customerId;
   final List<OrderItem> items;
   final Money totalAmount;
@@ -413,14 +413,14 @@ class OrderPlaced extends DomainEvent {
 
 ❌ **Don't include just IDs**
 ```dart
-class OrderPlaced extends DomainEvent {
+class OrderPlaced extends DomainEvent<UuidValue> {
   final String orderId;  // Bad - handlers need more context
 }
 ```
 
 ✅ **Use value objects for complex data**
 ```dart
-class OrderPlaced extends DomainEvent {
+class OrderPlaced extends DomainEvent<UuidValue> {
   final Address shippingAddress;  // Good - rich type
   final Money totalAmount;        // Good - rich type
 }
@@ -431,15 +431,15 @@ class OrderPlaced extends DomainEvent {
 ✅ **One event per business occurrence**
 ```dart
 // Good - separate events for separate occurrences
-class OrderPlaced extends DomainEvent { }
-class OrderShipped extends DomainEvent { }
-class OrderDelivered extends DomainEvent { }
+class OrderPlaced extends DomainEvent<UuidValue> { }
+class OrderShipped extends DomainEvent<UuidValue> { }
+class OrderDelivered extends DomainEvent<UuidValue> { }
 ```
 
 ❌ **Don't create overly generic events**
 ```dart
 // Bad - too generic
-class OrderChanged extends DomainEvent {
+class OrderChanged extends DomainEvent<UuidValue> {
   final String changeType;  // Avoid this pattern
 }
 ```
@@ -521,7 +521,7 @@ Future<void> saveOrder(Order order) async {
 
 ```dart
 // 1. Define the event
-class UserRegistered extends DomainEvent {
+class UserRegistered extends DomainEvent<UuidValue> {
   final String email;
   final String fullName;
   final String organizationId;
@@ -535,7 +535,7 @@ class UserRegistered extends DomainEvent {
 }
 
 // 2. Create aggregate that raises event
-class User extends AggregateRoot {
+class User extends UuidAggregateRoot {
   final String email;
   final String fullName;
   
@@ -621,7 +621,7 @@ class UserApplicationService {
 
 ```dart
 // Define events for the workflow
-class OrderPlaced extends DomainEvent {
+class OrderPlaced extends DomainEvent<UuidValue> {
   final String customerId;
   final List<OrderItem> items;
   final Money totalAmount;
@@ -634,7 +634,7 @@ class OrderPlaced extends DomainEvent {
   }) : super(aggregateId: orderId);
 }
 
-class PaymentProcessed extends DomainEvent {
+class PaymentProcessed extends DomainEvent<UuidValue> {
   final String orderId;
   final Money amount;
   final String paymentMethod;
@@ -647,7 +647,7 @@ class PaymentProcessed extends DomainEvent {
   }) : super(aggregateId: paymentId);
 }
 
-class OrderShipped extends DomainEvent {
+class OrderShipped extends DomainEvent<UuidValue> {
   final String trackingNumber;
   final String carrier;
   
@@ -881,7 +881,7 @@ abstract interface class EventTransport {
   Future<void> send(DomainEvent event);
   
   /// Receive events from remote publishers
-  Stream<DomainEvent> receive();
+  Stream<DomainEvent<UuidValue>> receive();
   
   /// Subscribe to specific event types with filters
   Future<void> subscribe(EventSubscription subscription);
@@ -930,7 +930,7 @@ abstract interface class RemoteEventClient {
   Future<void> unsubscribe(Type eventType);
   
   /// Get stream of events (same API as local EventBus)
-  Stream<T> on<T extends DomainEvent>();
+  Stream<T> on<T extends DomainEvent<Identity>>();
 }
 ```
 
@@ -948,7 +948,7 @@ class WebSocketEventTransport implements EventTransport {
   }
   
   @override
-  Stream<DomainEvent> receive() {
+  Stream<DomainEvent<UuidValue>> receive() {
     return socket.stream.map((data) => deserializeEvent(data));
   }
 }

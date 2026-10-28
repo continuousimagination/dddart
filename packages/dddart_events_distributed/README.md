@@ -1,713 +1,149 @@
 # dddart_events_distributed
 
-Distributed event system for DDDart that extends the local EventBus to enable domain events to be published and subscribed across network boundaries using HTTP polling.
+Persist and distribute domain events through HTTP polling. This pre-release
+package supports typed aggregate references, explicit event/identity codecs,
+authentication and authorization filtering, retention, inclusive catch-up and
+optional forwarding of locally published events.
 
-## Features
+## Identity and wire contracts
 
-- **EventBusServer**: Server-side component with automatic event persistence and HTTP endpoints
-- **EventBusClient**: Client-side component with HTTP polling and optional event forwarding
-- **HTTP Polling**: Reliable event delivery with automatic catch-up capabilities
-- **Repository Pattern**: Use any database implementation (MongoDB, MySQL, DynamoDB, Redis, etc.)
-- **Authorization Filtering**: Control which events each client can receive based on context
-- **Automatic Serialization**: Code generation for event serialization/deserialization
-- **Bidirectional Flow**: Events can flow from server to client and client to server
-- **Event Cleanup**: Automatic deletion of old events based on retention policies
+`DomainEvent<I>` references an aggregate with its concrete identity type I. The
+event occurrence ID remains a `UuidValue`. `StoredEvent<I>` also uses that UUID
+as its record ID; its `aggregateId` is separate. Heterogeneous stores intentionally
+use `StoredEvent<Identity>`. Event repositories implement
+`Repository<T, UuidValue>` plus explicit time-range operations.
 
-## Installation
+An envelope carries a tagged aggregate reference:
 
-Add this to your package's `pubspec.yaml` file:
-
-```yaml
-dependencies:
-  dddart_events_distributed: ^0.1.0
-
-dev_dependencies:
-  build_runner: ^2.4.0
+```json
+{"type":"github.issue.node","value":"I_kwDO_native_id"}
 ```
 
-Then run:
+The stable tag selects an explicitly registered `IdentityCodec<I>`. It is never
+inferred from `runtimeType`, `toString`, a UUID guess or a synthetic UUID mapping.
+Old envelopes whose aggregateId is a bare UUID string require explicit migration
+to `{"type":"uuid","value":"the-original-uuid"}`. Keep that original UUID text
+and case. Concrete event body JSON uses its own typed serializer representation;
+the restored body must agree with the envelope's event ID, time and aggregate ID.
 
-```bash
-dart pub get
-```
+## Generate event serializers and registrations
 
-## Quick Start
-
-### 1. Define Your Domain Events
-
-Create domain events with the `@Serializable` annotation:
+Add `dddart`, `dddart_json`, `dddart_serialization`, this package and
+`build_runner` using the repository's documented Git installation approach.
+One library owns both generated outputs:
 
 ```dart
+import 'dart:convert';
 import 'package:dddart/dddart.dart';
 import 'package:dddart_json/dddart_json.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
+import 'package:dddart_events_distributed/dddart_events_distributed.dart';
 
-part 'user_events.g.dart';
+part 'issue_events.g.dart';
 
 @Serializable()
-class UserCreatedEvent extends DomainEvent {
-  final String email;
-  final String name;
-  
-  UserCreatedEvent({
+@DistributedEvent('issue.opened.v1')
+class IssueOpened extends DomainEvent<IssueId> {
+  IssueOpened({
     required super.aggregateId,
-    required this.email,
-    required this.name,
+    required this.title,
+    super.eventId,
+    super.occurredAt,
     super.context,
   });
-}
-
-@Serializable()
-class OrderPurchasedEvent extends DomainEvent {
-  final double amount;
-  final String productId;
-  
-  OrderPurchasedEvent({
-    required super.aggregateId,
-    required this.amount,
-    required this.productId,
-    super.context,
-  });
+  final String title;
 }
 ```
 
-### 2. Generate Serialization Code
+`IssueId` is the application's immutable `Identity`; its codec defines JSON and
+canonical key representations. See the core identity guide for native/scoped ID
+examples. `DomainEvent<UuidValue>` uses the stock UUID codec. Every event must
+expose the four named base metadata parameters shown above for reconstruction.
 
-Run the code generator to create serializers and the event registry:
-
-```bash
-dart run build_runner build
-```
-
-This generates:
-- `user_events.g.dart` - Serialization methods for your events
-- Event registry map for deserialization
-
-### 3. Set Up the Server
-
-Create an EventBusServer with automatic event persistence:
+Run `dart run build_runner build --delete-conflicting-outputs` from the owning
+package. `dddart_json:json_serializable` and
+`dddart_events_distributed:event_registry` combine into `issue_events.g.dart`.
+The registry builder uses generated serializer classes, not static fromJson
+methods on event classes. It returns a fresh instance:
 
 ```dart
-import 'package:dddart/dddart.dart';
-import 'package:dddart_events_distributed/dddart_events_distributed.dart';
-import 'package:shelf/shelf_io.dart' as shelf_io;
-import 'package:shelf_router/shelf_router.dart';
-
-void main() async {
-  // Create local EventBus
-  final eventBus = EventBus();
-  
-  // Create event repository (use any database implementation)
-  final repository = InMemoryEventRepository();
-  
-  // Create EventBusServer with automatic persistence
-  final server = EventBusServer<StoredEvent>(
-    localEventBus: eventBus,
-    eventRepository: repository,
-    retentionDuration: const Duration(hours: 24),
-    storedEventFactory: StoredEvent.fromDomainEvent,
-  );
-  
-  // Subscribe to events locally
-  server.on<UserCreatedEvent>().listen((event) {
-    print('User created: ${event.email}');
-  });
-  
-  // Create HTTP endpoints
-  final endpoints = EventHttpEndpoints(
-    eventRepository: repository,
-  );
-  
-  // Set up HTTP routes
-  final router = Router()
-    ..get('/events', endpoints.handleGetEvents)
-    ..post('/events', (request) => endpoints.handlePostEvent(request, server));
-  
-  // Start HTTP server
-  final httpServer = await shelf_io.serve(router.call, 'localhost', 8080);
-  print('Server listening on http://${httpServer.address.host}:${httpServer.port}');
-  
-  // Publish events - they're automatically persisted
-  server.publish(UserCreatedEvent(
-    aggregateId: UuidValue.generate(),
-    email: 'alice@example.com',
-    name: 'Alice',
-  ));
-}
+final identities = IdentityCodecRegistry()
+  ..register<IssueId>('github.issue.node', IssueIdCodec());
+final events = createGeneratedEventRegistry(identityCodecs: identities);
 ```
 
-### 4. Set Up the Client
+The identity registry is shared with every generated serializer. `@DistributedEvent`
+freezes a wire key independently of a Dart rename. Without it, the declared class
+name is the documented wire key; renaming the class then requires wire migration.
+Duplicate keys, duplicate registrations and open/erased identity types fail.
 
-Create an EventBusClient that polls for events:
+For handwritten serializers, use
+`events.registerSerializer<IssueOpened>('issue.opened.v1', serializer)`. Explicit
+typed `register<E>(key, encode: ..., decode: ...)` callbacks are also supported.
+They must preserve all metadata/context and application fields. There is no
+implicit dynamic toJson fallback. Serialization/decoding failures are explicit.
 
-```dart
-import 'package:dddart/dddart.dart';
-import 'package:dddart_events_distributed/dddart_events_distributed.dart';
-import 'user_events.dart';
-
-void main() async {
-  // Create local EventBus
-  final eventBus = EventBus();
-  
-  // Create EventBusClient with polling
-  final client = EventBusClient(
-    localEventBus: eventBus,
-    serverUrl: 'http://localhost:8080',
-    eventRegistry: generatedEventRegistry, // Generated by build_runner
-    pollingInterval: const Duration(seconds: 5),
-    autoForward: true, // Automatically forward local events to server
-  );
-  
-  // Subscribe to events received from server
-  client.on<UserCreatedEvent>().listen((event) {
-    print('Received user created: ${event.email}');
-  });
-  
-  client.on<OrderPurchasedEvent>().listen((event) {
-    print('Received order: \$${event.amount}');
-  });
-  
-  // Publish local events (auto-forwarded to server)
-  client.publish(OrderPurchasedEvent(
-    aggregateId: UuidValue.generate(),
-    amount: 99.99,
-    productId: 'product-123',
-  ));
-}
-```
-
-## Core Concepts
-
-### EventBusServer
-
-The server-side component that wraps a local EventBus and adds:
-- **Automatic Persistence**: All events published to the local EventBus are automatically persisted
-- **HTTP Endpoints**: GET and POST endpoints for event distribution
-- **Event Cleanup**: Optional retention policies to delete old events
+## Server and client
 
 ```dart
-final server = EventBusServer<StoredEvent>(
-  localEventBus: eventBus,
+final repository = InMemoryEventRepository();
+final server = EventBusServer<StoredEvent<Identity>>(
+  localEventBus: EventBus(),
   eventRepository: repository,
-  retentionDuration: const Duration(hours: 24), // Optional
-  storedEventFactory: StoredEvent.fromDomainEvent,
+  storedEventFactory: (event) => StoredEvent<Identity>.fromDomainEvent(
+    event, registry: events,
+  ),
+  retentionDuration: const Duration(days: 30),
 );
-
-// Publish events (automatically persisted)
-server.publish(myEvent);
-
-// Subscribe to events locally
-server.on<MyEvent>().listen((event) { ... });
-
-// Clean up old events
-await server.cleanup();
-
-// Close when done
-await server.close();
+final endpoints = EventHttpEndpoints<StoredEvent<Identity>>(
+  eventRepository: repository,
+  identityCodecs: identities,
+);
 ```
 
-### EventBusClient
-
-The client-side component that wraps a local EventBus and adds:
-- **HTTP Polling**: Periodically polls the server for new events
-- **Automatic Catch-up**: Requests events since last known timestamp
-- **Event Forwarding**: Optionally forwards local events to the server
+Register `endpoints.handleGetEvents` at GET `/events` and a POST handler calling
+`endpoints.handlePostEvent(request, server)` at `/events`. GET requires an ISO
+8601 `since` parameter and returns authorized envelopes. POST validates tagged
+aggregate identities before repository writes and returns 201 for valid records.
+Authentication and authorization filtering remain explicitly injected callbacks.
+The in-memory repository is an instance-local test/development fake; database
+adapters must implement the time-range contract explicitly.
 
 ```dart
 final client = EventBusClient(
-  localEventBus: eventBus,
-  serverUrl: 'http://localhost:8080',
-  eventRegistry: generatedEventRegistry,
-  pollingInterval: const Duration(seconds: 5),
-  autoForward: true, // Enable automatic forwarding
-  initialTimestamp: DateTime.now().subtract(const Duration(hours: 1)),
+  localEventBus: EventBus(),
+  serverUrl: 'https://example.test',
+  eventRegistry: events,
+  autoForward: true,
 );
-
-// Publish events (auto-forwarded if enabled)
-client.publish(myEvent);
-
-// Subscribe to events from server
-client.on<MyEvent>().listen((event) { ... });
-
-// Close when done
-await client.close();
-```
-
-### StoredEvent
-
-A wrapper class that stores serialized domain events for network distribution:
-
-```dart
-@Serializable()
-class StoredEvent extends AggregateRoot {
-  final UuidValue aggregateId;
-  final String eventType;
-  final String eventJson;
-  final String? userId;
-  final String? tenantId;
-  final String? sessionId;
-  
-  // Create from DomainEvent
-  factory StoredEvent.fromDomainEvent(DomainEvent event) { ... }
-}
-```
-
-**Authorization Fields**: StoredEvent includes common authorization fields (userId, tenantId, sessionId) extracted from the DomainEvent's context map. You can extend StoredEvent to add custom authorization fields.
-
-### EventRepository
-
-An abstract class that extends Repository with time-range queries:
-
-```dart
-abstract class EventRepository<T extends StoredEvent> implements Repository<T> {
-  Future<List<T>> findSince(DateTime timestamp);
-  Future<void> deleteOlderThan(DateTime timestamp);
-}
-```
-
-## Authorization Filtering
-
-Control which events each client can receive using authorization filters:
-
-```dart
-final endpoints = EventHttpEndpoints(
-  eventRepository: repository,
-  authorizationFilter: (event, request) {
-    // Filter by tenant ID from header
-    final tenantId = request.headers['x-tenant-id'];
-    if (tenantId == null) return true;
-    return event.tenantId == tenantId;
-  },
-);
-```
-
-**Authorization Context**: Include authorization data in event context:
-
-```dart
-server.publish(UserCreatedEvent(
-  aggregateId: userId,
-  email: 'alice@example.com',
-  name: 'Alice',
-  context: {
-    'userId': 'user-123',
-    'tenantId': 'tenant-1',
-    'sessionId': 'session-abc',
-  },
-));
-```
-
-The authorization fields are automatically extracted and stored in StoredEvent for filtering.
-
-## Repository Implementation
-
-Use any database implementation by extending StoredEvent and implementing EventRepository:
-
-### MongoDB Example
-
-```dart
-@Serializable()
-@GenerateMongoRepository()
-class StoredEventMongo extends StoredEvent {
-  StoredEventMongo({
-    required super.id,
-    required super.createdAt,
-    required super.aggregateId,
-    required super.eventType,
-    required super.eventJson,
-    super.userId,
-    super.tenantId,
-    super.sessionId,
-  });
-}
-
-class StoredEventMongoRepository extends EventRepository<StoredEventMongo> {
-  // ... generated Repository methods
-  
-  @override
-  Future<List<StoredEventMongo>> findSince(DateTime timestamp) async {
-    final results = await collection.find({
-      'createdAt': {'\$gte': timestamp.toIso8601String()}
-    }).toList();
-    return results.map((doc) => StoredEventMongo.fromJson(doc)).toList();
-  }
-  
-  @override
-  Future<void> deleteOlderThan(DateTime timestamp) async {
-    await collection.deleteMany({
-      'createdAt': {'\$lt': timestamp.toIso8601String()}
-    });
-  }
-}
-```
-
-### MySQL Example
-
-```dart
-@Serializable()
-@GenerateMysqlRepository()
-class StoredEventMysql extends StoredEvent {
-  StoredEventMysql({
-    required super.id,
-    required super.createdAt,
-    required super.aggregateId,
-    required super.eventType,
-    required super.eventJson,
-    super.userId,
-    super.tenantId,
-    super.sessionId,
-  });
-}
-
-// Repository implementation with time-range queries
-class StoredEventMysqlRepository extends EventRepository<StoredEventMysql> {
-  // ... generated Repository methods
-  
-  @override
-  Future<List<StoredEventMysql>> findSince(DateTime timestamp) async {
-    final results = await connection.query(
-      'SELECT * FROM stored_events WHERE created_at >= ? ORDER BY created_at',
-      [timestamp.toIso8601String()],
-    );
-    return results.map((row) => StoredEventMysql.fromJson(row)).toList();
-  }
-  
-  @override
-  Future<void> deleteOlderThan(DateTime timestamp) async {
-    await connection.query(
-      'DELETE FROM stored_events WHERE created_at < ?',
-      [timestamp.toIso8601String()],
-    );
-  }
-}
-```
-
-### In-Memory Example
-
-For testing or development:
-
-```dart
-class InMemoryEventRepository implements EventRepository<StoredEvent> {
-  final List<StoredEvent> _events = [];
-  
-  @override
-  Future<void> save(StoredEvent event) async {
-    _events.add(event);
-  }
-  
-  @override
-  Future<List<StoredEvent>> findSince(DateTime timestamp) async {
-    return _events
-        .where((e) => e.createdAt.isAfter(timestamp) || 
-                      e.createdAt.isAtSameMomentAs(timestamp))
-        .toList();
-  }
-  
-  @override
-  Future<void> deleteOlderThan(DateTime timestamp) async {
-    _events.removeWhere((e) => e.createdAt.isBefore(timestamp));
-  }
-  
-  // ... other Repository methods
-}
-```
-
-## Custom Authorization Fields
-
-Extend StoredEvent to add application-specific authorization fields:
-
-```dart
-@Serializable()
-@GenerateMysqlRepository()
-class MyStoredEvent extends StoredEvent {
-  final List<String>? userRoles;
-  final String? organizationId;
-  
-  MyStoredEvent({
-    required super.id,
-    required super.createdAt,
-    required super.aggregateId,
-    required super.eventType,
-    required super.eventJson,
-    super.userId,
-    super.tenantId,
-    super.sessionId,
-    this.userRoles,
-    this.organizationId,
-  });
-  
-  @override
-  List<Object?> get props => [...super.props, userRoles, organizationId];
-  
-  factory MyStoredEvent.fromDomainEvent(DomainEvent event) {
-    return MyStoredEvent(
-      id: event.eventId,
-      createdAt: event.occurredAt,
-      aggregateId: event.aggregateId,
-      eventType: event.runtimeType.toString(),
-      eventJson: jsonEncode(event.toJson()),
-      userId: event.context['userId'] as String?,
-      tenantId: event.context['tenantId'] as String?,
-      sessionId: event.context['sessionId'] as String?,
-      userRoles: (event.context['userRoles'] as List?)?.cast<String>(),
-      organizationId: event.context['organizationId'] as String?,
-    );
-  }
-}
-
-// Use in EventBusServer
-final server = EventBusServer<MyStoredEvent>(
-  localEventBus: eventBus,
-  eventRepository: myRepository,
-  storedEventFactory: MyStoredEvent.fromDomainEvent,
-);
-```
-
-## HTTP API
-
-### GET /events?since=<timestamp>
-
-Retrieve events since a specific timestamp:
-
-```bash
-curl "http://localhost:8080/events?since=2024-12-04T10:00:00.000Z"
-```
-
-Response:
-```json
-[
-  {
-    "id": "event-uuid-1",
-    "createdAt": "2024-12-04T10:00:05.000Z",
-    "aggregateId": "user-123",
-    "eventType": "UserCreatedEvent",
-    "eventJson": "{\"email\":\"user@example.com\"}",
-    "userId": "user-123",
-    "tenantId": "tenant-1",
-    "sessionId": null
-  }
-]
-```
-
-### POST /events
-
-Post a new event to the server:
-
-```bash
-curl -X POST http://localhost:8080/events \
-  -H "Content-Type: application/json" \
-  -d '{
-    "id": "event-uuid",
-    "createdAt": "2024-12-04T10:00:15.000Z",
-    "aggregateId": "user-789",
-    "eventType": "UserUpdatedEvent",
-    "eventJson": "{\"email\":\"new@example.com\"}",
-    "userId": "user-789"
-  }'
-```
-
-Response:
-```json
-{
-  "id": "event-uuid",
-  "createdAt": "2024-12-04T10:00:15.000Z"
-}
-```
-
-## Event Cleanup
-
-Configure retention policies to automatically delete old events:
-
-```dart
-final server = EventBusServer<StoredEvent>(
-  localEventBus: eventBus,
-  eventRepository: repository,
-  retentionDuration: const Duration(hours: 24),
-  storedEventFactory: StoredEvent.fromDomainEvent,
-);
-
-// Manually trigger cleanup
-await server.cleanup();
-
-// Or schedule periodic cleanup
-Timer.periodic(const Duration(hours: 1), (_) async {
-  await server.cleanup();
+client.on<IssueOpened>().listen((event) {
+  print(event.aggregateId);
 });
 ```
 
-## Deferred registry generation
+Polling sorts batches by time and uses an inclusive timestamp plus record IDs to
+deduplicate tied events. Known events are decoded and checked before the cursor
+advances. A malformed payload or missing identity codec stops that batch; repair
+the payload/registration to make it retryable. Valid envelopes with unknown event
+types retain the intentional skip policy. Request timeout, cancellation, credential
+refresh, filtering and retention policies remain unchanged. Closing the client or
+server closes its owned local event bus, as before.
 
-The distributed event registry generator is a work-in-progress surface. Its
-generated contract and integration with the client and server remain deferred
-to EVENT-001 through EVENT-004, so it is not enabled by the active example and
-must not be treated as a supported registry workflow yet. The historical
-[generator notes](GENERATOR_USAGE.md) describe the intended direction only.
+## Custom stored records and limits
 
-## Examples
+A concrete JSON-only record can extend `StoredEvent<UuidValue>` (or another
+concrete I) and use `@Serializable`. Its generated serializer describes that
+concrete class. The inherited manual `StoredEvent.toJson` method describes the
+transport envelope with tagged identities; these are separate explicit formats.
+For HTTP subtype ingestion, inject `storedEventFromJson` to reconstruct T with
+the agreed wire format and shared identity codecs. The default decoder creates
+`StoredEvent<Identity>`; it does not cast that base record into an arbitrary subtype.
 
-See the [example status](example/README.md) for the current boundary. The only
-active example is
-[`custom_stored_event_json_example.dart`](example/custom_stored_event_json_example.dart),
-an independent JSON round-trip that makes no registry, transport, polling, or
-bulk-range claim. The former server, client, and end-to-end sketches are
-preserved under `example/legacy/` as deferred WIP files.
+The [active example](example/README.md) proves a custom record JSON round trip.
+Focused tests and a fresh generated consumer separately prove the registry,
+transport and typed identity boundary. Legacy server/client/range sketches remain
+excluded under `example/legacy`; this change does not claim completion of their
+unrelated EVENT-001 through EVENT-004 work or optional real AWS transports.
 
-Run the JSON-only example from this package directory:
-
-```bash
-cd example
-dart pub get
-dart run build_runner build --delete-conflicting-outputs
-dart run custom_stored_event_json_example.dart
-```
-
-## Architecture
-
-### Event Flow
-
-**Server → Client:**
-```
-Server EventBus → EventBusServer → Repository → HTTP GET → EventBusClient → Client EventBus
-```
-
-**Client → Server:**
-```
-Client EventBus → EventBusClient → HTTP POST → EventBusServer → Server EventBus → Repository
-```
-
-### Bidirectional Flow
-
-```
-┌─────────────────┐                    ┌─────────────────┐
-│  Client App     │                    │  Server App     │
-│                 │                    │                 │
-│  EventBus       │                    │  EventBus       │
-│    │            │                    │    │            │
-│    │ publish    │                    │    │ publish    │
-│    ▼            │                    │    ▼            │
-│  EventBusClient │◄───HTTP Poll──────┤  EventBusServer │
-│    │            │                    │    │            │
-│    │ forward    │                    │    │ persist    │
-│    │            │                    │    │            │
-│    └───HTTP POST──────────────────►│    ▼            │
-│                 │                    │  Repository     │
-│                 │                    │    │            │
-│                 │                    │    ▼            │
-│                 │                    │  Database       │
-└─────────────────┘                    └─────────────────┘
-```
-
-## Platform Support
-
-Works on all Dart platforms:
-- ✅ **Server** - Dart VM and compiled executables
-- ✅ **Web** - Dart web applications (client-side)
-- ✅ **Mobile** - Flutter iOS and Android apps (client-side)
-- ✅ **Desktop** - Flutter desktop applications (client-side)
-
-## Best Practices
-
-### 1. Use Authorization Context
-
-Always include authorization data in event context:
-
-```dart
-server.publish(MyEvent(
-  aggregateId: id,
-  context: {
-    'userId': currentUserId,
-    'tenantId': currentTenantId,
-  },
-));
-```
-
-### 2. Implement Proper Error Handling
-
-Handle errors gracefully in event handlers:
-
-```dart
-client.on<MyEvent>().listen(
-  (event) async {
-    try {
-      await processEvent(event);
-    } catch (e) {
-      logger.error('Failed to process event', e);
-    }
-  },
-  onError: (error) {
-    logger.error('Event handler error', error);
-  },
-);
-```
-
-### 3. Configure Appropriate Polling Intervals
-
-Balance between latency and server load:
-
-```dart
-// High-frequency updates (more server load)
-pollingInterval: const Duration(seconds: 1)
-
-// Standard updates (balanced)
-pollingInterval: const Duration(seconds: 5)
-
-// Low-frequency updates (less server load)
-pollingInterval: const Duration(seconds: 30)
-```
-
-### 4. Use Retention Policies
-
-Prevent unbounded event storage growth:
-
-```dart
-final server = EventBusServer<StoredEvent>(
-  // ...
-  retentionDuration: const Duration(days: 7),
-);
-
-// Schedule periodic cleanup
-Timer.periodic(const Duration(hours: 6), (_) async {
-  await server.cleanup();
-});
-```
-
-### 5. Index Database Queries
-
-Ensure your repository implementation has proper indexes:
-
-```sql
--- MySQL example
-CREATE INDEX idx_created_at ON stored_events(created_at);
-CREATE INDEX idx_tenant_id ON stored_events(tenant_id);
-CREATE INDEX idx_user_id ON stored_events(user_id);
-```
-
-## Troubleshooting
-
-### Events Not Being Received
-
-1. Check that the server is running and accessible
-2. Verify the client's `serverUrl` is correct
-3. Check that events are being persisted (query the repository directly)
-4. Verify the event registry includes your event types
-5. Check for authorization filter issues
-
-### Deserialization Errors
-
-1. Ensure `build_runner` has been run to generate serializers
-2. Verify the event registry includes your event types
-3. Check that event JSON structure matches the event class
-4. Look for type mismatches in event fields
-
-### Authorization Filter Not Working
-
-1. Verify authorization fields are set in event context
-2. Check that StoredEvent.fromDomainEvent extracts the fields correctly
-3. Test the filter logic independently
-4. Check HTTP request headers are being sent correctly
-
-## Contributing
-
-Contributions are welcome! Please read our contributing guidelines and submit pull requests to our repository.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
+See [the work record](../../docs/worky/identity-events-work-record.md) for actual
+local validation, generation ownership and unrun external-service checks.

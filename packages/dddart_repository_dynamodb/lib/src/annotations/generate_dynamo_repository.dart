@@ -2,7 +2,7 @@
 ///
 /// This annotation triggers code generation that creates a DynamoDB repository
 /// implementation for the annotated aggregate root class. The generated
-/// repository implements the `Repository<T>` interface from the dddart package
+/// repository implements the `Repository<T, UuidValue>` interface from the dddart package
 /// and uses the aggregate's JSON serializer from dddart_json for persistence.
 ///
 /// ## Requirements
@@ -21,7 +21,7 @@
 ///
 /// @Serializable()
 /// @GenerateDynamoRepository(tableName: 'users')
-/// class User extends AggregateRoot {
+/// class User extends UuidAggregateRoot {
 ///   User({
 ///     required UuidValue id,
 ///     required this.firstName,
@@ -64,7 +64,7 @@
 /// ## Custom Interface (Abstract Base Repository)
 ///
 /// When a custom interface is specified that contains methods beyond the base
-/// `Repository<T>` interface, an abstract base class is generated. The
+/// `Repository<T, UuidValue>` interface, an abstract base class is generated. The
 /// developer must extend this base class and implement the custom methods:
 ///
 /// ```dart
@@ -72,7 +72,7 @@
 /// part 'user_dynamo_repository.dart';
 ///
 /// // Define custom repository interface
-/// abstract interface class UserRepository implements Repository<User> {
+/// abstract interface class UserRepository implements Repository<User, UuidValue> {
 ///   Future<User?> findByEmail(String email);
 ///   Future<List<User>> findByLastName(
 ///     String lastName, {
@@ -85,7 +85,7 @@
 ///   tableName: 'users',
 ///   implements: UserRepository,
 /// )
-/// class User extends AggregateRoot {
+/// class User extends UuidAggregateRoot {
 ///   User({
 ///     required UuidValue id,
 ///     required this.firstName,
@@ -215,9 +215,9 @@ class GenerateDynamoRepository {
   /// For example, `UserProfile` becomes `user_profile`.
   ///
   /// [implements] - Optional custom repository interface. If provided and
-  /// the interface contains custom methods beyond `Repository<T>`, an abstract
+  /// the interface contains custom methods beyond `Repository<T, UuidValue>`, an abstract
   /// base class will be generated requiring the developer to implement
-  /// custom methods. If the interface only contains base `Repository<T>`
+  /// custom methods. If the interface only contains base `Repository<T, UuidValue>`
   /// methods, a concrete class will be generated.
   const GenerateDynamoRepository({
     this.tableName,
@@ -235,10 +235,10 @@ class GenerateDynamoRepository {
 
   /// The custom repository interface to implement.
   ///
-  /// If null, generates a concrete class implementing `Repository<T>`.
+  /// If null, generates a concrete class implementing `Repository<T, UuidValue>`.
   ///
   /// If provided:
-  /// - Interface contains only base `Repository<T>` methods → generates
+  /// - Interface contains only base `Repository<T, UuidValue>` methods → generates
   ///   concrete class implementing the interface
   /// - Interface contains custom methods → generates abstract base class
   ///   with concrete implementations of base methods and abstract

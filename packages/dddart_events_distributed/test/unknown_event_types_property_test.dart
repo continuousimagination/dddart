@@ -11,6 +11,7 @@ import 'dart:math';
 
 import 'package:dddart/dddart.dart';
 import 'package:dddart_events_distributed/src/event_bus_client.dart';
+import 'package:dddart_events_distributed/src/event_registry.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:test/test.dart';
@@ -24,9 +25,9 @@ void main() {
 
         for (var i = 0; i < 100; i++) {
           final eventBus = EventBus();
-          final receivedEvents = <DomainEvent>[];
+          final receivedEvents = <DomainEvent<UuidValue>>[];
 
-          eventBus.on<DomainEvent>().listen(receivedEvents.add);
+          eventBus.on<DomainEvent<UuidValue>>().listen(receivedEvents.add);
 
           // Generate mix of known and unknown events
           final knownEventCount = 1 + random.nextInt(5);
@@ -81,9 +82,12 @@ void main() {
           final client = EventBusClient(
             localEventBus: eventBus,
             serverUrl: 'http://test-server',
-            eventRegistry: {
-              'KnownEvent': KnownEvent.fromJson,
-            },
+            eventRegistry: (EventRegistry()
+              ..register<KnownEvent>(
+                'KnownEvent',
+                encode: (event) => event.toJson(),
+                decode: KnownEvent.fromJson,
+              )),
             pollingInterval: const Duration(milliseconds: 50),
             httpClient: mockClient,
           );
@@ -120,9 +124,9 @@ void main() {
 
         for (var i = 0; i < 100; i++) {
           final eventBus = EventBus();
-          final receivedEvents = <DomainEvent>[];
+          final receivedEvents = <DomainEvent<UuidValue>>[];
 
-          eventBus.on<DomainEvent>().listen(receivedEvents.add);
+          eventBus.on<DomainEvent<UuidValue>>().listen(receivedEvents.add);
 
           // Create sequence: known, unknown, known
           final baseTime = DateTime.now().add(const Duration(seconds: 1));
@@ -167,9 +171,12 @@ void main() {
           final client = EventBusClient(
             localEventBus: eventBus,
             serverUrl: 'http://test-server',
-            eventRegistry: {
-              'KnownEvent': KnownEvent.fromJson,
-            },
+            eventRegistry: (EventRegistry()
+              ..register<KnownEvent>(
+                'KnownEvent',
+                encode: (event) => event.toJson(),
+                decode: KnownEvent.fromJson,
+              )),
             pollingInterval: const Duration(milliseconds: 50),
             httpClient: mockClient,
           );
@@ -214,9 +221,9 @@ void main() {
 
         for (var i = 0; i < 50; i++) {
           final eventBus = EventBus();
-          final receivedEvents = <DomainEvent>[];
+          final receivedEvents = <DomainEvent<UuidValue>>[];
 
-          eventBus.on<DomainEvent>().listen(receivedEvents.add);
+          eventBus.on<DomainEvent<UuidValue>>().listen(receivedEvents.add);
 
           // Generate only unknown events
           final unknownEventCount = 1 + random.nextInt(10);
@@ -259,9 +266,12 @@ void main() {
           final client = EventBusClient(
             localEventBus: eventBus,
             serverUrl: 'http://test-server',
-            eventRegistry: {
-              'KnownEvent': KnownEvent.fromJson,
-            },
+            eventRegistry: (EventRegistry()
+              ..register<KnownEvent>(
+                'KnownEvent',
+                encode: (event) => event.toJson(),
+                decode: KnownEvent.fromJson,
+              )),
             pollingInterval: const Duration(milliseconds: 50),
             httpClient: mockClient,
           );
@@ -289,9 +299,9 @@ void main() {
 
         for (var i = 0; i < 50; i++) {
           final eventBus = EventBus();
-          final receivedEvents = <DomainEvent>[];
+          final receivedEvents = <DomainEvent<UuidValue>>[];
 
-          eventBus.on<DomainEvent>().listen(receivedEvents.add);
+          eventBus.on<DomainEvent<UuidValue>>().listen(receivedEvents.add);
 
           // First batch: unknown events
           // Second batch: known events
@@ -359,9 +369,12 @@ void main() {
           final client = EventBusClient(
             localEventBus: eventBus,
             serverUrl: 'http://test-server',
-            eventRegistry: {
-              'KnownEvent': KnownEvent.fromJson,
-            },
+            eventRegistry: (EventRegistry()
+              ..register<KnownEvent>(
+                'KnownEvent',
+                encode: (event) => event.toJson(),
+                decode: KnownEvent.fromJson,
+              )),
             pollingInterval: const Duration(milliseconds: 50),
             initialTimestamp: baseTime,
             httpClient: mockClient,
@@ -405,7 +418,7 @@ Map<String, dynamic> _generateKnownEvent(Random random, DateTime timestamp) {
     'id': eventId.toString(),
     'createdAt': timestamp.toIso8601String(),
     'updatedAt': timestamp.toIso8601String(),
-    'aggregateId': aggregateId.toString(),
+    'aggregateId': {'type': 'uuid', 'value': aggregateId.uuid},
     'eventType': 'KnownEvent',
     'eventJson': jsonEncode(eventJson),
     'occurredAt': timestamp, // For filtering in tests
@@ -430,7 +443,7 @@ Map<String, dynamic> _generateUnknownEvent(Random random, DateTime timestamp) {
     'id': eventId.toString(),
     'createdAt': timestamp.toIso8601String(),
     'updatedAt': timestamp.toIso8601String(),
-    'aggregateId': aggregateId.toString(),
+    'aggregateId': {'type': 'uuid', 'value': aggregateId.uuid},
     'eventType': 'UnknownEvent',
     'eventJson': jsonEncode(eventJson),
     'occurredAt': timestamp, // For filtering in tests
@@ -440,7 +453,7 @@ Map<String, dynamic> _generateUnknownEvent(Random random, DateTime timestamp) {
 // Test event class
 
 /// Known event type (in the registry).
-class KnownEvent extends DomainEvent {
+class KnownEvent extends DomainEvent<UuidValue> {
   KnownEvent({
     required super.aggregateId,
     required this.data,
@@ -460,4 +473,12 @@ class KnownEvent extends DomainEvent {
       context: json['context'] as Map<String, dynamic>? ?? {},
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'eventId': eventId.uuid,
+        'occurredAt': occurredAt.toIso8601String(),
+        'aggregateId': aggregateId.uuid,
+        'context': context,
+        'data': data,
+      };
 }

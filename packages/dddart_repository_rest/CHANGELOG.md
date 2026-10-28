@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **BREAKING:** Generated repositories implement Repository<T, I> with concrete
+  IDs, optional identityCodecs injection and shared JSON codecs. Canonical keys
+  are URI-encoded once; invalid keys fail before HTTP I/O. HTTP 400 maps to a
+  constraint error and a mismatched response identity is rejected.
+- Custom inherited repository methods are deduplicated with their resolved
+  generic, named and default parameter signatures intact.
+
 - Generated CRUD repositories now request JSON responses with
   `Accept: application/json`.
 - Generated `save` requests explicitly send JSON bodies with

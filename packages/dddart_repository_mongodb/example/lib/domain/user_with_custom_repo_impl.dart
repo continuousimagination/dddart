@@ -19,8 +19,7 @@ class UserWithCustomRepoMongoRepository
         return null;
       }
 
-      // Convert MongoDB _id back to id field for deserialization
-      doc['id'] = doc['_id'];
+      // Structural id is retained; remove only the physical binary key.
       doc.remove('_id');
 
       return _serializer.fromJson(doc);
@@ -41,8 +40,7 @@ class UserWithCustomRepoMongoRepository
           await _collection.find(where.eq('lastName', lastName)).toList();
 
       return docs.map((doc) {
-        // Convert MongoDB _id back to id field for deserialization
-        doc['id'] = doc['_id'];
+        // Structural id is retained; remove only the physical binary key.
         doc.remove('_id');
         return _serializer.fromJson(doc);
       }).toList();

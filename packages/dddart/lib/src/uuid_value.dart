@@ -1,11 +1,11 @@
-import 'package:dddart/src/value.dart';
+import 'package:dddart/src/identity.dart';
 import 'package:uuid/uuid.dart';
 
 /// A value object that represents a UUID.
 ///
 /// This class wraps a UUID string and provides type safety and validation
 /// for UUID values used as entity identifiers.
-class UuidValue extends Value {
+class UuidValue extends Identity {
   /// Creates a UuidValue from a UUID string.
   ///
   /// Throws [ArgumentError] if the provided string is not a valid UUID.

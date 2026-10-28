@@ -18,7 +18,7 @@ class OrderWithCustomRepoMysqlRepository
     `billingAddress_state`,
     `billingAddress_postalCode`,
     `billingAddress_country`,
-    BIN_TO_UUID(`id`) AS `id`,
+    `id`,
     `createdAt`,
     `updatedAt`
   ''';

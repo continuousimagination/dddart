@@ -36,6 +36,7 @@ export 'src/query/query_builder.dart';
 
 // Schema
 export 'src/schema/collection_analyzer.dart';
+export 'src/schema/identity_type.dart';
 export 'src/schema/relationship_analyzer.dart'
     hide CollectionKind; // Use CollectionKind from collection_analyzer
 export 'src/schema/schema_generator.dart';

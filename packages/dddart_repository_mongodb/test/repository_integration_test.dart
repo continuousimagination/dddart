@@ -201,8 +201,8 @@ void main() {
         );
 
         expect(doc, isNotNull);
-        expect(doc!['_id'], equals(user.id.toString()));
-        expect(doc.containsKey('id'), isFalse);
+        expect((doc!['_id'] as BsonBinary).byteList, user.id.uuid.codeUnits);
+        expect(doc['id'], user.id.uuid);
       });
 
       test('should map MongoDB _id to aggregate id on retrieve', () async {
@@ -211,7 +211,8 @@ void main() {
 
         // Insert document directly with _id
         await helper.insertDocument('test_users', {
-          '_id': userId.toString(),
+          '_id': BsonBinary.from(userId.uuid.codeUnits),
+          'id': userId.uuid,
           'name': 'Direct Insert',
           'email': 'direct@example.com',
         });
@@ -323,7 +324,8 @@ void main() {
         // Insert invalid document directly
         final invalidId = UuidValue.generate();
         await helper.insertDocument('test_users', {
-          '_id': invalidId.toString(),
+          '_id': BsonBinary.from(invalidId.uuid.codeUnits),
+          'id': invalidId.uuid,
           'name': 'Invalid',
           // Missing required 'email' field
         });
@@ -387,7 +389,8 @@ void main() {
         final invalidId = UuidValue.generate();
 
         await helper.insertDocument('test_users', {
-          '_id': invalidId.toString(),
+          '_id': BsonBinary.from(invalidId.uuid.codeUnits),
+          'id': invalidId.uuid,
           'name': 'Invalid',
           // Missing required 'email' field
         });
@@ -603,7 +606,8 @@ void main() {
         await helper.insertDocument(
           'test_accounts',
           {
-            '_id': directId.toString(),
+            '_id': BsonBinary.from(directId.uuid.codeUnits),
+            'id': directId.uuid,
             'accountName': 'Direct Insert',
             'accountType': 'Savings',
             'balance': 500,
