@@ -40,9 +40,15 @@ void main() {
   final connectionTimeout = config.getInt('database.connection.timeout');
   print('Connection timeout: ${connectionTimeout}s');
 
-  // Access list values (comma-separated in config)
+  // Access ordered YAML lists without splitting strings on commas.
   final features = config.getList('app.features');
   print('Enabled features: ${features?.join(', ')}');
+
+  // Application code interprets the ordered records and their native fields.
+  for (final value in config.getRequiredList('projects')) {
+    final project = value! as Map<String, Object?>;
+    print('Project: ${project['organization']}/${project['number']}');
+  }
 
   print('\n=== Optional Values with Defaults ===\n');
 

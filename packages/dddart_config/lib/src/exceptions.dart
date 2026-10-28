@@ -27,10 +27,10 @@ class ConfigException implements Exception {
   }
 }
 
-/// Thrown when a required configuration key is missing or null.
+/// Thrown when a required configuration key is absent.
 ///
 /// This exception indicates that the application attempted to access
-/// a required configuration value that does not exist or is explicitly null.
+/// a required configuration value that does not exist.
 ///
 /// Example:
 /// ```dart
@@ -53,7 +53,7 @@ class MissingConfigException extends ConfigException {
 /// Example:
 /// ```dart
 /// throw TypeConversionException('database.port', 'int', 'abc');
-/// // Output: Cannot convert "abc" to int (key: database.port)
+/// // Output describes the path and types, without including the value.
 /// ```
 class TypeConversionException extends ConfigException {
   /// Creates an exception for a type conversion failure.
@@ -63,7 +63,7 @@ class TypeConversionException extends ConfigException {
   /// The [actualValue] is the value that could not be converted.
   TypeConversionException(String key, this.expectedType, this.actualValue)
       : super(
-          'Cannot convert "$actualValue" to $expectedType',
+          'Cannot convert value of type ${actualValue.runtimeType} to $expectedType',
           key: key,
         );
 
@@ -71,7 +71,7 @@ class TypeConversionException extends ConfigException {
   final String expectedType;
 
   /// The actual value that could not be converted.
-  final String actualValue;
+  final Object? actualValue;
 }
 
 /// Thrown when configuration validation fails.
@@ -120,7 +120,7 @@ class FileAccessException extends ConfigException {
   /// The [cause] is the underlying exception that caused the failure.
   FileAccessException(this.filePath, this.cause)
       : super(
-          'Cannot access configuration file: $filePath ($cause)',
+          'Cannot access or parse configuration file: $filePath',
         );
 
   /// The path to the file that could not be accessed.

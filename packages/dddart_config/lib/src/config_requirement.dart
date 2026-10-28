@@ -18,8 +18,11 @@ enum ConfigType {
   /// Boolean type - must be a valid boolean representation.
   boolean,
 
-  /// List type - comma-separated string values.
+  /// Ordered structured list.
   list,
+
+  /// Structured map with string keys.
+  map,
 }
 
 /// Defines a configuration requirement for validation.
