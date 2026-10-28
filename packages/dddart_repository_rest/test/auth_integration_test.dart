@@ -112,7 +112,7 @@ Future<AuthenticatedTestServer> createAuthenticatedTestServer({
   int port = 8780,
 }) async {
   // Create repositories
-  final userRepository = InMemoryRepository<TestUser>();
+  final userRepository = InMemoryRepository<TestUser, UuidValue>();
   final refreshTokenRepository = InMemoryRefreshTokenRepository<RefreshToken>();
   final deviceCodeRepository = InMemoryDeviceCodeRepository<DeviceCode>(
     lifecycle: const StandardDeviceCodeLifecycle(),
@@ -155,7 +155,7 @@ Future<AuthenticatedTestServer> createAuthenticatedTestServer({
 
   // Register CRUD resource with authentication
   server.registerResource(
-    CrudResource<TestUser, TestClaims>(
+    CrudResource<TestUser, UuidValue, TestClaims>(
       path: path,
       repository: userRepository,
       serializer: serializer,

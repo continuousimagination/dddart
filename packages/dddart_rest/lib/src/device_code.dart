@@ -1,5 +1,10 @@
+import 'dart:convert';
+
 import 'package:dddart/dddart.dart';
+import 'package:dddart_json/dddart_json.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
+
+part 'device_code.g.dart';
 
 /// Status of a device code in the device flow
 enum DeviceCodeStatus {
@@ -29,7 +34,7 @@ enum DeviceCodeStatus {
 /// but it is an infrastructure concern, not a domain concept. The Repository
 /// pattern is used here as a general-purpose persistence abstraction.
 @Serializable()
-class DeviceCode extends AggregateRoot {
+class DeviceCode extends UuidAggregateRoot {
   /// Creates a device code
   DeviceCode({
     required super.id,

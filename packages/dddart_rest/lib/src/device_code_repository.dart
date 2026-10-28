@@ -8,7 +8,7 @@ import 'package:dddart_rest/src/device_code_lifecycle.dart';
 /// enumeration. [consumeApproved] is the consistency boundary that makes a
 /// device grant single-use.
 abstract interface class DeviceCodeRepository<T extends DeviceCode>
-    implements Repository<T> {
+    implements Repository<T, UuidValue> {
   /// Finds a device code by its human-readable user code.
   Future<T?> findByUserCode(String userCode);
 

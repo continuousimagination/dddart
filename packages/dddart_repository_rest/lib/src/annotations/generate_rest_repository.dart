@@ -8,7 +8,7 @@
 /// ```dart
 /// @Serializable()
 /// @GenerateRestRepository(resourcePath: '/users')
-/// class User extends AggregateRoot {
+/// class User extends UuidAggregateRoot {
 ///   final String firstName;
 ///   final String lastName;
 ///
@@ -30,13 +30,13 @@
 /// generator creates an abstract base class that you must extend:
 ///
 /// ```dart
-/// abstract interface class UserRepository implements Repository<User> {
+/// abstract interface class UserRepository implements Repository<User, UuidValue> {
 ///   Future<User?> findByEmail(String email);
 /// }
 ///
 /// @Serializable()
 /// @GenerateRestRepository(implements: UserRepository)
-/// class User extends AggregateRoot {
+/// class User extends UuidAggregateRoot {
 ///   final String email;
 ///   User({required this.email});
 /// }
@@ -74,7 +74,7 @@ class GenerateRestRepository {
 
   /// Optional custom repository interface to implement.
   ///
-  /// If provided with methods beyond base Repository<T>, generates an
+  /// If provided with methods beyond base Repository<T, UuidValue>, generates an
   /// abstract base class requiring custom method implementation.
   ///
   /// If null or only has base methods, generates a concrete repository

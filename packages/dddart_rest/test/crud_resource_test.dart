@@ -9,7 +9,7 @@ import 'package:test/test.dart';
 import 'json_serializer_test_support.dart';
 
 // Test aggregate root
-class TestUser extends AggregateRoot {
+class TestUser extends UuidAggregateRoot {
   TestUser({
     required this.name,
     required this.email,
@@ -49,7 +49,7 @@ class TestUserSerializer extends TestJsonSerializer<TestUser> {
 }
 
 // Mock repository for testing
-class MockRepository implements Repository<TestUser> {
+class MockRepository implements Repository<TestUser, UuidValue> {
   final Map<UuidValue, TestUser> _storage = {};
 
   @override
@@ -115,7 +115,7 @@ Request createRequest({
 }
 
 Future<QueryResult<TestUser>> pagedCollectionHandler(
-  Repository<TestUser> repository,
+  Repository<TestUser, UuidValue> repository,
   Map<String, String> queryParams,
   int skip,
   int take,
@@ -123,7 +123,7 @@ Future<QueryResult<TestUser>> pagedCollectionHandler(
 ) async {
   final items = switch (repository) {
     MockRepository() => repository.getAll(),
-    InMemoryRepository<TestUser>() => repository.getAllSync(),
+    InMemoryRepository<TestUser, UuidValue>() => repository.getAllSync(),
     _ => throw StateError('Unsupported test repository'),
   };
   return QueryResult<TestUser>(
@@ -135,13 +135,13 @@ Future<QueryResult<TestUser>> pagedCollectionHandler(
 void main() {
   late MockRepository repository;
   late TestUserSerializer serializer;
-  late CrudResource<TestUser, dynamic> resource;
+  late CrudResource<TestUser, UuidValue, dynamic> resource;
   late TestUser testUser;
 
   setUp(() {
     repository = MockRepository();
     serializer = TestUserSerializer();
-    resource = CrudResource<TestUser, dynamic>(
+    resource = CrudResource<TestUser, UuidValue, dynamic>(
       path: '/users',
       repository: repository,
       serializer: serializer,
@@ -247,7 +247,7 @@ void main() {
 
     test('exception handling via _handleException()', () async {
       // Arrange - create resource with custom exception handler
-      final customResource = CrudResource<TestUser, dynamic>(
+      final customResource = CrudResource<TestUser, UuidValue, dynamic>(
         path: '/users',
         repository: repository,
         serializer: serializer,
@@ -302,12 +302,12 @@ void main() {
         name: 'Selected by handler',
         email: 'selected@example.com',
       );
-      Repository<TestUser>? receivedRepository;
+      Repository<TestUser, UuidValue>? receivedRepository;
       Map<String, String>? receivedParams;
       int? receivedSkip;
       int? receivedTake;
 
-      final resourceWithHandler = CrudResource<TestUser, dynamic>(
+      final resourceWithHandler = CrudResource<TestUser, UuidValue, dynamic>(
         path: '/users',
         repository: repository,
         serializer: serializer,
@@ -364,7 +364,7 @@ void main() {
       await repository.save(user2);
       await repository.save(user3);
 
-      final resourceWithHandler = CrudResource<TestUser, dynamic>(
+      final resourceWithHandler = CrudResource<TestUser, UuidValue, dynamic>(
         path: '/users',
         repository: repository,
         serializer: serializer,
@@ -394,7 +394,7 @@ void main() {
       int? receivedSkip;
       int? receivedTake;
 
-      final resourceWithHandler = CrudResource<TestUser, dynamic>(
+      final resourceWithHandler = CrudResource<TestUser, UuidValue, dynamic>(
         path: '/users',
         repository: repository,
         serializer: serializer,
@@ -430,7 +430,7 @@ void main() {
       // Arrange
       await repository.save(testUser);
 
-      final resourceWithHandler = CrudResource<TestUser, dynamic>(
+      final resourceWithHandler = CrudResource<TestUser, UuidValue, dynamic>(
         path: '/users',
         repository: repository,
         serializer: serializer,
@@ -451,7 +451,7 @@ void main() {
       // Arrange
       await repository.save(testUser);
 
-      final resourceWithHandler = CrudResource<TestUser, dynamic>(
+      final resourceWithHandler = CrudResource<TestUser, UuidValue, dynamic>(
         path: '/users',
         repository: repository,
         serializer: serializer,
@@ -479,7 +479,7 @@ void main() {
       var receivedTake = -1;
 
       Future<QueryResult<TestUser>> testHandler(
-        Repository<TestUser> repo,
+        Repository<TestUser, UuidValue> repo,
         Map<String, String> params,
         int skip,
         int take,
@@ -492,7 +492,7 @@ void main() {
         return QueryResult<TestUser>([testUser], totalCount: 1);
       }
 
-      final resourceWithHandler = CrudResource<TestUser, dynamic>(
+      final resourceWithHandler = CrudResource<TestUser, UuidValue, dynamic>(
         path: '/users',
         repository: repository,
         serializer: serializer,
@@ -518,7 +518,7 @@ void main() {
       var receivedTake = -1;
 
       Future<QueryResult<TestUser>> testHandler(
-        Repository<TestUser> repo,
+        Repository<TestUser, UuidValue> repo,
         Map<String, String> params,
         int skip,
         int take,
@@ -529,7 +529,7 @@ void main() {
         return QueryResult<TestUser>([testUser], totalCount: 1);
       }
 
-      final resourceWithHandler = CrudResource<TestUser, dynamic>(
+      final resourceWithHandler = CrudResource<TestUser, UuidValue, dynamic>(
         path: '/users',
         repository: repository,
         serializer: serializer,
@@ -548,7 +548,7 @@ void main() {
 
     test('400 response when handler not found', () async {
       // Arrange
-      final resourceWithoutHandler = CrudResource<TestUser, dynamic>(
+      final resourceWithoutHandler = CrudResource<TestUser, UuidValue, dynamic>(
         path: '/users',
         repository: repository,
         serializer: serializer,
@@ -579,7 +579,7 @@ void main() {
       );
 
       Future<QueryResult<TestUser>> testHandler(
-        Repository<TestUser> repo,
+        Repository<TestUser, UuidValue> repo,
         Map<String, String> params,
         int skip,
         int take,
@@ -588,7 +588,7 @@ void main() {
         return QueryResult<TestUser>([filteredUser], totalCount: 1);
       }
 
-      final resourceWithHandler = CrudResource<TestUser, dynamic>(
+      final resourceWithHandler = CrudResource<TestUser, UuidValue, dynamic>(
         path: '/users',
         repository: repository,
         serializer: serializer,
@@ -632,10 +632,10 @@ void main() {
 
     test('pagination params do not count as filter params', () async {
       // Arrange
-      final inMemoryRepo = InMemoryRepository<TestUser>();
+      final inMemoryRepo = InMemoryRepository<TestUser, UuidValue>();
       await inMemoryRepo.save(testUser);
 
-      final inMemoryResource = CrudResource<TestUser, dynamic>(
+      final inMemoryResource = CrudResource<TestUser, UuidValue, dynamic>(
         path: '/users',
         repository: inMemoryRepo,
         serializer: serializer,
@@ -1230,7 +1230,7 @@ void main() {
   group('CrudResource - pagination helpers', () {
     test('_parsePagination() with valid skip and take params', () async {
       // Arrange
-      final inMemoryRepo = InMemoryRepository<TestUser>();
+      final inMemoryRepo = InMemoryRepository<TestUser, UuidValue>();
       for (var i = 0; i < 10; i++) {
         final user = TestUser(
           id: UuidValue.generate(),
@@ -1242,7 +1242,7 @@ void main() {
         await inMemoryRepo.save(user);
       }
 
-      final inMemoryResource = CrudResource<TestUser, dynamic>(
+      final inMemoryResource = CrudResource<TestUser, UuidValue, dynamic>(
         path: '/users',
         repository: inMemoryRepo,
         serializer: serializer,
@@ -1264,10 +1264,10 @@ void main() {
 
     test('default values when params missing', () async {
       // Arrange
-      final inMemoryRepo = InMemoryRepository<TestUser>();
+      final inMemoryRepo = InMemoryRepository<TestUser, UuidValue>();
       await inMemoryRepo.save(testUser);
 
-      final inMemoryResource = CrudResource<TestUser, dynamic>(
+      final inMemoryResource = CrudResource<TestUser, UuidValue, dynamic>(
         path: '/users',
         repository: inMemoryRepo,
         serializer: serializer,
@@ -1289,7 +1289,7 @@ void main() {
 
     test('maxTake enforcement', () async {
       // Arrange
-      final inMemoryRepo = InMemoryRepository<TestUser>();
+      final inMemoryRepo = InMemoryRepository<TestUser, UuidValue>();
       for (var i = 0; i < 150; i++) {
         final user = TestUser(
           id: UuidValue.generate(),
@@ -1301,7 +1301,7 @@ void main() {
         await inMemoryRepo.save(user);
       }
 
-      final inMemoryResource = CrudResource<TestUser, dynamic>(
+      final inMemoryResource = CrudResource<TestUser, UuidValue, dynamic>(
         path: '/users',
         repository: inMemoryRepo,
         serializer: serializer,
@@ -1328,7 +1328,7 @@ void main() {
       // Arrange
       var customHandlerCalled = false;
 
-      final customResource = CrudResource<TestUser, dynamic>(
+      final customResource = CrudResource<TestUser, UuidValue, dynamic>(
         path: '/users',
         repository: repository,
         serializer: serializer,
@@ -1362,7 +1362,7 @@ void main() {
 
     test('fallback to ErrorMapper when no custom handler found', () async {
       // Arrange
-      final customResource = CrudResource<TestUser, dynamic>(
+      final customResource = CrudResource<TestUser, UuidValue, dynamic>(
         path: '/users',
         repository: repository,
         serializer: serializer,
@@ -1394,7 +1394,7 @@ void main() {
       // Create a custom repository that throws CustomDomainException
       final customRepo = MockRepository();
 
-      final customResource = CrudResource<TestUser, dynamic>(
+      final customResource = CrudResource<TestUser, UuidValue, dynamic>(
         path: '/users',
         repository: customRepo,
         serializer: serializer,

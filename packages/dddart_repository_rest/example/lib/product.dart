@@ -11,7 +11,8 @@ import 'package:dddart_serialization/dddart_serialization.dart';
 part 'product.g.dart';
 
 /// Custom repository interface with domain-specific query methods.
-abstract interface class ProductRepository implements Repository<Product> {
+abstract interface class ProductRepository
+    implements Repository<Product, UuidValue> {
   /// Finds products by category.
   Future<List<Product>> findByCategory(String category);
 
@@ -25,7 +26,7 @@ abstract interface class ProductRepository implements Repository<Product> {
   resourcePath: '/products',
   implements: ProductRepository,
 )
-class Product extends AggregateRoot {
+class Product extends UuidAggregateRoot {
   /// Creates a new product.
   Product({
     required this.name,

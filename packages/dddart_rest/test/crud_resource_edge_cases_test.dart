@@ -9,7 +9,7 @@ import 'package:test/test.dart';
 import 'json_serializer_test_support.dart';
 
 // Test aggregate root
-class TestUser extends AggregateRoot {
+class TestUser extends UuidAggregateRoot {
   TestUser({
     required this.name,
     required this.email,
@@ -65,13 +65,14 @@ Request createRequest({
 }
 
 Future<QueryResult<TestUser>> pagedCollectionHandler(
-  Repository<TestUser> repository,
+  Repository<TestUser, UuidValue> repository,
   Map<String, String> queryParams,
   int skip,
   int take,
   dynamic authResult,
 ) async {
-  final items = (repository as InMemoryRepository<TestUser>).getAllSync();
+  final items =
+      (repository as InMemoryRepository<TestUser, UuidValue>).getAllSync();
   return QueryResult<TestUser>(
     items.skip(skip).take(take).toList(),
     totalCount: items.length,
@@ -79,11 +80,11 @@ Future<QueryResult<TestUser>> pagedCollectionHandler(
 }
 
 void main() {
-  late InMemoryRepository<TestUser> repository;
+  late InMemoryRepository<TestUser, UuidValue> repository;
   late TestUserSerializer serializer;
 
   setUp(() {
-    repository = InMemoryRepository<TestUser>();
+    repository = InMemoryRepository<TestUser, UuidValue>();
     serializer = TestUserSerializer();
   });
 
@@ -91,7 +92,7 @@ void main() {
     test('empty path throws ArgumentError', () {
       // Act & Assert
       expect(
-        () => CrudResource<TestUser, dynamic>(
+        () => CrudResource<TestUser, UuidValue, dynamic>(
           path: '', // Empty path
           repository: repository,
           serializer: serializer,
@@ -121,7 +122,7 @@ void main() {
         await repository.save(user);
       }
 
-      final resource = CrudResource<TestUser, dynamic>(
+      final resource = CrudResource<TestUser, UuidValue, dynamic>(
         path: '/users',
         repository: repository,
         serializer: serializer,
@@ -156,7 +157,7 @@ void main() {
         await repository.save(user);
       }
 
-      final resource = CrudResource<TestUser, dynamic>(
+      final resource = CrudResource<TestUser, UuidValue, dynamic>(
         path: '/users',
         repository: repository,
         serializer: serializer,
@@ -192,7 +193,7 @@ void main() {
       }
 
       var handlerCalls = 0;
-      final resource = CrudResource<TestUser, dynamic>(
+      final resource = CrudResource<TestUser, UuidValue, dynamic>(
         path: '/users',
         repository: repository,
         serializer: serializer,
@@ -238,7 +239,7 @@ void main() {
         await repository.save(user);
       }
 
-      final resource = CrudResource<TestUser, dynamic>(
+      final resource = CrudResource<TestUser, UuidValue, dynamic>(
         path: '/users',
         repository: repository,
         serializer: serializer,
@@ -277,7 +278,7 @@ void main() {
 
       await repository.save(testUser);
 
-      final resource = CrudResource<TestUser, dynamic>(
+      final resource = CrudResource<TestUser, UuidValue, dynamic>(
         path: '/users',
         repository: repository,
         serializer: jsonSerializer,
@@ -308,7 +309,7 @@ void main() {
         updatedAt: DateTime.now(),
       );
 
-      final resource = CrudResource<TestUser, dynamic>(
+      final resource = CrudResource<TestUser, UuidValue, dynamic>(
         path: '/users',
         repository: repository,
         serializer: serializer,
@@ -344,7 +345,7 @@ void main() {
         updatedAt: DateTime.now(),
       );
 
-      final resource = CrudResource<TestUser, dynamic>(
+      final resource = CrudResource<TestUser, UuidValue, dynamic>(
         path: '/users',
         repository: repository,
         serializer: serializer,
@@ -381,7 +382,7 @@ void main() {
       );
 
       Future<QueryResult<TestUser>> testHandler(
-        Repository<TestUser> repo,
+        Repository<TestUser, UuidValue> repo,
         Map<String, String> params,
         int skip,
         int take,
@@ -391,7 +392,7 @@ void main() {
         return QueryResult<TestUser>([testUser]);
       }
 
-      final resource = CrudResource<TestUser, dynamic>(
+      final resource = CrudResource<TestUser, UuidValue, dynamic>(
         path: '/users',
         repository: repository,
         serializer: serializer,
@@ -411,7 +412,7 @@ void main() {
     test('empty results from query handler', () async {
       // Arrange
       Future<QueryResult<TestUser>> testHandler(
-        Repository<TestUser> repo,
+        Repository<TestUser, UuidValue> repo,
         Map<String, String> params,
         int skip,
         int take,
@@ -421,7 +422,7 @@ void main() {
         return QueryResult<TestUser>([], totalCount: 0);
       }
 
-      final resource = CrudResource<TestUser, dynamic>(
+      final resource = CrudResource<TestUser, UuidValue, dynamic>(
         path: '/users',
         repository: repository,
         serializer: serializer,

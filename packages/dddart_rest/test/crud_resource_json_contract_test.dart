@@ -12,7 +12,7 @@ import 'package:test/test.dart';
 
 import 'json_serializer_test_support.dart';
 
-class _TestUser extends AggregateRoot {
+class _TestUser extends UuidAggregateRoot {
   _TestUser({required this.name, super.id, super.createdAt, super.updatedAt});
 
   final String name;
@@ -41,7 +41,7 @@ class _TestUserSerializer extends TestJsonSerializer<_TestUser> {
   }
 }
 
-class _CountingRepository implements Repository<_TestUser> {
+class _CountingRepository implements Repository<_TestUser, UuidValue> {
   _CountingRepository([Iterable<_TestUser> initial = const []])
       : _items = {for (final item in initial) item.id: item};
 
@@ -93,7 +93,7 @@ class _CountingAuthenticationHandler implements AuthenticationHandler<String> {
 }
 
 class _CountingAuthorizationHandler
-    implements AuthorizationHandler<_TestUser, String> {
+    implements AuthorizationHandler<_TestUser, UuidValue, String> {
   int calls = 0;
 
   @override
@@ -176,7 +176,7 @@ void main() {
 
     for (final accept in acceptHeaders) {
       final repository = _CountingRepository([user]);
-      final resource = CrudResource<_TestUser, void>(
+      final resource = CrudResource<_TestUser, UuidValue, void>(
         path: '/users',
         repository: repository,
         serializer: serializer,
@@ -208,7 +208,7 @@ void main() {
       for (final operation in ['get', 'query', 'create', 'update', 'delete']) {
         final repository = _CountingRepository([user]);
         final authentication = _CountingAuthenticationHandler();
-        final resource = CrudResource<_TestUser, String>(
+        final resource = CrudResource<_TestUser, UuidValue, String>(
           path: '/users',
           repository: repository,
           serializer: serializer,
@@ -279,7 +279,7 @@ void main() {
       for (final contentType in <String?>[null, 'application/yaml']) {
         final repository = _CountingRepository([user]);
         final authentication = _CountingAuthenticationHandler();
-        final resource = CrudResource<_TestUser, String>(
+        final resource = CrudResource<_TestUser, UuidValue, String>(
           path: '/users',
           repository: repository,
           serializer: serializer,
@@ -308,7 +308,7 @@ void main() {
 
   test('application/json parameters are allowed for request bodies', () async {
     final repository = _CountingRepository();
-    final resource = CrudResource<_TestUser, void>(
+    final resource = CrudResource<_TestUser, UuidValue, void>(
       path: '/users',
       repository: repository,
       serializer: serializer,
@@ -339,7 +339,7 @@ void main() {
     final repository = _CountingRepository([user]);
     final authentication = _CountingAuthenticationHandler();
     final authorization = _CountingAuthorizationHandler();
-    final resource = CrudResource<_TestUser, String>(
+    final resource = CrudResource<_TestUser, UuidValue, String>(
       path: '/users',
       repository: repository,
       serializer: serializer,
@@ -385,7 +385,7 @@ void main() {
     final repository = _CountingRepository([user]);
     final authentication = _CountingAuthenticationHandler();
     final authorization = _CountingAuthorizationHandler();
-    final resource = CrudResource<_TestUser, String>(
+    final resource = CrudResource<_TestUser, UuidValue, String>(
       path: '/users',
       repository: repository,
       serializer: serializer,
@@ -418,7 +418,7 @@ void main() {
       [],
       [user],
     ]) {
-      final resource = CrudResource<_TestUser, void>(
+      final resource = CrudResource<_TestUser, UuidValue, void>(
         path: '/users',
         repository: _CountingRepository(items),
         serializer: serializer,

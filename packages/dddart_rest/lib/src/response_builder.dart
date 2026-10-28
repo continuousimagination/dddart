@@ -11,7 +11,7 @@ import 'package:shelf/shelf.dart';
 /// and error responses in RFC 7807 Problem Details format.
 ///
 /// All methods handle serialization and set appropriate Content-Type headers.
-class ResponseBuilder<T extends AggregateRoot> {
+class ResponseBuilder<T extends AggregateRoot<Identity>> {
   /// Builds a 200 OK response with serialized body
   ///
   /// Uses the provided JSON serializer and sets the JSON Content-Type header.

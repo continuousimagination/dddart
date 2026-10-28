@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/src/crud_resource.dart';
 import 'package:dddart_rest/src/query_handler.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:logging/logging.dart';
 import 'package:shelf/shelf.dart';
 import 'package:test/test.dart';
@@ -10,7 +11,7 @@ import 'package:test/test.dart';
 import 'json_serializer_test_support.dart';
 
 // Test aggregate root
-class TestUser extends AggregateRoot {
+class TestUser extends UuidAggregateRoot {
   TestUser({
     required this.name,
     required this.email,
@@ -63,7 +64,7 @@ class FailingSerializer extends TestJsonSerializer<TestUser> {
 }
 
 // Mock repository for testing
-class MockRepository implements Repository<TestUser> {
+class MockRepository implements Repository<TestUser, UuidValue> {
   final Map<UuidValue, TestUser> _storage = {};
 
   @override
@@ -118,14 +119,14 @@ Request createRequest({
 void main() {
   late MockRepository repository;
   late TestUserSerializer serializer;
-  late CrudResource<TestUser, dynamic> resource;
+  late CrudResource<TestUser, UuidValue, dynamic> resource;
   late TestUser testUser;
   late List<LogRecord> logRecords;
 
   setUp(() {
     repository = MockRepository();
     serializer = TestUserSerializer();
-    resource = CrudResource<TestUser, dynamic>(
+    resource = CrudResource<TestUser, UuidValue, dynamic>(
       path: 'users',
       repository: repository,
       serializer: serializer,
@@ -247,15 +248,16 @@ void main() {
 
     test('logs query request at INFO level with query string', () async {
       // Arrange
-      final inMemoryRepo = InMemoryRepository<TestUser>();
+      final inMemoryRepo = InMemoryRepository<TestUser, UuidValue>();
       await inMemoryRepo.save(testUser);
 
-      final inMemoryResource = CrudResource<TestUser, dynamic>(
+      final inMemoryResource = CrudResource<TestUser, UuidValue, dynamic>(
         path: 'users',
         repository: inMemoryRepo,
         serializer: serializer,
         collectionHandler: (repo, params, skip, take, authResult) async {
-          final items = (repo as InMemoryRepository<TestUser>).getAllSync();
+          final items =
+              (repo as InMemoryRepository<TestUser, UuidValue>).getAllSync();
           return QueryResult(
             items.skip(skip).take(take).toList(),
             totalCount: items.length,
@@ -382,8 +384,8 @@ void main() {
 
     test('logs 400 response at FINE level for bad request', () async {
       // Arrange
-      final inMemoryRepo = InMemoryRepository<TestUser>();
-      final inMemoryResource = CrudResource<TestUser, dynamic>(
+      final inMemoryRepo = InMemoryRepository<TestUser, UuidValue>();
+      final inMemoryResource = CrudResource<TestUser, UuidValue, dynamic>(
         path: 'users',
         repository: inMemoryRepo,
         serializer: serializer,
@@ -405,7 +407,7 @@ void main() {
   group('CrudResource Logging - Deserialization Failures', () {
     test('logs deserialization failure at WARNING level in POST', () async {
       // Arrange
-      final failingResource = CrudResource<TestUser, dynamic>(
+      final failingResource = CrudResource<TestUser, UuidValue, dynamic>(
         path: 'users',
         repository: repository,
         serializer: FailingSerializer(),
@@ -429,7 +431,7 @@ void main() {
 
     test('logs deserialization failure at WARNING level in PUT', () async {
       // Arrange
-      final failingResource = CrudResource<TestUser, dynamic>(
+      final failingResource = CrudResource<TestUser, UuidValue, dynamic>(
         path: 'users',
         repository: repository,
         serializer: FailingSerializer(),
@@ -454,7 +456,7 @@ void main() {
 
     test('warning log includes error details', () async {
       // Arrange
-      final failingResource = CrudResource<TestUser, dynamic>(
+      final failingResource = CrudResource<TestUser, UuidValue, dynamic>(
         path: 'users',
         repository: repository,
         serializer: FailingSerializer(),
@@ -512,7 +514,8 @@ void main() {
       expect(severeLogs[0].error, isA<RepositoryException>());
     });
 
-    test('logs ArgumentError at SEVERE level for invalid UUID', () async {
+    test('logs DeserializationException at SEVERE level for invalid UUID',
+        () async {
       // Arrange
       final request = createRequest(path: '/users/invalid-id');
 
@@ -523,7 +526,7 @@ void main() {
       final severeLogs =
           logRecords.where((r) => r.level == Level.SEVERE).toList();
       expect(severeLogs.length, equals(1));
-      expect(severeLogs[0].error, isA<ArgumentError>());
+      expect(severeLogs[0].error, isA<DeserializationException>());
     });
 
     test('stack trace is included in SEVERE log', () async {

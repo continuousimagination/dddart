@@ -41,7 +41,7 @@ import '../repositories/user_repository.dart';
 /// - The repository owns selection and pagination
 /// - Empty/null parameter returns empty result (could also return 400 error)
 Future<QueryResult<User>> userCollectionHandler(
-  Repository<User> repository,
+  Repository<User, UuidValue> repository,
   Map<String, String> queryParams,
   int skip,
   int take,
@@ -55,7 +55,7 @@ Future<QueryResult<User>> userCollectionHandler(
 }
 
 Future<QueryResult<User>> firstNameQueryHandler(
-  Repository<User> repository,
+  Repository<User, UuidValue> repository,
   Map<String, String> queryParams,
   int skip,
   int take,
@@ -115,7 +115,7 @@ Future<QueryResult<User>> firstNameQueryHandler(
 /// - For databases, use indexed queries for performance
 /// - Consider rate limiting to prevent email enumeration attacks
 Future<QueryResult<User>> emailQueryHandler(
-  Repository<User> repository,
+  Repository<User, UuidValue> repository,
   Map<String, String> queryParams,
   int skip,
   int take,

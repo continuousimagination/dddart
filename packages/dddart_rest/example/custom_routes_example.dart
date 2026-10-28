@@ -21,7 +21,7 @@ import 'lib/json_serializer_support.dart';
 void main() async {
   // Set up CRUD resources
   final userRepository = InMemoryUserRepository();
-  final userResource = CrudResource<User, void>(
+  final userResource = CrudResource<User, UuidValue, void>(
     path: '/users',
     repository: userRepository,
     serializer: UserSerializer(),
@@ -89,7 +89,7 @@ Future<Response> _handleHealthCheck(Request request) async {
 }
 
 // User aggregate root for example
-class User extends AggregateRoot {
+class User extends UuidAggregateRoot {
   User({required this.name, super.id, super.createdAt, super.updatedAt});
   final String name;
 }
@@ -99,7 +99,7 @@ class User extends AggregateRoot {
 /// A production adapter would perform the ordering, pagination, and count in
 /// its datastore. This in-memory implementation is only for the runnable
 /// example.
-final class InMemoryUserRepository extends InMemoryRepository<User> {
+final class InMemoryUserRepository extends InMemoryRepository<User, UuidValue> {
   Future<QueryResult<User>> listPage({
     required int skip,
     required int take,

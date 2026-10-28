@@ -1,6 +1,7 @@
 import 'dart:io' as io;
 
 import 'package:dddart_rest/src/crud_resource.dart';
+import 'package:dddart_rest/src/error_mapper.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_router/shelf_router.dart';
@@ -68,7 +69,7 @@ class HttpServer {
   ///
   /// Example:
   /// ```dart
-  /// server.registerResource(CrudResource<User, void>(
+  /// server.registerResource(CrudResource<User, UuidValue, void>(
   ///   path: '/users',
   ///   repository: userRepository,
   ///   serializer: jsonSerializer,
@@ -141,7 +142,11 @@ class HttpServer {
     // Register routes for each resource
     for (final resource in _resources) {
       // GET /{path}/:id → resource.handleGetById
-      router.get('${resource.path}/<id>', resource.handleGetById);
+      router.get(
+        '${resource.path}/<id>',
+        (Request request, String id) =>
+            _handleIdentityRoute(request, id, resource.handleGetById),
+      );
 
       // GET /{path} → resource.handleQuery
       router.get(resource.path, resource.handleQuery);
@@ -150,10 +155,18 @@ class HttpServer {
       router.post(resource.path, resource.handleCreate);
 
       // PUT /{path}/:id → resource.handleUpdate
-      router.put('${resource.path}/<id>', resource.handleUpdate);
+      router.put(
+        '${resource.path}/<id>',
+        (Request request, String id) =>
+            _handleIdentityRoute(request, id, resource.handleUpdate),
+      );
 
       // DELETE /{path}/:id → resource.handleDelete
-      router.delete('${resource.path}/<id>', resource.handleDelete);
+      router.delete(
+        '${resource.path}/<id>',
+        (Request request, String id) =>
+            _handleIdentityRoute(request, id, resource.handleDelete),
+      );
     }
 
     // Register custom routes
@@ -185,6 +198,20 @@ class HttpServer {
     }
 
     return handler;
+  }
+
+  // shelf_router matches the encoded Uri.path. Decode its one segment exactly
+  // once; CrudResource and direct callers work with canonical codec keys.
+  Future<Response> _handleIdentityRoute(
+    Request request,
+    String encodedId,
+    Future<Response> Function(Request, String) handler,
+  ) async {
+    try {
+      return await handler(request, Uri.decodeComponent(encodedId));
+    } on FormatException catch (error, stackTrace) {
+      return ErrorMapper.mapException(error, stackTrace);
+    }
   }
 
   /// Stops the HTTP server

@@ -18,7 +18,7 @@ import 'package:shelf/shelf.dart';
 import 'lib/json_serializer_support.dart';
 
 // Domain model
-class User extends AggregateRoot {
+class User extends UuidAggregateRoot {
   User({
     required super.id,
     required this.username,
@@ -34,14 +34,15 @@ class User extends AggregateRoot {
 }
 
 /// User-specific persistence contract used by the authentication flow.
-abstract interface class UserRepository implements Repository<User> {
+abstract interface class UserRepository implements Repository<User, UuidValue> {
   /// Finds a user by login name.
   Future<User?> findByUsername(String username);
 }
 
 /// Instance-local user repository for this example.
 final class InMemoryUserRepository implements UserRepository {
-  final InMemoryRepository<User> _repository = InMemoryRepository<User>();
+  final InMemoryRepository<User, UuidValue> _repository =
+      InMemoryRepository<User, UuidValue>();
   final Map<String, UuidValue> _idsByUsername = {};
   final Map<UuidValue, String> _usernamesById = {};
 
@@ -213,7 +214,7 @@ void main() async {
 
   // Register protected user resource
   server.registerResource(
-    CrudResource<User, UserClaims>(
+    CrudResource<User, UuidValue, UserClaims>(
       path: '/users',
       repository: userRepo,
       serializer: UserSerializer(),
@@ -263,7 +264,7 @@ void main() async {
   print('\nPress Ctrl+C to stop the server');
 }
 
-Future<void> _seedUsers(Repository<User> repo) async {
+Future<void> _seedUsers(Repository<User, UuidValue> repo) async {
   final alice = User(
     id: UuidValue.generate(),
     username: 'alice',

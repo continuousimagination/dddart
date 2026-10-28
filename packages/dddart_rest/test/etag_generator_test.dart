@@ -4,7 +4,7 @@ import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:test/test.dart';
 
 // Test aggregate root
-class TestAggregate extends AggregateRoot {
+class TestAggregate extends UuidAggregateRoot {
   TestAggregate({
     required super.id,
     required this.name,

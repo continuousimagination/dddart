@@ -2,20 +2,20 @@
 
 ## Explicit collection and refresh-token reads (Unreleased)
 
-`CrudResource<T, TClaims>` no longer treats full repository enumeration as a
+`CrudResource<T, UuidValue, TClaims>` no longer treats full repository enumeration as a
 universal capability. An unfiltered `GET /resource` now requires an explicit
 `collectionHandler`:
 
 ```dart
 // Before: CrudResource enumerated some repository implementations implicitly.
-CrudResource<User, void>(
+CrudResource<User, UuidValue, void>(
   path: '/users',
   repository: userRepository,
   serializer: userSerializer,
 );
 
 // After: application code owns the datastore query and its ordering/count.
-CrudResource<User, void>(
+CrudResource<User, UuidValue, void>(
   path: '/users',
   repository: userRepository,
   serializer: userSerializer,
@@ -42,11 +42,11 @@ handler, an unfiltered collection request returns a problem+json 400 response.
 Named filter handlers continue to use `queryHandlers` unchanged.
 
 `JwtAuthHandler` now requires `RefreshTokenRepository<T>` rather than a plain
-`Repository<T>`:
+`Repository<T, UuidValue>`:
 
 ```dart
 // Before
-final refreshTokens = InMemoryRepository<RefreshToken>();
+final refreshTokens = InMemoryRepository<RefreshToken, UuidValue>();
 
 // After (tests and prototypes)
 final refreshTokens = InMemoryRefreshTokenRepository<RefreshToken>();
@@ -60,12 +60,12 @@ no-op. Custom refresh-token subtypes still require a matching typed lifecycle.
 ## Client-bound, single-use device grants (Unreleased)
 
 `AuthEndpoints` now requires a `DeviceCodeRepository<TDeviceCode>` instead of a
-plain `Repository<TDeviceCode>`. Replace the general-purpose in-memory
+plain `Repository<TDeviceCode, UuidValue>`. Replace the general-purpose in-memory
 repository in examples and tests:
 
 ```dart
 // Before
-final deviceCodeRepository = InMemoryRepository<DeviceCode>();
+final deviceCodeRepository = InMemoryRepository<DeviceCode, UuidValue>();
 
 // After
 final deviceCodeRepository = InMemoryDeviceCodeRepository<DeviceCode>(
@@ -199,19 +199,19 @@ opaque and contain no claim snapshot.
 
 ## JSON-only CRUD resources (Unreleased)
 
-`CrudResource<T, TClaims>` now has one JSON representation. Replace the
+`CrudResource<T, UuidValue, TClaims>` now has one JSON representation. Replace the
 content-type serializer map with a single `JsonSerializer<T>`:
 
 ```dart
 // Before
-CrudResource<User, void>(
+CrudResource<User, UuidValue, void>(
   path: '/users',
   repository: userRepository,
   serializers: {'application/json': userSerializer},
 );
 
 // After
-CrudResource<User, void>(
+CrudResource<User, UuidValue, void>(
   path: '/users',
   repository: userRepository,
   serializer: userJsonSerializer,
@@ -304,7 +304,7 @@ class MyAuthHandler extends AuthenticationHandler<MyClaims> {
 
 ```dart
 // Before
-final resource = CrudResource<User, StandardClaims>(
+final resource = CrudResource<User, UuidValue, StandardClaims>(
   path: '/users',
   repository: userRepo,
   serializer: userSerializer,
@@ -312,7 +312,7 @@ final resource = CrudResource<User, StandardClaims>(
 );
 
 // After
-final resource = CrudResource<User, StandardClaims>(
+final resource = CrudResource<User, UuidValue, StandardClaims>(
   path: '/users',
   repository: userRepo,
   serializer: userSerializer,
@@ -387,7 +387,7 @@ This release also introduces `AuthorizationHandler` for implementing resource-le
 
 ```dart
 // New authorization handler interface
-class MyAuthorizationHandler extends AuthorizationHandler<User, MyClaims> {
+class MyAuthorizationHandler extends AuthorizationHandler<User, UuidValue, MyClaims> {
   @override
   Future<AuthorizationResult> authorizeCreate(
     User user,
@@ -413,7 +413,7 @@ class MyAuthorizationHandler extends AuthorizationHandler<User, MyClaims> {
 }
 
 // Wire into CrudResource
-final resource = CrudResource<User, MyClaims>(
+final resource = CrudResource<User, UuidValue, MyClaims>(
   path: '/users',
   repository: userRepo,
   serializer: userSerializer,
