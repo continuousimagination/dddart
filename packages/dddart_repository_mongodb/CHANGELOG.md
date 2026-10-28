@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Changed
+
+- Breaking: repositories implement `Repository<T, I>` with concrete identity
+  lookup/deletion and optional injected `identityCodecs` shared with JSON.
+- Breaking storage migration: `_id` contains canonical key UTF-8 bytes as BSON
+  binary, preserving case and scope independently of collection collation. The
+  structural JSON `id` stays in the document. Recreate/migrate existing collections.
+- Add `fromDocument` for custom reads and reject malformed Unicode before I/O.
+- Preserve resolved generic and named/default custom method signatures.
+
 ## [0.9.0] - 2025-01-XX
 
 ### Added

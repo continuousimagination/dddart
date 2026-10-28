@@ -120,7 +120,9 @@ class TestMongoHelper {
     if (!isConnected) {
       throw StateError('Not connected. Call connect() first.');
     }
-    return _db!.collection(collectionName).findOne(where.eq('_id', id));
+    return _db!
+        .collection(collectionName)
+        .findOne(where.eq('_id', BsonBinary.from(id.codeUnits)));
   }
 
   /// Counts documents in a collection.

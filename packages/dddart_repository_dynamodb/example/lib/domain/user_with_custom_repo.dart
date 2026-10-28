@@ -13,7 +13,7 @@ part 'user_with_custom_repo_impl.dart';
 
 /// Custom repository interface with domain-specific query methods.
 abstract interface class UserRepository
-    implements Repository<UserWithCustomRepo> {
+    implements Repository<UserWithCustomRepo, UuidValue> {
   /// Finds at most one user through the email global secondary index.
   Future<UserWithCustomRepo?> findByEmail(String email);
 
@@ -30,7 +30,7 @@ abstract interface class UserRepository
   tableName: 'users_with_custom_repo',
   implements: UserRepository,
 )
-class UserWithCustomRepo extends AggregateRoot {
+class UserWithCustomRepo extends UuidAggregateRoot {
   /// Creates a user.
   UserWithCustomRepo({
     required this.firstName,

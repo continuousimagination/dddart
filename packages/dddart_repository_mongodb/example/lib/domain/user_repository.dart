@@ -3,11 +3,11 @@ import 'user_with_custom_repo.dart';
 
 /// Custom repository interface for UserWithCustomRepo aggregate with domain-specific queries.
 ///
-/// This interface extends the base Repository<UserWithCustomRepo> with custom query methods.
+/// This interface extends the base Repository<UserWithCustomRepo, UuidValue> with custom query methods.
 /// The MongoDB implementation will be generated as an abstract base class,
 /// requiring the developer to implement the custom methods.
 abstract interface class UserRepository
-    implements Repository<UserWithCustomRepo> {
+    implements Repository<UserWithCustomRepo, UuidValue> {
   /// Finds a user by their email address.
   ///
   /// Returns null if no user with the given email exists.
