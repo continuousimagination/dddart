@@ -45,14 +45,17 @@ void main() {
     test('should create exception with type and value details', () {
       final exception = TypeConversionException('database.port', 'int', 'abc');
 
-      expect(exception.message, equals('Cannot convert "abc" to int'));
+      expect(
+        exception.message,
+        equals('Cannot convert value of type String to int'),
+      );
       expect(exception.key, equals('database.port'));
       expect(exception.expectedType, equals('int'));
       expect(exception.actualValue, equals('abc'));
       expect(
         exception.toString(),
         equals(
-          'ConfigException: Cannot convert "abc" to int (key: database.port)',
+          'ConfigException: Cannot convert value of type String to int (key: database.port)',
         ),
       );
     });
@@ -99,11 +102,11 @@ void main() {
       expect(exception.cause, equals(cause));
       expect(
         exception.toString(),
-        contains('Cannot access configuration file: config.yaml'),
+        contains('Cannot access or parse configuration file: config.yaml'),
       );
       expect(
         exception.toString(),
-        contains('No such file or directory'),
+        isNot(contains('No such file or directory')),
       );
     });
   });

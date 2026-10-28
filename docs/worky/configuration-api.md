@@ -1,6 +1,6 @@
 # Structured configuration: API and implementation proposal
 
-Status: proposal for owner review before library implementation.
+Status: implementation authorized on 28 October 2026; local validation underway.
 Tracking: [#38](https://github.com/continuousimagination/dddart/issues/38).
 Source baseline: `c538680619a11af79e7094c3087646189c313978`.
 
@@ -23,7 +23,7 @@ class ConfigLookup {
   // Object? value;  // null is allowed when isPresent is true.
 }
 
-abstract interface class ConfigProvider {
+abstract class ConfigProvider {
   ConfigLookup lookup(String path);
   Future<void> reload();
 }
@@ -54,8 +54,10 @@ scalar values; numeric/bool getters accept corresponding typed scalars and
 explicitly parse environment-backed strings under documented existing rules.
 Do not stringify maps or lists to satisfy scalar access. Structural getList
 returns an actual sequence and never splits a scalar string on commas.
-Existing CSV-based getList/flattened getSection consumers receive explicit
-migration examples rather than a hidden reconstruction layer.
+Existing CSV-based getList consumers receive explicit migration examples.
+ConfigProvider supplies scalar getString and a legacy dotted getSection
+projection as concrete conveniences. The latter omits null, rejects lists and
+is not the structural provider contract; getMap preserves complete subtrees.
 
 ## Resolution and precedence
 
@@ -120,8 +122,8 @@ GitHub Actions is disabled; record actual local commands/results. Final
 external-consumer evidence must resolve the exact immutable candidate revision
 and read the ordered records with native scalar types.
 
-This draft PR contains the API/migration proposal, not a completed
-implementation or test result. Create a dedicated dddart work record and
-approve public access/null/precedence decisions before library changes.
+The owner authorized implementation after reviewing these proposals and the
+issue review. Actual commands and results belong in the dedicated configuration
+work record; proposal text alone is not a test result.
 Validated work may merge to feat/worky-changes; final branch review, merge to
 main and publication remain separate owner actions.

@@ -1,580 +1,222 @@
-/// Configuration management with multiple provider support.
-library;
-
+import 'package:dddart_config/src/config_lookup.dart';
 import 'package:dddart_config/src/config_provider.dart';
 import 'package:dddart_config/src/config_requirement.dart';
 import 'package:dddart_config/src/exceptions.dart';
 
-/// Unified configuration management with layered provider support.
+/// Layered structured configuration; earlier providers have higher precedence.
 ///
-/// The [Configuration] class combines multiple [ConfigProvider] instances
-/// with defined precedence rules, providing a single interface for accessing
-/// configuration values from multiple sources.
-///
-/// Providers are checked in the order they are provided to the constructor,
-/// with earlier providers taking precedence over later ones. This allows
-/// environment variables to override file-based defaults, for example.
-///
-/// Example:
-/// ```dart
-/// final config = Configuration([
-///   EnvironmentConfigProvider(prefix: 'MYAPP'),
-///   YamlConfigProvider('config.yaml'),
-/// ]);
-///
-/// // Environment variable MYAPP_DATABASE_HOST overrides config.yaml
-/// final host = config.getString('database.host');
-/// ```
-///
-/// The class provides basic string access through [getString] and
-/// [getSection], with support for reloading configuration from all
-/// providers via [reload].
-class Configuration {
-  /// Creates a configuration with the given providers.
-  ///
-  /// Providers are checked in order, with earlier providers taking
-  /// precedence over later ones. This allows layering configuration
-  /// sources with override semantics.
-  ///
-  /// Example:
-  /// ```dart
-  /// // Environment variables override YAML file values
-  /// final config = Configuration([
-  ///   EnvironmentConfigProvider(prefix: 'MYAPP'),
-  ///   YamlConfigProvider('config.yaml'),
-  /// ]);
-  /// ```
-  ///
-  /// Throws [ArgumentError] if [providers] is empty.
+/// Maps merge recursively. Other shapes, including lists and explicit null,
+/// replace the lower subtree. Resolve a complete effective tree before lookup
+/// so a child cannot bypass a null/scalar barrier in an intermediate provider.
+class Configuration extends ConfigProvider {
+  /// Creates a configuration from at least one provider.
   Configuration(List<ConfigProvider> providers)
       : _providers = List.unmodifiable(providers) {
     if (providers.isEmpty) {
-      throw ArgumentError('At least one provider must be specified');
+      throw ArgumentError('At least one provider is required');
     }
   }
 
   final List<ConfigProvider> _providers;
 
-  /// Retrieves a configuration value by key.
-  ///
-  /// Checks providers in precedence order and returns the first non-null
-  /// value found. Returns null if no provider contains the key.
-  ///
-  /// Keys typically use dot notation for hierarchical organization:
-  /// - `database.host`
-  /// - `database.port`
-  /// - `logging.level`
-  ///
-  /// Example:
-  /// ```dart
-  /// final host = config.getString('database.host');
-  /// if (host != null) {
-  ///   print('Database host: $host');
-  /// }
-  /// ```
-  ///
-  /// Returns null if the key does not exist in any provider.
-  String? getString(String key) {
-    for (final provider in _providers) {
-      final value = provider.getString(key);
-      if (value != null) {
-        return value;
+  @override
+  ConfigLookup lookup(String path) {
+    var root = <String, Object?>{};
+    for (final provider in _providers.reversed) {
+      final result = provider.lookup('');
+      if (!result.isPresent) continue;
+      final value = result.value;
+      if (value is! Map<String, Object?>) {
+        throw TypeConversionException('', 'root map', value);
       }
+      root = _merge(root, value);
     }
-    return null;
+    return ConfigLookup.present(root).at(path);
   }
 
-  /// Retrieves all configuration keys with a given prefix.
-  ///
-  /// Merges sections from all providers with precedence rules applied.
-  /// Earlier providers override values from later providers for the same key.
-  ///
-  /// For example, if the configuration contains:
-  /// - Provider 1: `database.host` = "prod.example.com"
-  /// - Provider 2: `database.host` = "localhost", `database.port` = "5432"
-  ///
-  /// Then `getSection('database')` returns:
-  /// ```dart
-  /// {
-  ///   'host': 'prod.example.com',  // From provider 1 (higher precedence)
-  ///   'port': '5432'                // From provider 2
-  /// }
-  /// ```
-  ///
-  /// Returns an empty map if no keys match the prefix in any provider.
-  Map<String, String> getSection(String prefix) {
-    final result = <String, String>{};
-
-    // Process providers in reverse order so earlier providers override later
-    for (var i = _providers.length - 1; i >= 0; i--) {
-      final section = _providers[i].getSection(prefix);
-      result.addAll(section);
+  static Map<String, Object?> _merge(
+    Map<String, Object?> low,
+    Map<String, Object?> high,
+  ) {
+    final result = Map<String, Object?>.of(low);
+    for (final entry in high.entries) {
+      final previous = result[entry.key];
+      final next = entry.value;
+      result[entry.key] =
+          previous is Map<String, Object?> && next is Map<String, Object?>
+              ? _merge(previous, next)
+              : next;
     }
-
     return result;
   }
 
-  /// Retrieves a required string configuration value.
-  ///
-  /// Returns the string value for [key], or throws [MissingConfigException]
-  /// if the key does not exist or has a null value.
-  ///
-  /// Example:
-  /// ```dart
-  /// final host = config.getRequiredString('database.host');
-  /// // Throws if database.host is not configured
-  /// ```
-  ///
-  /// Throws [MissingConfigException] if the key is not found.
+  /// Whether a path is present, including explicit null.
+  bool contains(String key) => lookup(key).isPresent;
+
+  /// Reads the structural value; use [lookup] to distinguish absent/null.
+  Object? getValue(String key) => lookup(key).value;
+
+  /// Reads a required scalar as text.
   String getRequiredString(String key) {
-    final value = getString(key);
-    if (value == null) {
-      throw MissingConfigException(key);
+    final value = _required(key, 'scalar');
+    if (value is String || value is num || value is bool) {
+      return value.toString();
     }
+    throw TypeConversionException(key, 'scalar', value);
+  }
+
+  /// Reads a scalar with a fallback for missing/null values.
+  String getStringOrDefault(String key, String defaultValue) =>
+      getString(key) ?? defaultValue;
+
+  /// Reads an integer, parsing environment-backed strings when necessary.
+  int? getInt(String key) => _optional(key, _integer);
+
+  /// Reads a required integer.
+  int getRequiredInt(String key) => _integer(key, _required(key, 'int'));
+
+  /// Reads an integer with a fallback for missing/null.
+  int getIntOrDefault(String key, int defaultValue) =>
+      getInt(key) ?? defaultValue;
+
+  /// Reads a number as double, or parses a numeric string.
+  double? getDouble(String key) => _optional(key, _double);
+
+  /// Reads a required double.
+  double getRequiredDouble(String key) =>
+      _double(key, _required(key, 'double'));
+
+  /// Reads a double with a fallback for missing/null.
+  double getDoubleOrDefault(String key, double defaultValue) =>
+      getDouble(key) ?? defaultValue;
+
+  /// Reads a boolean or a documented true/false string representation.
+  bool? getBool(String key) => _optional(key, _boolean);
+
+  /// Reads a required boolean.
+  bool getRequiredBool(String key) => _boolean(key, _required(key, 'bool'));
+
+  /// Reads a boolean with a fallback for missing/null.
+  bool getBoolOrDefault(String key, bool defaultValue) =>
+      getBool(key) ?? defaultValue;
+
+  /// Reads an ordered immutable list, without comma splitting.
+  List<Object?>? getList(String key) => _optional(key, _list);
+
+  /// Reads a required structured list.
+  List<Object?> getRequiredList(String key) =>
+      _list(key, _required(key, 'list'));
+
+  /// Reads a list, copying fallback values into an immutable tree.
+  List<Object?> getListOrDefault(String key, List<Object?> defaultValue) =>
+      getList(key) ??
+      ConfigLookup.present(defaultValue).value! as List<Object?>;
+
+  /// Reads an immutable map subtree.
+  Map<String, Object?>? getMap(String key) => _optional(key, _map);
+
+  /// Reads a required map subtree.
+  Map<String, Object?> getRequiredMap(String key) =>
+      _map(key, _required(key, 'map'));
+
+  Object _required(String key, String expected) {
+    final result = lookup(key);
+    if (!result.isPresent) throw MissingConfigException(key);
+    final value = result.value;
+    if (value == null) throw TypeConversionException(key, expected, null);
     return value;
   }
 
-  /// Retrieves a string configuration value with a default fallback.
-  ///
-  /// Returns the string value for [key], or [defaultValue] if the key
-  /// does not exist or has a null value.
-  ///
-  /// Example:
-  /// ```dart
-  /// final host = config.getStringOrDefault('database.host', 'localhost');
-  /// ```
-  String getStringOrDefault(String key, String defaultValue) {
-    return getString(key) ?? defaultValue;
+  T? _optional<T>(String key, T Function(String, Object) convert) {
+    final value = lookup(key).value;
+    return value == null ? null : convert(key, value);
   }
 
-  /// Retrieves an integer configuration value.
-  ///
-  /// Converts the string value to an integer using [int.parse].
-  /// Returns null if the key does not exist.
-  ///
-  /// Example:
-  /// ```dart
-  /// final port = config.getInt('database.port');
-  /// if (port != null) {
-  ///   print('Port: $port');
-  /// }
-  /// ```
-  ///
-  /// Throws [TypeConversionException] if the value cannot be parsed as int.
-  int? getInt(String key) {
-    final value = getString(key);
-    if (value == null) {
-      return null;
-    }
-
-    try {
-      return int.parse(value);
-    } on FormatException {
-      throw TypeConversionException(key, 'int', value);
-    }
+  static int _integer(String key, Object value) {
+    if (value is int) return value;
+    final parsed = value is String ? int.tryParse(value) : null;
+    if (parsed != null) return parsed;
+    throw TypeConversionException(key, 'int', value);
   }
 
-  /// Retrieves a required integer configuration value.
-  ///
-  /// Returns the integer value for [key], or throws an exception if the
-  /// key does not exist or cannot be converted to an integer.
-  ///
-  /// Example:
-  /// ```dart
-  /// final port = config.getRequiredInt('database.port');
-  /// ```
-  ///
-  /// Throws [MissingConfigException] if the key is not found.
-  /// Throws [TypeConversionException] if the value cannot be parsed as int.
-  int getRequiredInt(String key) {
-    final value = getString(key);
-    if (value == null) {
-      throw MissingConfigException(key);
-    }
-
-    try {
-      return int.parse(value);
-    } on FormatException {
-      throw TypeConversionException(key, 'int', value);
-    }
+  static double _double(String key, Object value) {
+    if (value is num) return value.toDouble();
+    final parsed = value is String ? double.tryParse(value) : null;
+    if (parsed != null) return parsed;
+    throw TypeConversionException(key, 'double', value);
   }
 
-  /// Retrieves an integer configuration value with a default fallback.
-  ///
-  /// Returns the integer value for [key], or [defaultValue] if the key
-  /// does not exist or has a null value.
-  ///
-  /// Example:
-  /// ```dart
-  /// final port = config.getIntOrDefault('database.port', 5432);
-  /// ```
-  ///
-  /// Throws [TypeConversionException] if the value exists but cannot be
-  /// parsed as int.
-  int getIntOrDefault(String key, int defaultValue) {
-    return getInt(key) ?? defaultValue;
+  static bool _boolean(String key, Object value) {
+    if (value is bool) return value;
+    if (value is String) {
+      switch (value.toLowerCase().trim()) {
+        case 'true':
+        case '1':
+        case 'yes':
+        case 'on':
+          return true;
+        case 'false':
+        case '0':
+        case 'no':
+        case 'off':
+          return false;
+      }
+    }
+    throw TypeConversionException(key, 'bool', value);
   }
 
-  /// Retrieves a double configuration value.
-  ///
-  /// Converts the string value to a double using [double.parse].
-  /// Returns null if the key does not exist.
-  ///
-  /// Example:
-  /// ```dart
-  /// final timeout = config.getDouble('connection.timeout');
-  /// if (timeout != null) {
-  ///   print('Timeout: $timeout seconds');
-  /// }
-  /// ```
-  ///
-  /// Throws [TypeConversionException] if the value cannot be parsed as double.
-  double? getDouble(String key) {
-    final value = getString(key);
-    if (value == null) {
-      return null;
-    }
-
-    try {
-      return double.parse(value);
-    } on FormatException {
-      throw TypeConversionException(key, 'double', value);
-    }
+  static List<Object?> _list(String key, Object value) {
+    if (value is List<Object?>) return value;
+    throw TypeConversionException(key, 'list', value);
   }
 
-  /// Retrieves a required double configuration value.
-  ///
-  /// Returns the double value for [key], or throws an exception if the
-  /// key does not exist or cannot be converted to a double.
-  ///
-  /// Example:
-  /// ```dart
-  /// final timeout = config.getRequiredDouble('connection.timeout');
-  /// ```
-  ///
-  /// Throws [MissingConfigException] if the key is not found.
-  /// Throws [TypeConversionException] if the value cannot be parsed as double.
-  double getRequiredDouble(String key) {
-    final value = getString(key);
-    if (value == null) {
-      throw MissingConfigException(key);
-    }
-
-    try {
-      return double.parse(value);
-    } on FormatException {
-      throw TypeConversionException(key, 'double', value);
-    }
+  static Map<String, Object?> _map(String key, Object value) {
+    if (value is Map<String, Object?>) return value;
+    throw TypeConversionException(key, 'map', value);
   }
 
-  /// Retrieves a double configuration value with a default fallback.
+  /// Validates required values, types and optional application validators.
   ///
-  /// Returns the double value for [key], or [defaultValue] if the key
-  /// does not exist or has a null value.
-  ///
-  /// Example:
-  /// ```dart
-  /// final timeout = config.getDoubleOrDefault('connection.timeout', 30.0);
-  /// ```
-  ///
-  /// Throws [TypeConversionException] if the value exists but cannot be
-  /// parsed as double.
-  double getDoubleOrDefault(String key, double defaultValue) {
-    return getDouble(key) ?? defaultValue;
-  }
-
-  /// Retrieves a boolean configuration value.
-  ///
-  /// Accepts the following string representations (case-insensitive):
-  /// - `true`, `false`
-  /// - `1`, `0`
-  /// - `yes`, `no`
-  /// - `on`, `off`
-  ///
-  /// Returns null if the key does not exist.
-  ///
-  /// Example:
-  /// ```dart
-  /// final debug = config.getBool('debug');
-  /// if (debug == true) {
-  ///   enableDebugMode();
-  /// }
-  /// ```
-  ///
-  /// Throws [TypeConversionException] if the value is not a valid boolean
-  /// representation.
-  bool? getBool(String key) {
-    final value = getString(key);
-    if (value == null) {
-      return null;
-    }
-
-    final normalized = value.toLowerCase().trim();
-    switch (normalized) {
-      case 'true':
-      case '1':
-      case 'yes':
-      case 'on':
-        return true;
-      case 'false':
-      case '0':
-      case 'no':
-      case 'off':
-        return false;
-      default:
-        throw TypeConversionException(key, 'bool', value);
-    }
-  }
-
-  /// Retrieves a required boolean configuration value.
-  ///
-  /// Returns the boolean value for [key], or throws an exception if the
-  /// key does not exist or cannot be converted to a boolean.
-  ///
-  /// Example:
-  /// ```dart
-  /// final debug = config.getRequiredBool('debug');
-  /// ```
-  ///
-  /// Throws [MissingConfigException] if the key is not found.
-  /// Throws [TypeConversionException] if the value is not a valid boolean
-  /// representation.
-  bool getRequiredBool(String key) {
-    final value = getString(key);
-    if (value == null) {
-      throw MissingConfigException(key);
-    }
-
-    final normalized = value.toLowerCase().trim();
-    switch (normalized) {
-      case 'true':
-      case '1':
-      case 'yes':
-      case 'on':
-        return true;
-      case 'false':
-      case '0':
-      case 'no':
-      case 'off':
-        return false;
-      default:
-        throw TypeConversionException(key, 'bool', value);
-    }
-  }
-
-  /// Retrieves a boolean configuration value with a default fallback.
-  ///
-  /// Returns the boolean value for [key], or [defaultValue] if the key
-  /// does not exist or has a null value.
-  ///
-  /// Example:
-  /// ```dart
-  /// final debug = config.getBoolOrDefault('debug', false);
-  /// ```
-  ///
-  /// Throws [TypeConversionException] if the value exists but is not a
-  /// valid boolean representation.
-  bool getBoolOrDefault(String key, bool defaultValue) {
-    return getBool(key) ?? defaultValue;
-  }
-
-  /// Retrieves a list configuration value.
-  ///
-  /// Splits the string value on commas and trims whitespace from each element.
-  /// Returns null if the key does not exist.
-  ///
-  /// Example:
-  /// ```dart
-  /// final hosts = config.getList('database.hosts');
-  /// // "host1, host2, host3" -> ["host1", "host2", "host3"]
-  /// ```
-  ///
-  /// Returns an empty list if the value is an empty string.
-  List<String>? getList(String key) {
-    final value = getString(key);
-    if (value == null) {
-      return null;
-    }
-
-    if (value.trim().isEmpty) {
-      return [];
-    }
-
-    return value.split(',').map((e) => e.trim()).toList();
-  }
-
-  /// Retrieves a required list configuration value.
-  ///
-  /// Returns the list value for [key], or throws [MissingConfigException]
-  /// if the key does not exist.
-  ///
-  /// Example:
-  /// ```dart
-  /// final hosts = config.getRequiredList('database.hosts');
-  /// ```
-  ///
-  /// Throws [MissingConfigException] if the key is not found.
-  List<String> getRequiredList(String key) {
-    final value = getList(key);
-    if (value == null) {
-      throw MissingConfigException(key);
-    }
-    return value;
-  }
-
-  /// Retrieves a list configuration value with a default fallback.
-  ///
-  /// Returns the list value for [key], or [defaultValue] if the key
-  /// does not exist or has a null value.
-  ///
-  /// Example:
-  /// ```dart
-  /// final hosts = config.getListOrDefault(
-  ///   'database.hosts',
-  ///   ['localhost'],
-  /// );
-  /// ```
-  List<String> getListOrDefault(String key, List<String> defaultValue) {
-    return getList(key) ?? defaultValue;
-  }
-
-  /// Validates configuration against a list of requirements.
-  ///
-  /// Checks each requirement to ensure:
-  /// 1. Required keys exist
-  /// 2. Values can be converted to the expected type
-  /// 3. Custom validators pass (if provided)
-  ///
-  /// All validation failures are collected before throwing an exception,
-  /// allowing the application to see all configuration issues at once.
-  ///
-  /// Example:
-  /// ```dart
-  /// config.validate([
-  ///   ConfigRequirement(
-  ///     key: 'database.host',
-  ///     type: ConfigType.string,
-  ///     required: true,
-  ///   ),
-  ///   ConfigRequirement(
-  ///     key: 'database.port',
-  ///     type: ConfigType.integer,
-  ///     required: true,
-  ///     validator: (value) {
-  ///       if (value < 1 || value > 65535) {
-  ///         throw ArgumentError('Port must be between 1 and 65535');
-  ///       }
-  ///       return value;
-  ///     },
-  ///   ),
-  ///   ConfigRequirement(
-  ///     key: 'logging.level',
-  ///     type: ConfigType.string,
-  ///     validator: (value) {
-  ///       final valid = ['debug', 'info', 'warn', 'error'];
-  ///       if (!valid.contains(value)) {
-  ///         throw ArgumentError('Must be one of: ${valid.join(', ')}');
-  ///       }
-  ///       return value;
-  ///     },
-  ///   ),
-  /// ]);
-  /// ```
-  ///
-  /// Throws [ValidationException] with a list of all validation failures
-  /// if any requirement is not met.
+  /// Failure reports omit actual configuration values and validator exception
+  /// text, which may contain secrets.
   void validate(List<ConfigRequirement> requirements) {
     final failures = <String>[];
-
     for (final requirement in requirements) {
       final key = requirement.key;
-      final rawValue = getString(key);
-
-      // Check if required key exists
-      if (rawValue == null) {
-        if (requirement.required) {
-          failures.add('$key is required');
-        }
-        continue; // Skip type and validator checks if value doesn't exist
+      if (!contains(key)) {
+        if (requirement.required) failures.add('$key is required');
+        continue;
       }
-
-      // Check type conversion
-      dynamic typedValue;
+      final Object value;
       try {
-        switch (requirement.type) {
-          case ConfigType.string:
-            typedValue = rawValue;
-          case ConfigType.integer:
-            typedValue = int.parse(rawValue);
-          case ConfigType.double:
-            typedValue = double.parse(rawValue);
-          case ConfigType.boolean:
-            final normalized = rawValue.toLowerCase().trim();
-            switch (normalized) {
-              case 'true':
-              case '1':
-              case 'yes':
-              case 'on':
-                typedValue = true;
-              case 'false':
-              case '0':
-              case 'no':
-              case 'off':
-                typedValue = false;
-              default:
-                throw const FormatException('Invalid boolean value');
-            }
-          case ConfigType.list:
-            if (rawValue.trim().isEmpty) {
-              typedValue = <String>[];
-            } else {
-              typedValue = rawValue.split(',').map((e) => e.trim()).toList();
-            }
-        }
-      } on FormatException {
+        value = switch (requirement.type) {
+          ConfigType.string => getRequiredString(key),
+          ConfigType.integer => getRequiredInt(key),
+          ConfigType.double => getRequiredDouble(key),
+          ConfigType.boolean => getRequiredBool(key),
+          ConfigType.list => getRequiredList(key),
+          ConfigType.map => getRequiredMap(key),
+        };
+      } on TypeConversionException {
         failures.add('$key must be a valid ${requirement.type.name}');
-        continue; // Skip validator check if type conversion failed
+        continue;
       }
-
-      // Check custom validator
-      if (requirement.validator != null) {
-        try {
-          requirement.validator!(typedValue);
-        } catch (e) {
-          failures.add('$key validation failed: $e');
-        }
+      try {
+        requirement.validator?.call(value);
+      } catch (_) {
+        failures.add('$key validation failed');
       }
     }
-
-    if (failures.isNotEmpty) {
-      throw ValidationException(failures);
-    }
+    if (failures.isNotEmpty) throw ValidationException(failures);
   }
 
-  /// Reloads configuration from all providers.
-  ///
-  /// Calls [ConfigProvider.reload] on each provider sequentially.
-  /// If any provider fails to reload, throws an exception with details
-  /// about which provider failed.
-  ///
-  /// Example:
-  /// ```dart
-  /// // Configuration files have been updated
-  /// await config.reload();
-  /// // New values are now available
-  /// final newValue = config.getString('some.key');
-  /// ```
-  ///
-  /// Throws [ConfigException] if any provider fails to reload, with
-  /// details about which provider failed and the underlying cause.
+  @override
   Future<void> reload() async {
     for (var i = 0; i < _providers.length; i++) {
       try {
         await _providers[i].reload();
-      } catch (e) {
-        throw ConfigException(
-          'Failed to reload provider at index $i: $e',
-        );
+      } catch (_) {
+        throw ConfigException('Failed to reload provider at index $i');
       }
     }
   }

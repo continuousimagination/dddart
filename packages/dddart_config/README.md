@@ -6,7 +6,8 @@ A unified configuration management package for the DDDart framework. Provides a 
 
 - **Multiple Configuration Sources**: Load configuration from YAML files, environment variables, or custom providers
 - **Provider Layering**: Combine multiple sources with defined precedence (e.g., environment overrides YAML)
-- **Type Safety**: Type-safe access methods for String, int, double, bool, and List types
+- **Structured Values**: Ordered lists, maps, native scalar types, and explicit null
+- **Type Safety**: Typed scalar, list, and map access with path-specific errors
 - **Validation**: Validate required configuration at startup with descriptive error messages
 - **Nested Configuration**: Support for hierarchical configuration using dot notation
 - **Runtime Reload**: Reload configuration from sources without restarting the application
@@ -19,10 +20,14 @@ Add `dddart_config` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  dddart_config: ^1.0.0
+  dddart_config:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      path: packages/dddart_config
+      ref: <approved-immutable-candidate-revision>
 ```
 
-Then run:
+Replace the revision placeholder with the reviewed candidate commit, then run:
 
 ```bash
 dart pub get
@@ -106,6 +111,12 @@ The provider converts environment variable names to configuration keys:
 
 This allows you to represent configuration keys that contain underscores, such as `bot_token`, `client_id`, or `max_connections`.
 
+Values remain strings: an environment value containing commas or JSON is not
+implicitly decoded as a collection. Use YAML for structural lists/maps. Names
+that collide after normalization, or define both an ancestor scalar and its
+descendant (such as `APP_DATABASE` and `APP_DATABASE_PORT`), produce a path error.
+Prefer a prefix to avoid unrelated collisions in the process environment.
+
 ## Usage Examples
 
 ### Provider Precedence
@@ -121,6 +132,46 @@ final config = Configuration([
 // If MYAPP_DATABASE_HOST is set, it overrides config.yaml
 final host = config.getString('database.host');
 ```
+
+Maps merge recursively by key; overriding `database.host` preserves a lower
+`database.port`. Lists replace wholesale, including empty lists. An explicit
+null masks lower values; an absent key permits fallback. An empty map contributes
+no overriding entries when merged with a lower map.
+
+A scalar/null/list is also a barrier in an intermediate provider. With high
+`database: {host: prod}`, middle `database: null`, and low
+`database: {port: 5432}`, the effective subtree is `{host: prod}`. Both subtree
+and child lookup report `database.port` absent. High-priority maps cannot bring
+back descendants hidden by an intermediate replacement.
+
+### Ordered structured configuration
+
+```yaml
+projects:
+  - organization: continuousimagination
+    number: 12
+  - organization: continuousimagination
+    number: 34
+```
+
+```dart
+final projects = config.getRequiredList('projects');
+final first = projects.first! as Map<String, Object?>;
+assert(first['number'] is int);
+final subtree = config.getRequiredMap(''); // Complete effective root.
+final result = config.lookup('optional.value');
+if (result.isPresent) {
+  // result.value can be an explicit null.
+}
+```
+
+Returned maps and lists are deeply immutable plain Dart values. YAML wrapper
+types are removed; sequence order, nested collections, empty values, native
+string/bool/int/double values and explicit null are retained. Non-string map
+keys, unsupported values and cyclic collections fail with path context.
+Dot paths traverse maps; inspect a subtree directly for literal dotted keys or
+list elements. Application record validation and ordering policy remain outside
+the configuration library.
 
 ### Validation at Startup
 
@@ -191,7 +242,7 @@ final timeout = config.getIntOrDefault('database.timeout', 30);
 final debug = config.getBoolOrDefault('debug', false);
 final enabled = config.getRequiredBool('features.new_ui');
 
-// List access (comma-separated values)
+// Structural list access; a scalar "a,b" stays a string.
 final tags = config.getListOrDefault('tags', ['default']);
 ```
 
@@ -212,6 +263,7 @@ final newHost = config.getString('database.host');
 ### Core Classes
 
 - **[Configuration](lib/src/configuration.dart)**: Main configuration class with provider layering and typed access
+- **[ConfigLookup](lib/src/config_lookup.dart)**: Structural value with explicit presence information
 - **[ConfigProvider](lib/src/config_provider.dart)**: Abstract interface for configuration sources
 - **[YamlConfigProvider](lib/src/yaml_config_provider.dart)**: Reads configuration from YAML files
 - **[EnvironmentConfigProvider](lib/src/environment_config_provider.dart)**: Reads configuration from environment variables
@@ -296,10 +348,15 @@ The following string values are recognized as boolean (case-insensitive):
 
 ### List Values
 
-Lists are represented as comma-separated strings:
-- `"a,b,c"` → `["a", "b", "c"]`
-- Whitespace is trimmed from each element
-- Empty string returns empty list
+List access requires an actual YAML list (or a list supplied by a structural
+provider). Strings containing commas remain single strings. List elements are
+not trimmed or converted. Use `getMap`/`getRequiredMap` for map subtrees.
+
+Nullable getters return null for missing or explicit-null values. Use `lookup`
+or `contains` to distinguish them. Required getters throw `MissingConfigException`
+for absence and `TypeConversionException` for explicit null or the wrong type.
+Error messages report paths and types without embedding configuration values.
+Custom validation failures omit the callback's exception text for the same reason.
 
 ### Numeric Values
 
@@ -309,45 +366,47 @@ Lists are represented as comma-separated strings:
 
 ## Extending with Custom Providers
 
-Create custom providers by implementing the `ConfigProvider` interface:
+Extend `ConfigProvider` and implement structural `lookup` and `reload`. The empty
+lookup path must expose the complete root map. The base supplies scalar string
+access and the legacy scalar-only `getSection` projection:
 
 ```dart
-class DatabaseConfigProvider implements ConfigProvider {
-  final Database db;
-  
-  DatabaseConfigProvider(this.db);
-  
+class ApplicationConfigProvider extends ConfigProvider {
+  ApplicationConfigProvider(Map<String, Object?> values)
+      : _root = ConfigLookup.present(values);
+
+  final ConfigLookup _root;
+
   @override
-  String? getString(String key) {
-    // Read from database config table
-    return db.query('SELECT value FROM config WHERE key = ?', [key]);
-  }
-  
+  ConfigLookup lookup(String path) => _root.at(path);
+
   @override
-  Map<String, String> getSection(String prefix) {
-    // Read all keys with prefix
-    final results = db.query(
-      'SELECT key, value FROM config WHERE key LIKE ?',
-      ['$prefix.%'],
-    );
-    return Map.fromEntries(
-      results.map((r) => MapEntry(r['key'], r['value'])),
-    );
-  }
-  
-  @override
-  Future<void> reload() async {
-    // Refresh cache if needed
-  }
+  Future<void> reload() async {}
 }
 
 // Use custom provider
 final config = Configuration([
   EnvironmentConfigProvider(prefix: 'MYAPP'),
-  DatabaseConfigProvider(database),
+  ApplicationConfigProvider({'database': {'port': 5432}}),
   YamlConfigProvider('defaults.yaml'),
 ]);
 ```
+
+## Migration from flat/string configuration
+
+- Custom providers now expose a root tree through `lookup('')`; keeping only a
+  flat string cache cannot implement ancestor masking correctly.
+- Replace comma-separated YAML/env list strings with actual YAML sequences.
+  `getList` now returns `List<Object?>`; cast/validate application records at the
+  consumer boundary. Commas and whitespace inside elements remain unchanged.
+- Existing scalar getters still work for simple configuration and parse numeric
+  or boolean environment strings. Collections are never stringified by `getString`.
+- `getSection` remains a legacy dotted scalar projection, omits null and rejects
+  lists. Prefer `getMap` for structural data and native types.
+- An explicit null now masks fallback instead of disappearing. Required null is
+  a type error, while an absent required key is a missing-value error.
+- Environment shape collisions are errors. Use a dedicated prefix and avoid
+  defining both an ancestor value and its descendants in the same provider.
 
 ## Error Handling
 
