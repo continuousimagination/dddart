@@ -44,9 +44,47 @@ are untouched. Final service gates use the repository's documented test fixtures
 
 Validator self-analysis, formatting, self-tests and inventory check pass. The
 inventory covers 15 public packages and 13 examples, with 22 root workspace
-members and no unaccounted exemptions. Full package/archive/example integration
-and final provisioned-service lanes are in progress; this record will be updated
-with actual results before the parent merges to the feature branch.
+members and no unaccounted exemptions. The complete `./scripts/test-all.sh` gate passes on parent revision
+d13d0a1afba1a1c10025fadd96bdacb6b6752698: all 15 package gates, all 15 isolated
+archive-consumer gates and all 13 example-policy lanes. Generation, fatal-info
+analysis, formatting, behavior/regression tests and applicable zero-warning
+publication dry runs pass. Nonpublishable packages retain their existing dry-run
+exemptions. Root membership and the inventory determine coverage.
+
+After that gate, explicit local provisioned-service lanes pass:
+
+| Command target | Mode | Actual result |
+| --- | --- | --- |
+| package dddart_repository_mongodb | ci | 82 tests, generation/analysis/format/dry-run pass |
+| package dddart_repository_dynamodb | ci | 113 tests, generation/analysis/format/dry-run pass |
+| package dddart_repository_mysql | ci | 191 tests, generation/analysis/format/dry-run pass |
+| example dddart_repository_mongodb_example | ci | Generated libraries compile; service-backed entrypoints pass |
+| example dddart_repository_dynamodb_example | ci | Generated libraries compile; service-backed entrypoints pass |
+| example dddart_repository_mysql_example | ci | Generated libraries compile; service-backed entrypoints pass |
+
+Each target uses `dart run tool/validation/validate.dart TARGET --mode=ci` with
+the documented local test services, not GitHub Actions. No service lane is
+represented as passed merely because local mode excludes its tags. Examples
+classified compile-only by policy remain compile-only; interactive servers,
+external OAuth/OIDC and legacy WIP are not promoted to runnable guarantees.
+
+A final diff from immutable revision 8131339 over packages/*/lib is empty. Thus
+the comprehensive Git consumer tests the exact integrated library source,
+including tracked stock auth runtime parts. Following commits contain evidence,
+API/migration documentation and clean-fixture inventory/format fixes only.
+No generated output was hand-edited or left unverified. The observed old
+annotation/part, DomainEvent generation and illustrative entity conflicts are
+resolved and recorded in the corresponding child work records.
+
+The three task-owned test containers and their anonymous volumes were removed
+after successful validation: dddart-worky-mongo-20261028,
+dddart-worky-dynamo-20261028 and dddart-worky-mysql-20261028. Existing stopped
+containers/data remain untouched. No unrelated working-tree changes remain.
+
+All implementation and integration work is ready for the authorized merge through
+PR #45 into feat/worky-changes. Independent feature review is still pending;
+#37/#38 retain their review/adoption acceptance items. Main and publication
+remain untouched.
 
 Evidence logs and scripts: /private/tmp/dddart-worky-implementation-20261028.
 Optional real AWS/OIDC and the explicitly excluded legacy event/server examples
