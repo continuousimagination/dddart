@@ -24,7 +24,7 @@ import 'package:shelf/shelf.dart';
 import 'lib/json_serializer_support.dart';
 
 // Domain model
-class User extends AggregateRoot {
+class User extends UuidAggregateRoot {
   User({
     required super.id,
     required this.email,
@@ -117,7 +117,7 @@ void main() async {
   print('  Audience: $clientId\n');
 
   // Create repository
-  final userRepo = InMemoryRepository<User>();
+  final userRepo = InMemoryRepository<User, UuidValue>();
 
   // Seed test user (in production, users would be synced from Cognito)
   await _seedUsers(userRepo);
@@ -137,7 +137,7 @@ void main() async {
 
   // Register protected user resource
   server.registerResource(
-    CrudResource<User, CognitoClaims>(
+    CrudResource<User, UuidValue, CognitoClaims>(
       path: '/users',
       repository: userRepo,
       serializer: UserSerializer(),
@@ -207,7 +207,7 @@ void main() async {
   print('\nPress Ctrl+C to stop the server');
 }
 
-Future<void> _seedUsers(Repository<User> repo) async {
+Future<void> _seedUsers(Repository<User, UuidValue> repo) async {
   // In production, users would be synced from Cognito
   // This is just for demonstration
   final testUser = User(

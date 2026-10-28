@@ -254,7 +254,8 @@ void main() {
         );
         final DeviceCodeRepository<CustomDeviceCode> deviceCodeRepository =
             inMemoryRepository;
-        final Repository<CustomDeviceCode> repository = deviceCodeRepository;
+        final Repository<CustomDeviceCode, UuidValue> repository =
+            deviceCodeRepository;
         expect(repository, same(inMemoryRepository));
         final endpoints =
             AuthEndpoints<StandardClaims, RefreshToken, CustomDeviceCode>(

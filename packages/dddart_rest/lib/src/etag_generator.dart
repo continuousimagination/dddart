@@ -32,7 +32,7 @@ enum ETagStrategy {
 /// final etag = generator.generate(user);
 /// // Returns: "2024-01-15T10:30:00.000Z"
 /// ```
-class ETagGenerator<T extends AggregateRoot> {
+class ETagGenerator<T extends AggregateRoot<Identity>> {
   /// Creates an ETag generator with the specified strategy
   ///
   /// Parameters:

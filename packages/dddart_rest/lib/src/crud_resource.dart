@@ -9,6 +9,7 @@ import 'package:dddart_rest/src/error_mapper.dart';
 import 'package:dddart_rest/src/etag_generator.dart';
 import 'package:dddart_rest/src/query_handler.dart';
 import 'package:dddart_rest/src/response_builder.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:shelf/shelf.dart';
 
 /// Main class that handles HTTP CRUD operations for an aggregate root.
@@ -22,7 +23,7 @@ import 'package:shelf/shelf.dart';
 ///
 /// Example without authentication:
 /// ```dart
-/// final userResource = CrudResource<User, void>(
+/// final userResource = CrudResource<User, UuidValue, void>(
 ///   path: '/users',
 ///   repository: userRepository,
 ///   serializer: jsonSerializer,
@@ -31,14 +32,14 @@ import 'package:shelf/shelf.dart';
 ///
 /// Example with authentication:
 /// ```dart
-/// final userResource = CrudResource<User, UserClaims>(
+/// final userResource = CrudResource<User, UuidValue, UserClaims>(
 ///   path: '/users',
 ///   repository: userRepository,
 ///   serializer: jsonSerializer,
 ///   authenticationHandler: jwtAuthHandler,
 /// );
 /// ```
-class CrudResource<T extends AggregateRoot, TClaims> {
+class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   /// Creates a CrudResource with the specified configuration
   ///
   /// Parameters:
@@ -72,7 +73,11 @@ class CrudResource<T extends AggregateRoot, TClaims> {
     this.maxTake = 100,
     ETagStrategy etagStrategy = ETagStrategy.timestamp,
     this.preCreate,
-  }) {
+    IdentityCodecRegistry? identityCodecs,
+  }) : identityCodecs = identityCodecs ?? IdentityCodecRegistry() {
+    if (!this.identityCodecs.contains<I>()) {
+      throw ArgumentError('Register a codec for the resource identity $I');
+    }
     // Validate path is not null or empty
     if (path.isEmpty) {
       throw ArgumentError('path cannot be empty');
@@ -90,8 +95,11 @@ class CrudResource<T extends AggregateRoot, TClaims> {
 
   /// Repository instance for persistence operations
   ///
-  /// All repositories implement Repository<T> interface with getById, save, deleteById methods
-  final Repository<T> repository;
+  /// All repositories implement Repository<T, I> interface with getById, save, deleteById methods
+  final Repository<T, I> repository;
+
+  /// Instance-local key codecs; configure the body serializer with the same codecs.
+  final IdentityCodecRegistry identityCodecs;
 
   /// JSON serializer used for all request and success response bodies.
   final JsonSerializer<T> serializer;
@@ -108,21 +116,21 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   /// When provided, operations are authorized after authentication succeeds.
   /// The handler is invoked after authentication but before executing the operation.
   /// If authorization fails, a 403 Forbidden response is returned.
-  final AuthorizationHandler<T, TClaims>? authorizationHandler;
+  final AuthorizationHandler<T, I, TClaims>? authorizationHandler;
 
   /// Optional handler for unfiltered collection retrieval.
   ///
   /// The handler owns datastore-side selection, ordering, pagination, and the
   /// accurate total count. It receives an empty query-parameter map, normalized
   /// pagination values, and the current authentication result.
-  final QueryHandler<T>? collectionHandler;
+  final QueryHandler<T, I>? collectionHandler;
 
   /// Map of query parameter names to handler functions
   ///
   /// Key: the query parameter name (e.g., 'firstName')
   /// Value: the handler function to invoke when that parameter is present
   /// Note: The same handler can be registered multiple times for backward compatibility
-  final Map<String, QueryHandler<T>> queryHandlers;
+  final Map<String, QueryHandler<T, I>> queryHandlers;
 
   /// Map of custom exception types to error response handlers
   ///
@@ -201,6 +209,16 @@ class CrudResource<T extends AggregateRoot, TClaims> {
     return (response: null, authResult: authResult);
   }
 
+  I _identityFromKey(String key) {
+    if (key.isEmpty ||
+        key == '.' ||
+        key == '..' ||
+        utf8.decode(utf8.encode(key)) != key) {
+      throw const DeserializationException('Invalid REST identity key');
+    }
+    return identityCodecs.fromKey<I>(key);
+  }
+
   /// Handles GET /resource/:id
   ///
   /// Parses the ID, calls repository.getById(), and returns a JSON aggregate.
@@ -212,7 +230,7 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   ///
   /// Parameters:
   /// - [request]: The HTTP request
-  /// - [id]: The ID string from the URL path
+  /// - [id]: The canonical key after one URI-decoding step (direct callers pass it decoded)
   ///
   /// Returns: A Response with status 200 and serialized aggregate, or error response
   Future<Response> handleGetById(Request request, String id) async {
@@ -231,8 +249,8 @@ class CrudResource<T extends AggregateRoot, TClaims> {
         return authCheck.response!;
       }
 
-      final uuid = UuidValue.fromString(id);
-      final aggregate = await repository.getById(uuid);
+      final identity = _identityFromKey(id);
+      final aggregate = await repository.getById(identity);
 
       // Generate ETag for the aggregate
       final etag = _etagGenerator.generate(aggregate);
@@ -493,7 +511,7 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   ///
   /// Parameters:
   /// - [request]: The HTTP request
-  /// - [id]: The ID string from the URL path
+  /// - [id]: The canonical key after one URI-decoding step (direct callers pass it decoded)
   ///
   /// Returns: A Response with status 200 and serialized aggregate, or error response
   Future<Response> handleUpdate(Request request, String id) async {
@@ -528,10 +546,10 @@ class CrudResource<T extends AggregateRoot, TClaims> {
         rethrow;
       }
 
-      final uuid = UuidValue.fromString(id);
-      if (aggregate.id != uuid) {
+      final identity = _identityFromKey(id);
+      if (aggregate.id != identity) {
         final response = _responseBuilder.badRequest(
-          'Route ID $uuid does not match request body ID ${aggregate.id}.',
+          'Route ID $identity does not match request body ID ${aggregate.id}.',
         );
         _logger.fine('PUT /$path/$id - ${response.statusCode} (ID mismatch)');
         return response;
@@ -541,7 +559,7 @@ class CrudResource<T extends AggregateRoot, TClaims> {
       final ifMatch = request.headers['if-match'];
       if (ifMatch != null) {
         // Fetch current aggregate to validate ETag
-        final currentAggregate = await repository.getById(uuid);
+        final currentAggregate = await repository.getById(identity);
         final currentETag = _etagGenerator.generate(currentAggregate);
 
         if (ifMatch != currentETag) {
@@ -614,7 +632,7 @@ class CrudResource<T extends AggregateRoot, TClaims> {
   ///
   /// Parameters:
   /// - [request]: The HTTP request
-  /// - [id]: The ID string from the URL path
+  /// - [id]: The canonical key after one URI-decoding step (direct callers pass it decoded)
   ///
   /// Returns: A Response with status 204, or error response
   Future<Response> handleDelete(Request request, String id) async {
@@ -633,12 +651,12 @@ class CrudResource<T extends AggregateRoot, TClaims> {
         return authCheck.response!;
       }
 
-      final uuid = UuidValue.fromString(id);
+      final identity = _identityFromKey(id);
 
       // Authorize if handler is configured
       if (authorizationHandler != null && authCheck.authResult != null) {
         final authzResult = await authorizationHandler!.authorizeDelete(
-          uuid,
+          identity,
           authCheck.authResult!,
         );
         if (!authzResult.isAuthorized) {
@@ -657,7 +675,7 @@ class CrudResource<T extends AggregateRoot, TClaims> {
         }
       }
 
-      await repository.deleteById(uuid);
+      await repository.deleteById(identity);
       final response = _responseBuilder.noContent();
       _logger.fine('DELETE /$path/$id - ${response.statusCode}');
       return response;

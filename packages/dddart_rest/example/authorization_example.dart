@@ -18,7 +18,7 @@ import 'package:shelf/shelf.dart';
 import 'lib/json_serializer_support.dart';
 
 // Domain model - Document owned by a user
-class Document extends AggregateRoot {
+class Document extends UuidAggregateRoot {
   Document({
     required super.id,
     required this.title,
@@ -60,7 +60,7 @@ class UserClaims {
 
 // Authorization handler - enforces ownership rules
 class DocumentAuthorizationHandler
-    extends AuthorizationHandler<Document, UserClaims> {
+    extends AuthorizationHandler<Document, UuidValue, UserClaims> {
   @override
   Future<AuthorizationResult> authorizeCreate(
     Document aggregate,
@@ -172,7 +172,7 @@ void main() async {
   print('Starting authorization example...\n');
 
   // Create repositories
-  final documentRepo = InMemoryRepository<Document>();
+  final documentRepo = InMemoryRepository<Document, UuidValue>();
   final refreshTokenRepo = InMemoryRefreshTokenRepository<RefreshToken>();
   final deviceCodeRepo = InMemoryDeviceCodeRepository<DeviceCode>(
     lifecycle: const StandardDeviceCodeLifecycle(),
@@ -248,7 +248,7 @@ void main() async {
 
   // Register protected document resource with authorization
   server.registerResource(
-    CrudResource<Document, UserClaims>(
+    CrudResource<Document, UuidValue, UserClaims>(
       path: '/documents',
       repository: documentRepo,
       serializer: DocumentSerializer(),
@@ -330,7 +330,7 @@ void main() async {
   print('\nPress Ctrl+C to stop the server');
 }
 
-Future<void> _seedDocuments(Repository<Document> repo) async {
+Future<void> _seedDocuments(Repository<Document, UuidValue> repo) async {
   // Alice's documents
   await repo.save(
     Document(

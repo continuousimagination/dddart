@@ -1,6 +1,7 @@
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:build/build.dart';
+import 'package:dddart/dddart.dart';
 import 'package:dddart_repository_rest/src/annotations/generate_rest_repository.dart';
 import 'package:source_gen/source_gen.dart';
 
@@ -53,6 +54,8 @@ class RestRepositoryGenerator
       );
     }
 
+    final identityType = _concreteIdentityType(classElement);
+
     // Extract configuration from annotation
     final resourcePath = _extractResourcePath(annotation, className);
     final customInterface = _extractImplementsInterface(annotation);
@@ -60,7 +63,7 @@ class RestRepositoryGenerator
     // Determine what to generate based on interface analysis
     if (customInterface == null) {
       // No custom interface - generate concrete class
-      return _generateConcreteRepository(className, resourcePath);
+      return _generateConcreteRepository(className, resourcePath, identityType);
     }
 
     // Analyze interface to determine if abstract base is needed
@@ -91,6 +94,7 @@ class RestRepositoryGenerator
       return _generateConcreteRepository(
         className,
         resourcePath,
+        identityType,
         implements: customInterface,
       );
     } else {
@@ -98,6 +102,7 @@ class RestRepositoryGenerator
       return _generateAbstractBaseRepository(
         className,
         resourcePath,
+        identityType,
         implements: customInterface,
         abstractMethods: customMethods,
       );
@@ -108,14 +113,27 @@ class RestRepositoryGenerator
   ///
   /// Walks the inheritance hierarchy to find AggregateRoot.
   bool _extendsAggregateRoot(ClassElement element) {
-    ClassElement? current = element;
-    while (current != null) {
-      if (current.name == 'AggregateRoot') return true;
-      final supertype = current.supertype;
-      if (supertype == null) break;
-      current = supertype.element as ClassElement?;
+    return element.allSupertypes.any(
+      (type) =>
+          const TypeChecker.fromRuntime(AggregateRoot).isExactly(type.element),
+    );
+  }
+
+  String _concreteIdentityType(ClassElement element) {
+    final root = element.allSupertypes.firstWhere(
+      (type) =>
+          const TypeChecker.fromRuntime(AggregateRoot).isExactly(type.element),
+    );
+    final identity = root.typeArguments.single;
+    if (element.typeParameters.isNotEmpty ||
+        identity is! InterfaceType ||
+        const TypeChecker.fromRuntime(Identity).isExactly(identity.element)) {
+      throw InvalidGenerationSourceError(
+        'Repository generation requires a concrete identity type.',
+        element: element,
+      );
     }
-    return false;
+    return identity.getDisplayString(withNullability: false);
   }
 
   /// Validates that a class has the @Serializable annotation.
@@ -178,15 +196,17 @@ class RestRepositoryGenerator
   /// Gets all methods from an interface type, including inherited methods.
   ///
   /// This includes methods from the interface itself and all superinterfaces
-  /// (including Repository<T>), but excludes methods from Object and other
+  /// (including Repository<T, UuidValue>), but excludes methods from Object and other
   /// system classes.
   List<MethodElement> _getInterfaceMethods(InterfaceType interfaceType) {
-    final methods = <MethodElement>[];
+    final methods = <String, MethodElement>{};
 
     // Get methods from the interface itself
-    methods.addAll(interfaceType.methods);
+    for (final method in interfaceType.methods) {
+      methods.putIfAbsent(method.name, () => method);
+    }
 
-    // Get methods from all superinterfaces (including Repository<T>)
+    // Get methods from all superinterfaces (including Repository<T, UuidValue>)
     // but exclude Object and system classes
     for (final supertype in interfaceType.allSupertypes) {
       final supertypeName = supertype.element.name;
@@ -196,27 +216,30 @@ class RestRepositoryGenerator
           supertype.element.library.name.startsWith('dart.')) {
         continue;
       }
-      methods.addAll(supertype.methods);
+      for (final method in supertype.methods) {
+        methods.putIfAbsent(method.name, () => method);
+      }
     }
 
-    return methods;
+    return methods.values.toList();
   }
 
   /// Generates a concrete repository class implementation.
   ///
   /// This is used when:
   /// - No custom interface is specified
-  /// - Custom interface only contains base Repository<T> methods
+  /// - Custom interface only contains base Repository<T, UuidValue> methods
   ///
   /// The generated class can be instantiated directly.
   String _generateConcreteRepository(
     String className,
-    String resourcePath, {
+    String resourcePath,
+    String identityType, {
     InterfaceType? implements,
   }) {
     final interfaceClause = implements != null
         ? 'implements ${implements.element.name}'
-        : 'implements Repository<$className>';
+        : 'implements Repository<$className, $identityType>';
 
     final buffer = StringBuffer();
 
@@ -235,7 +258,8 @@ class RestRepositoryGenerator
     buffer.writeln('  /// Creates a repository instance.');
     buffer.writeln('  ///');
     buffer.writeln('  /// [connection] - A REST connection to the API server.');
-    buffer.writeln('  ${className}RestRepository(this._connection);');
+    buffer.writeln(
+        '  ${className}RestRepository(this._connection, {IdentityCodecRegistry? identityCodecs}) : _identityCodecs = identityCodecs ?? IdentityCodecRegistry();');
     buffer.writeln();
 
     // Generate fields and getters
@@ -246,17 +270,20 @@ class RestRepositoryGenerator
     buffer.writeln("  String get _resourcePath => '$resourcePath';");
     buffer.writeln();
     buffer.writeln('  /// The JSON serializer for $className aggregates.');
-    buffer.writeln('  final _serializer = ${className}JsonSerializer();');
+    buffer.writeln('  final IdentityCodecRegistry _identityCodecs;');
+    buffer.writeln(
+        '  late final _serializer = ${className}JsonSerializer.withIdentityCodecs(_identityCodecs);');
+    buffer.writeln(_generateIdentityUri(identityType));
     buffer.writeln();
 
     // Generate CRUD methods
-    buffer.writeln(_generateGetByIdMethod(className));
+    buffer.writeln(_generateGetByIdMethod(className, identityType));
     buffer.writeln();
 
-    buffer.writeln(_generateSaveMethod(className));
+    buffer.writeln(_generateSaveMethod(className, identityType));
     buffer.writeln();
 
-    buffer.writeln(_generateDeleteByIdMethod(className));
+    buffer.writeln(_generateDeleteByIdMethod(className, identityType));
     buffer.writeln();
 
     // Generate exception mapping helper
@@ -270,13 +297,14 @@ class RestRepositoryGenerator
   /// Generates an abstract base repository class.
   ///
   /// This is used when a custom interface contains methods beyond the base
-  /// Repository<T> interface. The generated abstract class implements the
+  /// Repository<T, UuidValue> interface. The generated abstract class implements the
   /// base CRUD methods and declares custom methods as abstract.
   ///
   /// Developers must extend this class and implement the custom methods.
   String _generateAbstractBaseRepository(
     String className,
-    String resourcePath, {
+    String resourcePath,
+    String identityType, {
     required InterfaceType implements,
     required List<MethodElement> abstractMethods,
   }) {
@@ -288,7 +316,7 @@ class RestRepositoryGenerator
     );
     buffer.writeln('///');
     buffer.writeln(
-      '/// This abstract class implements the base `Repository<$className>` methods',
+      '/// This abstract class implements the base `Repository<$className, $identityType>` methods',
     );
     buffer.writeln(
       '/// (getById, save, deleteById) and declares custom methods as abstract.',
@@ -306,7 +334,8 @@ class RestRepositoryGenerator
     buffer.writeln('  /// Creates a repository instance.');
     buffer.writeln('  ///');
     buffer.writeln('  /// [connection] - A REST connection to the API server.');
-    buffer.writeln('  ${className}RestRepositoryBase(this._connection);');
+    buffer.writeln(
+        '  ${className}RestRepositoryBase(this._connection, {IdentityCodecRegistry? identityCodecs}) : _identityCodecs = identityCodecs ?? IdentityCodecRegistry();');
     buffer.writeln();
 
     // Generate fields and getters (same as concrete class)
@@ -317,17 +346,20 @@ class RestRepositoryGenerator
     buffer.writeln("  String get _resourcePath => '$resourcePath';");
     buffer.writeln();
     buffer.writeln('  /// The JSON serializer for $className aggregates.');
-    buffer.writeln('  final _serializer = ${className}JsonSerializer();');
+    buffer.writeln('  final IdentityCodecRegistry _identityCodecs;');
+    buffer.writeln(
+        '  late final _serializer = ${className}JsonSerializer.withIdentityCodecs(_identityCodecs);');
+    buffer.writeln(_generateIdentityUri(identityType));
     buffer.writeln();
 
     // Generate concrete implementations of base Repository methods
-    buffer.writeln(_generateGetByIdMethod(className));
+    buffer.writeln(_generateGetByIdMethod(className, identityType));
     buffer.writeln();
 
-    buffer.writeln(_generateSaveMethod(className));
+    buffer.writeln(_generateSaveMethod(className, identityType));
     buffer.writeln();
 
-    buffer.writeln(_generateDeleteByIdMethod(className));
+    buffer.writeln(_generateDeleteByIdMethod(className, identityType));
     buffer.writeln();
 
     buffer.writeln(_generateMapHttpExceptionMethod());
@@ -349,15 +381,31 @@ class RestRepositoryGenerator
     return buffer.toString();
   }
 
+  String _generateIdentityUri(String identityType) => '''
+  Uri _identityUri($identityType id) {
+    try {
+      final key = _identityCodecs.toKey<$identityType>(id);
+      return _connection.identityUri(_resourcePath, key);
+    } catch (error) {
+      if (error is RepositoryException) rethrow;
+      throw RepositoryException(
+        'Invalid REST identity key',
+        type: RepositoryExceptionType.constraint,
+        cause: error,
+      );
+    }
+  }''';
+
   /// Generates the getById method implementation.
-  String _generateGetByIdMethod(String className) {
+  String _generateGetByIdMethod(String className, String identityType) {
     return '''
   @override
-  Future<$className> getById(UuidValue id) async {
+  Future<$className> getById($identityType id) async {
     try {
+      final uri = _identityUri(id);
       final response = await _connection.executeRequest(
         () => _connection.client.get(
-          Uri.parse('\${_connection.baseUrl}\$_resourcePath/\${id.uuid}'),
+          uri,
           headers: {'Accept': 'application/json'},
         ),
         operation: 'retrieve $className',
@@ -365,7 +413,14 @@ class RestRepositoryGenerator
       
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        return _serializer.fromJson(json);
+        final aggregate = _serializer.fromJson(json);
+        if (aggregate.id != id) {
+          throw const RepositoryException(
+            'Response identity does not match requested identity',
+            type: RepositoryExceptionType.constraint,
+          );
+        }
+        return aggregate;
       }
       
       throw _mapHttpException(response.statusCode, response.body);
@@ -382,17 +437,18 @@ class RestRepositoryGenerator
   }
 
   /// Generates the save method implementation.
-  String _generateSaveMethod(String className) {
+  String _generateSaveMethod(String className, String identityType) {
     return '''
   @override
   Future<void> save($className aggregate) async {
     try {
+      final uri = _identityUri(aggregate.id);
       final json = _serializer.toJson(aggregate);
       final body = jsonEncode(json);
       
       final response = await _connection.executeRequest(
         () => _connection.client.put(
-          Uri.parse('\${_connection.baseUrl}\$_resourcePath/\${aggregate.id.uuid}'),
+          uri,
           body: body,
           headers: {
             'Accept': 'application/json',
@@ -420,14 +476,15 @@ class RestRepositoryGenerator
   }
 
   /// Generates the deleteById method implementation.
-  String _generateDeleteByIdMethod(String className) {
+  String _generateDeleteByIdMethod(String className, String identityType) {
     return '''
   @override
-  Future<void> deleteById(UuidValue id) async {
+  Future<void> deleteById($identityType id) async {
     try {
+      final uri = _identityUri(id);
       final response = await _connection.executeRequest(
         () => _connection.client.delete(
-          Uri.parse('\${_connection.baseUrl}\$_resourcePath/\${id.uuid}'),
+          uri,
           headers: {'Accept': 'application/json'},
         ),
         operation: 'delete $className',
@@ -488,6 +545,7 @@ class RestRepositoryGenerator
           detail ?? 'Duplicate resource',
           type: RepositoryExceptionType.duplicate,
         );
+      case 400:
       case 422:
         return RepositoryException(
           detail ?? 'Repository constraint violated',

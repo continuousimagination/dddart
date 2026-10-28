@@ -47,7 +47,7 @@ import 'package:dddart_repository_rest/dddart_repository_rest.dart';
 
 @Serializable()
 @GenerateRestRepository()
-class $className extends AggregateRoot {
+class $className extends UuidAggregateRoot {
 $fields
   $className();
 }
@@ -74,13 +74,18 @@ $fields
 
           // Verify generated code has valid structure
           expect(output, contains('class ${className}RestRepository'));
-          expect(output, contains('implements Repository<$className>'));
+          expect(
+            output,
+            contains('implements Repository<$className, UuidValue>'),
+          );
           expect(output, contains('Future<$className> getById'));
           expect(output, contains('Future<void> save($className aggregate)'));
           expect(output, contains('Future<void> deleteById'));
           expect(
             output,
-            contains('final _serializer = ${className}JsonSerializer()'),
+            contains(
+              'late final _serializer = ${className}JsonSerializer.withIdentityCodecs(_identityCodecs)',
+            ),
           );
           expect(output, contains('RepositoryException _mapHttpException'));
 
@@ -116,7 +121,7 @@ import 'package:dddart_repository_rest/dddart_repository_rest.dart';
 
 @Serializable()
 @GenerateRestRepository(resourcePath: '$resourcePath')
-class TestAggregate extends AggregateRoot {
+class TestAggregate extends UuidAggregateRoot {
   final String name;
   TestAggregate({required this.name});
 }
@@ -152,7 +157,7 @@ class TestAggregate extends AggregateRoot {
           // Verify it's used in HTTP requests (no slash between baseUrl and resourcePath)
           expect(
             output,
-            contains(r'${_connection.baseUrl}$_resourcePath/'),
+            contains('_connection.identityUri(_resourcePath, key)'),
             reason: 'Resource path should be used in HTTP request URLs',
           );
         }
@@ -192,7 +197,7 @@ import 'package:dddart_repository_rest/dddart_repository_rest.dart';
 
 @Serializable()
 @GenerateRestRepository()
-class $className extends AggregateRoot {
+class $className extends UuidAggregateRoot {
   final String name;
   $className({required this.name});
 }
@@ -244,7 +249,7 @@ import 'package:dddart_repository_rest/dddart_repository_rest.dart';
 
 @Serializable()
 @GenerateRestRepository()
-class User extends AggregateRoot {
+class User extends UuidAggregateRoot {
   final String name;
   User({required this.name});
 }
@@ -271,7 +276,7 @@ class User extends AggregateRoot {
         // Verify concrete class is generated (not abstract)
         expect(output1, contains('class UserRestRepository'));
         expect(output1, isNot(contains('abstract class')));
-        expect(output1, contains('implements Repository<User>'));
+        expect(output1, contains('implements Repository<User, UuidValue>'));
 
         // Test case 2: Custom interface with only base methods -> concrete class
         final library2 = await resolveSource(
@@ -282,11 +287,11 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:dddart_repository_rest/dddart_repository_rest.dart';
 
-abstract interface class ProductRepository implements Repository<Product> {}
+abstract interface class ProductRepository implements Repository<Product, UuidValue> {}
 
 @Serializable()
 @GenerateRestRepository(implements: ProductRepository)
-class Product extends AggregateRoot {
+class Product extends UuidAggregateRoot {
   final String name;
   Product({required this.name});
 }
@@ -324,14 +329,14 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:dddart_repository_rest/dddart_repository_rest.dart';
 
-abstract interface class OrderRepository implements Repository<Order> {
+abstract interface class OrderRepository implements Repository<Order, UuidValue> {
   Future<Order?> findByOrderNumber(String orderNumber);
   Future<List<Order>> findByCustomerId(String customerId);
 }
 
 @Serializable()
 @GenerateRestRepository(implements: OrderRepository)
-class Order extends AggregateRoot {
+class Order extends UuidAggregateRoot {
   final String orderNumber;
   Order({required this.orderNumber});
 }
@@ -381,7 +386,7 @@ class Order extends AggregateRoot {
           // Single custom method
           {
             'interface': '''
-abstract interface class UserRepository implements Repository<User> {
+abstract interface class UserRepository implements Repository<User, UuidValue> {
   Future<User?> findByEmail(String email);
 }
 ''',
@@ -390,7 +395,7 @@ abstract interface class UserRepository implements Repository<User> {
           // Multiple custom methods
           {
             'interface': '''
-abstract interface class OrderRepository implements Repository<Order> {
+abstract interface class OrderRepository implements Repository<Order, UuidValue> {
   Future<Order?> findByOrderNumber(String orderNumber);
   Future<List<Order>> findByCustomerId(String customerId);
   Future<List<Order>> findByStatus(String status);
@@ -405,7 +410,7 @@ abstract interface class OrderRepository implements Repository<Order> {
           // Methods with various parameter types
           {
             'interface': '''
-abstract interface class ProductRepository implements Repository<Product> {
+abstract interface class ProductRepository implements Repository<Product, UuidValue> {
   Future<List<Product>> findByCategory(String category);
   Future<List<Product>> findByPriceRange(double min, double max);
   Future<int> countByCategory(String category);
@@ -442,7 +447,7 @@ $interfaceCode
 
 @Serializable()
 @GenerateRestRepository(implements: ${className}Repository)
-class $className extends AggregateRoot {
+class $className extends UuidAggregateRoot {
   final String name;
   $className({required this.name});
 }
@@ -522,16 +527,16 @@ class $className extends AggregateRoot {
       timeout: const Timeout(Duration(minutes: 2)),
     );
 
-    // **Feature: rest-repository, Property 13: Protected members are accessible in subclasses**
+    // **Feature: rest-repository, Property 13: Library-private members are present for same-library consumers**
     test(
-      'protected members are accessible in subclasses of generated base class',
+      'library-private members are declared for same-library custom implementations',
       () async {
         // Test that subclasses can access _connection, _serializer, _resourcePath, and _mapHttpException
         final testCases = [
           {
             'className': 'User',
             'interface': '''
-abstract interface class UserRepository implements Repository<User> {
+abstract interface class UserRepository implements Repository<User, UuidValue> {
   Future<User?> findByEmail(String email);
 }
 ''',
@@ -539,7 +544,7 @@ abstract interface class UserRepository implements Repository<User> {
           {
             'className': 'Order',
             'interface': '''
-abstract interface class OrderRepository implements Repository<Order> {
+abstract interface class OrderRepository implements Repository<Order, UuidValue> {
   Future<List<Order>> findByStatus(String status);
 }
 ''',
@@ -547,7 +552,7 @@ abstract interface class OrderRepository implements Repository<Order> {
           {
             'className': 'Product',
             'interface': '''
-abstract interface class ProductRepository implements Repository<Product> {
+abstract interface class ProductRepository implements Repository<Product, UuidValue> {
   Future<List<Product>> search(String query);
 }
 ''',
@@ -571,7 +576,7 @@ $interfaceCode
 
 @Serializable()
 @GenerateRestRepository(implements: ${className}Repository)
-class $className extends AggregateRoot {
+class $className extends UuidAggregateRoot {
   final String name;
   $className({required this.name});
 }
@@ -603,7 +608,7 @@ class $className extends AggregateRoot {
             reason: 'Should generate abstract base class',
           );
 
-          // Verify _connection field is present and accessible (not private to the class)
+          // Verify _connection field is present and accessible (private to the Dart library)
           expect(
             output,
             contains('final RestConnection _connection;'),
@@ -613,7 +618,9 @@ class $className extends AggregateRoot {
           // Verify _serializer field is present
           expect(
             output,
-            contains('final _serializer = ${className}JsonSerializer();'),
+            contains(
+              'late final _serializer = ${className}JsonSerializer.withIdentityCodecs(_identityCodecs);',
+            ),
             reason: '_serializer should be declared as a field',
           );
 
@@ -647,7 +654,7 @@ class $className extends AggregateRoot {
 
           expect(
             output,
-            contains(r'$_resourcePath'),
+            contains('_connection.identityUri(_resourcePath, key)'),
             reason: '_resourcePath should be used in method implementations',
           );
 
@@ -659,7 +666,7 @@ class $className extends AggregateRoot {
           );
 
           // Verify the members are not declared as private to the library
-          // (they use _ prefix for convention but are accessible to subclasses)
+          // (the _ prefix makes them accessible only in the same Dart library)
           // In Dart, members with _ prefix are library-private, but since
           // subclasses will be in the same library (via part directive),
           // they will have access to these members.

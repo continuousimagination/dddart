@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest_client/dddart_rest_client.dart';
@@ -85,6 +86,23 @@ class RestConnection {
                 httpClient: httpClient,
               )
             : null;
+
+  /// Builds a single encoded identity segment from a canonical codec key.
+  ///
+  /// Empty and dot-only keys cannot be routed without path normalization.
+  /// Reject noncanonical UTF-16 rather than silently replacing characters.
+  Uri identityUri(String resourcePath, String key) {
+    if (key.isEmpty ||
+        key == '.' ||
+        key == '..' ||
+        utf8.decode(utf8.encode(key)) != key) {
+      throw const RepositoryException(
+        'REST identity keys must be nonempty, lossless UTF-8 and not dot segments',
+        type: RepositoryExceptionType.constraint,
+      );
+    }
+    return Uri.parse('$baseUrl$resourcePath/${Uri.encodeComponent(key)}');
+  }
 
   /// The base URL of the REST API.
   ///

@@ -6,7 +6,7 @@ import 'package:dddart/dddart.dart';
 /// including the list of matching items and an optional total count.
 /// The total count is useful for pagination, allowing clients to know
 /// the total number of items that match the query criteria.
-class QueryResult<T extends AggregateRoot> {
+class QueryResult<T extends AggregateRoot<Identity>> {
   /// Creates a QueryResult with the given items and optional total count
   ///
   /// Parameters:
@@ -44,7 +44,7 @@ class QueryResult<T extends AggregateRoot> {
 ///
 /// Example:
 /// ```dart
-/// abstract interface class UserRepository implements Repository<User> {
+/// abstract interface class UserRepository implements Repository<User, UuidValue> {
 ///   Future<({List<User> items, int totalCount})> findByFirstName(
 ///     String firstName, {
 ///     required int skip,
@@ -52,7 +52,7 @@ class QueryResult<T extends AggregateRoot> {
 ///   });
 /// }
 ///
-/// final firstNameHandler = (Repository<User> repository,
+/// final firstNameHandler = (Repository<User, UuidValue> repository,
 ///                           Map<String, String> queryParams,
 ///                           int skip,
 ///                           int take,
@@ -69,8 +69,9 @@ class QueryResult<T extends AggregateRoot> {
 ///   );
 /// };
 /// ```
-typedef QueryHandler<T extends AggregateRoot> = Future<QueryResult<T>> Function(
-  Repository<T> repository,
+typedef QueryHandler<T extends AggregateRoot<I>, I extends Identity>
+    = Future<QueryResult<T>> Function(
+  Repository<T, I> repository,
   Map<String, String> queryParams,
   int skip,
   int take,

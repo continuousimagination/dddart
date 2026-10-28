@@ -9,7 +9,7 @@ import 'package:test/test.dart';
 import 'json_serializer_test_support.dart';
 
 // Test aggregate root
-class TestUser extends AggregateRoot {
+class TestUser extends UuidAggregateRoot {
   TestUser({
     required this.name,
     required this.email,
@@ -58,7 +58,7 @@ class CustomDomainException implements Exception {
 }
 
 // Custom repository that can throw custom exceptions
-class TestRepository extends InMemoryRepository<TestUser> {
+class TestRepository extends InMemoryRepository<TestUser, UuidValue> {
   bool shouldThrowCustomException = false;
 
   @override
@@ -124,14 +124,15 @@ class HttpResponse {
   }
 }
 
-Future<QueryResult<T>> inMemoryCollectionHandler<T extends AggregateRoot>(
-  Repository<T> repository,
+Future<QueryResult<T>>
+    inMemoryCollectionHandler<T extends AggregateRoot<UuidValue>>(
+  Repository<T, UuidValue> repository,
   Map<String, String> queryParams,
   int skip,
   int take,
   dynamic authResult,
 ) async {
-  final items = (repository as InMemoryRepository<T>).getAllSync();
+  final items = (repository as InMemoryRepository<T, UuidValue>).getAllSync();
   return QueryResult<T>(
     items.skip(skip).take(take).toList(),
     totalCount: items.length,
@@ -141,17 +142,17 @@ Future<QueryResult<T>> inMemoryCollectionHandler<T extends AggregateRoot>(
 void main() {
   group('Integration Tests - Complete CRUD Lifecycle', () {
     late HttpServer server;
-    late InMemoryRepository<TestUser> repository;
+    late InMemoryRepository<TestUser, UuidValue> repository;
     late TestUserSerializer serializer;
     const port = 8081;
 
     setUp(() async {
-      repository = InMemoryRepository<TestUser>();
+      repository = InMemoryRepository<TestUser, UuidValue>();
       serializer = TestUserSerializer();
       server = HttpServer(port: port);
 
       server.registerResource(
-        CrudResource<TestUser, dynamic>(
+        CrudResource<TestUser, UuidValue, dynamic>(
           path: '/users',
           repository: repository,
           serializer: serializer,
@@ -288,18 +289,18 @@ void main() {
 
   group('Integration Tests - Query Handlers', () {
     late HttpServer server;
-    late InMemoryRepository<TestUser> repository;
+    late InMemoryRepository<TestUser, UuidValue> repository;
     late TestUserSerializer serializer;
     const port = 8082;
 
     setUp(() async {
-      repository = InMemoryRepository<TestUser>();
+      repository = InMemoryRepository<TestUser, UuidValue>();
       serializer = TestUserSerializer();
       server = HttpServer(port: port);
 
       // Register custom query handler
       server.registerResource(
-        CrudResource<TestUser, dynamic>(
+        CrudResource<TestUser, UuidValue, dynamic>(
           path: '/users',
           repository: repository,
           serializer: serializer,
@@ -307,8 +308,8 @@ void main() {
           queryHandlers: {
             'name': (repo, params, skip, take, authResult) async {
               final name = params['name']!;
-              final allUsers =
-                  (repo as InMemoryRepository<TestUser>).getAllSync();
+              final allUsers = (repo as InMemoryRepository<TestUser, UuidValue>)
+                  .getAllSync();
               final filtered = allUsers.where((u) => u.name == name).toList();
               return QueryResult(
                 filtered.skip(skip).take(take).toList(),
@@ -392,17 +393,17 @@ void main() {
 
   group('Integration Tests - JSON media contract', () {
     late HttpServer server;
-    late InMemoryRepository<TestUser> repository;
+    late InMemoryRepository<TestUser, UuidValue> repository;
     late TestUserSerializer jsonSerializer;
     const port = 8083;
 
     setUp(() async {
-      repository = InMemoryRepository<TestUser>();
+      repository = InMemoryRepository<TestUser, UuidValue>();
       jsonSerializer = TestUserSerializer();
       server = HttpServer(port: port);
 
       server.registerResource(
-        CrudResource<TestUser, dynamic>(
+        CrudResource<TestUser, UuidValue, dynamic>(
           path: '/users',
           repository: repository,
           serializer: jsonSerializer,
@@ -507,17 +508,17 @@ void main() {
 
   group('Integration Tests - Error Scenarios', () {
     late HttpServer server;
-    late InMemoryRepository<TestUser> repository;
+    late InMemoryRepository<TestUser, UuidValue> repository;
     late TestUserSerializer serializer;
     const port = 8084;
 
     setUp(() async {
-      repository = InMemoryRepository<TestUser>();
+      repository = InMemoryRepository<TestUser, UuidValue>();
       serializer = TestUserSerializer();
       server = HttpServer(port: port);
 
       server.registerResource(
-        CrudResource<TestUser, dynamic>(
+        CrudResource<TestUser, UuidValue, dynamic>(
           path: '/users',
           repository: repository,
           serializer: serializer,
@@ -525,8 +526,8 @@ void main() {
           queryHandlers: {
             'name': (repo, params, skip, take, authResult) async {
               final name = params['name']!;
-              final allUsers =
-                  (repo as InMemoryRepository<TestUser>).getAllSync();
+              final allUsers = (repo as InMemoryRepository<TestUser, UuidValue>)
+                  .getAllSync();
               final filtered = allUsers.where((u) => u.name == name).toList();
               return QueryResult(
                 filtered.skip(skip).take(take).toList(),
@@ -665,7 +666,7 @@ void main() {
       server = HttpServer(port: port);
 
       server.registerResource(
-        CrudResource<TestUser, dynamic>(
+        CrudResource<TestUser, UuidValue, dynamic>(
           path: '/users',
           repository: repository,
           serializer: serializer,
@@ -749,17 +750,17 @@ void main() {
 
   group('Integration Tests - Pagination', () {
     late HttpServer server;
-    late InMemoryRepository<TestUser> repository;
+    late InMemoryRepository<TestUser, UuidValue> repository;
     late TestUserSerializer serializer;
     const port = 8086;
 
     setUp(() async {
-      repository = InMemoryRepository<TestUser>();
+      repository = InMemoryRepository<TestUser, UuidValue>();
       serializer = TestUserSerializer();
       server = HttpServer(port: port);
 
       server.registerResource(
-        CrudResource<TestUser, dynamic>(
+        CrudResource<TestUser, UuidValue, dynamic>(
           path: '/users',
           repository: repository,
           serializer: serializer,
@@ -767,8 +768,8 @@ void main() {
           queryHandlers: {
             'name': (repo, params, skip, take, authResult) async {
               final name = params['name']!;
-              final allUsers =
-                  (repo as InMemoryRepository<TestUser>).getAllSync();
+              final allUsers = (repo as InMemoryRepository<TestUser, UuidValue>)
+                  .getAllSync();
               final filtered = allUsers.where((u) => u.name == name).toList();
               return QueryResult(
                 filtered.skip(skip).take(take).toList(),
