@@ -60,6 +60,14 @@ The REST test configuration now serializes these socket suites; production
 routing/query behavior is unchanged. This test-only repair is required to make
 the completion gate deterministic and is validated with the full REST suite.
 
+The same run found source_gen trying to resolve unrelated test-library @Tags
+metadata in the SQL packages. Their default generation targets now identify
+the actual fixture, library and example/lib inputs for both builders, following
+the existing distributed-event package convention. Generator tests still supply
+their own build_test sources; consumer auto-application remains unchanged.
+Required generation deletes and verifies the owning combined parts, so narrowing
+inputs does not allow stale generated output to satisfy the gate.
+
 The new external consumer resolves ten packages at immutable revision
 993252697d56417562e5f85503d64633647d1ae3. Generation, fatal analysis and execution
 pass for unprefixed shell metadata/reload, strict prefixed diagnostics, final
