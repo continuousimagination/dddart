@@ -1,26 +1,21 @@
-# Distributed events example status
+# Distributed events examples
 
-The distributed client, server, registry, and bulk time-range examples are
-legacy work-in-progress surfaces. They are preserved under `legacy/` as `.skip`
-files and are not runnable. Their contracts remain deferred to EVENT-001 through
-EVENT-004; this directory makes no current guarantee about registry generation,
-HTTP transport, polling, or bulk-range semantics.
-
-## Active JSON example
-
-The one active example is an independent `dddart_json` round-trip for a
-`StoredEvent` subtype with extra application fields. It exercises the current
-JSON-004 constructor and inherited-field behavior only.
-
-From this directory:
+The active `custom_stored_event_json_example.dart` proves a generated JSON
+round trip for a concrete `StoredEvent<UuidValue>` subtype with application fields.
+Run from this directory:
 
 ```bash
 dart pub get
-dart run build_runner clean
 dart run build_runner build --delete-conflicting-outputs
 dart run custom_stored_event_json_example.dart
 ```
 
-The build config explicitly disables the deferred distributed-event registry
-builder and generates only `lib/custom_stored_event.g.dart` with
-`dddart_json:json_serializable`.
+Its build enables only `dddart_json:json_serializable` for
+`lib/custom_stored_event.dart`; it makes no transport-envelope claim. The package's
+separate identity fixture and clean-consumer tests prove current generated event
+registries, native/scoped/UUID references, forwarding/filtering and cursor retry.
+See the package README for the current combined-part workflow.
+
+Old client/server/range sketches remain excluded under `legacy/` as `.skip` files.
+Their unrelated EVENT-001 through EVENT-004 and optional transport work remains
+deferred. They are historical context, not runnable framework contracts.

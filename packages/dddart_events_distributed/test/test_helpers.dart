@@ -4,7 +4,7 @@ library;
 import 'package:dddart/dddart.dart';
 
 /// Test event representing a newly created user.
-class UserCreatedEvent extends DomainEvent {
+class UserCreatedEvent extends DomainEvent<UuidValue> {
   /// Creates a user-created event fixture.
   UserCreatedEvent({
     required super.aggregateId,
@@ -47,7 +47,7 @@ class UserCreatedEvent extends DomainEvent {
 }
 
 /// Test event representing a placed order.
-class OrderPlacedEvent extends DomainEvent {
+class OrderPlacedEvent extends DomainEvent<UuidValue> {
   /// Creates an order-placed event fixture.
   OrderPlacedEvent({
     required super.aggregateId,
@@ -90,7 +90,7 @@ class OrderPlacedEvent extends DomainEvent {
 }
 
 /// Test event representing a processed payment.
-class PaymentProcessedEvent extends DomainEvent {
+class PaymentProcessedEvent extends DomainEvent<UuidValue> {
   /// Creates a payment-processed event fixture.
   PaymentProcessedEvent({
     required super.aggregateId,

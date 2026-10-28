@@ -15,7 +15,7 @@ part 'custom_stored_event.g.dart';
 /// This type demonstrates only the existing JSON serializer behavior. It does
 /// not define event-registry, HTTP transport, polling, or bulk-range semantics.
 @Serializable()
-class CustomStoredEvent extends StoredEvent {
+class CustomStoredEvent extends StoredEvent<UuidValue> {
   /// Creates a stored event with optional authorization metadata.
   CustomStoredEvent({
     required super.id,

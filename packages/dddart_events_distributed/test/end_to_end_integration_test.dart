@@ -20,10 +20,10 @@ import 'test_helpers.dart';
 void main() {
   group('End-to-End Integration Tests', () {
     late InMemoryEventRepository serverRepository;
-    late EventBusServer<StoredEvent> server;
+    late EventBusServer<StoredEvent<Identity>> server;
     late EventBus serverEventBus;
     late http.Client httpClient;
-    late EventHttpEndpoints<StoredEvent> endpoints;
+    late EventHttpEndpoints<StoredEvent<Identity>> endpoints;
     late shelf.Handler handler;
     late int serverPort;
     late String serverUrl;
@@ -32,14 +32,17 @@ void main() {
       // Set up server components
       serverRepository = InMemoryEventRepository();
       serverEventBus = EventBus();
-      server = EventBusServer<StoredEvent>(
+      server = EventBusServer<StoredEvent<Identity>>(
         localEventBus: serverEventBus,
         eventRepository: serverRepository,
-        storedEventFactory: StoredEvent.fromDomainEvent,
+        storedEventFactory: (event) => StoredEvent<Identity>.fromDomainEvent(
+          event,
+          registry: _testRegistry(),
+        ),
       );
 
       // Set up HTTP endpoints
-      endpoints = EventHttpEndpoints<StoredEvent>(
+      endpoints = EventHttpEndpoints<StoredEvent<Identity>>(
         eventRepository: serverRepository,
       );
 
@@ -77,14 +80,20 @@ void main() {
       () async {
         // Requirements: 2.5, 6.4, 6.5
         // Arrange: Create event registry for client
-        final eventRegistry =
-            <String, DomainEvent Function(Map<String, dynamic>)>{
-          'UserCreatedEvent': UserCreatedEvent.fromJson,
-          'OrderPlacedEvent': OrderPlacedEvent.fromJson,
-        };
+        final eventRegistry = (EventRegistry()
+          ..register<UserCreatedEvent>(
+            'UserCreatedEvent',
+            encode: (event) => event.toJson(),
+            decode: UserCreatedEvent.fromJson,
+          )
+          ..register<OrderPlacedEvent>(
+            'OrderPlacedEvent',
+            encode: (event) => event.toJson(),
+            decode: OrderPlacedEvent.fromJson,
+          ));
 
         final clientEventBus = EventBus();
-        final receivedEvents = <DomainEvent>[];
+        final receivedEvents = <DomainEvent<UuidValue>>[];
 
         // Subscribe to events on client
         clientEventBus.on<UserCreatedEvent>().listen(receivedEvents.add);
@@ -127,14 +136,20 @@ void main() {
       () async {
         // Requirements: 3.1, 6.4, 6.5
         // Arrange: Create client with auto-forward enabled
-        final eventRegistry =
-            <String, DomainEvent Function(Map<String, dynamic>)>{
-          'UserCreatedEvent': UserCreatedEvent.fromJson,
-          'OrderPlacedEvent': OrderPlacedEvent.fromJson,
-        };
+        final eventRegistry = (EventRegistry()
+          ..register<UserCreatedEvent>(
+            'UserCreatedEvent',
+            encode: (event) => event.toJson(),
+            decode: UserCreatedEvent.fromJson,
+          )
+          ..register<OrderPlacedEvent>(
+            'OrderPlacedEvent',
+            encode: (event) => event.toJson(),
+            decode: OrderPlacedEvent.fromJson,
+          ));
 
         final clientEventBus = EventBus();
-        final serverReceivedEvents = <DomainEvent>[];
+        final serverReceivedEvents = <DomainEvent<UuidValue>>[];
 
         // Subscribe to events on server
         serverEventBus.on<UserCreatedEvent>().listen(serverReceivedEvents.add);
@@ -207,16 +222,22 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 100));
 
         // Act: Create client that starts polling from before the events
-        final eventRegistry =
-            <String, DomainEvent Function(Map<String, dynamic>)>{
-          'UserCreatedEvent': UserCreatedEvent.fromJson,
-          'OrderPlacedEvent': OrderPlacedEvent.fromJson,
-        };
+        final eventRegistry = (EventRegistry()
+          ..register<UserCreatedEvent>(
+            'UserCreatedEvent',
+            encode: (event) => event.toJson(),
+            decode: UserCreatedEvent.fromJson,
+          )
+          ..register<OrderPlacedEvent>(
+            'OrderPlacedEvent',
+            encode: (event) => event.toJson(),
+            decode: OrderPlacedEvent.fromJson,
+          ));
 
         final clientEventBus = EventBus();
-        final receivedEvents = <DomainEvent>[];
+        final receivedEvents = <DomainEvent<UuidValue>>[];
 
-        clientEventBus.on<DomainEvent>().listen(receivedEvents.add);
+        clientEventBus.on<DomainEvent<UuidValue>>().listen(receivedEvents.add);
 
         // Start client with initial timestamp before events were published
         final initialTimestamp =
@@ -260,19 +281,22 @@ void main() {
         // Arrange: Set up server with authorization filter
         final filteredRepository = InMemoryEventRepository();
         final filteredEventBus = EventBus();
-        final filteredServer = EventBusServer<StoredEvent>(
+        final filteredServer = EventBusServer<StoredEvent<Identity>>(
           localEventBus: filteredEventBus,
           eventRepository: filteredRepository,
-          storedEventFactory: StoredEvent.fromDomainEvent,
+          storedEventFactory: (event) => StoredEvent<Identity>.fromDomainEvent(
+            event,
+            registry: _testRegistry(),
+          ),
         );
 
         // Authorization filter: only allow events for specific user
-        bool authFilter(StoredEvent event, shelf.Request request) {
+        bool authFilter(StoredEvent<Identity> event, shelf.Request request) {
           final allowedUserId = request.headers['x-user-id'];
           return event.userId == allowedUserId;
         }
 
-        final filteredEndpoints = EventHttpEndpoints<StoredEvent>(
+        final filteredEndpoints = EventHttpEndpoints<StoredEvent<Identity>>(
           eventRepository: filteredRepository,
           authorizationFilter: authFilter,
         );
@@ -346,3 +370,15 @@ void main() {
     );
   });
 }
+
+EventRegistry _testRegistry() => EventRegistry()
+  ..register<UserCreatedEvent>(
+    'UserCreatedEvent',
+    encode: (event) => event.toJson(),
+    decode: UserCreatedEvent.fromJson,
+  )
+  ..register<OrderPlacedEvent>(
+    'OrderPlacedEvent',
+    encode: (event) => event.toJson(),
+    decode: OrderPlacedEvent.fromJson,
+  );

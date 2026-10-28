@@ -11,6 +11,7 @@ import 'dart:math';
 
 import 'package:dddart/dddart.dart';
 import 'package:dddart_events_distributed/src/event_bus_client.dart';
+import 'package:dddart_events_distributed/src/event_registry.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:test/test.dart';
@@ -72,9 +73,12 @@ void main() {
           final client = EventBusClient(
             localEventBus: eventBus,
             serverUrl: 'http://test-server',
-            eventRegistry: {
-              'TestDomainEvent': TestDomainEvent.fromJson,
-            },
+            eventRegistry: (EventRegistry()
+              ..register<TestDomainEvent>(
+                'TestDomainEvent',
+                encode: (event) => event.toJson(),
+                decode: TestDomainEvent.fromJson,
+              )),
             pollingInterval: const Duration(milliseconds: 50),
             initialTimestamp: initialTimestamp,
             httpClient: mockClient,
@@ -172,9 +176,12 @@ void main() {
           final client = EventBusClient(
             localEventBus: eventBus,
             serverUrl: 'http://test-server',
-            eventRegistry: {
-              'TestDomainEvent': TestDomainEvent.fromJson,
-            },
+            eventRegistry: (EventRegistry()
+              ..register<TestDomainEvent>(
+                'TestDomainEvent',
+                encode: (event) => event.toJson(),
+                decode: TestDomainEvent.fromJson,
+              )),
             pollingInterval: const Duration(milliseconds: 50),
             initialTimestamp: baseTime,
             httpClient: mockClient,
@@ -239,9 +246,12 @@ void main() {
           final client = EventBusClient(
             localEventBus: eventBus,
             serverUrl: 'http://test-server',
-            eventRegistry: {
-              'TestDomainEvent': TestDomainEvent.fromJson,
-            },
+            eventRegistry: (EventRegistry()
+              ..register<TestDomainEvent>(
+                'TestDomainEvent',
+                encode: (event) => event.toJson(),
+                decode: TestDomainEvent.fromJson,
+              )),
             pollingInterval: const Duration(milliseconds: 50),
             httpClient: mockClient,
           );
@@ -330,9 +340,12 @@ void main() {
           final client = EventBusClient(
             localEventBus: eventBus,
             serverUrl: 'http://test-server',
-            eventRegistry: {
-              'TestDomainEvent': TestDomainEvent.fromJson,
-            },
+            eventRegistry: (EventRegistry()
+              ..register<TestDomainEvent>(
+                'TestDomainEvent',
+                encode: (event) => event.toJson(),
+                decode: TestDomainEvent.fromJson,
+              )),
             pollingInterval: const Duration(milliseconds: 50),
             initialTimestamp: baseTime,
             httpClient: mockClient,
@@ -358,7 +371,7 @@ void main() {
 
 // Generator functions
 
-/// Generates a random test DomainEvent.
+/// Generates a random test DomainEvent<UuidValue>.
 TestDomainEvent _generateRandomTestEvent(Random random) {
   return TestDomainEvent(
     aggregateId: UuidValue.generate(),
@@ -394,7 +407,7 @@ DateTime _generateRandomDateTime(Random random) {
   return DateTime(year, month, day, hour, minute, second, millisecond);
 }
 
-/// Converts a test event to StoredEvent JSON format.
+/// Converts a test event to StoredEvent<Identity> JSON format.
 Map<String, dynamic> _eventToStoredEventJson(TestDomainEvent event) {
   final eventJson = {
     'eventId': event.eventId.toString(),
@@ -408,7 +421,7 @@ Map<String, dynamic> _eventToStoredEventJson(TestDomainEvent event) {
     'id': event.eventId.toString(),
     'createdAt': event.occurredAt.toIso8601String(),
     'updatedAt': event.occurredAt.toIso8601String(),
-    'aggregateId': event.aggregateId.toString(),
+    'aggregateId': {'type': 'uuid', 'value': event.aggregateId.uuid},
     'eventType': 'TestDomainEvent',
     'eventJson': jsonEncode(eventJson),
   };
@@ -416,8 +429,8 @@ Map<String, dynamic> _eventToStoredEventJson(TestDomainEvent event) {
 
 // Test implementations
 
-/// Test DomainEvent for property testing.
-class TestDomainEvent extends DomainEvent {
+/// Test DomainEvent<UuidValue> for property testing.
+class TestDomainEvent extends DomainEvent<UuidValue> {
   TestDomainEvent({
     required super.aggregateId,
     required this.data,
@@ -438,4 +451,12 @@ class TestDomainEvent extends DomainEvent {
       context: json['context'] as Map<String, dynamic>? ?? {},
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'eventId': eventId.uuid,
+        'occurredAt': occurredAt.toIso8601String(),
+        'aggregateId': aggregateId.uuid,
+        'context': context,
+        'data': data,
+      };
 }

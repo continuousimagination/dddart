@@ -28,7 +28,7 @@ void main() {
           final eventCount = 5 + random.nextInt(26); // 5-30 events
 
           // Generate events with various authorization fields
-          final events = <StoredEvent>[];
+          final events = <StoredEvent<Identity>>[];
           for (var j = 0; j < eventCount; j++) {
             final event = _generateRandomStoredEvent(random);
             await repository.save(event);
@@ -36,7 +36,7 @@ void main() {
           }
 
           // Create endpoints WITHOUT authorization filter
-          final endpoints = EventHttpEndpoints<StoredEvent>(
+          final endpoints = EventHttpEndpoints<StoredEvent<Identity>>(
             eventRepository: repository,
             // authorizationFilter is null
           );
@@ -90,11 +90,11 @@ void main() {
           final repository = InMemoryEventRepository();
           final eventCount = 10 + random.nextInt(21); // 10-30 events
 
-          final events = <StoredEvent>[];
+          final events = <StoredEvent<Identity>>[];
 
           // Create events with different combinations of authorization fields
           for (var j = 0; j < eventCount; j++) {
-            final event = StoredEvent(
+            final event = StoredEvent<Identity>(
               id: UuidValue.generate(),
               createdAt: _generateRandomDateTime(random),
               aggregateId: UuidValue.generate(),
@@ -110,7 +110,7 @@ void main() {
           }
 
           // Create endpoints WITHOUT authorization filter
-          final endpoints = EventHttpEndpoints<StoredEvent>(
+          final endpoints = EventHttpEndpoints<StoredEvent<Identity>>(
             eventRepository: repository,
           );
 
@@ -174,10 +174,10 @@ void main() {
           final repository = InMemoryEventRepository();
           final eventCount = 5 + random.nextInt(16); // 5-20 events
 
-          final events = <StoredEvent>[];
+          final events = <StoredEvent<Identity>>[];
           for (var j = 0; j < eventCount; j++) {
             final isSensitive = random.nextBool();
-            final event = StoredEvent(
+            final event = StoredEvent<Identity>(
               id: UuidValue.generate(),
               createdAt: _generateRandomDateTime(random),
               aggregateId: UuidValue.generate(),
@@ -193,7 +193,7 @@ void main() {
           }
 
           // Create endpoints WITHOUT authorization filter
-          final endpoints = EventHttpEndpoints<StoredEvent>(
+          final endpoints = EventHttpEndpoints<StoredEvent<Identity>>(
             eventRepository: repository,
           );
 
@@ -249,7 +249,7 @@ void main() {
 
           // Generate events with old timestamps (before 2020)
           for (var j = 0; j < eventCount; j++) {
-            final event = StoredEvent(
+            final event = StoredEvent<Identity>(
               id: UuidValue.generate(),
               createdAt: DateTime(
                 2019,
@@ -265,7 +265,7 @@ void main() {
           }
 
           // Create endpoints WITHOUT authorization filter
-          final endpoints = EventHttpEndpoints<StoredEvent>(
+          final endpoints = EventHttpEndpoints<StoredEvent<Identity>>(
             eventRepository: repository,
           );
 
@@ -306,11 +306,11 @@ void main() {
           final repository = InMemoryEventRepository();
           final eventCount = 10 + random.nextInt(21); // 10-30 events
 
-          final events = <StoredEvent>[];
+          final events = <StoredEvent<Identity>>[];
 
           // Simulate events from different users, tenants, and sessions
           for (var j = 0; j < eventCount; j++) {
-            final event = StoredEvent(
+            final event = StoredEvent<Identity>(
               id: UuidValue.generate(),
               createdAt: _generateRandomDateTime(random),
               aggregateId: UuidValue.generate(),
@@ -326,7 +326,7 @@ void main() {
           }
 
           // Create endpoints WITHOUT authorization filter
-          final endpoints = EventHttpEndpoints<StoredEvent>(
+          final endpoints = EventHttpEndpoints<StoredEvent<Identity>>(
             eventRepository: repository,
           );
 
@@ -385,13 +385,13 @@ void main() {
 
 // Helper functions
 
-/// Generates a random StoredEvent for testing.
-StoredEvent _generateRandomStoredEvent(Random random) {
+/// Generates a random StoredEvent<Identity> for testing.
+StoredEvent<Identity> _generateRandomStoredEvent(Random random) {
   final includeUserId = random.nextBool();
   final includeTenantId = random.nextBool();
   final includeSessionId = random.nextBool();
 
-  return StoredEvent(
+  return StoredEvent<Identity>(
     id: UuidValue.generate(),
     createdAt: _generateRandomDateTime(random),
     aggregateId: UuidValue.generate(),
@@ -416,16 +416,17 @@ DateTime _generateRandomDateTime(Random random) {
 }
 
 /// In-memory implementation of EventRepository for testing.
-class InMemoryEventRepository implements EventRepository<StoredEvent> {
-  final List<StoredEvent> _events = [];
+class InMemoryEventRepository
+    implements EventRepository<StoredEvent<Identity>> {
+  final List<StoredEvent<Identity>> _events = [];
 
   @override
-  Future<void> save(StoredEvent entity) async {
+  Future<void> save(StoredEvent<Identity> entity) async {
     _events.add(entity);
   }
 
   @override
-  Future<StoredEvent> getById(UuidValue id) async {
+  Future<StoredEvent<Identity>> getById(UuidValue id) async {
     try {
       return _events.firstWhere((e) => e.id == id);
     } catch (_) {
@@ -439,7 +440,7 @@ class InMemoryEventRepository implements EventRepository<StoredEvent> {
   }
 
   @override
-  Future<List<StoredEvent>> findSince(DateTime timestamp) async {
+  Future<List<StoredEvent<Identity>>> findSince(DateTime timestamp) async {
     return _events
         .where(
           (e) =>

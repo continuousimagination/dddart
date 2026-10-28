@@ -19,17 +19,20 @@ import 'test_helpers.dart';
 void main() {
   group('Authorization Integration Tests', () {
     late InMemoryEventRepository repository;
-    late EventBusServer<StoredEvent> server;
+    late EventBusServer<StoredEvent<Identity>> server;
     late EventBus eventBus;
     late http.Client httpClient;
 
     setUp(() {
       repository = InMemoryEventRepository();
       eventBus = EventBus();
-      server = EventBusServer<StoredEvent>(
+      server = EventBusServer<StoredEvent<Identity>>(
         localEventBus: eventBus,
         eventRepository: repository,
-        storedEventFactory: StoredEvent.fromDomainEvent,
+        storedEventFactory: (event) => StoredEvent<Identity>.fromDomainEvent(
+          event,
+          registry: _testRegistry(),
+        ),
       );
       httpClient = http.Client();
     });
@@ -45,12 +48,15 @@ void main() {
       () async {
         // Requirements: 4.1, 4.2, 4.3, 4.4, 5.1, 5.2, 5.3
         // Arrange: Create authorization filter based on userId
-        bool userAuthFilter(StoredEvent event, shelf.Request request) {
+        bool userAuthFilter(
+          StoredEvent<Identity> event,
+          shelf.Request request,
+        ) {
           final requestUserId = request.headers['x-user-id'];
           return event.userId == requestUserId;
         }
 
-        final endpoints = EventHttpEndpoints<StoredEvent>(
+        final endpoints = EventHttpEndpoints<StoredEvent<Identity>>(
           eventRepository: repository,
           authorizationFilter: userAuthFilter,
         );
@@ -144,12 +150,15 @@ void main() {
       () async {
         // Requirements: 4.1, 4.2, 4.3, 4.4, 5.1, 5.2, 5.3
         // Arrange: Create authorization filter based on tenantId
-        bool tenantAuthFilter(StoredEvent event, shelf.Request request) {
+        bool tenantAuthFilter(
+          StoredEvent<Identity> event,
+          shelf.Request request,
+        ) {
           final requestTenantId = request.headers['x-tenant-id'];
           return event.tenantId == requestTenantId;
         }
 
-        final endpoints = EventHttpEndpoints<StoredEvent>(
+        final endpoints = EventHttpEndpoints<StoredEvent<Identity>>(
           eventRepository: repository,
           authorizationFilter: tenantAuthFilter,
         );
@@ -251,7 +260,7 @@ void main() {
       () async {
         // Requirements: 4.5, 5.1, 5.2, 5.3
         // Arrange: Create endpoints WITHOUT authorization filter
-        final endpoints = EventHttpEndpoints<StoredEvent>(
+        final endpoints = EventHttpEndpoints<StoredEvent<Identity>>(
           eventRepository: repository,
           // No authorizationFilter provided
         );
@@ -340,7 +349,10 @@ void main() {
         // Requirements: 4.1, 4.2, 4.3, 4.4, 5.1, 5.2, 5.3
         // Arrange: Create complex authorization filter
         // Allow events if: (userId matches OR tenantId matches) AND sessionId matches
-        bool complexAuthFilter(StoredEvent event, shelf.Request request) {
+        bool complexAuthFilter(
+          StoredEvent<Identity> event,
+          shelf.Request request,
+        ) {
           final requestUserId = request.headers['x-user-id'];
           final requestTenantId = request.headers['x-tenant-id'];
           final requestSessionId = request.headers['x-session-id'];
@@ -352,7 +364,7 @@ void main() {
           return (userMatch || tenantMatch) && sessionMatch;
         }
 
-        final endpoints = EventHttpEndpoints<StoredEvent>(
+        final endpoints = EventHttpEndpoints<StoredEvent<Identity>>(
           eventRepository: repository,
           authorizationFilter: complexAuthFilter,
         );
@@ -450,3 +462,20 @@ void main() {
     );
   });
 }
+
+EventRegistry _testRegistry() => EventRegistry()
+  ..register<UserCreatedEvent>(
+    'UserCreatedEvent',
+    encode: (event) => event.toJson(),
+    decode: UserCreatedEvent.fromJson,
+  )
+  ..register<OrderPlacedEvent>(
+    'OrderPlacedEvent',
+    encode: (event) => event.toJson(),
+    decode: OrderPlacedEvent.fromJson,
+  )
+  ..register<PaymentProcessedEvent>(
+    'PaymentProcessedEvent',
+    encode: (event) => event.toJson(),
+    decode: PaymentProcessedEvent.fromJson,
+  );

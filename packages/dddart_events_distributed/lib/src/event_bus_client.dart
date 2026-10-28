@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dddart/dddart.dart';
+import 'package:dddart_events_distributed/src/event_registry.dart';
+import 'package:dddart_events_distributed/src/stored_event.dart';
 import 'package:http/http.dart' as http;
 
 /// Client-side component that polls for events and optionally forwards
@@ -14,10 +16,10 @@ import 'package:http/http.dart' as http;
 /// Example usage:
 /// ```dart
 /// final eventBus = EventBus();
-/// final eventRegistry = {
-///   'UserCreatedEvent': UserCreatedEvent.fromJson,
-///   'OrderPurchasedEvent': OrderPurchasedEvent.fromJson,
-/// };
+/// final eventRegistry = EventRegistry()
+///   ..registerSerializer<UserCreatedEvent>(
+///     'user.created.v1', UserCreatedEventJsonSerializer(),
+///   );
 ///
 /// final client = EventBusClient(
 ///   localEventBus: eventBus,
@@ -40,7 +42,7 @@ class EventBusClient {
   ///
   /// [localEventBus] is the local EventBus to wrap with polling.
   /// [serverUrl] is the base URL of the event server.
-  /// [eventRegistry] maps event type names to deserialization functions.
+  /// [eventRegistry] supplies explicit stable event codecs and identity codecs.
   /// [pollingInterval] specifies how often to poll for new events.
   /// [autoForward] enables automatic forwarding of local events to server.
   /// [initialTimestamp] sets the starting point for event retrieval.
@@ -68,7 +70,8 @@ class EventBusClient {
 
     // Optionally forward local events to server
     if (autoForward) {
-      _subscription = localEventBus.on<DomainEvent>().listen(_forwardEvent);
+      _subscription =
+          localEventBus.on<DomainEvent<Identity>>().listen(_forwardEvent);
       _logger.info('Auto-forward enabled');
     }
   }
@@ -79,8 +82,8 @@ class EventBusClient {
   /// The base URL of the event server.
   final String serverUrl;
 
-  /// Map of event type names to deserialization factory functions.
-  final Map<String, DomainEvent Function(Map<String, dynamic>)> eventRegistry;
+  /// Explicit event serializers/factories with stable wire discriminators.
+  final EventRegistry eventRegistry;
 
   /// How often to poll for new events.
   final Duration pollingInterval;
@@ -115,7 +118,7 @@ class EventBusClient {
   Timer? _pollingTimer;
 
   /// Subscription to local EventBus for forwarding.
-  StreamSubscription<DomainEvent>? _subscription;
+  StreamSubscription<DomainEvent<Identity>>? _subscription;
 
   final Logger _logger = Logger('dddart.events.client');
 
@@ -203,39 +206,33 @@ class EventBusClient {
 
   /// Processes received event.
   Future<void> _processEvent(Map<String, dynamic> storedEventJson) async {
-    try {
-      final eventType = storedEventJson['eventType'] as String;
-      final eventDataJson = jsonDecode(storedEventJson['eventJson'] as String)
-          as Map<String, dynamic>;
-      final timestamp = DateTime.parse(storedEventJson['createdAt'] as String);
-      final id = storedEventJson['id'] as String;
-      if (_closed || timestamp.isBefore(_lastTimestamp)) return;
-      if (timestamp.isAfter(_lastTimestamp)) {
-        _lastTimestamp = timestamp;
-        _seenAtTimestamp.clear();
-      }
-      // Inclusive cursor retains tied events; IDs remove repeats, not time offsets.
-      if (!_seenAtTimestamp.add(id)) return;
+    final stored = StoredEvent<Identity>.fromJson(
+      storedEventJson,
+      identityCodecs: eventRegistry.identityCodecs,
+    );
+    final timestamp = stored.createdAt;
+    final id = stored.id.uuid;
+    if (_closed || timestamp.isBefore(_lastTimestamp)) return;
+    if (timestamp == _lastTimestamp && _seenAtTimestamp.contains(id)) return;
 
-      // Deserialize using registry
-      final factory = eventRegistry[eventType];
-      if (factory == null) {
-        _logger.fine('Unknown event type: $eventType (skipping)');
-        return;
-      }
-
-      final event = factory(eventDataJson);
-
-      // Publish to local bus
+    // Unknown event types retain the existing explicit skip policy. Known
+    // malformed payloads throw to _poll, stop the batch and remain retryable.
+    if (eventRegistry.containsKey(stored.eventType)) {
+      final event = stored.restore(eventRegistry);
       localEventBus.publish(event);
-      _logger.fine('Published received event: $eventType');
-    } catch (e, stackTrace) {
-      _logger.severe('Failed to process event', e, stackTrace);
+      _logger.fine('Published received event: ${stored.eventType}');
+    } else {
+      _logger.fine('Unknown event type: ${stored.eventType} (skipping)');
     }
+    if (timestamp.isAfter(_lastTimestamp)) {
+      _lastTimestamp = timestamp;
+      _seenAtTimestamp.clear();
+    }
+    _seenAtTimestamp.add(id);
   }
 
   /// Forwards local event to server.
-  Future<void> _forwardEvent(DomainEvent event) async {
+  Future<void> _forwardEvent(DomainEvent<Identity> event) async {
     try {
       // Convert DomainEvent to StoredEvent for transmission
       final storedEventJson = _domainEventToStoredEvent(event);
@@ -268,51 +265,17 @@ class EventBusClient {
   }
 
   /// Converts a DomainEvent to a StoredEvent for transmission.
-  Map<String, dynamic> _domainEventToStoredEvent(DomainEvent event) {
-    // Serialize the event data
-    final eventJson = <String, dynamic>{
-      'eventId': event.eventId.toString(),
-      'occurredAt': event.occurredAt.toIso8601String(),
-      'aggregateId': event.aggregateId.toString(),
-      'context': event.context,
-    };
-
-    // Try to call toJson if available (for @Serializable events)
-    try {
-      final dynamic dynamicEvent = event;
-      // ignore: avoid_dynamic_calls
-      if (dynamicEvent.toJson != null) {
-        // ignore: avoid_dynamic_calls
-        final eventData = dynamicEvent.toJson() as Map<String, dynamic>;
-        eventJson.addAll(eventData);
-      }
-    } catch (_) {
-      // If toJson is not available, just use base fields
-    }
-
-    // Create StoredEvent structure
-    return {
-      'id': event.eventId.toString(),
-      'createdAt': event.occurredAt.toIso8601String(),
-      'updatedAt': event.occurredAt.toIso8601String(),
-      'aggregateId': event.aggregateId.toString(),
-      'eventType': event.runtimeType.toString(),
-      'eventJson': jsonEncode(eventJson),
-      if (event.context['userId'] != null) 'userId': event.context['userId'],
-      if (event.context['tenantId'] != null)
-        'tenantId': event.context['tenantId'],
-      if (event.context['sessionId'] != null)
-        'sessionId': event.context['sessionId'],
-    };
-  }
+  Map<String, dynamic> _domainEventToStoredEvent(DomainEvent<Identity> event) =>
+      StoredEvent<Identity>.fromDomainEvent(event, registry: eventRegistry)
+          .toJson();
 
   /// Publishes event to local bus (and optionally forwards to server).
-  void publish(DomainEvent event) {
+  void publish(DomainEvent<Identity> event) {
     localEventBus.publish(event);
   }
 
   /// Subscribes to events on local bus.
-  Stream<E> on<E extends DomainEvent>() {
+  Stream<E> on<E extends DomainEvent<Identity>>() {
     return localEventBus.on<E>();
   }
 

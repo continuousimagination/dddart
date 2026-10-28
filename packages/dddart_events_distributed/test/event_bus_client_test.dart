@@ -3,6 +3,8 @@ import 'dart:convert';
 
 import 'package:dddart/dddart.dart';
 import 'package:dddart_events_distributed/src/event_bus_client.dart';
+import 'package:dddart_events_distributed/src/event_registry.dart';
+import 'package:dddart_events_distributed/src/stored_event.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -19,7 +21,7 @@ void main() {
           final client = EventBusClient(
             localEventBus: EventBus(),
             serverUrl: 'https://example.test',
-            eventRegistry: {},
+            eventRegistry: _testRegistry(),
             autoForward: true,
             pollingInterval: const Duration(seconds: 1),
             authToken: staticToken,
@@ -49,7 +51,7 @@ void main() {
         final client = EventBusClient(
           localEventBus: EventBus(),
           serverUrl: 'https://example.test',
-          eventRegistry: {},
+          eventRegistry: _testRegistry(),
           autoForward: true,
           authToken: 'static',
           pollingInterval: const Duration(seconds: 1),
@@ -72,7 +74,7 @@ void main() {
         final client = EventBusClient(
           localEventBus: EventBus(),
           serverUrl: 'https://example.test',
-          eventRegistry: {},
+          eventRegistry: _testRegistry(),
           autoForward: true,
           authToken: 'stale',
           authTokenProvider: () async => null,
@@ -258,7 +260,7 @@ EventBusClient _pollingClient(
   return EventBusClient(
     localEventBus: bus,
     serverUrl: 'https://example.test',
-    eventRegistry: {'TestEvent': (json) => _Event(json['label'] as String)},
+    eventRegistry: _testRegistry(),
     initialTimestamp: _epoch,
     pollingInterval: const Duration(seconds: 1),
     requestTimeout: requestTimeout,
@@ -266,16 +268,48 @@ EventBusClient _pollingClient(
   );
 }
 
-Map<String, dynamic> _stored(String id, int seconds) => {
-      'id': id,
-      'createdAt': _epoch.add(Duration(seconds: seconds)).toIso8601String(),
-      'eventType': 'TestEvent',
-      'eventJson': jsonEncode({'label': id}),
-    };
+final _fixtureIds = <String, UuidValue>{};
 
-class _Event extends DomainEvent {
-  _Event(this.label) : super(aggregateId: UuidValue.generate());
+Map<String, dynamic> _stored(String label, int seconds) =>
+    StoredEvent<Identity>.fromDomainEvent(
+      _Event(
+        label,
+        eventId: _fixtureIds.putIfAbsent(label, UuidValue.generate),
+        occurredAt: _epoch.add(Duration(seconds: seconds)),
+      ),
+      registry: _testRegistry(),
+    ).toJson();
+
+EventRegistry _testRegistry() => EventRegistry()
+  ..register<_Event>(
+    'TestEvent',
+    encode: (event) => event.toJson(),
+    decode: _Event.fromJson,
+  );
+
+class _Event extends DomainEvent<UuidValue> {
+  _Event(
+    this.label, {
+    UuidValue? aggregateId,
+    super.eventId,
+    super.occurredAt,
+    super.context,
+  }) : super(aggregateId: aggregateId ?? UuidValue.generate());
   final String label;
+  Map<String, dynamic> toJson() => {
+        'eventId': eventId.uuid,
+        'aggregateId': aggregateId.uuid,
+        'occurredAt': occurredAt.toIso8601String(),
+        'context': context,
+        'label': label,
+      };
+  static _Event fromJson(Map<String, dynamic> json) => _Event(
+        json['label'] as String,
+        aggregateId: UuidValue.fromString(json['aggregateId'] as String),
+        eventId: UuidValue.fromString(json['eventId'] as String),
+        occurredAt: DateTime.parse(json['occurredAt'] as String),
+        context: Map<String, dynamic>.from(json['context'] as Map),
+      );
 }
 
 class _ControlledClient extends http.BaseClient {

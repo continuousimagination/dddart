@@ -9,6 +9,7 @@ import 'dart:math';
 
 import 'package:dddart/dddart.dart';
 import 'package:dddart_events_distributed/src/event_bus_server.dart';
+import 'package:dddart_events_distributed/src/event_registry.dart';
 import 'package:dddart_events_distributed/src/event_repository.dart';
 import 'package:dddart_events_distributed/src/stored_event.dart';
 import 'package:test/test.dart';
@@ -29,10 +30,14 @@ void main() {
           final retentionDays = 1 + random.nextInt(30);
           final retentionDuration = Duration(days: retentionDays);
 
-          final server = EventBusServer<StoredEvent>(
+          final server = EventBusServer<StoredEvent<Identity>>(
             localEventBus: eventBus,
             eventRepository: repository,
-            storedEventFactory: StoredEvent.fromDomainEvent,
+            storedEventFactory: (event) =>
+                StoredEvent<Identity>.fromDomainEvent(
+              event,
+              registry: _testRegistry(),
+            ),
             retentionDuration: retentionDuration,
           );
 
@@ -106,10 +111,14 @@ void main() {
           final repository = InMemoryEventRepository();
           const retentionDuration = Duration(days: 30);
 
-          final server = EventBusServer<StoredEvent>(
+          final server = EventBusServer<StoredEvent<Identity>>(
             localEventBus: eventBus,
             eventRepository: repository,
-            storedEventFactory: StoredEvent.fromDomainEvent,
+            storedEventFactory: (event) =>
+                StoredEvent<Identity>.fromDomainEvent(
+              event,
+              registry: _testRegistry(),
+            ),
             retentionDuration: retentionDuration,
           );
 
@@ -157,10 +166,14 @@ void main() {
           final repository = InMemoryEventRepository();
           const retentionDuration = Duration(days: 7);
 
-          final server = EventBusServer<StoredEvent>(
+          final server = EventBusServer<StoredEvent<Identity>>(
             localEventBus: eventBus,
             eventRepository: repository,
-            storedEventFactory: StoredEvent.fromDomainEvent,
+            storedEventFactory: (event) =>
+                StoredEvent<Identity>.fromDomainEvent(
+              event,
+              registry: _testRegistry(),
+            ),
             retentionDuration: retentionDuration,
           );
 
@@ -207,10 +220,14 @@ void main() {
           final eventBus = EventBus();
           final repository = InMemoryEventRepository();
 
-          final server = EventBusServer<StoredEvent>(
+          final server = EventBusServer<StoredEvent<Identity>>(
             localEventBus: eventBus,
             eventRepository: repository,
-            storedEventFactory: StoredEvent.fromDomainEvent,
+            storedEventFactory: (event) =>
+                StoredEvent<Identity>.fromDomainEvent(
+              event,
+              registry: _testRegistry(),
+            ),
             // No retentionDuration specified
           );
 
@@ -256,10 +273,14 @@ void main() {
           final repository = InMemoryEventRepository();
           const retentionDuration = Duration(days: 10);
 
-          final server = EventBusServer<StoredEvent>(
+          final server = EventBusServer<StoredEvent<Identity>>(
             localEventBus: eventBus,
             eventRepository: repository,
-            storedEventFactory: StoredEvent.fromDomainEvent,
+            storedEventFactory: (event) =>
+                StoredEvent<Identity>.fromDomainEvent(
+              event,
+              registry: _testRegistry(),
+            ),
             retentionDuration: retentionDuration,
           );
 
@@ -307,9 +328,9 @@ void main() {
 
 // Helper functions
 
-/// Creates a StoredEvent with a specific timestamp.
-StoredEvent _createEventWithTimestamp(DateTime timestamp) {
-  return StoredEvent(
+/// Creates a StoredEvent<Identity> with a specific timestamp.
+StoredEvent<Identity> _createEventWithTimestamp(DateTime timestamp) {
+  return StoredEvent<Identity>(
     id: UuidValue.generate(),
     createdAt: timestamp,
     aggregateId: UuidValue.generate(),
@@ -321,16 +342,17 @@ StoredEvent _createEventWithTimestamp(DateTime timestamp) {
 // Test implementations
 
 /// In-memory implementation of EventRepository for testing.
-class InMemoryEventRepository implements EventRepository<StoredEvent> {
-  final List<StoredEvent> _events = [];
+class InMemoryEventRepository
+    implements EventRepository<StoredEvent<Identity>> {
+  final List<StoredEvent<Identity>> _events = [];
 
   @override
-  Future<void> save(StoredEvent entity) async {
+  Future<void> save(StoredEvent<Identity> entity) async {
     _events.add(entity);
   }
 
   @override
-  Future<StoredEvent> getById(UuidValue id) async {
+  Future<StoredEvent<Identity>> getById(UuidValue id) async {
     try {
       return _events.firstWhere((e) => e.id == id);
     } catch (_) {
@@ -339,7 +361,7 @@ class InMemoryEventRepository implements EventRepository<StoredEvent> {
   }
 
   /// Helper method for testing - not part of Repository interface.
-  Future<List<StoredEvent>> findAll() async {
+  Future<List<StoredEvent<Identity>>> findAll() async {
     return List.from(_events);
   }
 
@@ -353,7 +375,7 @@ class InMemoryEventRepository implements EventRepository<StoredEvent> {
   }
 
   @override
-  Future<List<StoredEvent>> findSince(DateTime timestamp) async {
+  Future<List<StoredEvent<Identity>>> findSince(DateTime timestamp) async {
     return _events
         .where(
           (e) =>
@@ -368,3 +390,5 @@ class InMemoryEventRepository implements EventRepository<StoredEvent> {
     _events.removeWhere((e) => e.createdAt.isBefore(timestamp));
   }
 }
+
+EventRegistry _testRegistry() => EventRegistry();
