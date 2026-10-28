@@ -215,7 +215,7 @@ void main() {}
             'kernel',
             'bin/wrong_identity.dart',
             '-o',
-            'build/wrong.dill'
+            'build/wrong.dill',
           ],
           workingDirectory: fixture.path,
         );
