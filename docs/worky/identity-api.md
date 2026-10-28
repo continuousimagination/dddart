@@ -1,180 +1,137 @@
-# Extensible identity: API and implementation proposal
+# Extensible identity: accepted API and migration
 
-Status: proposal for owner review before library implementation.
+Status: owner-approved API implemented across #39–#44; final integration evidence
+and independent-review status live in identity-integration-work-record.md.
 Tracking: [#37](https://github.com/continuousimagination/dddart/issues/37).
-Source baseline: `c538680619a11af79e7094c3087646189c313978`.
+Original baseline: c538680619a11af79e7094c3087646189c313978.
 
 ## Owner decisions
 
-On 28 October 2026, the owner approved breaking pre-release APIs and directed
-the framework to carry an application's concrete identity type through entities
-and repositories. Dddart must supply a UUID identity based on the current UUID
-functionality. Existing applications will migrate; a compatibility facade is
-not required.
+On 28 October 2026 the owner approved breaking pre-release APIs and directed the
+framework to carry each application's concrete identity type. Worky has no code
+to migrate. A GitHub Issue retains its GitHub-assigned ID; a synthetic UUID
+translation table is not introduced. Repository-scoped issue numbers are a
+separate composite-identity fixture. Consumer-specific GitHub policy stays in the
+consumer. Existing UUID applications will migrate explicitly.
 
-Worky has no implemented consumer to migrate. Its motivating case is an Issue
-whose identity is assigned by GitHub. A synthetic UUID translation table is not
-acceptable. A repository-scoped issue number is a separate composite-identity
-example; GitHub-specific identity policy belongs in the consumer.
-
-## Proposed domain API
-
-The proposed declarations are:
+## Domain contracts
 
 ```dart
-abstract class Identity extends Value { /* immutable equality properties */ }
+abstract class Identity extends Value {}
 class UuidValue extends Identity { /* existing UUID API */ }
-
 abstract class Entity<I extends Identity> { /* required I id */ }
-abstract class AggregateRoot<I extends Identity> extends Entity<I> { /* events */ }
-
+abstract class AggregateRoot<I extends Identity> extends Entity<I> {}
+abstract class UuidEntity extends Entity<UuidValue> { /* optional UUID */ }
+abstract class UuidAggregateRoot extends AggregateRoot<UuidValue> { /* optional UUID */ }
 abstract interface class Repository<T extends AggregateRoot<I>, I extends Identity> {
   Future<T> getById(I id);
   Future<void> save(T aggregate);
   Future<void> deleteById(I id);
 }
-
 class InMemoryRepository<T extends AggregateRoot<I>, I extends Identity>
-    implements Repository<T, I> { /* instance-local fake */ }
-
+    implements Repository<T, I> {}
 abstract class DomainEvent<I extends Identity> {
-  // I aggregateId; UuidValue eventId; existing time/context metadata.
+  // I aggregateId; UuidValue eventId; occurrence time/context.
 }
 ```
 
-Dart needs the repository's aggregate and identity types linked explicitly:
-`Repository<Issue, IssueId>` constrains Issue to
-`AggregateRoot<IssueId>` and makes lookup/deletion accept IssueId.
-Repositories still manage aggregate roots. Nested entities do not acquire
-independent repositories as part of this change.
+Repository<Issue, IssueId> links the aggregate and identity types, rejecting wrong
+lookup/deletion IDs statically. Repositories manage aggregate roots, not nested
+entities. Enumeration remains a separate explicit capability. The in-memory
+implementation is an instance-local consumer fake, not evidence for database or
+custom-interface semantics.
 
-Identity inherits Value's equality/hash contract, including runtime identity
-kind and structural properties. Consumer identity definitions must be immutable
-and include every scope component in their properties. Domain APIs must not
-erase the concrete identity type to Identity or Object.
+Identity retains Value's structural equality/hash and runtime-kind separation.
+Immutable consumer identity properties include every scope component. UuidValue
+remains the supplied UUID implementation, with generation, validation and original
+text/case preserved. General entities require their concrete ID; UUID convenience
+bases generate only UUIDs. Existing timestamp, touch, upsert and event policies
+remain in scope only for regression preservation.
 
-UuidValue remains the supplied UUID implementation; do not add a second UUID
-wrapper. Keep fromString, generate and existing validation available. The
-general Entity/AggregateRoot constructor requires an identity.
-Proposed UuidEntity and UuidAggregateRoot specializations supply optional UUID
-generation without an unchecked cast from UuidValue to a custom identity.
+AggregateRoot<I> carries DomainEvent<I>. EventBus intentionally dispatches
+heterogeneous DomainEvent<Identity> values; occurrence UUIDs remain distinct from
+aggregate identities.
 
-AggregateRoot's event methods carry DomainEvent<I>. Event occurrence IDs remain
-UUIDs. EventBus can still dispatch heterogeneous event types. Timestamps,
-touch(), CRUD/upsert semantics and event delivery policies are unchanged in
-scope; their existing behavior must continue under the migrated signatures.
+## Serialization and canonical keys
 
-## Serialization and key boundaries
+IdentityCodec<I> lives in dddart_serialization and explicitly defines toJson,
+fromJson, toKey and fromKey. JSON may be scalar or structured; canonical keys are
+reversible and collision-free over the supported identity domain, including scope.
+Arbitrary toString or UUID hashing is not a serialization contract.
 
-Core identity has no persistence or HTTP responsibility. Propose an explicit
-`IdentityCodec<I>` in the serialization boundary with operations equivalent to:
+IdentityCodecRegistry is instance-local, pre-registers UuidIdentityCodec as
+"uuid", and accepts register<I>(stableKey, codec). Duplicate type/key registration,
+unknown codecs, wrong concrete kinds, malformed values and noncanonical keys fail.
+Mixed-stream JSON tags are {"type": stableKey, "value": structuralValue}.
 
-```dart
-Object toJson(I identity);
-I fromJson(Object? value);
-String toKey(I identity);
-I fromKey(String value);
-```
+Generated JSON serializers accept .withIdentityCodecs(registry), share it with
+nested serializers and preserve the stateless default UUID constructor. Concrete
+inherited generic identity fields, nullable fields, collections and identity map
+keys are supported. Erased/open identity declarations fail generation. Regenerate
+owning combined parts; never hand-edit output. DomainEvent<I> serializers require
+named aggregateId, eventId, occurredAt and context reconstruction parameters.
 
-The JSON representation is a supported scalar or structured JSON value. The
-key representation is canonical and reversible for the supported identity
-domain. Codec implementations own validation and collision avoidance. Neither
-arbitrary toString() nor hashing into a UUID is a storage contract.
+## Adapter constraints and migrations
 
-Supply a UUID codec. Generated serializers/repositories receive the relevant
-typed codecs through constructor injection or explicit generator configuration.
-The JSON/code-generation issue must finalize the exact public declaration and
-registration/constructor surface against a clean generated consumer before
-implementation proceeds beyond that boundary.
+| Boundary | Implemented key representation and explicit constraint |
+| --- | --- |
+| MongoDB | Exact canonical UTF-8 bytes in binary _id; structural JSON id retained. Old string _id records, including UUIDs, need migration/recreation. BSON/server document constraints remain enforced. |
+| DynamoDB | Canonical string partition key, 1–2048 UTF-8 bytes; body reconstruction restores the structural identity. |
+| SQLite | Exact canonical UTF-8 bytes in BLOB identity columns. Old 16-byte UUID schemas/data need migration/recreation. |
+| MySQL | VARBINARY(1024) identity columns; reject oversized/malformed keys before I/O and reject old BINARY(16) schemas before writes, including non-strict mode. Full schema/index/row limits remain server-enforced. |
+| REST | One canonical key segment, encoded once by the client and decoded once by HttpServer. Empty, malformed UTF-8 and dot-only keys are rejected. |
 
-For scoped/composite IDs, a structural JSON object and an unambiguous canonical
-tuple key are valid examples; punctuation concatenation without escaping is
-not sufficient. Repository-local number 12 in two repositories must produce
-different identities and keys.
+SQL primary keys, entity references, collection parents and identity map keys
+retain their concrete types. UUID text bytes preserve UuidValue's case-sensitive
+equality. SQLite and MySQL retain their distinct existing collection layouts;
+MySQL Set/Map entity collections remain unsupported and fail generation clearly.
+Existing nullable collection containers still reconstruct as empty collections.
 
-SQL backends must propagate custom key types through primary keys, nested
-entity relationships and collection foreign keys. Native UUID storage can
-remain BLOB/BINARY while custom keys use a suitable declared SQL type. Document
-key length/type constraints, schema migration implications and explicit
-unsupported cases. Custom identities are in scope for all existing adapters;
-a UUID-only implementation is not completion of this issue.
+Generated adapters accept optional named identityCodecs and share it with JSON.
+Handwritten custom repository methods retain their explicit interfaces and use
+the selected backend's supported decoding seam. No implicit scans are added.
 
-REST applies URI encoding to the explicit key representation and decodes it
-before the typed repository boundary. Client and server must agree on the
-codec, malformed-key errors and resource routing. A string containing slash,
-percent, comma or Unicode must not be accidentally split or reinterpreted.
+## REST and distributed events
 
-Distributed events distinguish their own UUID record identity from the
-aggregate reference. Mixed streams need an explicit stable codec registration
-or discriminator to reconstruct the aggregate's identity kind. Dynamic
-runtimeType/toString fallbacks are not sufficient identity reconstruction.
+CrudResource<T, I, TClaims>, AuthorizationHandler<T, I, TClaims> and
+QueryHandler<T, I> retain concrete IDs. Direct resource handlers accept decoded
+canonical keys. Malformed/noncanonical server keys produce problem+json 400;
+valid absent IDs retain 404. Generated clients map 400/422 to constraint errors
+and reject mismatched response IDs. Authentication, pagination and the existing
+non-atomic ETag policy are preserved. Stock auth records keep UUID identity.
 
-## Work breakdown and dependency order
+StoredEvent<I> is a UUID-identified record with a separately typed aggregateId.
+Mixed stores intentionally use StoredEvent<Identity>. Transport envelopes use
+registered identity tags; old bare UUID aggregate references need migration.
+EventRegistry registers stable event keys with typed callbacks or JsonSerializer<E>.
+Generated registrations share the event JSON serializer's owning combined part.
+@DistributedEvent freezes a key independently of Dart names; without it the
+source class name is the declared wire key and renaming requires migration.
+No dynamic runtime-name/toJson fallback remains.
 
-| Issue | Responsibility | Prerequisites | Branch |
-| --- | --- | --- | --- |
-| #39 | Domain types, UUID convenience, in-memory repository and typed events | API review | issue/identity-core |
-| #40 | Serialization contracts, codecs, JSON generator and clean fixtures | #39 | issue/identity-serialization |
-| #41 | MongoDB and DynamoDB generators/adapters | #39, #40 | issue/identity-document-backends |
-| #42 | SQL, SQLite and MySQL dialect/schema/generator paths | #39, #40 | issue/identity-sql-backends |
-| #43 | REST server, generated repositories and affected auth/client paths | #39, #40 | issue/identity-rest |
-| #44 | Stored events, registry, transport and aggregate-reference reconstruction | #39, #40, #43 | issue/identity-distributed-events |
+Known payloads are validated against their envelopes before the inclusive polling
+cursor advances. Decode failures stop the batch and leave the failed record
+retryable; valid unknown event types keep the explicit skip policy. HTTP custom
+record ingestion uses an injected typed factory. Retention/auth/filtering and
+unrelated legacy/AWS transport work remain outside redesign.
 
-Each child PR targets `issue/37-extensible-identity`. This parent PR targets
-`feat/worky-changes`. Git branches do not themselves encode a parent:
-PR bases and the issue dependency graph define integration. Update child
-branches from the identity branch after prerequisites land.
+## Delivery and validation
 
-The parent issue owns final integration, examples, migration documentation,
-changelogs and external-consumer evidence. Child completion needs focused
-behavior that passes against already-proven prerequisites; an eventual
-end-to-end test is not the first proof.
+Configuration #38 and all six identity children have their own merged PRs and
+work records. The identity parent PR #45 targets feat/worky-changes. Validated
+merges are authorized upward only as far as that feature branch. Independent
+feature review, merge to main and publication are separate owner actions.
 
-## Local validation and generation ownership
+Use root pubspec.yaml membership and tool/validation/inventory.json. Required
+combined-part generation precedes formatting, focused behavior, affected package
+and downstream/example checks. The parent gate runs scripts/test-all.sh plus
+provisioned MongoDB, DynamoDB Local and MySQL lanes. A 13-package external consumer
+at immutable revision 8131339 proves configuration, all adapters, REST and mixed
+events; the integration record identifies the exact SHA and source equivalence.
+Real AWS/OIDC and excluded legacy examples are not represented as passed.
 
-GitHub Actions is disabled. Use the current repository validator in
-`tool/validation`, derived from the root workspace and shared policy inventory;
-do not copy the obsolete package lists from abandoned local guidance.
-
-For each child:
-
-1. Resolve workspace packages with `dart pub get` at the root.
-2. Inspect builder IDs, annotated inputs, expected outputs and owning part
-   directives. Give each combined generated part/build cache one owner.
-3. Run required generation sequentially from its owning consumer directory.
-   Verify outputs exist and compile with the owning library. Never hand-edit
-   generated parts.
-4. Format-check owned handwritten Dart files and run focused behavioral tests.
-5. Analyze/test affected packages, downstream consumers and affected examples.
-6. Run applicable validator package/example/minimal-consumer lanes.
-
-Final parent validation runs `./scripts/test-all.sh` plus service-backed
-MongoDB, DynamoDB Local and MySQL lanes against locally provisioned services.
-The convenience local mode intentionally excludes those services. Record
-external-service and optional real-AWS checks separately; unrun is not passed.
-
-A standalone outside-workspace Dart consumer must resolve an immutable pushed
-candidate revision, generate where applicable, and exercise UUID, native
-GitHub-like and scoped/composite identities. Include negative analyzer cases
-for unrelated ID kinds, malformed codec values and scope collisions.
-There is no Worky application lockfile to update yet.
-
-## Migration and approval boundary
-
-Migration examples cover both:
-
-- Existing UUID aggregates moving to UuidAggregateRoot (or explicitly passing
-  UuidValue), with repositories/events using their documented generic types.
-- An externally identified aggregate receiving its actual native identity,
-  with an explicit codec and typed repository; no generated UUID is inserted.
-
-Adapt all repository-owned examples and consumers. Preserve current UUID
-round-trip functionality and document any wire/schema changes deliberately.
-Do not absorb browser persistence (#29), publication (#30), timestamp redesign
-or unrelated event-feature work.
-
-This planning PR does not claim implementation, test passes or completed
-AI-DLC stages. A dedicated dddart work record and API/codec decisions must be
-settled before implementation. Validated child PRs may merge upward as far as
-feat/worky-changes. Final branch review, merge to main and release remain owner
-actions.
+Migration guidance and package changelogs cover UuidAggregateRoot/UuidEntity,
+Repository<T, UuidValue>, typed events, native IDs, codec injection and explicit
+storage/wire breaks. Current Git consumption uses documented dependency overrides;
+publication remains #30. Worky has no consumer lockfile to update. Browser
+persistence #29, timestamp redesign and unrelated event work remain separate.
