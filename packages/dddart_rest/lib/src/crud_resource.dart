@@ -219,6 +219,14 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
     return identityCodecs.fromKey<I>(key);
   }
 
+  void _validateCreatedIdentity(I identity) {
+    try {
+      _identityFromKey(identityCodecs.toKey<I>(identity));
+    } on SerializationException {
+      throw const DeserializationException('Invalid REST identity key');
+    }
+  }
+
   /// Handles GET /resource/:id
   ///
   /// Parses the ID, calls repository.getById(), and returns a JSON aggregate.
@@ -446,6 +454,9 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
       if (preCreate != null) {
         aggregate = preCreate!(aggregate, authCheck.authResult);
       }
+
+      // The final aggregate must be addressable by this REST adapter.
+      _validateCreatedIdentity(aggregate.id);
 
       // Authorize if handler is configured
       if (authorizationHandler != null && authCheck.authResult != null) {

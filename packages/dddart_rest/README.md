@@ -19,7 +19,9 @@ callers supply decoded canonical keys. Slash, percent, punctuation and Unicode
 remain data. Empty, malformed UTF-8 and dot-only (`.`/`..`) keys are unsupported
 and fail before client I/O. Invalid/noncanonical server keys yield problem+json
 400; valid missing IDs keep 404. Client 400 and 422 map to repository constraint
-errors. A get response with a different typed identity is rejected.
+errors. POST validates the final aggregate's key after `preCreate`, rejecting
+unsupported identities with 400 before authorization or persistence. A get
+response with a different typed identity is rejected.
 
 
 RESTful CRUD API framework for DDDart - Provides REST endpoints for aggregate roots with minimal boilerplate.

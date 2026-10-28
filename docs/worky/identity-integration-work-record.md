@@ -1,6 +1,9 @@
 # Identity/configuration integration work record
 
 Tracking: #37 and #38. Integration target: feat/worky-changes.
+This records the original d209242 integration baseline. Subsequent PR #53 review
+fixes and their updated validation are recorded in pr53-review-work-record.md;
+original immutable-source-equivalence statements below apply to that baseline.
 Main remains c538680619a11af79e7094c3087646189c313978.
 
 ## Implemented children

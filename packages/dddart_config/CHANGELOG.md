@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Unprefixed environment loading ignores non-addressable ambient names such as
+  shell `_` during construction/reload. Explicitly prefixed malformed paths,
+  normalized duplicates and ancestor/descendant conflicts remain errors.
 - **BREAKING**: Providers expose immutable structural values through `lookup`,
   preserving YAML maps, ordered lists, scalar types and explicit null.
 - **BREAKING**: List getters require real lists and return `List<Object?>`;

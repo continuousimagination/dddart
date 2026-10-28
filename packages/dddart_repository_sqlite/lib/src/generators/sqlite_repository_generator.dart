@@ -316,11 +316,12 @@ class SqliteRepositoryGenerator
   ) {
     // Find all List<Entity>, Set<Entity>, and Map<K, Entity> fields in the aggregate
     for (final field in _getAllFields(aggregateRoot)) {
+      final fieldType = IdentityTypeAnalysis.fieldType(aggregateRoot, field);
       ClassElement? entityClass;
 
       // Check for List<Entity>
-      if (field.type.isDartCoreList) {
-        final elementType = (field.type as InterfaceType).typeArguments.first;
+      if (fieldType.isDartCoreList) {
+        final elementType = (fieldType as InterfaceType).typeArguments.first;
         if (elementType is InterfaceType) {
           final element = elementType.element;
           if (element is ClassElement && _analyzer.isEntity(element)) {
@@ -330,8 +331,8 @@ class SqliteRepositoryGenerator
       }
 
       // Check for Set<Entity>
-      if (field.type.isDartCoreSet) {
-        final elementType = (field.type as InterfaceType).typeArguments.first;
+      if (fieldType.isDartCoreSet) {
+        final elementType = (fieldType as InterfaceType).typeArguments.first;
         if (elementType is InterfaceType) {
           final element = elementType.element;
           if (element is ClassElement && _analyzer.isEntity(element)) {
@@ -341,8 +342,8 @@ class SqliteRepositoryGenerator
       }
 
       // Check for Map<K, Entity>
-      if (field.type.isDartCoreMap) {
-        final typeArgs = (field.type as InterfaceType).typeArguments;
+      if (fieldType.isDartCoreMap) {
+        final typeArgs = (fieldType as InterfaceType).typeArguments;
         if (typeArgs.length == 2) {
           final valueType = typeArgs[1];
           if (valueType is InterfaceType) {

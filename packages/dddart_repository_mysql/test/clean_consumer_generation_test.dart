@@ -66,6 +66,34 @@ class NativeIdentityCodec implements IdentityCodec<NativeIdentity> {
   @override NativeIdentity fromKey(String key) => NativeIdentity(key);
 }
 
+class ScopedIdentity extends Identity {
+  const ScopedIdentity(this.scope, this.number);
+  final String scope;
+  final int number;
+  @override List<Object?> get props => [scope,number];
+}
+class ScopedIdentityCodec implements IdentityCodec<ScopedIdentity> {
+  @override Object toJson(ScopedIdentity id) => {'scope':id.scope,'number':id.number};
+  @override ScopedIdentity fromJson(Object? value) {
+    final json = value as Map;
+    return ScopedIdentity(json['scope'] as String,json['number'] as int);
+  }
+  @override String toKey(ScopedIdentity id) => jsonEncode([id.scope,id.number]);
+  @override ScopedIdentity fromKey(String key) {
+    final parts=jsonDecode(key) as List;
+    return ScopedIdentity(parts[0] as String,parts[1] as int);
+  }
+}
+@Serializable()
+class ConsumerComment extends Entity<ScopedIdentity> {
+  ConsumerComment({required super.id,required this.message,super.createdAt,super.updatedAt});
+  final String message;
+}
+abstract class ConsumerBase<I extends Identity,C extends Entity<ScopedIdentity>> extends AggregateRoot<I> {
+  ConsumerBase({required super.id,this.comments=const [],super.createdAt,super.updatedAt});
+  final List<C> comments;
+}
+
 abstract interface class BroadConsumerReads {
   Future<Iterable<ConsumerAggregate>> getAll();
 }
@@ -85,10 +113,11 @@ abstract interface class ConsumerRepository
   tableName: 'consumer_aggregates',
   implements: ConsumerRepository,
 )
-class ConsumerAggregate extends AggregateRoot<NativeIdentity> {
+class ConsumerAggregate extends ConsumerBase<NativeIdentity,ConsumerComment> {
   ConsumerAggregate({
     required this.slug,
     required super.id,
+    super.comments,
     super.createdAt,
     super.updatedAt,
   });
@@ -127,17 +156,28 @@ import 'package:dddart_serialization/dddart_serialization.dart';
 ConsumerRepository createRepository(MysqlConnection connection) =>
     ConsumerAggregateRepository(connection);
 
-void main() {
-  final connection = MysqlConnection(host:'127.0.0.1',port:1,database:'not_open',user:'test',password:'test');
+class SchemaConnection extends MysqlConnection {
+  SchemaConnection():super(host:'127.0.0.1',port:1,database:'not_open',user:'test',password:'test');
+  final statements=<String>[];
+  @override Future<void> execute(String sql,[List<Object?>? parameters]) async { statements.add(sql); }
+  @override Future<T> transaction<T>(Future<T> Function() action) => action();
+}
+Future<void> main() async {
+  final connection = SchemaConnection();
   createRepository(connection);
-  final codecs = IdentityCodecRegistry()..register<NativeIdentity>('native',NativeIdentityCodec());
+  final codecs = IdentityCodecRegistry()..register<NativeIdentity>('native',NativeIdentityCodec())..register<ScopedIdentity>('scoped',ScopedIdentityCodec());
   final repository = ConsumerAggregateRepository(connection, identityCodecs:codecs);
   Future<ConsumerAggregate> Function(NativeIdentity) lookup = repository.getById;
   Future<void> Function(NativeIdentity) delete = repository.deleteById;
   final serializer = ConsumerAggregateJsonSerializer.withIdentityCodecs(codecs);
-  final original = ConsumerAggregate(id:const NativeIdentity('native/%, café'),slug:'issue');
+  final original = ConsumerAggregate(id:const NativeIdentity('native/%, café'),slug:'issue',comments:[ConsumerComment(id:const ScopedIdentity('repo',12),message:'kept')]);
   if(serializer.deserialize(serializer.serialize(original)).id!=original.id || lookup == delete) throw StateError('Typed identity failed');
-  connection.close();
+  final restored=serializer.deserialize(serializer.serialize(original));
+  if(restored.comments.single.id!=original.comments.single.id) throw StateError('Inherited entity identity failed');
+  await repository.createTables();
+  final ddl=connection.statements.join();
+  if(!ddl.contains('consumeraggregates_id') || !ddl.contains('_list_position')) throw StateError('Missing inherited entity parent/order schema');
+  await connection.close();
 }
 ''');
 

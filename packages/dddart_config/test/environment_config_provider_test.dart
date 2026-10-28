@@ -2,6 +2,45 @@ import 'package:dddart_config/dddart_config.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('unprefixed shell metadata does not block construction or reload',
+      () async {
+    for (final ambientName in ['_', '_UNADDRESSABLE', 'TRAILING_']) {
+      final source = <String, String>{
+        ambientName: 'metadata',
+        'DATABASE_HOST': 'before',
+      };
+      final provider = EnvironmentConfigProvider(environment: source);
+      expect(provider.getString('database.host'), 'before');
+      expect(provider.lookup('').value, {
+        'database': {'host': 'before'},
+      });
+      source
+        ..[ambientName] = 'updated metadata'
+        ..['DATABASE_HOST'] = 'after';
+      await provider.reload();
+      expect(provider.getString('database.host'), 'after');
+      expect(provider.lookup('database').value, {'host': 'after'});
+    }
+  });
+
+  test('unprefixed configured path collisions remain errors', () {
+    for (final source in [
+      {'_': 'metadata', 'DATABASE': 'scalar', 'DATABASE_HOST': 'child'},
+      {'_': 'metadata', 'DATABASE_HOST': 'one', 'database_host': 'two'},
+    ]) {
+      expect(
+        () => EnvironmentConfigProvider(environment: source),
+        throwsA(
+          isA<ConfigException>().having(
+            (error) => error.message,
+            'message',
+            contains('Conflicting environment paths'),
+          ),
+        ),
+      );
+    }
+  });
+
   test('loads unprefixed environment strings as a structural map', () {
     final provider = EnvironmentConfigProvider(
       environment: {

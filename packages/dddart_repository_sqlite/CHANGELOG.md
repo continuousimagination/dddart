@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Resolve inherited generic entity collection types consistently during parent
+  foreign-key discovery. Concrete List<C> bindings retain typed child IDs,
+  parent references, contents and order through CRUD without dropped rows.
 - Breaking: generated Repository<T, I> lookup/deletion and collection parents
   use the concrete identity. Constructors accept shared identityCodecs.
 - Native/scoped IDs and identity collections use exact canonical UTF-8 BLOBs,

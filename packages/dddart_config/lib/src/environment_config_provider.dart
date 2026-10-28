@@ -8,6 +8,8 @@ import 'package:dddart_config/src/exceptions.dart';
 ///
 /// A single underscore separates path segments; a double underscore represents
 /// a literal underscore. Values remain strings, including commas and JSON text.
+/// Without a prefix, names mapping to empty path segments (such as shell `_`)
+/// are ignored. Names selected by an explicit prefix remain strictly validated.
 class EnvironmentConfigProvider extends ConfigProvider {
   /// Loads the process environment, optionally restricting names to [prefix].
   ///
@@ -40,6 +42,7 @@ class EnvironmentConfigProvider extends ConfigProvider {
           .replaceAll('\u0000', '_');
       final segments = path.split('.');
       if (segments.any((segment) => segment.isEmpty)) {
+        if (prefix == null) continue;
         throw ConfigException('Empty environment path segment', key: path);
       }
       var map = root;

@@ -115,7 +115,12 @@ Values remain strings: an environment value containing commas or JSON is not
 implicitly decoded as a collection. Use YAML for structural lists/maps. Names
 that collide after normalization, or define both an ancestor scalar and its
 descendant (such as `APP_DATABASE` and `APP_DATABASE_PORT`), produce a path error.
-Prefer a prefix to avoid unrelated collisions in the process environment.
+Without a prefix, ambient names that map to empty path segments (for example
+shell `_`, `_NAME` or `NAME_`) are ignored, so unrelated shell metadata cannot
+disable legitimate settings. With an explicit prefix, malformed selected names
+still produce a path error. Normalized duplicates and ancestor/descendant
+conflicts remain errors in both modes. Prefer a prefix to avoid unrelated
+addressable names colliding in the process environment.
 
 ## Usage Examples
 

@@ -86,7 +86,11 @@ EnvironmentConfigProvider supplies strings and its current hierarchical key
 mapping. Do not implicitly parse environment values as YAML/JSON or turn
 commas into list elements. Typed scalar accessors may parse strings. Detect
 conflicting ancestor/descendant shapes within a provider and document a
-deterministic path error rather than depending on iteration order.
+deterministic path error rather than depending on iteration order. In no-prefix
+mode, ignore ambient names whose mapped paths contain empty segments, including
+ordinary shell `_`. An explicit configured prefix remains strict for malformed
+selected names; addressable duplicates/shape conflicts remain errors in both
+modes.
 
 ## Work item and branch
 

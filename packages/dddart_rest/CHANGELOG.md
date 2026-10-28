@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- POST validates the final aggregate's canonical REST key after preCreate and
+  before authorization/persistence. Unsupported request identities return 400
+  Problem Details without writes, matching the other CRUD routing constraints.
 - **BREAKING:** CRUD resources, query callbacks and authorization handlers carry
   concrete identity types. Configure explicit key codecs for native/scoped IDs;
   routing URI-decodes one segment once and direct handlers accept canonical keys.

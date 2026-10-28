@@ -30,6 +30,13 @@ class _Serializer extends TestJsonSerializer<NativeIssue> {
 class _Repository extends InMemoryRepository<NativeIssue, NativeId> {
   final List<NativeId> reads = [];
   final List<NativeId> deletes = [];
+  int saves = 0;
+  @override
+  Future<void> save(NativeIssue aggregate) {
+    saves++;
+    return super.save(aggregate);
+  }
+
   @override
   Future<NativeIssue> getById(NativeId id) {
     reads.add(id);
@@ -82,6 +89,100 @@ class _Authorization
 }
 
 void main() {
+  test('POST rejects unsupported final identity keys before saving', () async {
+    final codecs = issueIdentityCodecs();
+    final serializer = _Serializer(codecs);
+    final repository = _Repository();
+    final resource = CrudResource<NativeIssue, NativeId, void>(
+      path: '/issues',
+      repository: repository,
+      serializer: serializer,
+      identityCodecs: codecs,
+    );
+    for (final key in ['.', '..', String.fromCharCode(0xd800)]) {
+      final response = await resource.handleCreate(
+        Request(
+          'POST',
+          Uri.parse('http://local/issues'),
+          headers: {'content-type': 'application/json'},
+          body: serializer
+              .serialize(NativeIssue(id: NativeId(key), title: 'invalid')),
+        ),
+      );
+      expect(response.statusCode, 400, reason: 'unsupported transport key');
+      expect(response.headers['content-type'], 'application/problem+json');
+      expect(await response.readAsString(), contains('identity key'));
+    }
+    expect(repository.saves, 0);
+    expect(repository.getAllSync(), isEmpty);
+  });
+
+  test('POST validates the identity returned by preCreate', () async {
+    final codecs = issueIdentityCodecs();
+    final serializer = _Serializer(codecs);
+    final repository = _Repository();
+    for (final key in ['', '.', '..', String.fromCharCode(0xd800)]) {
+      final resource = CrudResource<NativeIssue, NativeId, void>(
+        path: '/issues',
+        repository: repository,
+        serializer: serializer,
+        identityCodecs: codecs,
+        preCreate: (issue, auth) =>
+            NativeIssue(id: NativeId(key), title: issue.title),
+      );
+      final response = await resource.handleCreate(
+        Request(
+          'POST',
+          Uri.parse('http://local/issues'),
+          headers: {'content-type': 'application/json'},
+          body: serializer.serialize(
+            NativeIssue(id: const NativeId('valid'), title: 'changed'),
+          ),
+        ),
+      );
+      expect(response.statusCode, 400);
+      expect(await response.readAsString(), contains('identity key'));
+    }
+    expect(repository.saves, 0);
+    expect(repository.getAllSync(), isEmpty);
+  });
+
+  test('POST creates and retrieves a valid final punctuation/Unicode identity',
+      () async {
+    final codecs = issueIdentityCodecs();
+    final serializer = _Serializer(codecs);
+    final repository = _Repository();
+    const id = NativeId('Repo/IssueA %2F, café?x=# ');
+    final resource = CrudResource<NativeIssue, NativeId, void>(
+      path: '/issues',
+      repository: repository,
+      serializer: serializer,
+      identityCodecs: codecs,
+      preCreate: (issue, auth) => NativeIssue(id: id, title: issue.title),
+    );
+    final handler = (HttpServer()..registerResource(resource)).buildHandler();
+    final created = await handler(
+      Request(
+        'POST',
+        Uri.parse('http://local/issues'),
+        headers: {'content-type': 'application/json'},
+        body: serializer
+            .serialize(NativeIssue(id: const NativeId('.'), title: 'created')),
+      ),
+    );
+    expect(created.statusCode, 201);
+    expect(repository.saves, 1);
+    expect(serializer.deserialize(await created.readAsString()).id, id);
+    final found = await handler(
+      Request(
+        'GET',
+        Uri.parse('http://local/issues/${Uri.encodeComponent(id.value)}'),
+      ),
+    );
+    expect(found.statusCode, 200);
+    expect(serializer.deserialize(await found.readAsString()).id, id);
+  });
+
   test('direct CRUD uses decoded native keys and typed delete authorization',
       () async {
     final codecs = issueIdentityCodecs();

@@ -328,8 +328,9 @@ class MysqlRepositoryGenerator
   ) {
     // Find all List<Entity> fields in the aggregate
     for (final field in _getAllFields(aggregateRoot)) {
-      if (field.type.isDartCoreList) {
-        final elementType = (field.type as InterfaceType).typeArguments.first;
+      final fieldType = IdentityTypeAnalysis.fieldType(aggregateRoot, field);
+      if (fieldType.isDartCoreList) {
+        final elementType = (fieldType as InterfaceType).typeArguments.first;
         if (elementType is InterfaceType) {
           final entityClass = elementType.element;
           if (entityClass is ClassElement &&

@@ -408,7 +408,8 @@ class ScopedIdCodec implements IdentityCodec<ScopedId> {
 }
 
 /// Generic inherited application state with identity fields and collections.
-abstract class SqlIssueBase<I extends Identity> extends AggregateRoot<I> {
+abstract class SqlIssueBase<I extends Identity, C extends Entity<ScopedId>>
+    extends AggregateRoot<I> {
   /// Creates the native or scoped issue state.
   SqlIssueBase({
     required super.id,
@@ -417,6 +418,7 @@ abstract class SqlIssueBase<I extends Identity> extends AggregateRoot<I> {
     this.optionalReference,
     this.history = const [],
     this.labelsById = const {},
+    this.comments = const [],
     super.createdAt,
     super.updatedAt,
   });
@@ -435,6 +437,9 @@ abstract class SqlIssueBase<I extends Identity> extends AggregateRoot<I> {
 
   /// Identity map keys use canonical keys, values use structural JSON.
   final Map<I, I?> labelsById;
+
+  /// Entity collection declared generically and closed by the concrete root.
+  final List<C> comments;
 }
 
 /// Embedded application value containing a structured identity.
@@ -500,7 +505,7 @@ abstract interface class NativeIssueRepository
   tableName: 'worky_native_issues',
   implements: NativeIssueRepository,
 )
-class NativeIssue extends SqlIssueBase<NativeId> {
+class NativeIssue extends SqlIssueBase<NativeId, NativeComment> {
   /// Creates a native issue.
   NativeIssue({
     required super.id,
@@ -510,22 +515,19 @@ class NativeIssue extends SqlIssueBase<NativeId> {
     super.history,
     super.labelsById,
     this.holder,
-    this.comments = const [],
+    super.comments,
     super.createdAt,
     super.updatedAt,
   });
 
   /// Optional embedded identity.
   final SqlIdentityHolder? holder;
-
-  /// Contained entities, not separate repositories.
-  final List<NativeComment> comments;
 }
 
 /// Scoped primary/foreign keys and collection parents.
 @Serializable()
 @GenerateMysqlRepository(tableName: 'worky_scoped_issues')
-class ScopedIssue extends SqlIssueBase<ScopedId> {
+class ScopedIssue extends SqlIssueBase<ScopedId, ScopedComment> {
   /// Creates a scoped issue.
   ScopedIssue({
     required super.id,
@@ -535,16 +537,13 @@ class ScopedIssue extends SqlIssueBase<ScopedId> {
     super.history,
     super.labelsById,
     this.holder,
-    this.comments = const [],
+    super.comments,
     super.createdAt,
     super.updatedAt,
   });
 
   /// Optional embedded identity.
   final SqlIdentityHolder? holder;
-
-  /// Contained entities, not separate repositories.
-  final List<ScopedComment> comments;
 }
 
 /// Application composition uses one fresh registry, shared with serializers.
