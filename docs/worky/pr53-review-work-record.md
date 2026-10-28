@@ -47,8 +47,8 @@ Cached analyzer annotation errors in old build state were cleared with
 build_runner clean before the successful owning generations; they are not counted
 as behavioral reproductions. Temporary MySQL service: task-owned
 `dddart-review53-mysql-20261028`, loopback 3307, disposable `test_db`.
-Logs: /private/tmp/dddart-pr53-review-20261028. Broad/package/downstream/consumer
-completion gates are still pending at this checkpoint.
+Logs: /private/tmp/dddart-pr53-review-20261028. These focused results preceded
+the final completion gates recorded below.
 
 ## Validation repair discovered by the broad gate
 
@@ -75,3 +75,56 @@ POST/preCreate key rejection with zero writes, routable Unicode creation, and
 real MySQL/SQLite inherited generic entity CRUD/order/FK/delete isolation.
 It uses a separate disposable MySQL probe database. This is new candidate
 coverage, not a reuse of the older thirteen-package baseline assertion.
+
+## Final completion evidence
+
+Functional fixes: 993252697d56417562e5f85503d64633647d1ae3.
+Full-gate candidate: c1d8f5de06c7579aa7b5a60e3b22739f0bf80507.
+Production library files are identical between those revisions; the intervening
+commits adjust test/build configuration and evidence. This final record update
+changes documentation only.
+
+The following commands completed successfully on the full-gate candidate:
+
+```sh
+./scripts/test-all.sh
+dart run tool/validation/validate.dart package dddart_repository_mysql --mode=ci
+dart run tool/validation/validate.dart example dddart_repository_mysql_example --mode=ci
+```
+
+- The workspace-derived local gate passed all 15 package gates, 15 isolated
+  archive consumers and 13 example-policy lanes. This includes required owning
+  generation, format checks, fatal analysis and applicable publication dry runs.
+  The inventory check reconciles membership against the root pubspec workspace.
+- Full affected suites passed: configuration 156, REST 311, SQLite 95 and
+  service-backed MySQL 192 tests. Downstream REST repository tests also pass
+  (110), along with shared SQL tests (85) and the other workspace package gates.
+- MySQL's explicit service-backed example lane passed its runnable entrypoints,
+  including custom repository behavior. The MySQL package dry run reports zero
+  warnings. No packages were published.
+- The immutable ten-package Git consumer described above passed fresh
+  generation, fatal analysis and execution against both real MySQL and SQLite.
+  Its fixture/logs are retained outside the workspace at
+  /private/tmp/dddart-pr53-consumer-9932526 and
+  /private/tmp/dddart-pr53-review-20261028/git-consumer.log.
+
+Generation remains single-owner per package/example cache. The SQL fixture
+builders are dddart_json:json_serializable plus
+dddart_repository_mysql:mysql_repository or
+dddart_repository_sqlite:sqlite_repository, invoked by
+scripts/run-required-generation.sh and the example validator. Expected combined
+parts are regenerated, checked for existence and compiled with their owning
+libraries; no generated parts were hand-edited or committed.
+
+The temporary MySQL container dddart-review53-mysql-20261028 and its anonymous
+volume were removed after successful validation. MongoDB/DynamoDB external
+service lanes were not rerun for these bounded fixes; their original baseline
+service evidence remains historical. Real AWS/OIDC and inventory-excluded legacy
+examples remain unrun, and compile-only examples retain that classification.
+Configuration policy/API notes, affected package guides and changelogs are
+updated. No unresolved source/specification conflicts remain for R1–R3.
+
+PR #53 remains open against unchanged main
+c538680619a11af79e7094c3087646189c313978. Reviewer re-evaluation and adoption
+approval are still pending; this work does not dismiss the requested changes
+review or merge the PR.
