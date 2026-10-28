@@ -19,7 +19,7 @@ class OrderStatus {
 
 /// Aggregate root representing an order.
 @Serializable()
-class Order extends AggregateRoot {
+class Order extends UuidAggregateRoot {
   Order({
     required this.customerId,
     required this.items,

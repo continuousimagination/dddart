@@ -12,7 +12,7 @@ part 'constructor_config_test.g.dart';
 
 /// Test user for constructor configuration testing.
 @Serializable()
-class ConfigurableUser extends AggregateRoot {
+class ConfigurableUser extends UuidAggregateRoot {
   ConfigurableUser({
     required this.firstName,
     required this.lastName,
