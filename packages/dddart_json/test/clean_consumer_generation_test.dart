@@ -101,8 +101,11 @@ class ApplicationIdentityCodec implements IdentityCodec<UuidValue> {
 @Serializable()
 class NativeConsumerAggregate extends AggregateRoot<UuidValue> {
   NativeConsumerAggregate({required super.id, required this.keys,
+    required this.history, required this.optionalValues,
     super.createdAt, super.updatedAt});
   final Map<UuidValue, String> keys;
+  final List<UuidValue?> history;
+  final Map<String, UuidValue?> optionalValues;
 }
 '''
             .replaceFirst(
@@ -127,9 +130,13 @@ void main() {
     ..register<UuidValue>('application.native.v1', const ApplicationIdentityCodec());
   final nativeSerializer = NativeConsumerAggregateJsonSerializer.withIdentityCodecs(codecs);
   final native = NativeConsumerAggregate(id: const UuidValue('not-a-framework-UUID'),
-    keys: {const UuidValue('native/%, key'): 'value'});
+    keys: {const UuidValue('native/%, key'): 'value'},
+    history: const [UuidValue('previous'), null],
+    optionalValues: const {'present': UuidValue('value'), 'absent': null});
   final nativeRestored = nativeSerializer.deserialize(nativeSerializer.serialize(native));
-  if (nativeRestored.id != native.id || nativeRestored.keys[native.keys.keys.single] != 'value') {
+  if (nativeRestored.id != native.id || nativeRestored.keys[native.keys.keys.single] != 'value' ||
+      nativeRestored.history.first != native.history.first || nativeRestored.history.last != null ||
+      nativeRestored.optionalValues['present'] != native.optionalValues['present']) {
     throw StateError('Application identity was confused with the framework UUID.');
   }
 }

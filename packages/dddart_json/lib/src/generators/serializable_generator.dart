@@ -752,7 +752,11 @@ $fromJsonWithConfigBody
 
   String _encodeValue(DartType type, String value, {bool nonNull = false}) {
     if (!nonNull && type.nullabilitySuffix == NullabilitySuffix.question) {
-      return '$value != null ? ${_encodeValue(type, '$value!', nonNull: true)} : null';
+      // Collection callback parameters promote after the null check; public
+      // instance fields and computed expressions still require an assertion.
+      final present =
+          {'item', 'key', 'value'}.contains(value) ? value : '$value!';
+      return '$value != null ? ${_encodeValue(type, present, nonNull: true)} : null';
     }
     final name = type.getDisplayString(withNullability: false);
     if (type is InterfaceType && _uuidType.isExactly(type.element)) {
