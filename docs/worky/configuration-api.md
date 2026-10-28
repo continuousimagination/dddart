@@ -1,6 +1,7 @@
 # Structured configuration: API and implementation proposal
 
-Status: implementation authorized on 28 October 2026; local validation underway.
+Status: implemented and locally validated on 28 October 2026; final integrated
+feature-branch review remains pending.
 Tracking: [#38](https://github.com/continuousimagination/dddart/issues/38).
 Source baseline: `c538680619a11af79e7094c3087646189c313978`.
 
