@@ -5,7 +5,8 @@ import 'package:dddart_events_distributed/src/stored_event.dart';
 ///
 /// This abstract class extends the base Repository interface to add
 /// time-range query methods needed for distributed event systems.
-abstract class EventRepository<T extends StoredEvent> implements Repository<T> {
+abstract class EventRepository<T extends StoredEvent<Identity>>
+    implements Repository<T, UuidValue> {
   /// Finds all events with createdAt >= timestamp.
   ///
   /// Implementations should use database-specific queries optimized

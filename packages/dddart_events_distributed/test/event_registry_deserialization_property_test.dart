@@ -11,6 +11,7 @@ import 'dart:math';
 
 import 'package:dddart/dddart.dart';
 import 'package:dddart_events_distributed/src/event_bus_client.dart';
+import 'package:dddart_events_distributed/src/event_registry.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:test/test.dart';
@@ -24,13 +25,13 @@ void main() {
 
         for (var i = 0; i < 100; i++) {
           final eventBus = EventBus();
-          final receivedEvents = <DomainEvent>[];
+          final receivedEvents = <DomainEvent<UuidValue>>[];
 
-          eventBus.on<DomainEvent>().listen(receivedEvents.add);
+          eventBus.on<DomainEvent<UuidValue>>().listen(receivedEvents.add);
 
           // Generate random events of different types
           final eventCount = 1 + random.nextInt(10);
-          final serverEvents = <DomainEvent>[];
+          final serverEvents = <DomainEvent<UuidValue>>[];
           final baseTime = DateTime.now().add(const Duration(seconds: 1));
 
           for (var j = 0; j < eventCount; j++) {
@@ -77,11 +78,22 @@ void main() {
           final client = EventBusClient(
             localEventBus: eventBus,
             serverUrl: 'http://test-server',
-            eventRegistry: {
-              'TestEventA': TestEventA.fromJson,
-              'TestEventB': TestEventB.fromJson,
-              'TestEventC': TestEventC.fromJson,
-            },
+            eventRegistry: (EventRegistry()
+              ..register<TestEventA>(
+                'TestEventA',
+                encode: (event) => event.toJson(),
+                decode: TestEventA.fromJson,
+              )
+              ..register<TestEventB>(
+                'TestEventB',
+                encode: (event) => event.toJson(),
+                decode: TestEventB.fromJson,
+              )
+              ..register<TestEventC>(
+                'TestEventC',
+                encode: (event) => event.toJson(),
+                decode: TestEventC.fromJson,
+              )),
             pollingInterval: const Duration(milliseconds: 50),
             httpClient: mockClient,
           );
@@ -194,9 +206,12 @@ void main() {
           final client = EventBusClient(
             localEventBus: eventBus,
             serverUrl: 'http://test-server',
-            eventRegistry: {
-              'TestEventA': TestEventA.fromJson,
-            },
+            eventRegistry: (EventRegistry()
+              ..register<TestEventA>(
+                'TestEventA',
+                encode: (event) => event.toJson(),
+                decode: TestEventA.fromJson,
+              )),
             pollingInterval: const Duration(milliseconds: 50),
             httpClient: mockClient,
           );
@@ -297,9 +312,12 @@ void main() {
           final client = EventBusClient(
             localEventBus: eventBus,
             serverUrl: 'http://test-server',
-            eventRegistry: {
-              'TestEventB': TestEventB.fromJson,
-            },
+            eventRegistry: (EventRegistry()
+              ..register<TestEventB>(
+                'TestEventB',
+                encode: (event) => event.toJson(),
+                decode: TestEventB.fromJson,
+              )),
             pollingInterval: const Duration(milliseconds: 50),
             httpClient: mockClient,
           );
@@ -375,8 +393,8 @@ TestEventC _generateTestEventCWithTimestamp(Random random, DateTime timestamp) {
   );
 }
 
-/// Converts an event to StoredEvent JSON format.
-Map<String, dynamic> _eventToStoredEventJson(DomainEvent event) {
+/// Converts an event to StoredEvent<Identity> JSON format.
+Map<String, dynamic> _eventToStoredEventJson(DomainEvent<UuidValue> event) {
   Map<String, dynamic> eventJson;
 
   if (event is TestEventA) {
@@ -415,7 +433,7 @@ Map<String, dynamic> _eventToStoredEventJson(DomainEvent event) {
     'id': event.eventId.toString(),
     'createdAt': event.occurredAt.toIso8601String(),
     'updatedAt': event.occurredAt.toIso8601String(),
-    'aggregateId': event.aggregateId.toString(),
+    'aggregateId': {'type': 'uuid', 'value': event.aggregateId.uuid},
     'eventType': event.runtimeType.toString(),
     'eventJson': jsonEncode(eventJson),
   };
@@ -424,7 +442,7 @@ Map<String, dynamic> _eventToStoredEventJson(DomainEvent event) {
 // Test event classes
 
 /// Test event A with various field types.
-class TestEventA extends DomainEvent {
+class TestEventA extends DomainEvent<UuidValue> {
   TestEventA({
     required super.aggregateId,
     required this.dataA,
@@ -453,10 +471,21 @@ class TestEventA extends DomainEvent {
       context: json['context'] as Map<String, dynamic>? ?? {},
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'eventId': eventId.uuid,
+        'occurredAt': occurredAt.toIso8601String(),
+        'aggregateId': aggregateId.uuid,
+        'context': context,
+        'dataA': dataA,
+        'numberField': numberField,
+        'boolField': boolField,
+        'listField': listField,
+      };
 }
 
 /// Test event B with optional field.
-class TestEventB extends DomainEvent {
+class TestEventB extends DomainEvent<UuidValue> {
   TestEventB({
     required super.aggregateId,
     required this.dataB,
@@ -479,10 +508,19 @@ class TestEventB extends DomainEvent {
       context: json['context'] as Map<String, dynamic>? ?? {},
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'eventId': eventId.uuid,
+        'occurredAt': occurredAt.toIso8601String(),
+        'aggregateId': aggregateId.uuid,
+        'context': context,
+        'dataB': dataB,
+        'optionalField': optionalField,
+      };
 }
 
 /// Test event C - simple event.
-class TestEventC extends DomainEvent {
+class TestEventC extends DomainEvent<UuidValue> {
   TestEventC({
     required super.aggregateId,
     required this.dataC,
@@ -502,4 +540,12 @@ class TestEventC extends DomainEvent {
       context: json['context'] as Map<String, dynamic>? ?? {},
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'eventId': eventId.uuid,
+        'occurredAt': occurredAt.toIso8601String(),
+        'aggregateId': aggregateId.uuid,
+        'context': context,
+        'dataC': dataC,
+      };
 }

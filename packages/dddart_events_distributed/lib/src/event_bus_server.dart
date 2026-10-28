@@ -16,10 +16,12 @@ import 'package:dddart_events_distributed/src/stored_event.dart';
 /// final eventBus = EventBus();
 /// final repository = InMemoryEventRepository();
 ///
-/// final server = EventBusServer<StoredEvent>(
+/// final server = EventBusServer<StoredEvent<Identity>>(
 ///   localEventBus: eventBus,
 ///   eventRepository: repository,
-///   storedEventFactory: StoredEvent.fromDomainEvent,
+///   storedEventFactory: (event) => StoredEvent<Identity>.fromDomainEvent(
+///     event, registry: eventRegistry,
+///   ),
 ///   retentionDuration: Duration(days: 30),
 /// );
 ///
@@ -32,7 +34,7 @@ import 'package:dddart_events_distributed/src/stored_event.dart';
 /// // Close when done
 /// await server.close();
 /// ```
-class EventBusServer<T extends StoredEvent> {
+class EventBusServer<T extends StoredEvent<Identity>> {
   /// Creates an EventBusServer.
   ///
   /// [localEventBus] is the local EventBus to wrap with persistence.
@@ -48,7 +50,8 @@ class EventBusServer<T extends StoredEvent> {
     this.retentionDuration,
   }) {
     // Subscribe to all events and persist them
-    _subscription = localEventBus.on<DomainEvent>().listen(_persistEvent);
+    _subscription =
+        localEventBus.on<DomainEvent<Identity>>().listen(_persistEvent);
     _logger.info('EventBusServer started');
   }
 
@@ -62,23 +65,23 @@ class EventBusServer<T extends StoredEvent> {
   final Duration? retentionDuration;
 
   /// Factory function to convert DomainEvents to StoredEvents.
-  final T Function(DomainEvent) storedEventFactory;
+  final T Function(DomainEvent<Identity>) storedEventFactory;
 
-  StreamSubscription<DomainEvent>? _subscription;
+  StreamSubscription<DomainEvent<Identity>>? _subscription;
   final Logger _logger = Logger('dddart.events.server');
 
   /// Publishes event to local bus (which triggers persistence).
-  void publish(DomainEvent event) {
+  void publish(DomainEvent<Identity> event) {
     localEventBus.publish(event);
   }
 
   /// Subscribes to events on local bus.
-  Stream<E> on<E extends DomainEvent>() {
+  Stream<E> on<E extends DomainEvent<Identity>>() {
     return localEventBus.on<E>();
   }
 
   /// Persists event to repository.
-  Future<void> _persistEvent(DomainEvent event) async {
+  Future<void> _persistEvent(DomainEvent<Identity> event) async {
     try {
       final stored = storedEventFactory(event);
       await eventRepository.save(stored);

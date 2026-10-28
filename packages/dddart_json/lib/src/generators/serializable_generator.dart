@@ -8,7 +8,7 @@ import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:build/build.dart';
 import 'package:dddart/dddart.dart'
-    show AggregateRoot, Entity, Identity, UuidValue, Value;
+    show AggregateRoot, DomainEvent, Entity, Identity, UuidValue, Value;
 import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:source_gen/source_gen.dart';
 
@@ -20,6 +20,7 @@ Builder serializableBuilder(BuilderOptions options) =>
 class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
   static const _aggregateRootType = TypeChecker.fromRuntime(AggregateRoot);
   static const _entityType = TypeChecker.fromRuntime(Entity);
+  static const _domainEventType = TypeChecker.fromRuntime(DomainEvent);
   static const _valueType = TypeChecker.fromRuntime(Value);
   static const _identityType = TypeChecker.fromRuntime(Identity);
   static const _uuidType = TypeChecker.fromRuntime(UuidValue);
@@ -60,6 +61,7 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
           classAnalysis,
           config,
         );
+      case ClassType.event:
       case ClassType.value:
         return _generateValueSerialization(classElement, classAnalysis, config);
       case ClassType.entity:
@@ -70,7 +72,7 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
         );
       case ClassType.invalid:
         throw InvalidGenerationSourceError(
-          'Class $className must extend either AggregateRoot or Value to use @Serializable annotation.',
+          'Class $className must extend AggregateRoot, Entity, Value or DomainEvent to use @Serializable annotation.',
           element: element,
         );
     }
@@ -189,15 +191,19 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
     final fields = _extractFields(classElement, classType);
 
     DartType? identityType;
-    if (classType == ClassType.aggregateRoot || classType == ClassType.entity) {
+    if (classType == ClassType.aggregateRoot ||
+        classType == ClassType.entity ||
+        classType == ClassType.event) {
       final entity = classElement.allSupertypes.firstWhere(
-        (type) => _entityType.isExactly(type.element),
+        (type) =>
+            (classType == ClassType.event ? _domainEventType : _entityType)
+                .isExactly(type.element),
       );
       identityType = entity.typeArguments.single;
       if (identityType is! InterfaceType ||
           _identityType.isExactly(identityType.element)) {
         throw InvalidGenerationSourceError(
-          'Class $className must specify a concrete identity type. Use UuidAggregateRoot/UuidEntity or an explicit Identity subtype.',
+          'Class $className must specify a concrete identity type. Use UuidValue or an explicit Identity subtype.',
           element: classElement,
         );
       }
@@ -228,6 +234,9 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
       if (_entityType.isExactly(supertypeElement)) {
         return ClassType.entity;
       }
+      if (_domainEventType.isExactly(supertypeElement)) {
+        return ClassType.event;
+      }
       if (_valueType.isExactly(supertypeElement)) {
         return ClassType.value;
       }
@@ -249,6 +258,7 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
       ClassType.aggregateRoot => _aggregateRootType,
       ClassType.entity => _entityType,
       ClassType.value => _valueType,
+      ClassType.event => _domainEventType,
       ClassType.invalid => null,
     };
     if (frameworkBaseType == null) return fields;
@@ -259,7 +269,11 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
       final isInherited = current.element != classElement;
 
       for (final field in current.element.fields) {
-        if (field.isStatic || field.isSynthetic) continue;
+        if (field.isStatic ||
+            field.isSynthetic ||
+            (field.isPrivate && field.library != classElement.library)) {
+          continue;
+        }
         if ((classType == ClassType.aggregateRoot ||
                 classType == ClassType.entity) &&
             ['id', 'createdAt', 'updatedAt'].contains(field.name)) {
@@ -292,6 +306,29 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
       }
 
       current = current.superclass;
+    }
+
+    if (classType == ClassType.event && current != null) {
+      final parameters = classElement.unnamedConstructor?.parameters
+              .where((parameter) => parameter.isNamed)
+              .map((parameter) => parameter.name)
+              .toSet() ??
+          <String>{};
+      for (final name in ['eventId', 'occurredAt', 'aggregateId', 'context']) {
+        if (!parameters.contains(name) || !fieldNames.add(name)) {
+          throw InvalidGenerationSourceError(
+            'DomainEvent serialization requires named base metadata parameters without shadowing.',
+            element: classElement,
+          );
+        }
+        fields.add(
+          FieldInfo(
+            name: name,
+            type: current.getGetter(name)!.returnType,
+            isNullable: false,
+          ),
+        );
+      }
     }
 
     return fields;
@@ -956,5 +993,6 @@ enum ClassType {
   aggregateRoot,
   entity,
   value,
+  event,
   invalid,
 }

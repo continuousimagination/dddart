@@ -1,5 +1,13 @@
 # DDDart JSON
 
+Concrete `DomainEvent<I>` classes are also supported. Expose named `aggregateId`,
+`eventId`, `occurredAt` and `context` constructor parameters (normally through
+`super` parameters). Event serializers retain the concrete identity codec and
+UUID occurrence ID; they do not add entity timestamps. Private ancestor state
+from another Dart library is not a public serialization field. Distributed event
+registrations are documented in `dddart_events_distributed`.
+
+
 JSON serialization code generation for DDDart aggregate roots, entities, and
 value objects.
 
