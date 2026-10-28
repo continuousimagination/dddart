@@ -32,7 +32,7 @@ void main() {
         // Verify TestUserSqliteRepository was generated
         final repo = TestUserSqliteRepository(connection);
         expect(repo, isNotNull);
-        expect(repo, isA<Repository<TestUser>>());
+        expect(repo, isA<Repository<TestUser, UuidValue>>());
 
         // Verify createTables method exists and works
         await repo.createTables();
@@ -43,7 +43,7 @@ void main() {
         // Verify OrderSqliteRepository was generated
         final repo = OrderSqliteRepository(connection);
         expect(repo, isNotNull);
-        expect(repo, isA<Repository<Order>>());
+        expect(repo, isA<Repository<Order, UuidValue>>());
 
         // Verify createTables creates multiple tables
         await repo.createTables();
@@ -55,7 +55,7 @@ void main() {
         // Verify TestProductSqliteRepository was generated
         final repo = TestProductSqliteRepository(connection);
         expect(repo, isNotNull);
-        expect(repo, isA<Repository<TestProduct>>());
+        expect(repo, isA<Repository<TestProduct, UuidValue>>());
 
         // Verify createTables works
         await repo.createTables();
@@ -397,7 +397,7 @@ void main() {
         // TestUserSqliteRepository should be a concrete class
         final repo = TestUserSqliteRepository(connection);
         expect(repo, isNotNull);
-        expect(repo, isA<Repository<TestUser>>());
+        expect(repo, isA<Repository<TestUser, UuidValue>>());
 
         // Should have all standard CRUD methods
         expect(repo.getById, isNotNull);
@@ -407,13 +407,13 @@ void main() {
 
       test('repository implements Repository interface', () {
         final userRepo = TestUserSqliteRepository(connection);
-        expect(userRepo, isA<Repository<TestUser>>());
+        expect(userRepo, isA<Repository<TestUser, UuidValue>>());
 
         final orderRepo = OrderSqliteRepository(connection);
-        expect(orderRepo, isA<Repository<Order>>());
+        expect(orderRepo, isA<Repository<Order, UuidValue>>());
 
         final productRepo = TestProductSqliteRepository(connection);
-        expect(productRepo, isA<Repository<TestProduct>>());
+        expect(productRepo, isA<Repository<TestProduct, UuidValue>>());
       });
 
       test('repository has createTables method', () async {

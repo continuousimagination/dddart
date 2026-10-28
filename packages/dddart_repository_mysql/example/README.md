@@ -161,7 +161,7 @@ The examples use a simple e-commerce domain:
 ```sql
 -- Aggregate root table
 CREATE TABLE orders (
-  id BINARY(16) PRIMARY KEY NOT NULL,
+  id VARBINARY(1024) PRIMARY KEY NOT NULL,
   createdAt TIMESTAMP NOT NULL,
   updatedAt TIMESTAMP NOT NULL,
   customerName VARCHAR(255) NOT NULL,
@@ -181,8 +181,8 @@ CREATE TABLE orders (
 
 -- Entity table with foreign key
 CREATE TABLE order_items (
-  id BINARY(16) PRIMARY KEY NOT NULL,
-  order_id BINARY(16) NOT NULL,
+  id VARBINARY(1024) PRIMARY KEY NOT NULL,
+  order_id VARBINARY(1024) NOT NULL,
   productName VARCHAR(255) NOT NULL,
   quantity BIGINT NOT NULL,
   -- Embedded value object: unitPrice

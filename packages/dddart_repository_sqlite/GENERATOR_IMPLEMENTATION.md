@@ -74,7 +74,7 @@ The `SqliteRepositoryGenerator` is a source_gen-based code generator that automa
 - ✅ Detects custom methods in interface
 - ✅ Generates concrete class if no custom methods exist
 - ✅ Generates abstract base class if custom methods exist
-- ✅ Exposes protected members (`_connection`, `_dialect`, `_serializer`) for subclass access
+- ✅ Exposes library-private members (`_connection`, `_dialect`, `_serializer`) for subclass access
 - ✅ Declares custom methods as abstract for implementation by subclass
 
 ### 7. Exception Mapping (Task 8.7)
@@ -92,7 +92,7 @@ For an aggregate root like:
 ```dart
 @Serializable()
 @GenerateSqliteRepository()
-class Order extends AggregateRoot {
+class Order extends UuidAggregateRoot {
   Order({
     required UuidValue id,
     required this.totalAmount,
@@ -107,7 +107,7 @@ class Order extends AggregateRoot {
 The generator produces:
 
 ```dart
-class OrderSqliteRepository implements Repository<Order> {
+class OrderSqliteRepository implements Repository<Order, UuidValue> {
   OrderSqliteRepository(this._connection);
 
   final SqliteConnection _connection;
@@ -145,7 +145,7 @@ Value objects are embedded directly in their parent tables with prefixed column 
 
 ### Type Mapping
 
-- `UuidValue` → `BLOB` (16 bytes)
+- `UuidValue` → `BLOB` (canonical UTF-8 bytes)
 - `DateTime` → `INTEGER` (milliseconds since epoch)
 - `bool` → `INTEGER` (0 or 1)
 - `String` → `TEXT`
@@ -175,7 +175,7 @@ The current implementation provides basic CRUD operations. Future enhancements c
 ```dart
 @Serializable()
 @GenerateSqliteRepository()
-class MyAggregate extends AggregateRoot {
+class MyAggregate extends UuidAggregateRoot {
   // ...
 }
 ```

@@ -71,14 +71,14 @@ void main() {
                 // Insert row with NULL in required field
                 await helper!.connection.execute(
                   'INSERT INTO simple_product (id, name, price, createdAt, updatedAt) '
-                  'VALUES (UUID_TO_BIN(?), NULL, ?, NOW(), NOW())',
+                  'VALUES (?, NULL, ?, NOW(), NOW())',
                   [UuidValue.generate().toString(), 99.99],
                 );
 
                 // Try to retrieve - should fail deserialization
                 try {
                   final results = await helper!.connection.query(
-                    'SELECT BIN_TO_UUID(id) as id, name, price, createdAt, updatedAt '
+                    'SELECT id, name, price, createdAt, updatedAt '
                     'FROM simple_product',
                   );
 
@@ -116,7 +116,7 @@ void main() {
                 // Try to insert invalid price type
                 await helper!.connection.execute(
                   'INSERT INTO simple_product (id, name, price, createdAt, updatedAt) '
-                  "VALUES (UUID_TO_BIN(?), ?, 'invalid_price', NOW(), NOW())",
+                  "VALUES (?, ?, 'invalid_price', NOW(), NOW())",
                   [UuidValue.generate().toString(), 'Test Product'],
                 );
               } catch (e) {
@@ -143,7 +143,7 @@ void main() {
                 // Try to insert without required field
                 await helper!.connection.execute(
                   'INSERT INTO simple_product (id, name, createdAt, updatedAt) '
-                  'VALUES (UUID_TO_BIN(?), ?, NOW(), NOW())',
+                  'VALUES (?, ?, NOW(), NOW())',
                   [UuidValue.generate().toString(), 'Test Product'],
                 );
               } catch (e) {
@@ -206,7 +206,7 @@ void main() {
         // Corrupt the order_item data
         try {
           await helper!.connection.execute(
-            'UPDATE order_item SET quantity = NULL WHERE order_id = UUID_TO_BIN(?)',
+            'UPDATE order_item SET quantity = NULL WHERE order_id = ?',
             [order.id.toString()],
           );
 
@@ -269,7 +269,7 @@ void main() {
         // Corrupt the email value
         try {
           await helper!.connection.execute(
-            'UPDATE customer SET email_value = NULL WHERE id = UUID_TO_BIN(?)',
+            'UPDATE customer SET email_value = NULL WHERE id = ?',
             [customer.id.toString()],
           );
 

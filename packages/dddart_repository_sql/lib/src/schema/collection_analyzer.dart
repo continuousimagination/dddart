@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
+import 'package:dddart_repository_sql/src/schema/identity_type.dart';
 
 /// Analyzes collection fields in aggregate roots and entities.
 ///
@@ -35,8 +36,11 @@ class CollectionAnalyzer {
   /// // info.elementKind == ElementKind.primitive
   /// // info.elementType is int
   /// ```
-  CollectionInfo? analyzeCollection(FieldElement field) {
-    final fieldType = field.type;
+  CollectionInfo? analyzeCollection(
+    FieldElement field, {
+    DartType? resolvedType,
+  }) {
+    final fieldType = resolvedType ?? field.type;
 
     // Check for List<T>
     if (fieldType.isDartCoreList) {
@@ -103,6 +107,7 @@ class CollectionAnalyzer {
   /// analyzer.isPrimitiveType(customClassType); // false
   /// ```
   bool isPrimitiveType(DartType type) {
+    if (IdentityTypeAnalysis.isIdentity(type)) return true;
     if (type is! InterfaceType) return false;
 
     final element = type.element;
@@ -131,7 +136,8 @@ class CollectionAnalyzer {
   /// analyzer.isValueObject(moneyElement); // true
   /// ```
   bool isValueObject(ClassElement element) {
-    return _extendsClass(element, 'Value');
+    return !IdentityTypeAnalysis.isIdentity(element.thisType) &&
+        _extendsClass(element, 'Value');
   }
 
   /// Checks if a type is an entity.
@@ -144,7 +150,7 @@ class CollectionAnalyzer {
   ///
   /// Example:
   /// ```dart
-  /// class OrderItem extends Entity {
+  /// class OrderItem extends UuidEntity {
   ///   final int quantity;
   /// }
   /// analyzer.isEntity(orderItemElement); // true
@@ -365,6 +371,6 @@ enum ElementKind {
   /// Value object (extends Value).
   value,
 
-  /// Entity (extends Entity).
+  /// Entity (extends UuidEntity).
   entity,
 }

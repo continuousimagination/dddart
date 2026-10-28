@@ -1,5 +1,23 @@
 # dddart_repository_sql
 
+## Typed identity contracts
+
+`SqlDialect` supplies `identityColumnType`, `maxIdentityKeyBytes`,
+`encodeIdentityKey` and `decodeIdentityKey` for canonical UTF-8 identity keys.
+Extend the dialect to inherit validation, or implement the new members explicitly.
+SQL adapters share an `IdentityCodecRegistry` with their JSON serializers; no
+arbitrary identity `toString()` or UUID-shaped-string guess is used as encoding.
+
+`IdentityTypeAnalysis` resolves concrete entity identity arguments and inherited
+field types. `TypeMapper.getSqlTypeFor` treats identities atomically before Value
+embedding. `ColumnDefinition.jsonPath` records a column's structural JSON leaf;
+collection schema helpers accept the actual `parentIdentityType`.
+
+SQLite uses exact BLOB keys. MySQL uses VARBINARY(1024) with a checked byte budget,
+including UUID text. Existing 16-byte UUID storage requires an explicit migration
+or recreation. See each backend's migration section for supported shapes and
+limits. Domain repositories remain `Repository<T, I>` over aggregate roots.
+
 Base SQL repository abstractions for DDDart - Domain-Driven Design for Dart.
 
 ## Overview
@@ -42,7 +60,7 @@ dddart_repository_sql (base abstractions)
 
 dddart_repository_sqlite (concrete implementation)
     ├── SqliteConnection (implements SqlConnection)
-    ├── SqliteDialect (implements SqlDialect)
+    ├── SqliteDialect (extends SqlDialect)
     └── SqliteRepositoryGenerator (uses base utilities)
 ```
 

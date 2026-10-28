@@ -1,5 +1,36 @@
 # dddart_repository_sqlite
 
+## Typed identity migration
+
+Use `UuidAggregateRoot`/`UuidEntity` for optional generated UUIDs, or
+`AggregateRoot<IssueId>`/`Entity<CommentId>` with required application identities.
+Generated repositories implement `Repository<T, I>` and accept an optional named
+`identityCodecs` registry shared with their generated JSON serializer:
+
+```dart
+final codecs = IdentityCodecRegistry()
+  ..register<IssueId>('github.issue.v1', IssueIdCodec());
+final repository = IssueSqliteRepository(connection, identityCodecs: codecs);
+```
+
+Application codecs follow the [JSON/key contract](../dddart_serialization/README.md#identity-codecs).
+Canonical keys are stored as UTF-8 BLOBs through root, entity and collection
+primary/foreign keys. Structured IDs and identity map keys retain scope and exact
+case; malformed key Unicode is rejected. UUID keys retain their complete string
+bytes, including case. Migrate/recreate existing 16-byte UUID schemas/data, then
+regenerate every owning combined part and update hand-written SQL parameters.
+
+Persistence uses fixed Dart field names and includes null fields to clear optional
+identity state on updates. Explicit path/type metadata preserves codec JSON as a
+leaf, including identities inside embedded values and inherited collections.
+Nullable collection containers retain their existing empty-on-load convention.
+
+Until publication, use the [Git installation guide](../../docs/GIT_INSTALLATION.md)
+with same-revision internal overrides for adapters still declaring hosted sibling
+dependencies. Custom implementations access underscore members only within the
+same Dart library, including parts. SQLite imposes complete row/database limits;
+this adapter does not silently shorten an identity key.
+
 SQLite repository implementation for DDDart aggregate roots with automatic code generation.
 
 ## Features
@@ -40,7 +71,7 @@ import 'package:dddart_repository_sqlite/dddart_repository_sqlite.dart';
 
 @Serializable()
 @GenerateSqliteRepository()
-class Order extends AggregateRoot {
+class Order extends UuidAggregateRoot {
   Order({
     required UuidValue id,
     required this.customerId,
@@ -233,7 +264,7 @@ You can extend generated repositories with custom query methods for domain-speci
 ### Define Custom Interface
 
 ```dart
-abstract class OrderRepository implements Repository<Order> {
+abstract class OrderRepository implements Repository<Order, UuidValue> {
   Future<List<Order>> findByCustomerId(UuidValue customerId);
   Future<List<Order>> findByDateRange(DateTime start, DateTime end);
   Future<double> getTotalRevenue();
@@ -241,7 +272,7 @@ abstract class OrderRepository implements Repository<Order> {
 
 @Serializable()
 @GenerateSqliteRepository(implements: OrderRepository)
-class Order extends AggregateRoot {
+class Order extends UuidAggregateRoot {
   Order({
     required UuidValue id,
     required this.customerId,
@@ -296,7 +327,7 @@ class OrderSqliteRepositoryImpl extends OrderSqliteRepository {
 
 ### Protected Members
 
-The generated base class exposes protected members for custom implementations:
+Generated underscore members are library-private and available in the same Dart library or its parts:
 
 - `connection`: The `SqliteConnection` instance
 - `dialect`: The `SqliteDialect` instance for encoding/decoding
@@ -548,7 +579,7 @@ DDDart SQLite repositories provide comprehensive support for collections in your
 ```dart
 @Serializable()
 @GenerateSqliteRepository()
-class User extends AggregateRoot {
+class User extends UuidAggregateRoot {
   User({
     required UuidValue id,
     required this.name,
@@ -628,7 +659,7 @@ class Address {
 
 @Serializable()
 @GenerateSqliteRepository()
-class Order extends AggregateRoot {
+class Order extends UuidAggregateRoot {
   Order({
     required UuidValue id,
     required this.payments,
@@ -696,7 +727,7 @@ CREATE TABLE orders_discountsByCode_items (
 
 ```dart
 @Serializable()
-class CartItem extends Entity {
+class CartItem extends UuidEntity {
   CartItem({
     required UuidValue id,
     required this.productId,
@@ -708,7 +739,7 @@ class CartItem extends Entity {
 }
 
 @Serializable()
-class Discount extends Entity {
+class Discount extends UuidEntity {
   Discount({
     required UuidValue id,
     required this.code,
@@ -721,7 +752,7 @@ class Discount extends Entity {
 
 @Serializable()
 @GenerateSqliteRepository()
-class ShoppingCart extends AggregateRoot {
+class ShoppingCart extends UuidAggregateRoot {
   ShoppingCart({
     required UuidValue id,
     required this.items,
@@ -823,7 +854,7 @@ CREATE TABLE saved_cart_items (
 ```dart
 @Serializable()
 @GenerateSqliteRepository()
-class Event extends AggregateRoot {
+class Event extends UuidAggregateRoot {
   Event({
     required UuidValue id,
     required this.scheduledFor,
@@ -846,7 +877,7 @@ class Event extends AggregateRoot {
 ```dart
 @Serializable()
 @GenerateSqliteRepository()
-class Task extends AggregateRoot {
+class Task extends UuidAggregateRoot {
   Task({
     required UuidValue id,
     required this.completed,

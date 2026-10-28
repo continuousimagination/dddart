@@ -43,8 +43,8 @@ void main() {
             );
             expect(
               (encoded! as Uint8List).length,
-              equals(16),
-              reason: 'Iteration $i: Encoded UUID should be 16 bytes',
+              equals(originalUuid.uuid.length),
+              reason: 'Iteration $i: UUID key must preserve its exact text',
             );
 
             // Decode back to UuidValue
@@ -161,8 +161,8 @@ void main() {
           // Verify type mappings are consistent and match expected MySQL types
           expect(
             dialect.uuidColumnType,
-            equals('BINARY(16)'),
-            reason: 'UuidValue should map to BINARY(16)',
+            equals('VARBINARY(1024)'),
+            reason: 'UuidValue uses the exact canonical identity key column',
           );
           expect(
             dialect.textColumnType,

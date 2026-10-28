@@ -269,8 +269,9 @@ void main() {
     // **Feature: mysql-repository, Property 9: Type mapping correctness**
     // **Validates: Requirements 3.7**
     group('Property 9: Type mapping correctness', () {
-      test('should map UuidValue to BINARY(16)', () {
-        expect(dialect.uuidColumnType, equals('BINARY(16)'));
+      test('should map UuidValue to exact variable binary identity storage',
+          () {
+        expect(dialect.uuidColumnType, equals('VARBINARY(1024)'));
       });
 
       test('should map String to VARCHAR(255)', () {

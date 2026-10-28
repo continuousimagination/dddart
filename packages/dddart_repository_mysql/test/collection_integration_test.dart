@@ -583,15 +583,19 @@ void main() {
         expect(await helper!.tableExists('test_primitive_collections'), isTrue);
       });
 
-      test('should use MySQL BINARY(16) for UUID fields', () async {
+      test('should use exact variable binary storage for identity columns',
+          () async {
         final repo =
             TestPrimitiveCollectionsMysqlRepository(helper!.connection);
         await repo.createTables();
 
-        // This test verifies that the schema uses MySQL-specific types
-        // The actual verification would require inspecting the schema
-        // For now, we just verify the tables were created successfully
-        expect(await helper!.tableExists('test_primitive_collections'), isTrue);
+        final columns = await helper!.connection.query(
+          'SELECT DATA_TYPE, CHARACTER_MAXIMUM_LENGTH FROM information_schema.COLUMNS '
+          'WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?',
+          ['test_primitive_collections', 'id'],
+        );
+        expect(columns.single['DATA_TYPE'], 'varbinary');
+        expect(columns.single['CHARACTER_MAXIMUM_LENGTH'], 1024);
       });
     });
   });

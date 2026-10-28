@@ -5,7 +5,7 @@ import 'package:dddart_repository_sql/src/schema/table_definition.dart';
 import 'package:test/test.dart';
 
 /// Mock SQL dialect for testing.
-class MockSqlDialect implements SqlDialect {
+class MockSqlDialect extends SqlDialect {
   @override
   String get uuidColumnType => 'BLOB';
 

@@ -23,7 +23,7 @@ part 'order_with_custom_repo_impl.dart';
   tableName: 'orders',
   implements: OrderRepository,
 )
-class OrderWithCustomRepo extends AggregateRoot {
+class OrderWithCustomRepo extends UuidAggregateRoot {
   /// Creates a new Order aggregate.
   OrderWithCustomRepo({
     required this.customerName,

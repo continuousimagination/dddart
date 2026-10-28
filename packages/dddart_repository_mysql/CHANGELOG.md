@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Changed
+
+- Breaking: generated Repository<T, I> APIs and optional injected identityCodecs
+  retain concrete native/scoped identity types through primary/foreign keys.
+- Canonical keys use exact VARBINARY(1024), validated before truncation can occur;
+  migrate/recreate former 16-byte UUID schemas/data. UUID case is preserved.
+- Resolve inherited fields/collections and use structural JSON path metadata.
+  Identity map keys, nullable identity updates and rollback are locally tested.
+- Query conversion follows database column types so numeric string IDs remain
+  strings. MySQL Set/Map entity collections fail generation explicitly; its
+  existing List<Entity> layout remains supported.
+
 ### Deprecated
 
 - `MysqlConnection.maxConnections`, which has always been a no-op on the
