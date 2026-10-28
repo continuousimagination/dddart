@@ -74,3 +74,40 @@ Git installation guide explicitly documents pinned overrides for those siblings.
 The external adapter proof uses that documented approach; the no-override JSON
 proof remains separately recorded under #40. No publication conversion is hidden
 in this identity change.
+
+## Completed local gates
+
+- MongoDB provisioned-service package gate: 82 tests pass, analysis and formatting
+  pass, required parts regenerated/compiled, publish dry-run has zero warnings.
+- DynamoDB provisioned-service package gate: 113 tests pass with the same checks
+  and a zero-warning publish dry-run. No service skips occurred in either gate.
+- Both standalone example service gates pass after regeneration, analysis,
+  formatting, compilation and actual execution of supported finite entrypoints.
+  MongoDB's configuration fallback is verified with the normal shell environment.
+- Both archive/minimal-consumer lanes pass with only their allowed dependency
+  closures. Fresh custom-interface fixtures generate, analyze generated output,
+  compile typed lookup/deletion callbacks and run without opening a database.
+- The external Git consumer pins all five dddart packages to
+  b3c3bebc67feaf62b02dd20acb1c41a9322e615b, with the three documented internal
+  Git overrides. Resolution, combined JSON/Mongo/Dynamo generation, fatal-info
+  analysis and real scoped CRUD against both services pass. Scope deletion leaves
+  the other local number intact. The later 67fb07b changes only example fallback
+  and documentation; adapter library behavior is identical.
+
+Commands:
+
+```bash
+dart run tool/validation/validate.dart package dddart_repository_mongodb --mode=ci
+dart run tool/validation/validate.dart package dddart_repository_dynamodb --mode=ci
+dart run tool/validation/validate.dart example dddart_repository_mongodb_example --mode=ci
+dart run tool/validation/validate.dart example dddart_repository_dynamodb_example --mode=ci
+dart run tool/validation/validate.dart consumer dddart_repository_mongodb
+dart run tool/validation/validate.dart consumer dddart_repository_dynamodb
+```
+
+These ci-mode commands ran locally against the dedicated containers; GitHub
+Actions remained disabled. Logs are under
+/private/tmp/dddart-worky-implementation-20261028/ (mongo-package.log,
+dynamo-package.log, mongo-example-final.log, dynamo-example.log, the consumer
+logs, and document-git-consumer-current.log). This completes #41's owned paths;
+SQL, REST, distributed events and final feature integration/review remain pending.
