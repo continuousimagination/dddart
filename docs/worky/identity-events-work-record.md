@@ -67,3 +67,17 @@ The following fixture-only commit 88b9c77 prevents embedded part directives from
 being mistaken for package generation inputs; it does not change library code.
 Logs are retained under /private/tmp/dddart-worky-implementation-20261028 and the
 immutable fixture under /private/tmp/dddart-worky-integrated-consumer-8131339.
+
+## Child completion gate
+
+The final distributed package lane passes all 88 tests, required generation,
+fatal-info analysis and formatting. The JSON package lane passes all 114 tests
+and corresponding gates. The active concrete record example generates, compiles
+and runs. Both archive-consumer lanes pass. Package publication dry runs are
+exempt because these packages already declare publish_to: none.
+
+The generation gate exposed an embedded `part` directive in the clean-consumer
+fixture, which now uses the same placeholder approach as other package fixtures.
+This is test-only and all required outputs are now verified against their owning
+libraries. No generated file was edited manually. The final workspace/service
+integration gate and independent feature review remain parent responsibilities.
