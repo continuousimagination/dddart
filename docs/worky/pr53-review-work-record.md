@@ -49,3 +49,21 @@ as behavioral reproductions. Temporary MySQL service: task-owned
 `dddart-review53-mysql-20261028`, loopback 3307, disposable `test_db`.
 Logs: /private/tmp/dddart-pr53-review-20261028. Broad/package/downstream/consumer
 completion gates are still pending at this checkpoint.
+
+## Validation repair discovered by the broad gate
+
+The first broad run exposed a pre-existing socket-suite race: integration_test
+and http_server_test both bind port 8082 (and other overlapping fixed ports),
+while HttpServer uses shared binds. The second paginated query reached another
+suite's resource and returned 400. The isolated query test passes unchanged.
+The REST test configuration now serializes these socket suites; production
+routing/query behavior is unchanged. This test-only repair is required to make
+the completion gate deterministic and is validated with the full REST suite.
+
+The new external consumer resolves ten packages at immutable revision
+993252697d56417562e5f85503d64633647d1ae3. Generation, fatal analysis and execution
+pass for unprefixed shell metadata/reload, strict prefixed diagnostics, final
+POST/preCreate key rejection with zero writes, routable Unicode creation, and
+real MySQL/SQLite inherited generic entity CRUD/order/FK/delete isolation.
+It uses a separate disposable MySQL probe database. This is new candidate
+coverage, not a reuse of the older thirteen-package baseline assertion.
