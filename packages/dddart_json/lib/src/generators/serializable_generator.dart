@@ -7,7 +7,8 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:build/build.dart';
-import 'package:dddart/dddart.dart' show AggregateRoot, Entity, Value;
+import 'package:dddart/dddart.dart'
+    show AggregateRoot, Entity, Identity, UuidValue, Value;
 import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:source_gen/source_gen.dart';
 
@@ -20,6 +21,8 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
   static const _aggregateRootType = TypeChecker.fromRuntime(AggregateRoot);
   static const _entityType = TypeChecker.fromRuntime(Entity);
   static const _valueType = TypeChecker.fromRuntime(Value);
+  static const _identityType = TypeChecker.fromRuntime(Identity);
+  static const _uuidType = TypeChecker.fromRuntime(UuidValue);
 
   @override
   String generateForAnnotatedElement(
@@ -36,6 +39,12 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
 
     final classElement = element;
     final className = classElement.name;
+    if (classElement.typeParameters.isNotEmpty) {
+      throw InvalidGenerationSourceError(
+        'Annotate a concrete non-generic consuming class; generic base classes may remain unannotated.',
+        element: classElement,
+      );
+    }
 
     // Validate that the class extends AggregateRoot or Value
     final classAnalysis = _analyzeClass(classElement);
@@ -179,10 +188,26 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
     // Extract field information
     final fields = _extractFields(classElement, classType);
 
+    DartType? identityType;
+    if (classType == ClassType.aggregateRoot || classType == ClassType.entity) {
+      final entity = classElement.allSupertypes.firstWhere(
+        (type) => _entityType.isExactly(type.element),
+      );
+      identityType = entity.typeArguments.single;
+      if (identityType is! InterfaceType ||
+          _identityType.isExactly(identityType.element)) {
+        throw InvalidGenerationSourceError(
+          'Class $className must specify a concrete identity type. Use UuidAggregateRoot/UuidEntity or an explicit Identity subtype.',
+          element: classElement,
+        );
+      }
+    }
+
     return ClassAnalysis(
       type: classType,
       className: className,
       fields: fields,
+      identityType: identityType,
     );
   }
 
@@ -229,11 +254,11 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
     if (frameworkBaseType == null) return fields;
 
     final fieldNames = <String>{};
-    ClassElement? current = classElement;
-    while (current != null && !frameworkBaseType.isExactly(current)) {
-      final isInherited = current != classElement;
+    InterfaceType? current = classElement.thisType;
+    while (current != null && !frameworkBaseType.isExactly(current.element)) {
+      final isInherited = current.element != classElement;
 
-      for (final field in current.fields) {
+      for (final field in current.element.fields) {
         if (field.isStatic || field.isSynthetic) continue;
         if ((classType == ClassType.aggregateRoot ||
                 classType == ClassType.entity) &&
@@ -254,17 +279,19 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
           _validateInheritedFieldReconstruction(classElement, field);
         }
 
+        final fieldType =
+            current.getGetter(field.name)?.returnType ?? field.type;
         fields.add(
           FieldInfo(
             name: field.name,
-            type: field.type,
+            type: fieldType,
             isNullable:
-                field.type.nullabilitySuffix == NullabilitySuffix.question,
+                fieldType.nullabilitySuffix == NullabilitySuffix.question,
           ),
         );
       }
 
-      current = current.supertype?.element as ClassElement?;
+      current = current.superclass;
     }
 
     return fields;
@@ -325,9 +352,18 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
 class ${className}JsonSerializer implements JsonSerializer<$className> {
   /// Default configuration for this serializer.
   final SerializationConfig _defaultConfig;
+  final IdentityCodecRegistry _identityCodecs;
+
+  /// Identity codecs shared with nested serializers and composition code.
+  IdentityCodecRegistry get identityCodecs => _identityCodecs;
   
   /// Creates a serializer with the specified default configuration.
   ${className}JsonSerializer([SerializationConfig? defaultConfig])
+      : this.withIdentityCodecs(IdentityCodecRegistry(), defaultConfig);
+
+  /// Creates a serializer with explicit, shared identity encodings.
+  ${className}JsonSerializer.withIdentityCodecs(
+    this._identityCodecs, [SerializationConfig? defaultConfig])
       : _defaultConfig = defaultConfig ?? $annotationConfigSource;
   
   @override
@@ -368,13 +404,13 @@ $fromJsonWithConfigBody
   }
   
   /// Convenience method for static access with default configuration
-  static Map<String, dynamic> encode($className instance, [SerializationConfig? config]) {
-    return ${className}JsonSerializer().toJson(instance, config);
+  static Map<String, dynamic> encode($className instance, [SerializationConfig? config, IdentityCodecRegistry? identityCodecs]) {
+    return ${className}JsonSerializer.withIdentityCodecs(identityCodecs ?? IdentityCodecRegistry()).toJson(instance, config);
   }
   
   /// Convenience method for static access with default configuration
-  static $className decode(dynamic json, [SerializationConfig? config]) {
-    return ${className}JsonSerializer().fromJson(json, config);
+  static $className decode(dynamic json, [SerializationConfig? config, IdentityCodecRegistry? identityCodecs]) {
+    return ${className}JsonSerializer.withIdentityCodecs(identityCodecs ?? IdentityCodecRegistry()).fromJson(json, config);
   }
 }''';
   }
@@ -395,7 +431,7 @@ $fromJsonWithConfigBody
     if (analysis.type == ClassType.aggregateRoot ||
         analysis.type == ClassType.entity) {
       buffer.writeln(
-        "      SerializationUtils.applyFieldRename('id', effectiveConfig.fieldRename): instance.id.toString(),",
+        "      SerializationUtils.applyFieldRename('id', effectiveConfig.fieldRename): ${_encodeValue(analysis.identityType!, 'instance.id')},",
       );
       buffer.writeln(
         "      SerializationUtils.applyFieldRename('createdAt', effectiveConfig.fieldRename): instance.createdAt.toIso8601String(),",
@@ -469,7 +505,7 @@ $fromJsonWithConfigBody
     if (analysis.type == ClassType.aggregateRoot ||
         analysis.type == ClassType.entity) {
       buffer.writeln(
-        "        id: UuidValue.fromString(json[SerializationUtils.applyFieldRename('id', effectiveConfig.fieldRename)] as String),",
+        "        id: ${_decodeValue(analysis.identityType!, "json[SerializationUtils.applyFieldRename('id', effectiveConfig.fieldRename)]")},",
       );
       buffer.writeln(
         "        createdAt: json[SerializationUtils.applyFieldRename('createdAt', effectiveConfig.fieldRename)] != null ? DateTime.parse(json[SerializationUtils.applyFieldRename('createdAt', effectiveConfig.fieldRename)] as String) : DateTime.now(),",
@@ -492,84 +528,9 @@ $fromJsonWithConfigBody
 
   /// Generates field deserialization with runtime configuration.
   String _generateFieldDeserializationWithConfig(FieldInfo field) {
-    final typeName = field.type.getDisplayString(withNullability: false);
-    final fieldName = field.name;
-    final jsonAccess =
-        "json[SerializationUtils.applyFieldRename('$fieldName', effectiveConfig.fieldRename)]";
-
-    // Handle nullable types first
-    if (field.isNullable) {
-      // Handle nullable special types
-      if (typeName == 'UuidValue') {
-        return '$jsonAccess != null ? UuidValue.fromString($jsonAccess as String) : null';
-      }
-      if (typeName == 'DateTime') {
-        return '$jsonAccess != null ? DateTime.parse($jsonAccess as String) : null';
-      }
-
-      // Handle nullable enum types
-      if (_isEnumType(field.type)) {
-        return '$jsonAccess != null ? $typeName.values.byName($jsonAccess as String) : null';
-      }
-
-      // Handle nullable DDDart types
-      if (_isDDDartType(field.type)) {
-        return '$jsonAccess != null ? ${typeName}JsonSerializer().fromJson($jsonAccess as Map<String, dynamic>, effectiveConfig) : null';
-      }
-
-      // Handle nullable collections
-      if (typeName.startsWith('List<') || typeName.startsWith('Set<')) {
-        return '$jsonAccess != null ? ${_generateCollectionDeserializationWithConfig(field, jsonAccess)} : null';
-      }
-
-      if (typeName.startsWith('Map<')) {
-        return '$jsonAccess != null ? ${_generateMapDeserializationWithConfig(field, jsonAccess)} : null';
-      }
-
-      // Handle nullable double type with int-to-double conversion
-      if (typeName == 'double') {
-        return '$jsonAccess != null ? ($jsonAccess is int ? ($jsonAccess as int).toDouble() : $jsonAccess as double) : null';
-      }
-
-      // Default nullable primitive types with casting
-      return '$jsonAccess as $typeName?';
-    }
-
-    // Handle non-nullable special types
-    if (typeName == 'UuidValue') {
-      return 'UuidValue.fromString($jsonAccess as String)';
-    }
-
-    if (typeName == 'DateTime') {
-      return 'DateTime.parse($jsonAccess as String)';
-    }
-
-    // Handle non-nullable enum types
-    if (_isEnumType(field.type)) {
-      return '$typeName.values.byName($jsonAccess as String)';
-    }
-
-    // Handle non-nullable collections
-    if (typeName.startsWith('List<') || typeName.startsWith('Set<')) {
-      return _generateCollectionDeserializationWithConfig(field, jsonAccess);
-    }
-
-    if (typeName.startsWith('Map<')) {
-      return _generateMapDeserializationWithConfig(field, jsonAccess);
-    }
-
-    // Check if it's a DDDart type
-    if (_isDDDartType(field.type)) {
-      return '${typeName}JsonSerializer().fromJson($jsonAccess as Map<String, dynamic>, effectiveConfig)';
-    }
-
-    // Handle double type with int-to-double conversion
-    if (typeName == 'double') {
-      return '($jsonAccess is int ? ($jsonAccess as int).toDouble() : $jsonAccess as double)';
-    }
-
-    // Default: primitive types with casting
-    return '$jsonAccess as $typeName';
+    final access =
+        "json[SerializationUtils.applyFieldRename('${field.name}', effectiveConfig.fieldRename)]";
+    return _decodeValue(field.type, access);
   }
 
   /// Generates the toJson method body for AggregateRoot classes.
@@ -582,7 +543,7 @@ $fromJsonWithConfigBody
 
     // Add Entity base fields with consistent naming
     buffer.writeln(
-      "      '${_applyFieldRename('id', config.fieldRename)}': instance.id.toString(),",
+      "      '${_applyFieldRename('id', config.fieldRename)}': ${_encodeValue(analysis.identityType!, 'instance.id')},",
     );
     buffer.writeln(
       "      '${_applyFieldRename('createdAt', config.fieldRename)}': instance.createdAt.toIso8601String(),",
@@ -645,8 +606,8 @@ $fromJsonWithConfigBody
     final createdAtKey = _applyFieldRename('createdAt', config.fieldRename);
     final updatedAtKey = _applyFieldRename('updatedAt', config.fieldRename);
 
-    buffer
-        .writeln("        id: UuidValue.fromString(json['$idKey'] as String),");
+    buffer.writeln(
+        "        id: ${_decodeValue(analysis.identityType!, "json['$idKey']")},");
     buffer.writeln(
       "        createdAt: DateTime.parse(json['$createdAtKey'] as String),",
     );
@@ -761,556 +722,143 @@ $fromJsonWithConfigBody
     );
   }
 
-  /// Generates serialization code for a field assuming it's not null.
-  String _generateFieldSerializationNonNull(
-    FieldInfo field, [
-    String prefix = '',
-  ]) {
-    final typeName = field.type.getDisplayString(withNullability: false);
-    final fieldRef = '$prefix${field.name}';
+  /// Generates serialization for a field selected by an enclosing null check.
+  String _generateFieldSerializationNonNull(FieldInfo field,
+          [String prefix = '']) =>
+      _encodeValue(field.type, '$prefix${field.name}');
 
-    // Handle special types with standardized formats
-    if (typeName == 'UuidValue') {
-      return '$fieldRef.toString()';
+  /// Generates serialization through the same recursive structural contract.
+  String _generateFieldSerialization(FieldInfo field, [String prefix = '']) =>
+      _encodeValue(field.type, '$prefix${field.name}');
+
+  /// Generates deserialization for an already resolved JSON key.
+  String _generateFieldDeserialization(FieldInfo field, String jsonKey) =>
+      _decodeValue(field.type, "json['$jsonKey']");
+
+  bool _coreCollection(DartType type, String name) =>
+      type is InterfaceType &&
+      type.element.name == name &&
+      type.element.library.source.uri.toString() == 'dart:core';
+
+  bool _identity(DartType type) => _identityType.isAssignableFromType(type);
+
+  void _validateIdentity(DartType type) {
+    if (type is! InterfaceType || _identityType.isExactly(type.element)) {
+      throw InvalidGenerationSourceError(
+        'Identity values require a concrete identity type and an explicit codec.',
+      );
     }
-
-    if (typeName == 'DateTime') {
-      return '$fieldRef.toIso8601String()';
-    }
-
-    // Handle enum types
-    if (_isEnumType(field.type)) {
-      return '$fieldRef!.name';
-    }
-
-    // Handle collections
-    if (typeName.startsWith('List<') || typeName.startsWith('Set<')) {
-      return _generateCollectionSerialization(field, fieldRef);
-    }
-
-    if (typeName.startsWith('Map<')) {
-      return _generateMapSerialization(field, fieldRef);
-    }
-
-    // Check if it's a DDDart type (Entity or Value) - assume non-null
-    if (_isDDDartType(field.type)) {
-      final serializerName = '${typeName}JsonSerializer';
-      // Use non-null assertion since we're in a context where we know it's not null
-      return '$serializerName().toJson($fieldRef!, effectiveConfig)';
-    }
-
-    // Default: primitive types
-    return fieldRef;
   }
 
-  /// Generates serialization code for a field.
-  String _generateFieldSerialization(FieldInfo field, [String prefix = '']) {
-    final typeName = field.type.getDisplayString(withNullability: false);
-    final fieldRef = '$prefix${field.name}';
-
-    // Handle nullable types first
-    if (field.isNullable) {
-      // Handle nullable special types
-      if (typeName == 'UuidValue') {
-        return '$fieldRef?.toString()';
+  String _encodeValue(DartType type, String value, {bool nonNull = false}) {
+    if (!nonNull && type.nullabilitySuffix == NullabilitySuffix.question) {
+      // Collection callback parameters promote after the null check; public
+      // instance fields and computed expressions still require an assertion.
+      final present =
+          {'item', 'key', 'value'}.contains(value) ? value : '$value!';
+      return '$value != null ? ${_encodeValue(type, present, nonNull: true)} : null';
+    }
+    final name = type.getDisplayString(withNullability: false);
+    if (type is InterfaceType && _uuidType.isExactly(type.element)) {
+      return 'const UuidIdentityCodec().toJson($value)';
+    }
+    if (_identity(type)) {
+      _validateIdentity(type);
+      return '_identityCodecs.toJson<$name>($value)';
+    }
+    if (name == 'DateTime') return '$value.toIso8601String()';
+    if (_isEnumType(type)) return '$value.name';
+    if (_coreCollection(type, 'List') || _coreCollection(type, 'Set')) {
+      final item = (type as InterfaceType).typeArguments.single;
+      return '$value.map((item) => ${_encodeValue(item, 'item')}).toList()';
+    }
+    if (_coreCollection(type, 'Map')) {
+      final arguments = (type as InterfaceType).typeArguments;
+      final key = arguments[0];
+      final keyName = key.getDisplayString(withNullability: false);
+      final String encodedKey;
+      if (keyName == 'String' &&
+          key.nullabilitySuffix != NullabilitySuffix.question) {
+        encodedKey = 'key';
+      } else if (_identity(key) &&
+          key.nullabilitySuffix != NullabilitySuffix.question) {
+        _validateIdentity(key);
+        encodedKey = key is InterfaceType && _uuidType.isExactly(key.element)
+            ? 'const UuidIdentityCodec().toKey(key)'
+            : '_identityCodecs.toKey<$keyName>(key)';
+      } else {
+        throw InvalidGenerationSourceError(
+          'JSON map keys must be non-null strings or concrete identities with key codecs.',
+        );
       }
-      if (typeName == 'DateTime') {
-        return '$fieldRef?.toIso8601String()';
+      return '$value.map((key, value) => MapEntry($encodedKey, ${_encodeValue(arguments[1], 'value')}))';
+    }
+    if (_isDDDartType(type)) {
+      if (type is ParameterizedType && type.typeArguments.isNotEmpty) {
+        throw InvalidGenerationSourceError(
+            'Use a concrete non-generic serializable value subtype.');
       }
-
-      // Handle nullable enum types
-      if (_isEnumType(field.type)) {
-        return '$fieldRef?.name';
-      }
-
-      // Handle nullable collections
-      if (typeName.startsWith('List<') || typeName.startsWith('Set<')) {
-        return '$fieldRef != null ? ${_generateCollectionSerialization(field, '$fieldRef!')} : null';
-      }
-
-      if (typeName.startsWith('Map<')) {
-        return '$fieldRef != null ? ${_generateMapSerialization(field, '$fieldRef!')} : null';
-      }
-
-      // Handle nullable DDDart types
-      if (_isDDDartType(field.type)) {
-        final serializerName = '${typeName}JsonSerializer';
-        return '$fieldRef != null ? $serializerName().toJson($fieldRef!, effectiveConfig) : null';
-      }
-
-      // Default nullable primitive types
-      return fieldRef;
+      return '${name}JsonSerializer.withIdentityCodecs(_identityCodecs).toJson($value, effectiveConfig)';
     }
-
-    // Handle non-nullable special types
-    if (typeName == 'UuidValue') {
-      return '$fieldRef.toString()';
-    }
-
-    if (typeName == 'DateTime') {
-      return '$fieldRef.toIso8601String()';
-    }
-
-    // Handle non-nullable enum types
-    if (_isEnumType(field.type)) {
-      return '$fieldRef.name';
-    }
-
-    // Handle non-nullable collections
-    if (typeName.startsWith('List<') || typeName.startsWith('Set<')) {
-      return _generateCollectionSerialization(field, fieldRef);
-    }
-
-    if (typeName.startsWith('Map<')) {
-      return _generateMapSerialization(field, fieldRef);
-    }
-
-    // Check if it's a DDDart type (Entity or Value)
-    if (_isDDDartType(field.type)) {
-      final serializerName = '${typeName}JsonSerializer';
-      return '$serializerName().toJson($fieldRef, effectiveConfig)';
-    }
-
-    // Default: primitive types
-    return fieldRef;
+    if (_isPrimitiveType(name) || name == 'Object' || name == 'Null')
+      return value;
+    throw InvalidGenerationSourceError('Unsupported JSON field type: $name');
   }
 
-  /// Generates deserialization code for a field.
-  String _generateFieldDeserialization(FieldInfo field, String jsonKey) {
-    final typeName = field.type.getDisplayString(withNullability: false);
-
-    // Handle special types with standardized formats
-    if (typeName == 'UuidValue') {
-      return "UuidValue.fromString(json['$jsonKey'] as String)";
+  String _decodeValue(DartType type, String value, {bool nonNull = false}) {
+    if (!nonNull && type.nullabilitySuffix == NullabilitySuffix.question) {
+      return '$value != null ? ${_decodeValue(type, value, nonNull: true)} : null';
     }
-
-    if (typeName == 'DateTime') {
-      return "DateTime.parse(json['$jsonKey'] as String)";
+    final name = type.getDisplayString(withNullability: false);
+    if (type is InterfaceType && _uuidType.isExactly(type.element)) {
+      return 'const UuidIdentityCodec().fromJson($value)';
     }
-
-    // Handle nullable special types
-    if (field.isNullable) {
-      if (typeName == 'UuidValue') {
-        return "json['$jsonKey'] != null ? UuidValue.fromString(json['$jsonKey'] as String) : null";
+    if (_identity(type)) {
+      _validateIdentity(type);
+      return '_identityCodecs.fromJson<$name>($value)';
+    }
+    if (name == 'DateTime') return 'DateTime.parse($value as String)';
+    if (_isEnumType(type)) return '$name.values.byName($value as String)';
+    if (_coreCollection(type, 'List') || _coreCollection(type, 'Set')) {
+      final item = (type as InterfaceType).typeArguments.single;
+      final method = _coreCollection(type, 'Set') ? 'toSet()' : 'toList()';
+      return '($value as List).map((item) => ${_decodeValue(item, 'item')}).$method';
+    }
+    if (_coreCollection(type, 'Map')) {
+      final arguments = (type as InterfaceType).typeArguments;
+      final key = arguments[0];
+      final keyName = key.getDisplayString(withNullability: false);
+      final String decodedKey;
+      if (keyName == 'String' &&
+          key.nullabilitySuffix != NullabilitySuffix.question) {
+        decodedKey = 'key';
+      } else if (_identity(key) &&
+          key.nullabilitySuffix != NullabilitySuffix.question) {
+        _validateIdentity(key);
+        decodedKey = key is InterfaceType && _uuidType.isExactly(key.element)
+            ? 'const UuidIdentityCodec().fromKey(key)'
+            : '_identityCodecs.fromKey<$keyName>(key)';
+      } else {
+        throw InvalidGenerationSourceError(
+          'JSON map keys must be non-null strings or concrete identities with key codecs.',
+        );
       }
-      if (typeName == 'DateTime') {
-        return "json['$jsonKey'] != null ? DateTime.parse(json['$jsonKey'] as String) : null";
+      return 'Map<String, dynamic>.from($value as Map).map((key, value) => MapEntry($decodedKey, ${_decodeValue(arguments[1], 'value')}))';
+    }
+    if (_isDDDartType(type)) {
+      if (type is ParameterizedType && type.typeArguments.isNotEmpty) {
+        throw InvalidGenerationSourceError(
+            'Use a concrete non-generic serializable value subtype.');
       }
-
-      // Handle nullable enum types
-      if (_isEnumType(field.type)) {
-        return "json['$jsonKey'] != null ? $typeName.values.byName(json['$jsonKey'] as String) : null";
-      }
-
-      // Handle nullable DDDart types
-      if (_isDDDartType(field.type)) {
-        return "json['$jsonKey'] != null ? ${typeName}JsonSerializer().fromJson(json['$jsonKey'], effectiveConfig) : null";
-      }
+      return '${name}JsonSerializer.withIdentityCodecs(_identityCodecs).fromJson($value as Map<String, dynamic>, effectiveConfig)';
     }
-
-    // Handle non-nullable enum types
-    if (_isEnumType(field.type)) {
-      return "$typeName.values.byName(json['$jsonKey'] as String)";
+    if (name == 'double') {
+      return '($value is int ? ($value as int).toDouble() : $value as double)';
     }
-
-    // Handle collections
-    if (typeName.startsWith('List<') || typeName.startsWith('Set<')) {
-      return _generateCollectionDeserialization(field, jsonKey);
-    }
-
-    if (typeName.startsWith('Map<')) {
-      return _generateMapDeserialization(field, jsonKey);
-    }
-
-    // Check if it's a DDDart type
-    if (_isDDDartType(field.type)) {
-      return "${typeName}JsonSerializer().fromJson(json['$jsonKey'], effectiveConfig)";
-    }
-
-    // Default: primitive types with casting
-    return "json['$jsonKey'] as $typeName";
-  }
-
-  /// Generates serialization code for collections (List, Set).
-  String _generateCollectionSerialization(FieldInfo field, String fieldRef) {
-    final typeName = field.type.getDisplayString(withNullability: false);
-    final typeArgs = field.type is ParameterizedType
-        ? (field.type as ParameterizedType).typeArguments
-        : <DartType>[];
-
-    if (typeArgs.isEmpty) {
-      // Untyped collection, serialize as-is
-      return fieldRef;
-    }
-
-    final itemType = typeArgs.first;
-    final itemTypeName = itemType.getDisplayString(withNullability: false);
-    final itemIsNullable =
-        itemType.nullabilitySuffix == NullabilitySuffix.question;
-
-    // Handle special item types
-    if (itemTypeName == 'UuidValue') {
-      if (itemIsNullable) {
-        return '$fieldRef.map((item) => item?.toString()).toList()';
-      }
-      return '$fieldRef.map((item) => item.toString()).toList()';
-    }
-
-    if (itemTypeName == 'DateTime') {
-      if (itemIsNullable) {
-        return '$fieldRef.map((item) => item?.toIso8601String()).toList()';
-      }
-      return '$fieldRef.map((item) => item.toIso8601String()).toList()';
-    }
-
-    // Handle enum item types
-    if (_isEnumType(itemType)) {
-      if (itemIsNullable) {
-        return '$fieldRef.map((item) => item?.name).toList()';
-      }
-      return '$fieldRef.map((item) => item.name).toList()';
-    }
-
-    // Handle DDDart types
-    if (_isDDDartType(itemType)) {
-      if (itemIsNullable) {
-        return '$fieldRef.map((item) => item != null ? ${itemTypeName}JsonSerializer().toJson(item, effectiveConfig) : null).toList()';
-      }
-      return '$fieldRef.map((item) => ${itemTypeName}JsonSerializer().toJson(item, effectiveConfig)).toList()';
-    }
-
-    // Handle nested collections
-    if (itemTypeName.startsWith('List<') ||
-        itemTypeName.startsWith('Set<') ||
-        itemTypeName.startsWith('Map<')) {
-      // For nested collections, we need to recursively handle them
-      // This is complex, so for now we'll serialize as-is and let Dart handle it
-      return fieldRef;
-    }
-
-    // Primitive types - convert Set to List for JSON compatibility
-    if (typeName.startsWith('Set<')) {
-      return '$fieldRef.toList()';
-    }
-
-    // Other primitive types - serialize as-is
-    return fieldRef;
-  }
-
-  /// Generates serialization code for maps.
-  String _generateMapSerialization(FieldInfo field, String fieldRef) {
-    final typeArgs = field.type is ParameterizedType
-        ? (field.type as ParameterizedType).typeArguments
-        : <DartType>[];
-
-    if (typeArgs.length < 2) {
-      // Untyped map, serialize as-is
-      return fieldRef;
-    }
-
-    final keyType = typeArgs[0];
-    final valueType = typeArgs[1];
-    final keyTypeName = keyType.getDisplayString(withNullability: false);
-    final valueTypeName = valueType.getDisplayString(withNullability: false);
-    final valueIsNullable =
-        valueType.nullabilitySuffix == NullabilitySuffix.question;
-
-    // Only handle String keys for now (JSON limitation)
-    if (keyTypeName != 'String') {
-      return fieldRef;
-    }
-
-    // Handle special value types
-    if (valueTypeName == 'UuidValue') {
-      if (valueIsNullable) {
-        return '$fieldRef.map((key, value) => MapEntry(key, value?.toString()))';
-      }
-      return '$fieldRef.map((key, value) => MapEntry(key, value.toString()))';
-    }
-
-    if (valueTypeName == 'DateTime') {
-      if (valueIsNullable) {
-        return '$fieldRef.map((key, value) => MapEntry(key, value?.toIso8601String()))';
-      }
-      return '$fieldRef.map((key, value) => MapEntry(key, value.toIso8601String()))';
-    }
-
-    // Handle enum value types
-    if (_isEnumType(valueType)) {
-      if (valueIsNullable) {
-        return '$fieldRef.map((key, value) => MapEntry(key, value?.name))';
-      }
-      return '$fieldRef.map((key, value) => MapEntry(key, value.name))';
-    }
-
-    // Handle DDDart value types
-    if (_isDDDartType(valueType)) {
-      if (valueIsNullable) {
-        return '$fieldRef.map((key, value) => MapEntry(key, value != null ? ${valueTypeName}JsonSerializer().toJson(value, effectiveConfig) : null))';
-      }
-      return '$fieldRef.map((key, value) => MapEntry(key, ${valueTypeName}JsonSerializer().toJson(value, effectiveConfig)))';
-    }
-
-    // Primitive values - serialize as-is
-    return fieldRef;
-  }
-
-  /// Generates deserialization code for collections (List, Set).
-  String _generateCollectionDeserialization(FieldInfo field, String jsonKey) {
-    final typeName = field.type.getDisplayString(withNullability: false);
-    final typeArgs = field.type is ParameterizedType
-        ? (field.type as ParameterizedType).typeArguments
-        : <DartType>[];
-
-    if (typeArgs.isEmpty) {
-      // Untyped collection
-      return "json['$jsonKey'] as $typeName";
-    }
-
-    final itemType = typeArgs.first;
-    final itemTypeName = itemType.getDisplayString(withNullability: false);
-    final itemTypeNameWithNull =
-        itemType.getDisplayString(withNullability: true);
-    final isSet = typeName.startsWith('Set<');
-    final collectionMethod = isSet ? 'toSet()' : 'toList()';
-    final itemIsNullable =
-        itemType.nullabilitySuffix == NullabilitySuffix.question;
-
-    // Handle special item types
-    if (itemTypeName == 'UuidValue') {
-      if (itemIsNullable) {
-        return "(json['$jsonKey'] as List).map((item) => item != null ? UuidValue.fromString(item as String) : null).$collectionMethod";
-      }
-      return "(json['$jsonKey'] as List).map((item) => UuidValue.fromString(item as String)).$collectionMethod";
-    }
-
-    if (itemTypeName == 'DateTime') {
-      if (itemIsNullable) {
-        return "(json['$jsonKey'] as List).map((item) => item != null ? DateTime.parse(item as String) : null).$collectionMethod";
-      }
-      return "(json['$jsonKey'] as List).map((item) => DateTime.parse(item as String)).$collectionMethod";
-    }
-
-    // Handle enum item types
-    if (_isEnumType(itemType)) {
-      if (itemIsNullable) {
-        return "(json['$jsonKey'] as List).map((item) => item != null ? $itemTypeName.values.byName(item as String) : null).$collectionMethod";
-      }
-      return "(json['$jsonKey'] as List).map((item) => $itemTypeName.values.byName(item as String)).$collectionMethod";
-    }
-
-    // Handle DDDart types
-    if (_isDDDartType(itemType)) {
-      if (itemIsNullable) {
-        return "(json['$jsonKey'] as List).map((item) => item != null ? ${itemTypeName}JsonSerializer().fromJson(item, effectiveConfig) : null).$collectionMethod";
-      }
-      return "(json['$jsonKey'] as List).map((item) => ${itemTypeName}JsonSerializer().fromJson(item, effectiveConfig)).$collectionMethod";
-    }
-
-    // Handle primitive types
-    if (_isPrimitiveType(itemTypeName)) {
-      return "(json['$jsonKey'] as List).map((item) => item as $itemTypeNameWithNull).$collectionMethod";
-    }
-
-    // Default case
-    return "json['$jsonKey'] as $typeName";
-  }
-
-  /// Generates deserialization code for maps.
-  String _generateMapDeserialization(FieldInfo field, String jsonKey) {
-    final typeArgs = field.type is ParameterizedType
-        ? (field.type as ParameterizedType).typeArguments
-        : <DartType>[];
-
-    if (typeArgs.length < 2) {
-      // Untyped map - use Map.from to handle dynamic keys
-      return "Map.from(json['$jsonKey'] as Map)";
-    }
-
-    final keyType = typeArgs[0];
-    final valueType = typeArgs[1];
-    final keyTypeName = keyType.getDisplayString(withNullability: false);
-    final valueTypeName = valueType.getDisplayString(withNullability: false);
-    final valueTypeNameWithNull =
-        valueType.getDisplayString(withNullability: true);
-    final valueIsNullable =
-        valueType.nullabilitySuffix == NullabilitySuffix.question;
-
-    // Only handle String keys for now (JSON limitation)
-    if (keyTypeName != 'String') {
-      return "Map.from(json['$jsonKey'] as Map)";
-    }
-
-    // Handle special value types
-    if (valueTypeName == 'UuidValue') {
-      if (valueIsNullable) {
-        return "Map<String, dynamic>.from(json['$jsonKey'] as Map).map((key, value) => MapEntry(key, value != null ? UuidValue.fromString(value as String) : null))";
-      }
-      return "Map<String, dynamic>.from(json['$jsonKey'] as Map).map((key, value) => MapEntry(key, UuidValue.fromString(value as String)))";
-    }
-
-    if (valueTypeName == 'DateTime') {
-      if (valueIsNullable) {
-        return "Map<String, dynamic>.from(json['$jsonKey'] as Map).map((key, value) => MapEntry(key, value != null ? DateTime.parse(value as String) : null))";
-      }
-      return "Map<String, dynamic>.from(json['$jsonKey'] as Map).map((key, value) => MapEntry(key, DateTime.parse(value as String)))";
-    }
-
-    // Handle enum value types
-    if (_isEnumType(valueType)) {
-      if (valueIsNullable) {
-        return "Map<String, dynamic>.from(json['$jsonKey'] as Map).map((key, value) => MapEntry(key, value != null ? $valueTypeName.values.byName(value as String) : null))";
-      }
-      return "Map<String, dynamic>.from(json['$jsonKey'] as Map).map((key, value) => MapEntry(key, $valueTypeName.values.byName(value as String)))";
-    }
-
-    // Handle DDDart value types
-    if (_isDDDartType(valueType)) {
-      if (valueIsNullable) {
-        return "Map<String, dynamic>.from(json['$jsonKey'] as Map).map((key, value) => MapEntry(key, value != null ? ${valueTypeName}JsonSerializer().fromJson(value, effectiveConfig) : null))";
-      }
-      return "Map<String, dynamic>.from(json['$jsonKey'] as Map).map((key, value) => MapEntry(key, ${valueTypeName}JsonSerializer().fromJson(value, effectiveConfig)))";
-    }
-
-    // Handle primitive value types (including dynamic)
-    if (_isPrimitiveType(valueTypeName) || valueTypeName == 'dynamic') {
-      return "Map<String, dynamic>.from(json['$jsonKey'] as Map).map((key, value) => MapEntry(key, value as $valueTypeNameWithNull))";
-    }
-
-    // Default case - use Map.from for safe casting
-    return "Map<String, dynamic>.from(json['$jsonKey'] as Map)";
-  }
-
-  /// Generates deserialization code for collections with runtime configuration.
-  String _generateCollectionDeserializationWithConfig(
-    FieldInfo field,
-    String jsonAccess,
-  ) {
-    final typeName = field.type.getDisplayString(withNullability: false);
-    final typeArgs = field.type is ParameterizedType
-        ? (field.type as ParameterizedType).typeArguments
-        : <DartType>[];
-
-    if (typeArgs.isEmpty) {
-      // Untyped collection
-      return '$jsonAccess as $typeName';
-    }
-
-    final itemType = typeArgs.first;
-    final itemTypeName = itemType.getDisplayString(withNullability: false);
-    final itemTypeNameWithNull =
-        itemType.getDisplayString(withNullability: true);
-    final isSet = typeName.startsWith('Set<');
-    final collectionMethod = isSet ? 'toSet()' : 'toList()';
-    final itemIsNullable =
-        itemType.nullabilitySuffix == NullabilitySuffix.question;
-
-    // Handle special item types
-    if (itemTypeName == 'UuidValue') {
-      if (itemIsNullable) {
-        return '($jsonAccess as List).map((item) => item != null ? UuidValue.fromString(item as String) : null).$collectionMethod';
-      }
-      return '($jsonAccess as List).map((item) => UuidValue.fromString(item as String)).$collectionMethod';
-    }
-
-    if (itemTypeName == 'DateTime') {
-      if (itemIsNullable) {
-        return '($jsonAccess as List).map((item) => item != null ? DateTime.parse(item as String) : null).$collectionMethod';
-      }
-      return '($jsonAccess as List).map((item) => DateTime.parse(item as String)).$collectionMethod';
-    }
-
-    // Handle enum item types
-    if (_isEnumType(itemType)) {
-      if (itemIsNullable) {
-        return '($jsonAccess as List).map((item) => item != null ? $itemTypeName.values.byName(item as String) : null).$collectionMethod';
-      }
-      return '($jsonAccess as List).map((item) => $itemTypeName.values.byName(item as String)).$collectionMethod';
-    }
-
-    // Handle DDDart types
-    if (_isDDDartType(itemType)) {
-      if (itemIsNullable) {
-        return '($jsonAccess as List).map((item) => item != null ? ${itemTypeName}JsonSerializer().fromJson(item as Map<String, dynamic>, effectiveConfig) : null).$collectionMethod';
-      }
-      return '($jsonAccess as List).map((item) => ${itemTypeName}JsonSerializer().fromJson(item as Map<String, dynamic>, effectiveConfig)).$collectionMethod';
-    }
-
-    // Handle primitive types
-    if (_isPrimitiveType(itemTypeName)) {
-      return '($jsonAccess as List).map((item) => item as $itemTypeNameWithNull).$collectionMethod';
-    }
-
-    // Default case
-    return '$jsonAccess as $typeName';
-  }
-
-  /// Generates deserialization code for maps with runtime configuration.
-  String _generateMapDeserializationWithConfig(
-    FieldInfo field,
-    String jsonAccess,
-  ) {
-    final typeArgs = field.type is ParameterizedType
-        ? (field.type as ParameterizedType).typeArguments
-        : <DartType>[];
-
-    if (typeArgs.length < 2) {
-      // Untyped map - use Map.from to handle dynamic keys
-      return 'Map.from($jsonAccess as Map)';
-    }
-
-    final keyType = typeArgs[0];
-    final valueType = typeArgs[1];
-    final keyTypeName = keyType.getDisplayString(withNullability: false);
-    final valueTypeName = valueType.getDisplayString(withNullability: false);
-    final valueTypeNameWithNull =
-        valueType.getDisplayString(withNullability: true);
-    final valueIsNullable =
-        valueType.nullabilitySuffix == NullabilitySuffix.question;
-
-    // Only handle String keys for now (JSON limitation)
-    if (keyTypeName != 'String') {
-      return 'Map.from($jsonAccess as Map)';
-    }
-
-    // Handle special value types
-    if (valueTypeName == 'UuidValue') {
-      if (valueIsNullable) {
-        return 'Map<String, dynamic>.from($jsonAccess as Map).map((key, value) => MapEntry(key, value != null ? UuidValue.fromString(value as String) : null))';
-      }
-      return 'Map<String, dynamic>.from($jsonAccess as Map).map((key, value) => MapEntry(key, UuidValue.fromString(value as String)))';
-    }
-
-    if (valueTypeName == 'DateTime') {
-      if (valueIsNullable) {
-        return 'Map<String, dynamic>.from($jsonAccess as Map).map((key, value) => MapEntry(key, value != null ? DateTime.parse(value as String) : null))';
-      }
-      return 'Map<String, dynamic>.from($jsonAccess as Map).map((key, value) => MapEntry(key, DateTime.parse(value as String)))';
-    }
-
-    // Handle enum value types
-    if (_isEnumType(valueType)) {
-      if (valueIsNullable) {
-        return 'Map<String, dynamic>.from($jsonAccess as Map).map((key, value) => MapEntry(key, value != null ? $valueTypeName.values.byName(value as String) : null))';
-      }
-      return 'Map<String, dynamic>.from($jsonAccess as Map).map((key, value) => MapEntry(key, $valueTypeName.values.byName(value as String)))';
-    }
-
-    // Handle DDDart value types
-    if (_isDDDartType(valueType)) {
-      if (valueIsNullable) {
-        return 'Map<String, dynamic>.from($jsonAccess as Map).map((key, value) => MapEntry(key, value != null ? ${valueTypeName}JsonSerializer().fromJson(value as Map<String, dynamic>, effectiveConfig) : null))';
-      }
-      return 'Map<String, dynamic>.from($jsonAccess as Map).map((key, value) => MapEntry(key, ${valueTypeName}JsonSerializer().fromJson(value as Map<String, dynamic>, effectiveConfig)))';
-    }
-
-    // Handle primitive value types (including dynamic)
-    if (_isPrimitiveType(valueTypeName) || valueTypeName == 'dynamic') {
-      return 'Map<String, dynamic>.from($jsonAccess as Map).map((key, value) => MapEntry(key, value as $valueTypeNameWithNull))';
-    }
-
-    // Default case - use Map.from for safe casting
-    return 'Map<String, dynamic>.from($jsonAccess as Map)';
+    if (name == 'dynamic') return value;
+    if (_isPrimitiveType(name) || name == 'Object' || name == 'Null')
+      return '$value as $name';
+    throw InvalidGenerationSourceError('Unsupported JSON field type: $name');
   }
 
   /// Checks if a type name represents a primitive type.
@@ -1383,10 +931,12 @@ class ClassAnalysis {
     required this.type,
     required this.className,
     required this.fields,
+    this.identityType,
   });
   final ClassType type;
   final String className;
   final List<FieldInfo> fields;
+  final DartType? identityType;
 }
 
 /// Represents information about a field.

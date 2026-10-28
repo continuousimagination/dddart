@@ -46,7 +46,7 @@ import 'package:dddart_serialization/dddart_serialization.dart';
 __GENERATED_PART_DIRECTIVE__
 
 @Serializable()
-class ConsumerAggregate extends AggregateRoot {
+class ConsumerAggregate extends UuidAggregateRoot {
   ConsumerAggregate({
     required this.name,
     super.id,
@@ -58,7 +58,7 @@ class ConsumerAggregate extends AggregateRoot {
 }
 
 @Serializable()
-class ConsumerEntity extends Entity {
+class ConsumerEntity extends UuidEntity {
   ConsumerEntity({
     required this.name,
     super.id,
@@ -78,6 +78,35 @@ class ConsumerValue extends Value {
   @override
   List<Object?> get props => [name];
 }
+
+// Same display name as the framework UUID, but a distinct application kind.
+class UuidValue extends Identity {
+  const UuidValue(this.value);
+  final String value;
+  @override List<Object?> get props => [value];
+  @override String toString() => 'debug only';
+}
+
+class ApplicationIdentityCodec implements IdentityCodec<UuidValue> {
+  const ApplicationIdentityCodec();
+  @override String toJson(UuidValue identity) => identity.value;
+  @override UuidValue fromJson(Object? value) {
+    if (value is! String) throw const FormatException('Expected string');
+    return UuidValue(value);
+  }
+  @override String toKey(UuidValue identity) => identity.value;
+  @override UuidValue fromKey(String value) => UuidValue(value);
+}
+
+@Serializable()
+class NativeConsumerAggregate extends AggregateRoot<UuidValue> {
+  NativeConsumerAggregate({required super.id, required this.keys,
+    required this.history, required this.optionalValues,
+    super.createdAt, super.updatedAt});
+  final Map<UuidValue, String> keys;
+  final List<UuidValue?> history;
+  final Map<String, UuidValue?> optionalValues;
+}
 '''
             .replaceFirst(
           '__GENERATED_PART_DIRECTIVE__',
@@ -88,6 +117,7 @@ class ConsumerValue extends Value {
       final binDirectory = Directory('${fixture.path}/bin')..createSync();
       File('${binDirectory.path}/main.dart').writeAsStringSync('''
 import 'package:dddart_json_clean_consumer/model.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
 
 void main() {
   final serializer = ConsumerAggregateJsonSerializer();
@@ -95,6 +125,19 @@ void main() {
   final restored = serializer.deserialize(serializer.serialize(original));
   if (restored.name != original.name || restored.id != original.id) {
     throw StateError('Generated serializer failed to round-trip the aggregate.');
+  }
+  final codecs = IdentityCodecRegistry()
+    ..register<UuidValue>('application.native.v1', const ApplicationIdentityCodec());
+  final nativeSerializer = NativeConsumerAggregateJsonSerializer.withIdentityCodecs(codecs);
+  final native = NativeConsumerAggregate(id: const UuidValue('not-a-framework-UUID'),
+    keys: {const UuidValue('native/%, key'): 'value'},
+    history: const [UuidValue('previous'), null],
+    optionalValues: const {'present': UuidValue('value'), 'absent': null});
+  final nativeRestored = nativeSerializer.deserialize(nativeSerializer.serialize(native));
+  if (nativeRestored.id != native.id || nativeRestored.keys[native.keys.keys.single] != 'value' ||
+      nativeRestored.history.first != native.history.first || nativeRestored.history.last != null ||
+      nativeRestored.optionalValues['present'] != native.optionalValues['present']) {
+    throw StateError('Application identity was confused with the framework UUID.');
   }
 }
 ''');

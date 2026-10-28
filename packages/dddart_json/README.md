@@ -39,7 +39,7 @@ import 'package:dddart_serialization/dddart_serialization.dart';
 part 'user.g.dart';  // Required for code generation
 
 @Serializable()
-class User extends AggregateRoot {
+class User extends UuidAggregateRoot {
   User({
     required this.name,
     required this.email,
@@ -113,6 +113,46 @@ final user2 = UserJsonSerializer.decode(json2);
 
 ## Configuration
 
+### Identity generation
+
+Use `UuidAggregateRoot`/`UuidEntity` for optional, generated UUIDs. Externally
+identified aggregates extend `AggregateRoot<IssueId>` and require their native
+ID. Define a concrete application `Identity` and register its `IdentityCodec`
+with `IdentityCodecRegistry` from `dddart_serialization`.
+
+```dart
+final codecs = IdentityCodecRegistry()
+  ..register<IssueId>('github.issue.v1', IssueIdCodec());
+final serializer = IssueJsonSerializer.withIdentityCodecs(codecs);
+final json = serializer.toJson(issue);
+final restored = serializer.fromJson(json);
+```
+
+The generated `identityCodecs` getter exposes the shared registry for composition.
+Nested generated serializers receive the same registry, including identities in
+nullable fields, lists, sets, map values and identity map keys. JSON map keys are
+strings or concrete identities; identity keys use the canonical key codec.
+Stock UUIDs retain their string JSON representation. Application identity kinds
+are recognized by type, so a class's name cannot accidentally select UUID
+encoding.
+
+`IssueJsonSerializer.withIdentityCodecs(codecs, config)` accepts constructor
+configuration. Static helpers accept the registry after configuration:
+`IssueJsonSerializer.encode(issue, config, codecs)` and
+`IssueJsonSerializer.decode(json, config, codecs)`. Existing UUID serializers
+can still use their default constructor.
+
+An annotated class must have concrete identity and field types. A concrete class
+can inherit from an unannotated generic base; inherited fields are resolved with
+its type arguments. Annotated open generic classes, erased `Identity` roots and
+unsupported map key types fail generation with a diagnostic. Regenerate every
+owning library after migrating its base classes, then analyze and test the
+combined generated part with its handwritten owner.
+
+See [codec contracts](../dddart_serialization/README.md#identity-codecs) for the
+tagged envelope and key validation rules. Repository adapter migration is
+tracked separately from serializer support.
+
 ### Field Naming Strategies
 
 Configure how field names are transformed in JSON:
@@ -176,7 +216,7 @@ The serializer handles nested entities and values automatically:
 
 ```dart
 @Serializable()
-class Company extends AggregateRoot {
+class Company extends UuidAggregateRoot {
   Company({
     required this.name,
     required this.address,
@@ -192,7 +232,7 @@ class Company extends AggregateRoot {
 }
 
 @Serializable()
-class Employee extends Entity {
+class Employee extends UuidEntity {
   Employee({
     required this.name,
     required this.position,

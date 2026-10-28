@@ -12,7 +12,7 @@ part 'runtime_config_test.g.dart';
 
 /// Test user with simple annotation - configuration done at runtime.
 @Serializable()
-class FlexibleUser extends AggregateRoot {
+class FlexibleUser extends UuidAggregateRoot {
   FlexibleUser({
     required this.firstName,
     required this.lastName,

@@ -17,7 +17,7 @@ enum OrderStatus {
 
 /// Example aggregate with enum field
 @Serializable()
-class Order extends AggregateRoot {
+class Order extends UuidAggregateRoot {
   Order({
     required this.orderNumber,
     required this.status,

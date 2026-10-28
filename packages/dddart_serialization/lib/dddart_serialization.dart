@@ -8,6 +8,7 @@
 /// For JSON serialization, use the `dddart_json` package.
 library dddart_serialization;
 
+export 'src/identity_codec.dart';
 export 'src/serializable_annotation.dart';
 export 'src/serialization_config.dart';
 export 'src/serialization_contracts.dart';
