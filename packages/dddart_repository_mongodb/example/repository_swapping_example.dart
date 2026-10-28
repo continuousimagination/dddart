@@ -39,7 +39,7 @@ Future<void> _demonstrateInMemoryRepository() async {
   print('1. Using InMemoryRepository (for testing)...');
 
   // Create in-memory repository - no database needed!
-  final userRepo = InMemoryRepository<UserWithCustomRepo>();
+  final userRepo = InMemoryRepository<UserWithCustomRepo, UuidValue>();
 
   // Create and save users
   final user1 = UserWithCustomRepo(
@@ -133,7 +133,7 @@ Future<void> _demonstrateBusinessLogicWithSwappableRepo() async {
 
   // Test with in-memory repository
   print('\n   Testing with InMemoryRepository:');
-  final inMemoryRepo = InMemoryRepository<UserWithCustomRepo>();
+  final inMemoryRepo = InMemoryRepository<UserWithCustomRepo, UuidValue>();
   await _runBusinessLogic(inMemoryRepo);
 
   // Test with MongoDB repository
@@ -157,13 +157,13 @@ Future<void> _demonstrateBusinessLogicWithSwappableRepo() async {
 
 /// Business logic that depends on Repository interface, not implementation.
 ///
-/// This function works with ANY implementation of Repository<UserWithCustomRepo>:
+/// This function works with ANY implementation of Repository<UserWithCustomRepo, UuidValue>:
 /// - InMemoryRepository for fast unit tests
 /// - UserWithCustomRepoMongoRepository for production
 /// - MockRepository for integration tests
 /// - Future: RestRepository, PostgresRepository, etc.
 Future<void> _runBusinessLogic(
-  Repository<UserWithCustomRepo> userRepo,
+  Repository<UserWithCustomRepo, UuidValue> userRepo,
 ) async {
   // Create user
   final user = UserWithCustomRepo(
@@ -223,7 +223,7 @@ Example Test:
 void main() {
   test('user creation workflow', () async {
     // Fast test with in-memory repository
-    final repo = InMemoryRepository<UserWithCustomRepo>();
+    final repo = InMemoryRepository<UserWithCustomRepo, UuidValue>();
     
     final user = UserWithCustomRepo(
       firstName: 'Test',

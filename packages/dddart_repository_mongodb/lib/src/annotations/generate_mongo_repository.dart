@@ -2,7 +2,7 @@
 ///
 /// This annotation triggers code generation that creates a MongoDB repository
 /// implementation for the annotated aggregate root class. The generated
-/// repository implements the `Repository<T>` interface from the dddart package
+/// repository implements the `Repository<T, UuidValue>` interface from the dddart package
 /// and uses the aggregate's JSON serializer from dddart_json for persistence.
 ///
 /// ## Requirements
@@ -19,7 +19,7 @@
 /// ```dart
 /// @Serializable()
 /// @GenerateMongoRepository(collectionName: 'users')
-/// class User extends AggregateRoot {
+/// class User extends UuidAggregateRoot {
 ///   final String firstName;
 ///   final String lastName;
 ///
@@ -44,12 +44,12 @@
 /// ## Custom Interface (Abstract Base Repository)
 ///
 /// When a custom interface is specified that contains methods beyond the base
-/// `Repository<T>` interface, an abstract base class is generated. The
+/// `Repository<T, UuidValue>` interface, an abstract base class is generated. The
 /// developer must extend this base class and implement the custom methods:
 ///
 /// ```dart
 /// // Define custom repository interface
-/// abstract interface class UserRepository implements Repository<User> {
+/// abstract interface class UserRepository implements Repository<User, UuidValue> {
 ///   Future<User?> findByEmail(String email);
 ///   Future<List<User>> findByLastName(String lastName);
 /// }
@@ -59,7 +59,7 @@
 ///   collectionName: 'users',
 ///   implements: UserRepository,
 /// )
-/// class User extends AggregateRoot {
+/// class User extends UuidAggregateRoot {
 ///   final String firstName;
 ///   final String lastName;
 ///   final String email;
@@ -82,7 +82,6 @@
 ///     final doc = await _collection.findOne(where.eq('email', email));
 ///     if (doc == null) return null;
 ///
-///     doc['id'] = doc['_id'];
 ///     doc.remove('_id');
 ///     return _serializer.fromJson(doc);
 ///   }
@@ -94,7 +93,6 @@
 ///         .toList();
 ///
 ///     return docs.map((doc) {
-///       doc['id'] = doc['_id'];
 ///       doc.remove('_id');
 ///       return _serializer.fromJson(doc);
 ///     }).toList();
@@ -120,7 +118,7 @@
 /// UserRepository repo = UserMongoRepository(database);
 ///
 /// // Testing: In-memory implementation
-/// UserRepository repo = InMemoryRepository<User>();
+/// UserRepository repo = InMemoryRepository<User, UuidValue>();
 ///
 /// // Client-side: REST API implementation (future package)
 /// UserRepository repo = UserRestRepository(apiClient);
@@ -133,9 +131,9 @@ class GenerateMongoRepository {
   /// For example, `UserProfile` becomes `user_profiles`.
   ///
   /// [implements] - Optional custom repository interface. If provided and
-  /// the interface contains custom methods beyond `Repository<T>`, an abstract
+  /// the interface contains custom methods beyond `Repository<T, UuidValue>`, an abstract
   /// base class will be generated requiring the developer to implement
-  /// custom methods. If the interface only contains base `Repository<T>`
+  /// custom methods. If the interface only contains base `Repository<T, UuidValue>`
   /// methods, a concrete class will be generated.
   const GenerateMongoRepository({
     this.collectionName,
@@ -153,10 +151,10 @@ class GenerateMongoRepository {
 
   /// The custom repository interface to implement.
   ///
-  /// If null, generates a concrete class implementing `Repository<T>`.
+  /// If null, generates a concrete class implementing `Repository<T, UuidValue>`.
   ///
   /// If provided:
-  /// - Interface contains only base `Repository<T>` methods → generates
+  /// - Interface contains only base `Repository<T, UuidValue>` methods → generates
   ///   concrete class implementing the interface
   /// - Interface contains custom methods → generates abstract base class
   ///   with concrete implementations of base methods and abstract

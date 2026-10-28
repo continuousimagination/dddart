@@ -6,6 +6,7 @@ library;
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:build/build.dart';
+import 'package:dddart/dddart.dart' show AggregateRoot, Identity;
 import 'package:dddart_repository_dynamodb/src/annotations/generate_dynamo_repository.dart';
 import 'package:source_gen/source_gen.dart';
 
@@ -48,7 +49,7 @@ class DynamoRepositoryGenerator
     final classElement = element;
     final className = classElement.name;
 
-    // Validate class extends AggregateRoot
+    // Validate class extends UuidAggregateRoot
     if (!_extendsAggregateRoot(classElement)) {
       throw InvalidGenerationSourceError(
         'Class $className must extend AggregateRoot to use '
@@ -66,6 +67,8 @@ class DynamoRepositoryGenerator
       );
     }
 
+    final identityType = _concreteIdentityType(classElement);
+
     // Extract configuration from annotation
     final tableName = _extractTableName(annotation, className);
     final customInterface = _extractImplementsInterface(annotation);
@@ -73,7 +76,7 @@ class DynamoRepositoryGenerator
     // Determine what to generate based on interface analysis
     if (customInterface == null) {
       // No custom interface - generate concrete class
-      return _generateConcreteRepository(className, tableName);
+      return _generateConcreteRepository(className, identityType, tableName);
     }
 
     // Analyze interface to determine if abstract base is needed
@@ -103,6 +106,7 @@ class DynamoRepositoryGenerator
       // Interface only has base Repository methods - generate concrete class
       return _generateConcreteRepository(
         className,
+        identityType,
         tableName,
         implements: customInterface,
       );
@@ -110,6 +114,7 @@ class DynamoRepositoryGenerator
       // Interface has custom methods - generate abstract base class
       return _generateAbstractBaseRepository(
         className,
+        identityType,
         tableName,
         implements: customInterface,
         abstractMethods: customMethods,
@@ -117,18 +122,31 @@ class DynamoRepositoryGenerator
     }
   }
 
-  /// Validates that a class extends AggregateRoot.
+  /// Validates that a class extends UuidAggregateRoot.
   ///
   /// Walks the inheritance hierarchy to find AggregateRoot.
   bool _extendsAggregateRoot(ClassElement element) {
-    ClassElement? current = element;
-    while (current != null) {
-      if (current.name == 'AggregateRoot') return true;
-      final supertype = current.supertype;
-      if (supertype == null) break;
-      current = supertype.element as ClassElement?;
+    return element.allSupertypes.any(
+      (type) =>
+          const TypeChecker.fromRuntime(AggregateRoot).isExactly(type.element),
+    );
+  }
+
+  String _concreteIdentityType(ClassElement element) {
+    final root = element.allSupertypes.firstWhere(
+      (type) =>
+          const TypeChecker.fromRuntime(AggregateRoot).isExactly(type.element),
+    );
+    final identity = root.typeArguments.single;
+    if (element.typeParameters.isNotEmpty ||
+        identity is! InterfaceType ||
+        const TypeChecker.fromRuntime(Identity).isExactly(identity.element)) {
+      throw InvalidGenerationSourceError(
+        'Repository generation requires a concrete identity type.',
+        element: element,
+      );
     }
-    return false;
+    return identity.getDisplayString(withNullability: false);
   }
 
   /// Validates that a class has the @Serializable annotation.
@@ -163,7 +181,7 @@ class DynamoRepositoryGenerator
   /// Gets all methods from an interface type, including inherited methods.
   ///
   /// This includes methods from the interface itself and all superinterfaces
-  /// (including Repository<T>), but excludes methods from Object and other
+  /// (including Repository<T, UuidValue>), but excludes methods from Object and other
   /// system classes.
   List<MethodElement> _getInterfaceMethods(InterfaceType interfaceType) {
     final methodsByName = <String, MethodElement>{};
@@ -174,7 +192,7 @@ class DynamoRepositoryGenerator
       methodsByName.putIfAbsent(method.name, () => method);
     }
 
-    // Get methods from all superinterfaces (including Repository<T>)
+    // Get methods from all superinterfaces (including Repository<T, UuidValue>)
     // but exclude Object and system classes
     for (final supertype in interfaceType.allSupertypes) {
       final supertypeName = supertype.element.name;
@@ -208,14 +226,33 @@ class DynamoRepositoryGenerator
   }
 
   /// Generates the getById method implementation.
-  String _generateGetByIdMethod(String className) {
+  String _generateIdentityMembers(String className, String identityType) => '''
+  final IdentityCodecRegistry _identityCodecs;
+  late final _serializer = ${className}JsonSerializer.withIdentityCodecs(_identityCodecs);
+
+  /// Converts an item using the registered key and structural JSON codecs.
+  $className fromItem(Map<String, AttributeValue> item) {
+    final json = AttributeValueConverter.attributeMapToJsonMap(item);
+    final key = json['id'];
+    if (key is! String) {
+      throw const DeserializationException('Expected string DynamoDB identity key');
+    }
+    final identity = _identityCodecs.fromKey<$identityType>(key);
+    encodeDynamoIdentityKey<$identityType>(_identityCodecs, identity);
+    json['id'] = _identityCodecs.toJson<$identityType>(identity);
+    return _serializer.fromJson(json);
+  }
+''';
+
+  String _generateGetByIdMethod(String className, String identityType) {
     return '''
   @override
-  Future<$className> getById(UuidValue id) async {
+  Future<$className> getById($identityType id) async {
+    final key = encodeDynamoIdentityKey<$identityType>(_identityCodecs, id);
     try {
       final response = await _connection.client.getItem(
         tableName: tableName,
-        key: {'id': AttributeValue(s: id.toString())},
+        key: {'id': AttributeValue(s: key)},
       );
       
       if (response.item == null || response.item!.isEmpty) {
@@ -225,10 +262,11 @@ class DynamoRepositoryGenerator
         );
       }
       
-      // Convert DynamoDB AttributeValue map to JSON
-      final json = AttributeValueConverter.attributeMapToJsonMap(response.item!);
-      
-      return _serializer.fromJson(json);
+      final aggregate = fromItem(response.item!);
+      if (aggregate.id != id) {
+        throw const DeserializationException('Stored identity does not match requested key');
+      }
+      return aggregate;
     } on RepositoryException {
       rethrow;
     } catch (e) {
@@ -238,12 +276,14 @@ class DynamoRepositoryGenerator
   }
 
   /// Generates the save method implementation.
-  String _generateSaveMethod(String className) {
+  String _generateSaveMethod(String className, String identityType) {
     return '''
   @override
   Future<void> save($className aggregate) async {
+    final key = encodeDynamoIdentityKey<$identityType>(_identityCodecs, aggregate.id);
     try {
       final json = _serializer.toJson(aggregate);
+      json['id'] = key;
       
       // Convert JSON to DynamoDB AttributeValue map
       final item = AttributeValueConverter.jsonMapToAttributeMap(json);
@@ -260,15 +300,16 @@ class DynamoRepositoryGenerator
   }
 
   /// Generates the deleteById method implementation.
-  String _generateDeleteByIdMethod(String className) {
+  String _generateDeleteByIdMethod(String className, String identityType) {
     return '''
   @override
-  Future<void> deleteById(UuidValue id) async {
+  Future<void> deleteById($identityType id) async {
+    final key = encodeDynamoIdentityKey<$identityType>(_identityCodecs, id);
     try {
       // First check if item exists
       final getResponse = await _connection.client.getItem(
         tableName: tableName,
-        key: {'id': AttributeValue(s: id.toString())},
+        key: {'id': AttributeValue(s: key)},
       );
       
       if (getResponse.item == null || getResponse.item!.isEmpty) {
@@ -281,7 +322,7 @@ class DynamoRepositoryGenerator
       // Delete the item
       await _connection.client.deleteItem(
         tableName: tableName,
-        key: {'id': AttributeValue(s: id.toString())},
+        key: {'id': AttributeValue(s: key)},
       );
     } on RepositoryException {
       rethrow;
@@ -464,17 +505,18 @@ Resources:
   ///
   /// This is used when:
   /// - No custom interface is specified
-  /// - Custom interface only contains base Repository<T> methods
+  /// - Custom interface only contains base Repository<T, UuidValue> methods
   ///
   /// The generated class can be instantiated directly.
   String _generateConcreteRepository(
     String className,
+    String identityType,
     String tableName, {
     InterfaceType? implements,
   }) {
     final interfaceClause = implements != null
         ? 'implements ${implements.element.name}'
-        : 'implements Repository<$className>';
+        : 'implements Repository<$className, $identityType>';
 
     final buffer = StringBuffer();
 
@@ -494,7 +536,9 @@ Resources:
     buffer.writeln('  /// Creates a repository instance.');
     buffer.writeln('  ///');
     buffer.writeln('  /// [connection] - A DynamoDB connection instance.');
-    buffer.writeln('  ${className}DynamoRepository(this._connection);');
+    buffer.writeln(
+      '  ${className}DynamoRepository(this._connection, {IdentityCodecRegistry? identityCodecs}) : _identityCodecs = identityCodecs ?? IdentityCodecRegistry();',
+    );
     buffer.writeln();
 
     // Generate fields and getters
@@ -505,17 +549,17 @@ Resources:
     buffer.writeln("  String get tableName => '$tableName';");
     buffer.writeln();
     buffer.writeln('  /// The JSON serializer for $className aggregates.');
-    buffer.writeln('  final _serializer = ${className}JsonSerializer();');
+    buffer.writeln(_generateIdentityMembers(className, identityType));
     buffer.writeln();
 
     // Generate CRUD methods
-    buffer.writeln(_generateGetByIdMethod(className));
+    buffer.writeln(_generateGetByIdMethod(className, identityType));
     buffer.writeln();
 
-    buffer.writeln(_generateSaveMethod(className));
+    buffer.writeln(_generateSaveMethod(className, identityType));
     buffer.writeln();
 
-    buffer.writeln(_generateDeleteByIdMethod(className));
+    buffer.writeln(_generateDeleteByIdMethod(className, identityType));
     buffer.writeln();
 
     // Generate exception mapping helper
@@ -533,12 +577,13 @@ Resources:
   /// Generates an abstract base repository class.
   ///
   /// This is used when a custom interface contains methods beyond the base
-  /// Repository<T> interface. The generated abstract class implements the
+  /// Repository<T, UuidValue> interface. The generated abstract class implements the
   /// base CRUD methods and declares custom methods as abstract.
   ///
   /// Developers must extend this class and implement the custom methods.
   String _generateAbstractBaseRepository(
     String className,
+    String identityType,
     String tableName, {
     required InterfaceType implements,
     required List<MethodElement> abstractMethods,
@@ -569,7 +614,9 @@ Resources:
     buffer.writeln('  /// Creates a repository instance.');
     buffer.writeln('  ///');
     buffer.writeln('  /// [connection] - A DynamoDB connection instance.');
-    buffer.writeln('  ${className}DynamoRepositoryBase(this._connection);');
+    buffer.writeln(
+      '  ${className}DynamoRepositoryBase(this._connection, {IdentityCodecRegistry? identityCodecs}) : _identityCodecs = identityCodecs ?? IdentityCodecRegistry();',
+    );
     buffer.writeln();
 
     // Generate fields and getters
@@ -580,17 +627,17 @@ Resources:
     buffer.writeln("  String get tableName => '$tableName';");
     buffer.writeln();
     buffer.writeln('  /// The JSON serializer for $className aggregates.');
-    buffer.writeln('  final _serializer = ${className}JsonSerializer();');
+    buffer.writeln(_generateIdentityMembers(className, identityType));
     buffer.writeln();
 
     // Generate concrete implementations of base Repository methods
-    buffer.writeln(_generateGetByIdMethod(className));
+    buffer.writeln(_generateGetByIdMethod(className, identityType));
     buffer.writeln();
 
-    buffer.writeln(_generateSaveMethod(className));
+    buffer.writeln(_generateSaveMethod(className, identityType));
     buffer.writeln();
 
-    buffer.writeln(_generateDeleteByIdMethod(className));
+    buffer.writeln(_generateDeleteByIdMethod(className, identityType));
     buffer.writeln();
 
     // Generate exception mapping helper

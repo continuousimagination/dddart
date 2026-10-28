@@ -4,6 +4,41 @@ MongoDB repository implementation for DDDart - Domain-Driven Design for Dart.
 
 ## Overview
 
+### Typed identities and migration
+
+Until publication, use the [Git installation guide](../../docs/GIT_INSTALLATION.md).
+The adapter still declares hosted internal dependencies, so use the guide's
+overrides pinned to the same immutable Git revision.
+
+Generated repositories implement `Repository<T, I>`, where `I` is the concrete
+identity on the aggregate. Use `UuidAggregateRoot` for optional generated UUIDs,
+or `AggregateRoot<IssueId>` with a required native/scoped ID. Register application
+codecs and pass them into the repository:
+
+```dart
+final codecs = IdentityCodecRegistry()
+  ..register<IssueId>('github.issue.v1', IssueIdCodec());
+final repository = IssueMongoRepository(database, identityCodecs: codecs);
+```
+
+`IssueId` and its codec are application-defined; see the
+[codec contract](../dddart_serialization/README.md#identity-codecs).
+The registry is shared with generated JSON serializers. Generic inherited state
+is resolved before generation, and erased/open identity roots are rejected.
+
+MongoDB `_id` now stores the canonical key's UTF-8 bytes as BSON binary. The
+document retains its structural JSON `id`; custom reads can call
+`fromDocument(document)`. This preserves exact identity comparison under
+case-insensitive collection collation. Keys with malformed Unicode fail before
+I/O; complete documents remain subject to the
+[16 MiB BSON limit](https://www.mongodb.com/docs/manual/reference/limits/).
+
+This is a breaking physical-schema change, including for UUID consumers. Migrate
+or recreate existing collections explicitly; changing an immutable `_id` requires
+rewriting documents. Generated code expects the new representation. Regenerate
+every owning combined part and update custom queries that formerly copied `_id`
+into `id`. Each aggregate collection owns one concrete identity kind.
+
 `dddart_repository_mongodb` provides code-generated MongoDB repositories for DDDart aggregate roots. It leverages existing JSON serialization from `dddart_json` and the mature `mongo_dart` driver for MongoDB connectivity, with full support for AWS DocumentDB Serverless.
 
 The package follows DDDart's code generation pattern to automatically create repository implementations from annotated aggregate roots, eliminating boilerplate while maintaining type safety and extensibility.
@@ -45,7 +80,7 @@ import 'package:dddart_repository_mongodb/dddart_repository_mongodb.dart';
 
 @Serializable()
 @GenerateMongoRepository(collectionName: 'users')
-class User extends AggregateRoot {
+class User extends UuidAggregateRoot {
   final String firstName;
   final String lastName;
   final String email;
@@ -111,7 +146,7 @@ Define custom interfaces for domain-specific queries:
 
 ```dart
 // Define custom interface
-abstract interface class UserRepository implements Repository<User> {
+abstract interface class UserRepository implements Repository<User, UuidValue> {
   Future<User?> findByEmail(String email);
   Future<List<User>> findByLastName(String lastName);
 }
@@ -119,7 +154,7 @@ abstract interface class UserRepository implements Repository<User> {
 // Annotate with custom interface
 @Serializable()
 @GenerateMongoRepository(implements: UserRepository)
-class User extends AggregateRoot {
+class User extends UuidAggregateRoot {
   final String firstName;
   final String lastName;
   final String email;
@@ -142,7 +177,6 @@ class UserMongoRepository extends UserMongoRepositoryBase {
     final doc = await _collection.findOne(where.eq('email', email));
     if (doc == null) return null;
 
-    doc['id'] = doc['_id'];
     doc.remove('_id');
     return _serializer.fromJson(doc);
   }
@@ -154,7 +188,6 @@ class UserMongoRepository extends UserMongoRepositoryBase {
         .toList();
 
     return docs.map((doc) {
-      doc['id'] = doc['_id'];
       doc.remove('_id');
       return _serializer.fromJson(doc);
     }).toList();
@@ -262,7 +295,7 @@ Best for simple CRUD operations without custom queries.
 ```dart
 @Serializable()
 @GenerateMongoRepository()
-class Product extends AggregateRoot {
+class Product extends UuidAggregateRoot {
   final String name;
   final double price;
   
@@ -280,14 +313,14 @@ Best when you need different implementations (MongoDB, REST, in-memory) conformi
 
 ```dart
 // Domain layer - define interface
-abstract interface class UserRepository implements Repository<User> {
+abstract interface class UserRepository implements Repository<User, UuidValue> {
   Future<User?> findByEmail(String email);
 }
 
 // Aggregate with interface
 @Serializable()
 @GenerateMongoRepository(implements: UserRepository)
-class User extends AggregateRoot {
+class User extends UuidAggregateRoot {
   final String email;
   User({required this.email});
 }
@@ -301,7 +334,6 @@ class UserMongoRepository extends UserMongoRepositoryBase {
     final doc = await _collection.findOne(where.eq('email', email));
     if (doc == null) return null;
     
-    doc['id'] = doc['_id'];
     doc.remove('_id');
     return _serializer.fromJson(doc);
   }
@@ -309,12 +341,13 @@ class UserMongoRepository extends UserMongoRepositoryBase {
 
 // Swap implementations
 UserRepository repo = UserMongoRepository(database);     // Production
-UserRepository repo = InMemoryRepository<User>();        // Testing
+Repository<User, UuidValue> repo = InMemoryRepository<User, UuidValue>();        // Testing
 ```
 
 ### Pattern 3: Accessing MongoDB Internals
 
-The generated base class exposes protected members for custom queries:
+The generated base class has library-private members for custom queries in the
+same Dart library (including its parts):
 
 - **`_database`**: The MongoDB `Db` instance
 - **`_collection`**: Helper getter for the collection
@@ -331,7 +364,6 @@ class UserMongoRepository extends UserMongoRepositoryBase {
         .toList();
     
     return docs.map((doc) {
-      doc['id'] = doc['_id'];
       doc.remove('_id');
       return _serializer.fromJson(doc);
     }).toList();
@@ -599,11 +631,11 @@ Future<User?> findUserSafely(UuidValue id) async {
 
 ### Generated Repository Classes
 
-Generated repositories implement `Repository<T>` with these methods:
+Generated repositories implement `Repository<T, I>` with these methods:
 
-- `Future<T> getById(UuidValue id)`: Retrieve aggregate by ID
+- `Future<T> getById(I id)`: Retrieve aggregate by ID
 - `Future<void> save(T aggregate)`: Save or update aggregate (upsert)
-- `Future<void> deleteById(UuidValue id)`: Delete aggregate by ID
+- `Future<void> deleteById(I id)`: Delete aggregate by ID
 
 When extending generated base classes, you also have access to:
 
@@ -654,8 +686,8 @@ dart run build_runner build --delete-conflicting-outputs
 
 Ensure your class extends `AggregateRoot`:
 ```dart
-class User extends AggregateRoot { // ✅ Correct
-class User extends Entity {        // ❌ Wrong
+class User extends UuidAggregateRoot { // ✅ Correct
+class User extends UuidEntity {        // ❌ Wrong
 ```
 
 **Problem**: "Class must be annotated with @Serializable()" error
@@ -664,7 +696,7 @@ Add both annotations:
 ```dart
 @Serializable()                    // ✅ Required
 @GenerateMongoRepository()
-class User extends AggregateRoot { ... }
+class User extends UuidAggregateRoot { ... }
 ```
 
 ### Connection Issues

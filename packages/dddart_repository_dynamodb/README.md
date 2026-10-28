@@ -4,6 +4,40 @@ DynamoDB repository implementation for DDDart aggregate roots with code generati
 
 ## Features
 
+### Typed identities and migration
+
+Until publication, use the [Git installation guide](../../docs/GIT_INSTALLATION.md).
+The adapter still declares hosted internal dependencies, so use the guide's
+overrides pinned to the same immutable Git revision.
+
+Generated repositories implement `Repository<T, I>` using the aggregate's
+concrete identity type. UUID consumers use `UuidAggregateRoot`; externally
+identified consumers extend `AggregateRoot<IssueId>` with a required ID.
+
+```dart
+final codecs = IdentityCodecRegistry()
+  ..register<IssueId>('github.issue.v1', IssueIdCodec());
+final repository = IssueDynamoRepository(connection, identityCodecs: codecs);
+```
+
+Application codecs follow the
+[explicit JSON/key contract](../dddart_serialization/README.md#identity-codecs).
+The same registry reaches nested generated JSON serializers. The table keeps a
+string partition key named `id`. It contains the canonical codec key, with
+structural JSON identity restored by `fromKey`/`toJson` on reads. Custom query
+implementations should call `fromItem(item)` so scoped IDs receive this conversion.
+
+Keys must contain 1–2048 lossless UTF-8 bytes. Empty, oversized and malformed
+Unicode keys fail before I/O; case and trailing whitespace remain significant.
+These are the [DynamoDB partition-key constraints](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Constraints.html).
+Complete item limits remain enforced by DynamoDB. A table owns one identity kind.
+
+UUID string keys retain their existing representation. Native/scoped identities
+use the application's codec; changing its canonical representation requires a
+data migration. Regenerate every owning combined part after migrating base
+classes and repository interfaces. Annotated open/erased identity roots fail
+generation. No default scan or enumeration capability is added.
+
 - 🚀 **Code Generation**: Automatically generate DynamoDB repository implementations from annotated aggregate roots
 - 🔄 **JSON Serialization**: Reuse existing `dddart_json` serializers with automatic AttributeValue conversion
 - 🎯 **Type Safety**: Full type safety with compile-time code generation
@@ -40,7 +74,7 @@ part 'user.g.dart';
 
 @Serializable()
 @GenerateDynamoRepository(tableName: 'users')
-class User extends AggregateRoot {
+class User extends UuidAggregateRoot {
   User({
     required UuidValue id,
     required this.email,
@@ -139,7 +173,7 @@ Define domain-specific query methods:
 part 'user.g.dart';
 part 'user_dynamo_repository.dart';
 
-abstract interface class UserRepository implements Repository<User> {
+abstract interface class UserRepository implements Repository<User, UuidValue> {
   Future<User?> findByEmail(String email);
   Future<List<User>> findByLastName(
     String lastName, {
@@ -152,7 +186,7 @@ abstract interface class UserRepository implements Repository<User> {
   tableName: 'users',
   implements: UserRepository,
 )
-class User extends AggregateRoot {
+class User extends UuidAggregateRoot {
   // ... fields
 }
 ```
@@ -268,13 +302,13 @@ Marks an aggregate root for repository generation.
 **Example:**
 ```dart
 @GenerateDynamoRepository(tableName: 'users')
-class User extends AggregateRoot { }
+class User extends UuidAggregateRoot { }
 
 @GenerateDynamoRepository(
   tableName: 'orders',
   implements: OrderRepository,
 )
-class Order extends AggregateRoot { }
+class Order extends UuidAggregateRoot { }
 ```
 
 ### Classes
@@ -345,7 +379,7 @@ Utilities for converting between JSON and DynamoDB AttributeValue format.
 #### Concrete Repository (No Custom Interface)
 
 Generated when no custom interface is specified or interface has only base methods.
-The class implements `Repository<T>` and provides CRUD operations only. It does
+The class implements `Repository<T, UuidValue>` and provides CRUD operations only. It does
 not enumerate the table or issue an implicit DynamoDB `Scan`.
 
 **Constructor:**
@@ -418,10 +452,7 @@ class UserDynamoRepository extends UserDynamoRepositoryBase {
       return null;
     }
     
-    final json = AttributeValueConverter.attributeMapToJsonMap(
-      result.items!.first,
-    );
-    return _serializer.fromJson(json);
+    return fromItem(result.items!.first);
   }
 }
 ```
@@ -477,14 +508,14 @@ The AWS SDK manages HTTP connection pooling internally. Reusing a single `Dynamo
 ```dart
 // ✅ Good: Explicit table names
 @GenerateDynamoRepository(tableName: 'prod_users')
-class User extends AggregateRoot { }
+class User extends UuidAggregateRoot { }
 
 @GenerateDynamoRepository(tableName: 'staging_users')
-class User extends AggregateRoot { }
+class User extends UuidAggregateRoot { }
 
 // ⚠️ Acceptable for development: Auto-generated names
 @GenerateDynamoRepository() // Generates 'user' table name
-class User extends AggregateRoot { }
+class User extends UuidAggregateRoot { }
 ```
 
 **Use environment-specific prefixes:**
@@ -493,7 +524,7 @@ class User extends AggregateRoot { }
 final env = Platform.environment['ENV'] ?? 'dev';
 
 @GenerateDynamoRepository(tableName: '${env}_users')
-class User extends AggregateRoot { }
+class User extends UuidAggregateRoot { }
 ```
 
 ### Error Handling Patterns
@@ -717,7 +748,7 @@ void main() {
 ```dart
 // Test business logic without DynamoDB. getAll() is a concrete inspection
 // convenience on InMemoryRepository, not a framework repository capability.
-final userRepo = InMemoryRepository<User>();
+final userRepo = InMemoryRepository<User, UuidValue>();
 final service = UserService(userRepo);
 
 test('should create user', () async {
@@ -738,7 +769,7 @@ Extend the generated base repository to add domain-specific queries:
 part 'user.g.dart';
 part 'user_dynamo_repository.dart';
 
-abstract interface class UserRepository implements Repository<User> {
+abstract interface class UserRepository implements Repository<User, UuidValue> {
   Future<User?> findByEmail(String email);
   Future<List<User>> findByLastName(
     String lastName, {
@@ -751,7 +782,7 @@ abstract interface class UserRepository implements Repository<User> {
   tableName: 'users',
   implements: UserRepository,
 )
-class User extends AggregateRoot {
+class User extends UuidAggregateRoot {
   User({
     required UuidValue id,
     required this.email,
@@ -792,10 +823,7 @@ class UserDynamoRepository extends UserDynamoRepositoryBase {
         return null;
       }
 
-      final json = AttributeValueConverter.attributeMapToJsonMap(
-        result.items!.first,
-      );
-      return _serializer.fromJson(json);
+      return fromItem(result.items!.first);
     } catch (error) {
       throw _mapDynamoException(error, 'findByEmail');
     }
@@ -825,8 +853,7 @@ class UserDynamoRepository extends UserDynamoRepositoryBase {
       }
 
       return result.items!.map((item) {
-        final json = AttributeValueConverter.attributeMapToJsonMap(item);
-        return _serializer.fromJson(json);
+        return fromItem(item);
       }).toList();
     } catch (error) {
       throw _mapDynamoException(error, 'findByLastName');
@@ -1160,7 +1187,7 @@ dart run build_runner build
 // 5. Implement custom serialization for complex types
 
 @Serializable()
-class User extends AggregateRoot {
+class User extends UuidAggregateRoot {
   User({
     required UuidValue id,
     required this.email,
@@ -1248,7 +1275,7 @@ dependencies:
 ```dart
 @Serializable()
 @GenerateMongoRepository(collectionName: 'users')
-class User extends AggregateRoot {
+class User extends UuidAggregateRoot {
   // Same aggregate definition
 }
 

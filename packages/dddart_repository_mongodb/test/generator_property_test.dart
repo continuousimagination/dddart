@@ -38,7 +38,7 @@ import 'package:dddart_repository_mongodb/dddart_repository_mongodb.dart';
 
 @Serializable()
 @GenerateMongoRepository()
-class SimpleAggregate extends AggregateRoot {
+class SimpleAggregate extends UuidAggregateRoot {
   SimpleAggregate({required this.name}) : super();
   
   final String name;
@@ -65,7 +65,10 @@ class SimpleAggregate extends AggregateRoot {
 
         // Verify generated code contains required elements
         expect(generated, contains('class SimpleAggregateMongoRepository'));
-        expect(generated, contains('implements Repository<SimpleAggregate>'));
+        expect(
+          generated,
+          contains('implements Repository<SimpleAggregate, UuidValue>'),
+        );
         expect(generated, contains('String get collectionName'));
         expect(generated, contains('Future<SimpleAggregate> getById'));
         expect(generated, contains('Future<void> save(SimpleAggregate'));
@@ -94,7 +97,7 @@ class Money extends Value {
 
 @Serializable()
 @GenerateMongoRepository()
-class Order extends AggregateRoot {
+class Order extends UuidAggregateRoot {
   Order({required this.total}) : super();
   
   final Money total;
@@ -138,7 +141,7 @@ import 'package:dddart_repository_mongodb/dddart_repository_mongodb.dart';
 
 @Serializable()
 @GenerateMongoRepository(collectionName: 'custom_orders')
-class Order extends AggregateRoot {
+class Order extends UuidAggregateRoot {
   Order({required this.total}) : super();
   
   final double total;
@@ -176,13 +179,13 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:dddart_repository_mongodb/dddart_repository_mongodb.dart';
 
-abstract class CustomOrderRepository implements Repository<Order> {
+abstract class CustomOrderRepository implements Repository<Order, UuidValue> {
   Future<List<Order>> findByStatus(String status);
 }
 
 @Serializable()
 @GenerateMongoRepository(implements: CustomOrderRepository)
-class Order extends AggregateRoot {
+class Order extends UuidAggregateRoot {
   Order({required this.status}) : super();
   
   final String status;
@@ -230,7 +233,7 @@ import 'package:dddart_repository_mongodb/dddart_repository_mongodb.dart';
 
 @Serializable()
 @GenerateMongoRepository()
-class Order extends AggregateRoot {
+class Order extends UuidAggregateRoot {
   Order({required this.total}) : super();
   
   final double total;
@@ -266,7 +269,7 @@ import 'package:dddart_repository_mongodb/dddart_repository_mongodb.dart';
 
 @Serializable()
 @GenerateMongoRepository()
-class Customer extends AggregateRoot {
+class Customer extends UuidAggregateRoot {
   Customer({required this.name}) : super();
   
   final String name;
@@ -390,7 +393,7 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_repository_mongodb/dddart_repository_mongodb.dart';
 
 @GenerateMongoRepository()
-class MissingSerializable extends AggregateRoot {
+class MissingSerializable extends UuidAggregateRoot {
   MissingSerializable() : super();
 }
 ''',

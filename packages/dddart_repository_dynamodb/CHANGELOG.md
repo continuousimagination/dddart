@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0] - Unreleased
 
 ### Changed
+- **Breaking identity API:** generated repositories implement `Repository<T, I>`
+  and accept an optional named `identityCodecs` registry shared with JSON.
+- Native/scoped keys use explicit canonical codecs, validated as 1–2048 UTF-8
+  bytes before I/O. Add `fromItem` to restore structural identity in custom reads.
+- UUID consumers migrate to `UuidAggregateRoot`; existing UUID key text remains.
 - **Breaking:** Generated default DynamoDB repositories now implement
   `Repository<T>` and no longer expose an implicit `getAll()` backed by a
   full-table `Scan`.

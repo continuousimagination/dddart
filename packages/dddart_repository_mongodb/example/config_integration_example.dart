@@ -1,5 +1,7 @@
 // ignore_for_file: avoid_print
 
+import 'dart:io';
+
 import 'package:dddart_config/dddart_config.dart';
 import 'package:dddart_repository_mongodb/dddart_repository_mongodb.dart';
 import 'lib/domain/user.dart';
@@ -88,7 +90,15 @@ Future<Configuration> _loadConfiguration() async {
 
     // Create configuration with environment variables
     // Falls back to defaults if env vars not set
-    return Configuration([EnvironmentConfigProvider()]);
+    return Configuration([
+      EnvironmentConfigProvider(
+        environment: Map<String, String>.fromEntries(
+          Platform.environment.entries.where(
+            (entry) => entry.key.startsWith('MONGODB_'),
+          ),
+        ),
+      ),
+    ]);
   }
 }
 

@@ -19,7 +19,7 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';
 
-abstract interface class ReportRepository implements Repository<Report> {
+abstract interface class ReportRepository implements Repository<Report, UuidValue> {
   Future<R> transform<R extends Object?>(
     R value, [
     int retries = 3,
@@ -38,7 +38,7 @@ abstract interface class ReportRepository implements Repository<Report> {
   tableName: 'reports',
   implements: ReportRepository,
 )
-class Report extends AggregateRoot {
+class Report extends UuidAggregateRoot {
   Report({super.id, super.createdAt, super.updatedAt});
 }
 ''',
@@ -91,7 +91,7 @@ abstract interface class BroadReportReads {
 }
 
 abstract interface class ReportRepository
-    implements Repository<Report>, BroadReportReads {
+    implements Repository<Report, UuidValue>, BroadReportReads {
   @override
   Future<List<Report>> getAll();
 
@@ -105,7 +105,7 @@ abstract interface class ReportRepository
   tableName: 'reports',
   implements: ReportRepository,
 )
-class Report extends AggregateRoot {
+class Report extends UuidAggregateRoot {
   Report({super.id, super.createdAt, super.updatedAt});
 }
 ''',

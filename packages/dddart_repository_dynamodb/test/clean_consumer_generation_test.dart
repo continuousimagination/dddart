@@ -51,12 +51,25 @@ import 'package:dddart_serialization/dddart_serialization.dart';
 
 __GENERATED_PART_DIRECTIVE__
 
+class NativeIdentity extends Identity {
+  const NativeIdentity(this.value);
+  final String value;
+  @override List<Object?> get props => [value];
+}
+
+class NativeIdentityCodec implements IdentityCodec<NativeIdentity> {
+  @override String toJson(NativeIdentity id) => id.value;
+  @override NativeIdentity fromJson(Object? value) => NativeIdentity(value as String);
+  @override String toKey(NativeIdentity id) => id.value;
+  @override NativeIdentity fromKey(String key) => NativeIdentity(key);
+}
+
 abstract interface class BroadConsumerReads {
   Future<Iterable<ConsumerAggregate>> getAll();
 }
 
 abstract interface class ConsumerRepository
-    implements Repository<ConsumerAggregate>, BroadConsumerReads {
+    implements Repository<ConsumerAggregate, NativeIdentity>, BroadConsumerReads {
   @override
   Future<List<ConsumerAggregate>> getAll();
 
@@ -70,10 +83,10 @@ abstract interface class ConsumerRepository
   tableName: 'consumer_aggregates',
   implements: ConsumerRepository,
 )
-class ConsumerAggregate extends AggregateRoot {
+class ConsumerAggregate extends AggregateRoot<NativeIdentity> {
   ConsumerAggregate({
     required this.slug,
-    super.id,
+    required super.id,
     super.createdAt,
     super.updatedAt,
   });
@@ -83,7 +96,7 @@ class ConsumerAggregate extends AggregateRoot {
 
 class ConsumerAggregateRepository
     extends ConsumerAggregateDynamoRepositoryBase {
-  ConsumerAggregateRepository(super.connection);
+  ConsumerAggregateRepository(super.connection, {super.identityCodecs});
 
   @override
   Future<List<ConsumerAggregate>> getAll() =>
@@ -107,6 +120,7 @@ class ConsumerAggregateRepository
       File('${binDirectory.path}/main.dart').writeAsStringSync('''
 import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';
 import 'package:dddart_repository_dynamodb_clean_consumer/model.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
 
 ConsumerRepository createRepository(DynamoConnection connection) =>
     ConsumerAggregateRepository(connection);
@@ -114,6 +128,13 @@ ConsumerRepository createRepository(DynamoConnection connection) =>
 void main() {
   final connection = DynamoConnection.local();
   createRepository(connection);
+  final codecs = IdentityCodecRegistry()..register<NativeIdentity>('native',NativeIdentityCodec());
+  final repository = ConsumerAggregateRepository(connection, identityCodecs:codecs);
+  Future<ConsumerAggregate> Function(NativeIdentity) lookup = repository.getById;
+  Future<void> Function(NativeIdentity) delete = repository.deleteById;
+  final serializer = ConsumerAggregateJsonSerializer.withIdentityCodecs(codecs);
+  final original = ConsumerAggregate(id:const NativeIdentity('native/%, café'),slug:'issue');
+  if(serializer.deserialize(serializer.serialize(original)).id!=original.id || lookup == delete) throw StateError('Typed identity failed');
   connection.dispose();
 }
 ''');
@@ -171,6 +192,7 @@ void main() {
           'build/main.dill',
         ],
       );
+      await _expectDartSuccess(fixture, ['run', 'bin/main.dart']);
     },
     timeout: const Timeout(Duration(minutes: 3)),
   );
