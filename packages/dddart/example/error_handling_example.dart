@@ -290,7 +290,7 @@ class SimpleLogger {
 
 // Example events
 
-class OrderPlacedEvent extends DomainEvent {
+class OrderPlacedEvent extends DomainEvent<UuidValue> {
   final String customerId;
   final double totalAmount;
   final String currency;
@@ -311,7 +311,7 @@ class OrderPlacedEvent extends DomainEvent {
         );
 }
 
-class InventoryReservationFailedEvent extends DomainEvent {
+class InventoryReservationFailedEvent extends DomainEvent<UuidValue> {
   final UuidValue orderId;
   final String reason;
   final OrderPlacedEvent originalEvent;

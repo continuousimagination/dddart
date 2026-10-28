@@ -82,7 +82,7 @@ Future<void> _performOperations() async {
 
   // Repository operations
   print('2. Creating repository and saving aggregates...');
-  final repository = InMemoryRepository<UserAggregate>();
+  final repository = InMemoryRepository<UserAggregate, UuidValue>();
 
   final user1 = UserAggregate.register(
     email: 'alice@example.com',

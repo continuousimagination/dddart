@@ -4,7 +4,7 @@ import 'package:test/test.dart';
 import 'package:uuid/uuid.dart' as uuid_pkg;
 
 // Concrete implementation of Entity for testing
-class TestEntity extends Entity {
+class TestEntity extends UuidEntity {
   TestEntity({
     super.id,
     super.createdAt,

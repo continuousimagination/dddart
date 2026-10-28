@@ -85,7 +85,7 @@ Future<void> _demonstrateRepositoryLogging() async {
   print('💾 Repository Logging Demo');
   print('-' * 60);
 
-  final repository = InMemoryRepository<UserAggregate>();
+  final repository = InMemoryRepository<UserAggregate, UuidValue>();
 
   // Create a user
   final user = UserAggregate.register(

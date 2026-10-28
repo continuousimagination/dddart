@@ -60,6 +60,7 @@ export 'src/domain_event.dart';
 export 'src/entity.dart';
 export 'src/event_bus.dart';
 export 'src/file_log_handler.dart';
+export 'src/identity.dart';
 export 'src/in_memory_repository.dart';
 export 'src/repository.dart';
 export 'src/repository_exception.dart';

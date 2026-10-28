@@ -5,7 +5,7 @@ import 'user_registered_event.dart';
 ///
 /// This aggregate manages user lifecycle and raises domain events
 /// when significant actions occur.
-class UserAggregate extends AggregateRoot {
+class UserAggregate extends UuidAggregateRoot {
   /// The user's email address.
   final String email;
 

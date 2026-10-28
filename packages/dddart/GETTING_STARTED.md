@@ -26,7 +26,7 @@ Create an event that represents something that happened in your domain:
 ```dart
 import 'package:dddart/dddart.dart';
 
-class UserRegistered extends DomainEvent {
+class UserRegistered extends DomainEvent<UuidValue> {
   final String email;
   final String fullName;
   
@@ -41,7 +41,7 @@ class UserRegistered extends DomainEvent {
 ### Step 2: Create an Aggregate that Raises Events
 
 ```dart
-class User extends AggregateRoot {
+class User extends UuidAggregateRoot {
   final String email;
   final String fullName;
   
