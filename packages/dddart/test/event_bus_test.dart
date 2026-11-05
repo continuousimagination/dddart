@@ -32,6 +32,40 @@ void main() {
       await eventBus.close();
     });
 
+    test('remote delivery reaches handlers without re-originating the event',
+        () async {
+      final all = <TestEvent>[];
+      final originated = <TestEvent>[];
+      eventBus.on<TestEvent>().listen(all.add);
+      eventBus.onPublished<TestEvent>().listen(originated.add);
+      final event = TestEvent(
+        aggregateId: UuidValue.generate(),
+        message: 'same occurrence, separate deliveries',
+      );
+      eventBus.deliver(event);
+      eventBus.publish(event);
+      eventBus.deliver(event);
+      await Future<void>.delayed(Duration.zero);
+      expect(all, [event, event, event]);
+      expect(originated, [event]);
+    });
+
+    test('accepts an application logger', () async {
+      final logger = Logger('application.events');
+      final bus = EventBus(logger: logger);
+      expect(bus.logger, same(logger));
+      await bus.close();
+      expect(
+        () => bus.deliver(
+          TestEvent(
+            aggregateId: UuidValue.generate(),
+            message: 'closed',
+          ),
+        ),
+        throwsStateError,
+      );
+    });
+
     test('publishes events to subscribers', () async {
       final receivedEvents = <TestEvent>[];
 

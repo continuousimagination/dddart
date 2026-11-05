@@ -279,7 +279,13 @@ class DynamoRepositoryGenerator
   String _generateSaveMethod(String className, String identityType) {
     return '''
   @override
-  Future<void> save($className aggregate) async {
+  Future<void> save($className aggregate) => saveWithEvents(
+    aggregate: aggregate,
+    persist: () => _saveAggregate(aggregate),
+    publisher: eventPublisher,
+  );
+
+  Future<void> _saveAggregate($className aggregate) async {
     final key = encodeDynamoIdentityKey<$identityType>(_identityCodecs, aggregate.id);
     try {
       final json = _serializer.toJson(aggregate);
@@ -537,13 +543,15 @@ Resources:
     buffer.writeln('  ///');
     buffer.writeln('  /// [connection] - A DynamoDB connection instance.');
     buffer.writeln(
-      '  ${className}DynamoRepository(this._connection, {IdentityCodecRegistry? identityCodecs}) : _identityCodecs = identityCodecs ?? IdentityCodecRegistry();',
+      '  ${className}DynamoRepository(this._connection, {IdentityCodecRegistry? identityCodecs, this.eventPublisher}) : _identityCodecs = identityCodecs ?? IdentityCodecRegistry();',
     );
     buffer.writeln();
 
     // Generate fields and getters
     buffer.writeln('  /// The DynamoDB connection instance.');
     buffer.writeln('  final DynamoConnection _connection;');
+    buffer.writeln('  /// Optional shared publisher for raised events.');
+    buffer.writeln('  final EventPublisher? eventPublisher;');
     buffer.writeln();
     buffer.writeln('  /// The table name for $className aggregates.');
     buffer.writeln("  String get tableName => '$tableName';");
@@ -615,13 +623,15 @@ Resources:
     buffer.writeln('  ///');
     buffer.writeln('  /// [connection] - A DynamoDB connection instance.');
     buffer.writeln(
-      '  ${className}DynamoRepositoryBase(this._connection, {IdentityCodecRegistry? identityCodecs}) : _identityCodecs = identityCodecs ?? IdentityCodecRegistry();',
+      '  ${className}DynamoRepositoryBase(this._connection, {IdentityCodecRegistry? identityCodecs, this.eventPublisher}) : _identityCodecs = identityCodecs ?? IdentityCodecRegistry();',
     );
     buffer.writeln();
 
     // Generate fields and getters
     buffer.writeln('  /// The DynamoDB connection instance.');
     buffer.writeln('  final DynamoConnection _connection;');
+    buffer.writeln('  /// Optional shared publisher for raised events.');
+    buffer.writeln('  final EventPublisher? eventPublisher;');
     buffer.writeln();
     buffer.writeln('  /// The table name for $className aggregates.');
     buffer.writeln("  String get tableName => '$tableName';");

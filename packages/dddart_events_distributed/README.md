@@ -5,6 +5,19 @@ package supports typed aggregate references, explicit event/identity codecs,
 authentication and authorization filtering, retention, inclusive catch-up and
 optional forwarding of locally published events.
 
+The new aggregate-scoped history and publication foundations are documented in
+the [distributed events guide](../../docs/DISTRIBUTED_EVENTS.md). They include
+`AggregateReference`, `EventEnvelope`, `AggregateEventRepository`, its InMemory
+implementation and `RetryingEventPublisher`. AppSync, DynamoDB event history and
+the aggregate-watch protocol are still being implemented; the current HTTP
+poller retains its timestamp-based API.
+
+For repository-driven publication, configure `eventPublisher: client.publisher`
+and await `repository.save(aggregate)`. The publisher sends a separate event POST,
+retries bounded transient failures and leaves rejected events pending. Received
+events are delivered locally without being auto-forwarded back to the server.
+Do not also auto-forward the same pending events through the local bus.
+
 ## Identity and wire contracts
 
 `DomainEvent<I>` references an aggregate with its concrete identity type I. The

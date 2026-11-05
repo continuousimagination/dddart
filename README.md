@@ -4,6 +4,10 @@ A collection of packages for Domain-Driven Design in Dart with automatic JSON se
 
 ## Packages
 
+The [aggregate events and AppSync guide](docs/DISTRIBUTED_EVENTS.md) describes
+the approved distributed-events design, the available foundation APIs, and the
+remaining transport and deployment work.
+
 ### [dddart](packages/dddart/)
 Core DDDart framework providing base classes for entities, aggregate roots, and value objects, plus serialization interfaces.
 

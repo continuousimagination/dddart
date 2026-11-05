@@ -514,7 +514,9 @@ class $className extends UuidAggregateRoot {
           );
           expect(
             output,
-            contains('Future<void> save($className aggregate) async {'),
+            contains(
+              'Future<void> save($className aggregate) => saveWithEvents(',
+            ),
             reason: 'save should have concrete implementation',
           );
           expect(

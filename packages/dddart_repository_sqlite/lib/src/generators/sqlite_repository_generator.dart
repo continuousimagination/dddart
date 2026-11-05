@@ -642,13 +642,15 @@ class SqliteRepositoryGenerator
     buffer.writeln('  ///');
     buffer.writeln('  /// [connection] - An open SQLite database connection.');
     buffer.writeln(
-      '  ${className}SqliteRepository(this._connection, {IdentityCodecRegistry? identityCodecs}) : _identityCodecs = identityCodecs ?? IdentityCodecRegistry();',
+      '  ${className}SqliteRepository(this._connection, {IdentityCodecRegistry? identityCodecs, this.eventPublisher}) : _identityCodecs = identityCodecs ?? IdentityCodecRegistry();',
     );
     buffer.writeln();
 
     // Fields and getters
     buffer.writeln('  /// The SQLite database connection.');
     buffer.writeln('  final SqliteConnection _connection;');
+    buffer.writeln('  /// Optional shared publisher for raised events.');
+    buffer.writeln('  final EventPublisher? eventPublisher;');
     buffer.writeln();
     buffer.writeln('  /// The SQL dialect for SQLite.');
     buffer.writeln('  final _dialect = SqliteDialect();');
@@ -906,13 +908,15 @@ class SqliteRepositoryGenerator
     buffer.writeln('  ///');
     buffer.writeln('  /// [connection] - An open SQLite database connection.');
     buffer.writeln(
-      '  ${className}SqliteRepositoryBase(this._connection, {IdentityCodecRegistry? identityCodecs}) : _identityCodecs = identityCodecs ?? IdentityCodecRegistry();',
+      '  ${className}SqliteRepositoryBase(this._connection, {IdentityCodecRegistry? identityCodecs, this.eventPublisher}) : _identityCodecs = identityCodecs ?? IdentityCodecRegistry();',
     );
     buffer.writeln();
 
     // Protected fields for subclass access
     buffer.writeln('  /// The SQLite database connection (library-private).');
     buffer.writeln('  final SqliteConnection _connection;');
+    buffer.writeln('  /// Optional shared publisher for raised events.');
+    buffer.writeln('  final EventPublisher? eventPublisher;');
     buffer.writeln();
     buffer.writeln('  /// The SQL dialect for SQLite (library-private).');
     buffer.writeln('  final _dialect = SqliteDialect();');
@@ -1057,7 +1061,16 @@ class SqliteRepositoryGenerator
   ) {
     final buffer = StringBuffer();
     buffer.writeln('  @override');
-    buffer.writeln('  Future<void> save($className aggregate) async {');
+    buffer.writeln(
+      '  Future<void> save($className aggregate) => saveWithEvents(',
+    );
+    buffer.writeln('    aggregate: aggregate,');
+    buffer.writeln('    persist: () => _saveAggregate(aggregate),');
+    buffer.writeln('    publisher: eventPublisher,');
+    buffer.writeln('  );');
+    buffer.writeln();
+    buffer
+        .writeln('  Future<void> _saveAggregate($className aggregate) async {');
     buffer.writeln('    _encodeIdentity(aggregate.id);');
     buffer.writeln('    await _connection.transaction(() async {');
     buffer.writeln('      try {');

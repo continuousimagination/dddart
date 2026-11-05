@@ -1,7 +1,9 @@
 import 'package:dddart/src/aggregate_root.dart';
+import 'package:dddart/src/event_publisher.dart';
 import 'package:dddart/src/identity.dart';
 import 'package:dddart/src/repository.dart';
 import 'package:dddart/src/repository_exception.dart';
+import 'package:dddart/src/save_with_events.dart';
 import 'package:logging/logging.dart';
 
 /// In-memory implementation of [Repository] for testing purposes.
@@ -101,6 +103,12 @@ import 'package:logging/logging.dart';
 /// * [RepositoryException] - Exception thrown by repository operations
 class InMemoryRepository<T extends AggregateRoot<I>, I extends Identity>
     implements Repository<T, I> {
+  /// Creates instance-local storage with optional originated-event publication.
+  InMemoryRepository({this.eventPublisher});
+
+  /// Shared publisher used after successful saves; null preserves manual events.
+  final EventPublisher? eventPublisher;
+
   /// Logger instance for repository operations.
   final Logger _logger = Logger('dddart.repository');
 
@@ -126,7 +134,13 @@ class InMemoryRepository<T extends AggregateRoot<I>, I extends Identity>
   }
 
   @override
-  Future<void> save(T aggregate) async {
+  Future<void> save(T aggregate) => saveWithEvents(
+        aggregate: aggregate,
+        persist: () => _saveAggregate(aggregate),
+        publisher: eventPublisher,
+      );
+
+  Future<void> _saveAggregate(T aggregate) async {
     try {
       _logger.fine('Saving $T with ID: ${aggregate.id}');
       _storage[aggregate.id] = aggregate;

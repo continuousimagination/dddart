@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Generated repositories accept an optional `eventPublisher` and publish safely
+  captured pending events after the transaction commits through core shared code.
+
 - Resolve inherited generic entity collection types consistently during parent
   foreign-key discovery. Concrete List<C> bindings retain typed child IDs,
   parent references, contents and order through CRUD without dropped rows.

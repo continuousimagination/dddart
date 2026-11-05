@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Aggregate-scoped history contracts, explicit logical references and versioned
+  event envelopes, with committed ingestion positions and typed expiration.
+- InMemory aggregate history with configurable seven-day retention, paginated
+  recovery, fresh-head capture and idempotent retained UUID acceptance.
+- Shared bounded publication retry policy with named logging and an awaitable
+  legacy HTTP client publisher for event-enabled repository saves.
+- Remote polling delivery no longer echoes through auto-forwarding bridges.
+- Document the approved AppSync design and distinguish available foundations
+  from the DynamoDB, watch, authorization and deployment work still pending.
+
 - **BREAKING:** `StoredEvent<I>` retains concrete aggregate references separately
   from its UUID record ID. Mixed streams use explicit tagged identity JSON;
   old bare UUID references require migration.
