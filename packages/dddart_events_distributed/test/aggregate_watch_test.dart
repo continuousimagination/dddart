@@ -57,17 +57,20 @@ void main() {
   test('live disconnect signals recovery before a failed rejoin', () async {
     final reference = fixture.reference('game');
     fixture.allow(reference, ['alice']);
-    final transport = _LiveControl(HttpAggregateEventTransport(
-      baseUrl: Uri.parse('http://local/events'),
-      wire: fixture.wire,
-      tokenProvider: () async => 'alice',
-      client: MockClient(fixture.route),
-    ));
+    final transport = _LiveControl(
+      HttpAggregateEventTransport(
+        baseUrl: Uri.parse('http://local/events'),
+        wire: fixture.wire,
+        tokenProvider: () async => 'alice',
+        client: MockClient(fixture.route),
+      ),
+    );
     final client = AggregateEventClient(
-        transport: transport,
-        registry: fixture.registry,
-        aggregateKind: (_) => 'game',
-        interval: const Duration(hours: 1));
+      transport: transport,
+      registry: fixture.registry,
+      aggregateKind: (_) => 'game',
+      interval: const Duration(hours: 1),
+    );
     fixture.clients.add(client);
     final watch = client.watch(reference);
     await watch.ready;
@@ -480,7 +483,9 @@ class _Fixture {
     requests.add(request);
     if (request.url.pathSegments.last == failingAction) {
       return http.Response(
-          '{"error":"Synthetic unavailable control transport"}', 503);
+        '{"error":"Synthetic unavailable control transport"}',
+        503,
+      );
     }
     final incoming = shelf.Request(
       request.method,
