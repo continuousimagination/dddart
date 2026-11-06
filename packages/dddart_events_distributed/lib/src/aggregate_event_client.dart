@@ -179,6 +179,13 @@ class AggregateEventClient {
           await _synchronize(_generation);
         } while (_again && !_closed && !_paused);
       } catch (error, stack) {
+        for (final state in _watches.values.toList()) {
+          if (_current(state, _generation) &&
+              state.status != EventWatchStatus.revoked &&
+              state.status != EventWatchStatus.resyncRequired) {
+            _status(state, EventWatchStatus.connecting);
+          }
+        }
         logger.warning(
           'Watch synchronization failed; retrying on next interval',
           error,
@@ -246,6 +253,7 @@ class AggregateEventClient {
           onDisconnect: () {
             if (_current(state, generation)) {
               state.subscription = null;
+              _status(state, EventWatchStatus.connecting);
               unawaited(synchronize());
             }
           },
