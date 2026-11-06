@@ -788,14 +788,23 @@ $fromJsonWithConfigBody
   }
 
   String _encodeValue(DartType type, String value, {bool nonNull = false}) {
+    final name = type.getDisplayString(withNullability: false);
+    // JSON primitives already preserve null. A conditional plus assertion here
+    // produces prefer_null_aware_operators diagnostics in generated consumers.
+    if (_isPrimitiveType(name) || name == 'Object' || name == 'Null') {
+      return value;
+    }
     if (!nonNull && type.nullabilitySuffix == NullabilitySuffix.question) {
       // Collection callback parameters promote after the null check; public
       // instance fields and computed expressions still require an assertion.
       final present =
           {'item', 'key', 'value'}.contains(value) ? value : '$value!';
-      return '$value != null ? ${_encodeValue(type, present, nonNull: true)} : null';
+      final encoded = _encodeValue(type, present, nonNull: true);
+      if (encoded.startsWith('$present.')) {
+        return '$value?.${encoded.substring(present.length + 1)}';
+      }
+      return '$value != null ? $encoded : null';
     }
-    final name = type.getDisplayString(withNullability: false);
     if (type is InterfaceType && _uuidType.isExactly(type.element)) {
       return 'const UuidIdentityCodec().toJson($value)';
     }
@@ -837,8 +846,6 @@ $fromJsonWithConfigBody
       }
       return '${name}JsonSerializer.withIdentityCodecs(_identityCodecs).toJson($value, effectiveConfig)';
     }
-    if (_isPrimitiveType(name) || name == 'Object' || name == 'Null')
-      return value;
     throw InvalidGenerationSourceError('Unsupported JSON field type: $name');
   }
 
