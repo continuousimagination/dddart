@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dddart/dddart.dart';
 import 'package:dddart_events_distributed/src/aggregate_reference.dart';
 import 'package:dddart_events_distributed/src/stored_event.dart';
@@ -48,10 +50,33 @@ class EventEnvelope extends UuidAggregateRoot {
   /// Existing registered event body and occurrence/authorization metadata.
   final StoredEvent<Identity> event;
 
+  /// Canonical occurrence content for idempotent acceptance across transports.
+  /// JSON object order is irrelevant; application string values are preserved.
+  String canonicalJson(IdentityCodecRegistry identities) {
+    final json = toJson(identities);
+    final stored = json['event'] as Map<String, dynamic>;
+    try {
+      stored['eventJson'] =
+          jsonEncode(_canonical(jsonDecode(stored['eventJson'] as String)));
+    } on FormatException {
+      /* Preserve malformed bodies for client log/skip recovery. */
+    }
+    return jsonEncode(_canonical(json));
+  }
+
   /// Encodes only the explicit event-publication contract.
   Map<String, dynamic> toJson(IdentityCodecRegistry identityCodecs) => {
         'version': 1,
         'aggregate': aggregate.toJson(identityCodecs),
         'event': event.toJson(),
       };
+}
+
+Object? _canonical(Object? value) {
+  if (value is Map) {
+    final keys = value.keys.cast<String>().toList()..sort();
+    return {for (final key in keys) key: _canonical(value[key])};
+  }
+  if (value is List) return value.map(_canonical).toList();
+  return value;
 }

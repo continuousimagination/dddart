@@ -1,5 +1,13 @@
 # dddart_rest
 
+HTTP authentication also exposes request-independent
+`CredentialVerifier<TClaims>.verifyCredential`. Reuse `JwtAuthHandler` or
+`OAuthJwtAuthHandler` directly, or instantiate `JwtCredentialVerifier` without
+issuance/refresh storage for a native Lambda authorizer. Narrow `credentials.dart`
+and `http.dart` exports support standalone runtimes. See the
+[aggregate events guide](../../docs/DISTRIBUTED_EVENTS.md) for shared HTTP/AppSync
+authentication, policy injection and serverless handler registration.
+
 ## Typed identities (pre-release breaking change)
 
 Use `UuidAggregateRoot` for existing UUID models and `Repository<User, UuidValue>`

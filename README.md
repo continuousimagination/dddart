@@ -5,8 +5,8 @@ A collection of packages for Domain-Driven Design in Dart with automatic JSON se
 ## Packages
 
 The [aggregate events and AppSync guide](docs/DISTRIBUTED_EVENTS.md) describes
-the approved distributed-events design, the available foundation APIs, and the
-remaining transport and deployment work.
+aggregate watches, HTTP polling, optional AppSync Events, DynamoDB history,
+authorization, deployment and migration.
 
 ### [dddart](packages/dddart/)
 Core DDDart framework providing base classes for entities, aggregate roots, and value objects, plus serialization interfaces.
@@ -16,6 +16,18 @@ Serialization framework providing the `@Serializable` annotation and configurati
 
 ### [dddart_json](packages/dddart_json/)
 JSON serialization code generation for DDDart objects. Generates type-safe serializer service classes.
+
+### [dddart_events_distributed](packages/dddart_events_distributed/)
+Transport-independent aggregate watches, retained history contracts, HTTP polling,
+shared authorization and bounded event publication.
+
+### [dddart_events_dynamodb](packages/dddart_events_dynamodb/)
+Server-side DynamoDB event history and shared random channel mappings for Lambda
+and other concurrent servers. InMemory remains available for local tests.
+
+### [dddart_events_appsync](packages/dddart_events_appsync/)
+Optional AWS AppSync Events live transport, native Lambda handlers and
+CloudFormation deployment. Uses existing JWT authentication or Cognito/OIDC.
 
 ## Quick Start
 

@@ -106,14 +106,18 @@ class RetryingEventPublisher implements EventPublisher {
         );
         return false;
       }
+      final finalTimeout = remaining <= policy.attemptTimeout;
+      final timeout = finalTimeout ? remaining : policy.attemptTimeout;
       try {
-        final timeout = remaining < policy.attemptTimeout
-            ? remaining
-            : policy.attemptTimeout;
         await _send(event).timeout(timeout);
         return true;
       } catch (error, stackTrace) {
-        if (!_retryable(error) || attempt == policy.maxAttempts) {
+        // A timeout clipped to the total budget is terminal. Timer granularity
+        // may leave a few microseconds on Stopwatch; retrying that sliver can
+        // otherwise create a burst of attempts whose timers round down to zero.
+        if (!_retryable(error) ||
+            attempt == policy.maxAttempts ||
+            (error is TimeoutException && finalTimeout)) {
           _failed(event, attempt, error, stackTrace);
           return false;
         }

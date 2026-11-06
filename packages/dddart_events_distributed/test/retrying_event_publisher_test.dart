@@ -114,7 +114,7 @@ void main() {
     );
 
     expect(await publisher.publish(_Event(UuidValue.generate())), isFalse);
-    expect(attempts, inInclusiveRange(1, 10));
+    expect(attempts, inInclusiveRange(1, 3));
     expect(
       records.where((record) => record.level == Level.SEVERE),
       hasLength(1),
