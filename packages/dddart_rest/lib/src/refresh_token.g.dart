@@ -42,8 +42,7 @@ class RefreshTokenJsonSerializer implements JsonSerializer<RefreshToken> {
           instance.updatedAt.toIso8601String(),
       if (instance.deviceInfo != null || effectiveConfig.includeNullFields)
         SerializationUtils.applyFieldRename(
-                'deviceInfo', effectiveConfig.fieldRename):
-            instance.deviceInfo != null ? instance.deviceInfo! : null,
+            'deviceInfo', effectiveConfig.fieldRename): instance.deviceInfo,
       SerializationUtils.applyFieldRename(
               'expiresAt', effectiveConfig.fieldRename):
           instance.expiresAt.toIso8601String(),
