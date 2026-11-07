@@ -19,6 +19,156 @@ void main() {
     }
   });
 
+  for (final action in ['resolve', 'read']) {
+    test(
+        'transient $action failure signals recovery and retains the checkpoint',
+        () async {
+      final reference = fixture.reference('game');
+      fixture.allow(reference, ['alice']);
+      final client = fixture.client('alice');
+      final watch = client.watch(reference);
+      final denied = client.watch(fixture.reference('game'));
+      final states = <EventWatchStatus>[];
+      watch.signals.listen(states.add);
+      await client.synchronize();
+      final checkpoint = watch.checkpoint;
+      expect(watch.status, EventWatchStatus.active);
+      expect(denied.status, EventWatchStatus.revoked);
+      final received = <DomainEvent<Identity>>[];
+      watch.events.listen(received.add);
+      await fixture.accept(reference, label: 'missed');
+      fixture.failingAction = action;
+      await client.synchronize();
+      await Future<void>.delayed(Duration.zero);
+      expect(watch.status, EventWatchStatus.connecting);
+      expect(states, contains(EventWatchStatus.connecting));
+      expect(watch.checkpoint, checkpoint);
+      expect(denied.status, EventWatchStatus.revoked);
+      fixture.failingAction = null;
+      await client.synchronize();
+      await Future<void>.delayed(Duration.zero);
+      expect(watch.status, EventWatchStatus.active);
+      expect(received, hasLength(1));
+      expect((received.single as _Changed).label, 'missed');
+      expect(watch.checkpoint, isNot(checkpoint));
+    });
+  }
+
+  test('live disconnect signals recovery before a failed rejoin', () async {
+    final reference = fixture.reference('game');
+    fixture.allow(reference, ['alice']);
+    final transport = _LiveControl(
+      HttpAggregateEventTransport(
+        baseUrl: Uri.parse('http://local/events'),
+        wire: fixture.wire,
+        tokenProvider: () async => 'alice',
+        client: MockClient(fixture.route),
+      ),
+    );
+    final client = AggregateEventClient(
+      transport: transport,
+      registry: fixture.registry,
+      aggregateKind: (_) => 'game',
+      interval: const Duration(hours: 1),
+    );
+    fixture.clients.add(client);
+    final watch = client.watch(reference);
+    await watch.ready;
+    final checkpoint = watch.checkpoint;
+    final states = <EventWatchStatus>[];
+    watch.signals.listen(states.add);
+    fixture.failingAction = 'resolve';
+    transport.disconnected();
+    await client.synchronize();
+    await Future<void>.delayed(Duration.zero);
+    expect(watch.status, EventWatchStatus.connecting);
+    expect(states.first, EventWatchStatus.connecting);
+    expect(watch.checkpoint, checkpoint);
+    fixture.failingAction = null;
+    await client.synchronize();
+    expect(watch.status, EventWatchStatus.active);
+  });
+
+  for (final terminal in [
+    EventWatchStatus.revoked,
+    EventWatchStatus.resyncRequired,
+  ]) {
+    test('delayed disconnect cannot resurrect a $terminal watch', () async {
+      final reference = fixture.reference('game');
+      fixture.allow(reference, ['alice']);
+      final transport = _LiveControl(
+        HttpAggregateEventTransport(
+          baseUrl: Uri.parse('http://local/events'),
+          wire: fixture.wire,
+          tokenProvider: () async => 'alice',
+          client: MockClient(fixture.route),
+        ),
+      );
+      final client = AggregateEventClient(
+        transport: transport,
+        registry: fixture.registry,
+        aggregateKind: (_) => 'game',
+        interval: const Duration(hours: 1),
+      );
+      fixture.clients.add(client);
+      final watch = client.watch(reference);
+      await watch.ready;
+      final lateDisconnect = transport.disconnected;
+      final signals = <EventWatchStatus>[];
+      watch.signals.listen(signals.add);
+      if (terminal == EventWatchStatus.revoked) {
+        fixture.allow(reference, []);
+      } else {
+        fixture.now = fixture.now.add(const Duration(days: 8));
+      }
+      await client.synchronize();
+      expect(watch.status, terminal);
+      await Future<void>.delayed(Duration.zero);
+      signals.clear();
+      final requests = fixture.requests.length;
+      lateDisconnect();
+      await Future<void>.delayed(Duration.zero);
+      await client.synchronize();
+      expect(watch.status, terminal);
+      expect(signals, isEmpty);
+      expect(fixture.requests.length, requests);
+    });
+  }
+
+  test('a replaced subscription cannot disconnect the new channel', () async {
+    final reference = fixture.reference('game');
+    fixture.allow(reference, ['alice']);
+    final transport = _LiveControl(
+      HttpAggregateEventTransport(
+        baseUrl: Uri.parse('http://local/events'),
+        wire: fixture.wire,
+        tokenProvider: () async => 'alice',
+        client: MockClient(fixture.route),
+      ),
+    );
+    final client = AggregateEventClient(
+      transport: transport,
+      registry: fixture.registry,
+      aggregateKind: (_) => 'game',
+      interval: const Duration(hours: 1),
+    );
+    fixture.clients.add(client);
+    final watch = client.watch(reference);
+    await watch.ready;
+    final staleDisconnect = transport.disconnected;
+    await fixture.channels.rotate(reference, UuidValue.generate());
+    await client.synchronize();
+    final requests = fixture.requests.length;
+    staleDisconnect();
+    await Future<void>.delayed(Duration.zero);
+    expect(watch.status, EventWatchStatus.active);
+    expect(fixture.requests.length, requests);
+    fixture.failingAction = 'resolve';
+    transport.disconnected();
+    await client.synchronize();
+    expect(watch.status, EventWatchStatus.connecting);
+  });
+
   test('two game players, selective documents and one shared daily puzzle',
       () async {
     final game = fixture.reference('game');
@@ -366,6 +516,7 @@ class _Fixture {
   final Map<AggregateReference<Identity>, Set<String>> members = {};
   final clients = <AggregateEventClient>[];
   final requests = <http.Request>[];
+  String? failingAction;
   late final InMemoryAggregateEventRepository history;
   late final InMemoryEventChannelRepository channels;
   late final _Policy policy;
@@ -410,6 +561,12 @@ class _Fixture {
       );
   Future<http.Response> route(http.Request request) async {
     requests.add(request);
+    if (request.url.pathSegments.last == failingAction) {
+      return http.Response(
+        '{"error":"Synthetic unavailable control transport"}',
+        503,
+      );
+    }
     final incoming = shelf.Request(
       request.method,
       request.url,
@@ -447,6 +604,37 @@ class _Fixture {
     clients.add(client);
     return client;
   }
+}
+
+class _LiveControl implements LiveAggregateEventTransport {
+  _LiveControl(this.control);
+  final AggregateEventTransport control;
+  late void Function() disconnected;
+  @override
+  Future<List<EventWatchResult>> resolve(List<EventWatchRequest> watches) =>
+      control.resolve(watches);
+  @override
+  Future<List<EventWatchResult>> read(List<EventWatchRequest> watches) =>
+      control.read(watches);
+  @override
+  Future<void> publish(EventEnvelope envelope) => control.publish(envelope);
+  @override
+  Future<void> close() => control.close();
+  @override
+  Future<EventLiveSubscription> subscribe(
+    EventChannel channel, {
+    required void Function(RecordedEvent) onEvent,
+    required void Function() onRefresh,
+    required void Function() onDisconnect,
+  }) async {
+    disconnected = onDisconnect;
+    return _LiveLease();
+  }
+}
+
+class _LiveLease implements EventLiveSubscription {
+  @override
+  Future<void> cancel() async {}
 }
 
 class _Policy implements AggregateEventPolicy<String> {

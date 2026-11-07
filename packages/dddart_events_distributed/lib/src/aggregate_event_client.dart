@@ -179,6 +179,13 @@ class AggregateEventClient {
           await _synchronize(_generation);
         } while (_again && !_closed && !_paused);
       } catch (error, stack) {
+        for (final state in _watches.values.toList()) {
+          if (_current(state, _generation) &&
+              state.status != EventWatchStatus.revoked &&
+              state.status != EventWatchStatus.resyncRequired) {
+            _status(state, EventWatchStatus.connecting);
+          }
+        }
         logger.warning(
           'Watch synchronization failed; retrying on next interval',
           error,
@@ -230,27 +237,36 @@ class AggregateEventClient {
       state.checkpoint ??= result.checkpoint;
       if (transport is LiveAggregateEventTransport &&
           (state.subscription == null || state.channel?.id != channel.id)) {
-        await state.subscription?.cancel();
+        final liveGeneration = ++state.liveGeneration;
+        final previous = state.subscription;
         state.subscription = null;
-        if (!_current(state, generation)) continue;
+        await previous?.cancel();
+        bool liveCurrent() =>
+            _current(state, generation) &&
+            state.liveGeneration == liveGeneration &&
+            state.status != EventWatchStatus.revoked &&
+            state.status != EventWatchStatus.resyncRequired;
+        if (!liveCurrent()) continue;
         state.channel = channel;
         final subscription =
             await (transport as LiveAggregateEventTransport).subscribe(
           channel,
           onEvent: (record) {
-            if (_current(state, generation)) _deliver(state, record);
+            if (liveCurrent()) _deliver(state, record);
           },
           onRefresh: () {
-            if (_current(state, generation)) unawaited(synchronize());
+            if (liveCurrent()) unawaited(synchronize());
           },
           onDisconnect: () {
-            if (_current(state, generation)) {
+            if (liveCurrent()) {
+              state.liveGeneration++;
               state.subscription = null;
+              _status(state, EventWatchStatus.connecting);
               unawaited(synchronize());
             }
           },
         );
-        if (!_current(state, generation)) {
+        if (!liveCurrent()) {
           await subscription.cancel();
           continue;
         }
@@ -343,9 +359,11 @@ class AggregateEventClient {
   }
 
   Future<void> _stop(_WatchState state, EventWatchStatus status) async {
-    await state.subscription?.cancel();
+    state.liveGeneration++;
+    final subscription = state.subscription;
     state.subscription = null;
     _status(state, status);
+    await subscription?.cancel();
   }
 
   Future<void> _release(_WatchState state) async {
@@ -419,6 +437,7 @@ class _WatchState {
   String? checkpoint;
   EventChannel? channel;
   EventLiveSubscription? subscription;
+  int liveGeneration = 0;
   EventWatchStatus status = EventWatchStatus.connecting;
   final ready = Completer<void>();
   final Set<AggregateEventWatch> leases = {};
