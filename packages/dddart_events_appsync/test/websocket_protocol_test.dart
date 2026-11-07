@@ -45,6 +45,27 @@ void main() {
     await server.close();
   });
 
+  for (final singleEvent in [true, false]) {
+    test(
+        'native data restores single-string and list frames: single=$singleEvent',
+        () async {
+      server.singleEventFrames = singleEvent;
+      final game = fixture.reference();
+      final watch = client.watch(game);
+      await watch.ready;
+      final received = <DomainEvent<Identity>>[];
+      watch.events.listen(received.add);
+      final record = await fixture.history.append(fixture.envelope(game));
+      server.broadcast(
+        await fixture.channels.resolve(game),
+        {'kind': 'record', 'record': fixture.wire.record(record)},
+      );
+      await _until(() => received.isNotEmpty);
+      expect(received.single.eventId, record.envelope.id);
+      expect(received.single, isA<Changed>());
+    });
+  }
+
   test('native handshake multiplexes watches and deduplicates unordered replay',
       () async {
     final game = fixture.reference();
@@ -300,6 +321,7 @@ class _Server {
   int failures = 0;
   String failure = 'FORBIDDEN';
   bool holdSubscriptions = false;
+  bool singleEventFrames = false;
   static Future<_Server> start(EventFixture fixture) async {
     final server = _Server(
       fixture,
@@ -457,7 +479,8 @@ class _Server {
           peer.send({
             'type': 'data',
             'id': subscription.key,
-            'event': [jsonEncode(payload)],
+            'event':
+                singleEventFrames ? jsonEncode(payload) : [jsonEncode(payload)],
           });
         }
       }

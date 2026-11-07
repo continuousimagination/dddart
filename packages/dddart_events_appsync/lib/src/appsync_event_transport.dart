@@ -244,7 +244,17 @@ class AppSyncEventTransport
       if (type == 'data') {
         final subscription = _subscriptions[id];
         if (subscription == null) return;
-        final events = frame['event'] as List;
+        // Native AWS delivery can carry one encoded event per frame. Keep the
+        // documented list shape compatible without weakening batch limits.
+        final rawEvents = frame['event'];
+        final List<dynamic> events;
+        if (rawEvents is String) {
+          events = [rawEvents];
+        } else if (rawEvents is List) {
+          events = rawEvents;
+        } else {
+          throw const FormatException('Invalid AppSync data payload');
+        }
         if (events.length > 5) {
           throw const FormatException('Oversized AppSync batch');
         }
