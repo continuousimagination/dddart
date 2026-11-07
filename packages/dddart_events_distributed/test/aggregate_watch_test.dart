@@ -89,6 +89,86 @@ void main() {
     expect(watch.status, EventWatchStatus.active);
   });
 
+  for (final terminal in [
+    EventWatchStatus.revoked,
+    EventWatchStatus.resyncRequired,
+  ]) {
+    test('delayed disconnect cannot resurrect a $terminal watch', () async {
+      final reference = fixture.reference('game');
+      fixture.allow(reference, ['alice']);
+      final transport = _LiveControl(
+        HttpAggregateEventTransport(
+          baseUrl: Uri.parse('http://local/events'),
+          wire: fixture.wire,
+          tokenProvider: () async => 'alice',
+          client: MockClient(fixture.route),
+        ),
+      );
+      final client = AggregateEventClient(
+        transport: transport,
+        registry: fixture.registry,
+        aggregateKind: (_) => 'game',
+        interval: const Duration(hours: 1),
+      );
+      fixture.clients.add(client);
+      final watch = client.watch(reference);
+      await watch.ready;
+      final lateDisconnect = transport.disconnected;
+      final signals = <EventWatchStatus>[];
+      watch.signals.listen(signals.add);
+      if (terminal == EventWatchStatus.revoked) {
+        fixture.allow(reference, []);
+      } else {
+        fixture.now = fixture.now.add(const Duration(days: 8));
+      }
+      await client.synchronize();
+      expect(watch.status, terminal);
+      await Future<void>.delayed(Duration.zero);
+      signals.clear();
+      final requests = fixture.requests.length;
+      lateDisconnect();
+      await Future<void>.delayed(Duration.zero);
+      await client.synchronize();
+      expect(watch.status, terminal);
+      expect(signals, isEmpty);
+      expect(fixture.requests.length, requests);
+    });
+  }
+
+  test('a replaced subscription cannot disconnect the new channel', () async {
+    final reference = fixture.reference('game');
+    fixture.allow(reference, ['alice']);
+    final transport = _LiveControl(
+      HttpAggregateEventTransport(
+        baseUrl: Uri.parse('http://local/events'),
+        wire: fixture.wire,
+        tokenProvider: () async => 'alice',
+        client: MockClient(fixture.route),
+      ),
+    );
+    final client = AggregateEventClient(
+      transport: transport,
+      registry: fixture.registry,
+      aggregateKind: (_) => 'game',
+      interval: const Duration(hours: 1),
+    );
+    fixture.clients.add(client);
+    final watch = client.watch(reference);
+    await watch.ready;
+    final staleDisconnect = transport.disconnected;
+    await fixture.channels.rotate(reference, UuidValue.generate());
+    await client.synchronize();
+    final requests = fixture.requests.length;
+    staleDisconnect();
+    await Future<void>.delayed(Duration.zero);
+    expect(watch.status, EventWatchStatus.active);
+    expect(fixture.requests.length, requests);
+    fixture.failingAction = 'resolve';
+    transport.disconnected();
+    await client.synchronize();
+    expect(watch.status, EventWatchStatus.connecting);
+  });
+
   test('two game players, selective documents and one shared daily puzzle',
       () async {
     final game = fixture.reference('game');
