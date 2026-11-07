@@ -53,8 +53,7 @@ class DeviceCodeJsonSerializer implements JsonSerializer<DeviceCode> {
           'userCode', effectiveConfig.fieldRename): instance.userCode,
       if (instance.userId != null || effectiveConfig.includeNullFields)
         SerializationUtils.applyFieldRename(
-                'userId', effectiveConfig.fieldRename):
-            instance.userId != null ? instance.userId! : null,
+            'userId', effectiveConfig.fieldRename): instance.userId,
     };
     return json;
   }

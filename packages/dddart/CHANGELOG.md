@@ -21,6 +21,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   unmodifiable conveniences for tests and prototypes.
 
 ### Added
+- Captured pending-event batches with selective acknowledgment that preserves
+  events raised during asynchronous saves.
+- Optional repository event publication through `EventPublisher`,
+  `saveWithEvents`, `EventPublishingRepository` and the InMemory publisher hook.
+- `EventBus.deliver` and `onPublished` distinguish remote receipt from local
+  origination; the bus exposes an injectable named logger.
 - Initial project structure
 - Entity base class with automatic ID and timestamp generation
 - AggregateRoot base class extending Entity

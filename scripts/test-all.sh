@@ -7,6 +7,17 @@
 
 set -euo pipefail
 
+DDDART_VALIDATION_MODE=local
+case "${1:-}" in
+  "") ;;
+  --with-services) DDDART_VALIDATION_MODE=ci ;;
+  *) echo "Usage: ./scripts/test-all.sh [--with-services]" >&2; exit 2 ;;
+esac
+if [ "$#" -gt 1 ]; then
+  echo "Usage: ./scripts/test-all.sh [--with-services]" >&2
+  exit 2
+fi
+
 REPOSITORY_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Git hooks export repository-local variables such as GIT_DIR. Clear them
@@ -41,4 +52,4 @@ cd "$REPOSITORY_ROOT"
 dart analyze --fatal-infos tool/validation
 dart format --output=none --set-exit-if-changed tool/validation
 dart tool/validation/self_test.dart
-dart tool/validation/validate.dart all --mode=local
+dart tool/validation/validate.dart all --mode="$DDDART_VALIDATION_MODE"

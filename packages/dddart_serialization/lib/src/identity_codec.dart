@@ -159,6 +159,30 @@ class IdentityCodecRegistry {
     return {'type': entry.key, 'value': entry.encode(identity)};
   }
 
+  /// Encodes a heterogeneous identity as a tagged, canonical storage key.
+  ///
+  /// Uses the explicitly registered key codec, retaining case and scope. JSON
+  /// object field order and runtime type names never determine storage identity.
+  Map<String, String> toTaggedKey(Identity identity) {
+    final entry = _types[identity.runtimeType];
+    if (entry == null) {
+      throw const SerializationException('No identity key codec registered');
+    }
+    _checkKind(entry, identity);
+    try {
+      final key = entry.encodeKey(identity);
+      final restored = entry.decodeKey(key);
+      _checkKind(entry, restored);
+      if (restored != identity || entry.encodeKey(restored) != key) {
+        throw const FormatException('Identity key codec is not lossless');
+      }
+      return {'type': entry.key, 'key': key};
+    } catch (error) {
+      if (error is SerializationException) rethrow;
+      throw const SerializationException('Invalid identity key encoding');
+    }
+  }
+
   /// Reconstructs an identity from an explicit registered wire discriminator.
   Identity fromTaggedJson(Object? value) {
     if (value is! Map ||

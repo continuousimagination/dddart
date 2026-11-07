@@ -35,6 +35,11 @@ dependency_overrides:
 ''');
 
       final libDirectory = Directory('${fixture.path}/lib')..createSync();
+      File('${fixture.path}/analysis_options.yaml').writeAsStringSync('''
+linter:
+  rules:
+    prefer_null_aware_operators: true
+''');
       File('${libDirectory.path}/model.dart').writeAsStringSync(
         '''
 import 'dart:convert';
@@ -49,12 +54,22 @@ __GENERATED_PART_DIRECTIVE__
 class ConsumerAggregate extends UuidAggregateRoot {
   ConsumerAggregate({
     required this.name,
+    this.note,
+    this.count,
+    this.enabled,
+    this.completedAt,
+    this.notes,
     super.id,
     super.createdAt,
     super.updatedAt,
   });
 
   final String name;
+  final String? note;
+  final int? count;
+  final bool? enabled;
+  final DateTime? completedAt;
+  final List<String?>? notes;
 }
 
 @Serializable()
@@ -126,6 +141,23 @@ void main() {
   if (restored.name != original.name || restored.id != original.id) {
     throw StateError('Generated serializer failed to round-trip the aggregate.');
   }
+  for (final nullable in [original,
+    ConsumerAggregate(name: 'present', note: 'memo', count: 4, enabled: false,
+      completedAt: DateTime.utc(2026, 11, 6), notes: [null, 'memo'])]) {
+    final json = serializer.toJson(nullable,
+      const SerializationConfig(includeNullFields: true));
+    final decoded = serializer.fromJson(json);
+    if (!json.containsKey('note') || json['note'] != nullable.note ||
+        decoded.note != nullable.note || decoded.count != nullable.count ||
+        decoded.enabled != nullable.enabled ||
+        decoded.completedAt != nullable.completedAt ||
+        decoded.notes?.join('|') != nullable.notes?.join('|')) {
+      throw StateError('Nullable primitive fields failed to round-trip.');
+    }
+  }
+  if (serializer.toJson(original).containsKey('note')) {
+    throw StateError('Nullable fields must remain omitted by default.');
+  }
   final codecs = IdentityCodecRegistry()
     ..register<UuidValue>('application.native.v1', const ApplicationIdentityCodec());
   final nativeSerializer = NativeConsumerAggregateJsonSerializer.withIdentityCodecs(codecs);
@@ -154,7 +186,7 @@ void main() {
       );
 
       expect(File('${libDirectory.path}/model.g.dart').existsSync(), isTrue);
-      await _expectDartSuccess(fixture, ['analyze', '--fatal-warnings']);
+      await _expectDartSuccess(fixture, ['analyze', '--fatal-infos']);
       await _expectDartSuccess(fixture, ['run', 'bin/main.dart']);
     },
     timeout: const Timeout(Duration(minutes: 2)),

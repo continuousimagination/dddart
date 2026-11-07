@@ -149,12 +149,32 @@ void main() {
       throwsA(isA<SerializationException>()),
     );
     expect(
+      () => lossy.toTaggedKey(const _NativeId('IssueA')),
+      throwsA(isA<SerializationException>()),
+    );
+    expect(
       () => lossy.fromKey<_NativeId>('IssueA'),
       throwsA(isA<DeserializationException>()),
     );
     expect(
       () => registry().fromKey<_ScopedId>('[ "repo", 12 ]'),
       throwsA(isA<DeserializationException>()),
+    );
+  });
+
+  test('tagged canonical keys preserve explicit kinds, case and scope', () {
+    final codecs = registry();
+    expect(codecs.toTaggedKey(const _NativeId('IssueA')), {
+      'type': 'native.v1',
+      'key': 'IssueA',
+    });
+    expect(codecs.toTaggedKey(const _ScopedId('Repo', 12)), {
+      'type': 'scoped.v1',
+      'key': '["Repo",12]',
+    });
+    expect(
+      () => IdentityCodecRegistry().toTaggedKey(const _NativeId('IssueA')),
+      throwsA(isA<SerializationException>()),
     );
   });
 

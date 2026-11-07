@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:dddart/dddart.dart';
 import 'package:dddart_events_distributed/src/event_registry.dart';
+import 'package:dddart_events_distributed/src/retrying_event_publisher.dart';
 import 'package:dddart_events_distributed/src/stored_event.dart';
 import 'package:http/http.dart' as http;
 
@@ -60,8 +61,16 @@ class EventBusClient {
     String? authToken,
     this.authTokenProvider,
     this.requestTimeout = const Duration(seconds: 2),
+    EventRetryPolicy? retryPolicy,
+    Logger? logger,
   })  : _httpClient = httpClient ?? http.Client(),
-        _authToken = authToken {
+        _authToken = authToken,
+        logger = logger ?? Logger('dddart.events.client') {
+    publisher = RetryingEventPublisher(
+      send: _sendEvent,
+      policy: retryPolicy,
+      logger: this.logger,
+    );
     _lastTimestamp = initialTimestamp ?? DateTime.now().toUtc();
     _logger.info('EventBusClient starting with lastTimestamp: $_lastTimestamp');
 
@@ -70,8 +79,9 @@ class EventBusClient {
 
     // Optionally forward local events to server
     if (autoForward) {
-      _subscription =
-          localEventBus.on<DomainEvent<Identity>>().listen(_forwardEvent);
+      _subscription = localEventBus
+          .onPublished<DomainEvent<Identity>>()
+          .listen(_forwardEvent);
       _logger.info('Auto-forward enabled');
     }
   }
@@ -120,7 +130,17 @@ class EventBusClient {
   /// Subscription to local EventBus for forwarding.
   StreamSubscription<DomainEvent<Identity>>? _subscription;
 
-  final Logger _logger = Logger('dddart.events.client');
+  /// Logger used for polling, publication retries, and final failures.
+  final Logger logger;
+
+  Logger get _logger => logger;
+
+  /// Awaitable separate event publication for an event-enabled repository.
+  ///
+  /// Configure this as the repository's eventPublisher. Do not also publish the
+  /// same pending event through an auto-forwarding bus. A successful result
+  /// means the server accepted the event, not that consumers processed it.
+  late final EventPublisher publisher;
 
   /// Starts polling for events.
   void _startPolling() {
@@ -219,7 +239,7 @@ class EventBusClient {
     // malformed payloads throw to _poll, stop the batch and remain retryable.
     if (eventRegistry.containsKey(stored.eventType)) {
       final event = stored.restore(eventRegistry);
-      localEventBus.publish(event);
+      localEventBus.deliver(event);
       _logger.fine('Published received event: ${stored.eventType}');
     } else {
       _logger.fine('Unknown event type: ${stored.eventType} (skipping)');
@@ -233,34 +253,42 @@ class EventBusClient {
 
   /// Forwards local event to server.
   Future<void> _forwardEvent(DomainEvent<Identity> event) async {
+    await publisher.publish(event);
+  }
+
+  Future<void> _sendEvent(DomainEvent<Identity> event) async {
+    final storedEventJson = _domainEventToStoredEvent(event);
+    final token =
+        authTokenProvider == null ? _authToken : await authTokenProvider!();
+    if (_closed) {
+      throw const EventPublicationException('Event client is closed');
+    }
+    final abort = Completer<void>();
+    final timeout = Timer(requestTimeout, abort.complete);
     try {
-      // Convert DomainEvent to StoredEvent for transmission
-      final storedEventJson = _domainEventToStoredEvent(event);
-
-      final url = Uri.parse('$serverUrl/events');
-
-      // Build headers with optional authentication
-      final headers = <String, String>{'Content-Type': 'application/json'};
-      final token =
-          authTokenProvider == null ? _authToken : await authTokenProvider!();
-      if (_closed) return;
-      if (token != null) {
-        headers['Authorization'] = 'Bearer $token';
-      }
-
-      final response = await _httpClient.post(
-        url,
-        headers: headers,
-        body: jsonEncode(storedEventJson),
+      final request = http.AbortableRequest(
+        'POST',
+        Uri.parse('$serverUrl/events'),
+        abortTrigger: abort.future,
+      )
+        ..headers.addAll({
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        })
+        ..body = jsonEncode(storedEventJson);
+      final response = await http.Response.fromStream(
+        await _httpClient.send(request),
       );
-
-      if (response.statusCode == 201) {
-        _logger.fine('Forwarded event: ${event.runtimeType}');
-      } else {
-        _logger.warning('Forward failed: ${response.statusCode}');
+      if (response.statusCode != 201) {
+        throw EventPublicationException(
+          'Event ingestion returned HTTP ${response.statusCode}',
+          retryable: response.statusCode == 408 ||
+              response.statusCode == 429 ||
+              response.statusCode >= 500,
+        );
       }
-    } catch (e, stackTrace) {
-      _logger.severe('Failed to forward event', e, stackTrace);
+    } finally {
+      timeout.cancel();
     }
   }
 

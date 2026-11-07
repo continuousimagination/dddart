@@ -3,13 +3,13 @@ import 'dart:math';
 
 import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 import 'package:dddart/dddart.dart';
-import 'package:dddart_rest/src/authentication_handler.dart';
 import 'package:dddart_rest/src/authentication_result.dart';
+import 'package:dddart_rest/src/jwt_credential_verifier.dart';
 import 'package:dddart_rest/src/refresh_token.dart';
 import 'package:dddart_rest/src/refresh_token_lifecycle.dart';
 import 'package:dddart_rest/src/refresh_token_repository.dart';
+import 'package:dddart_rest/src/token_authentication_handler.dart';
 import 'package:dddart_rest/src/tokens.dart';
-import 'package:shelf/shelf.dart';
 
 /// Loads the current application claims for a validated user ID.
 ///
@@ -43,7 +43,7 @@ typedef ApplicationClaimsLoader<TClaims> = Future<TClaims?> Function(
 /// );
 /// ```
 class JwtAuthHandler<TClaims, TRefreshToken extends RefreshToken>
-    extends AuthenticationHandler<TClaims> {
+    extends TokenAuthenticationHandler<TClaims> {
   /// Creates a JWT authentication handler
   JwtAuthHandler({
     required this.secret,
@@ -91,63 +91,13 @@ class JwtAuthHandler<TClaims, TRefreshToken extends RefreshToken>
   final Map<String, dynamic> Function(TClaims) _claimsToJson;
 
   @override
-  Future<AuthenticationResult<TClaims>> authenticate(Request request) async {
-    try {
-      // Extract Bearer token from Authorization header
-      final authHeader = request.headers['authorization'];
-      if (authHeader == null) {
-        return AuthenticationResult.failure('Missing authorization header');
-      }
-
-      if (!authHeader.startsWith('Bearer ')) {
-        return AuthenticationResult.failure('Invalid token format');
-      }
-
-      final token = authHeader.substring(7);
-
-      // Decode and verify JWT
-      JWT? jwt;
-      try {
-        jwt = JWT.verify(token, SecretKey(secret));
-      } on JWTExpiredException {
-        return AuthenticationResult.failure('Token has expired');
-      } on JWTException {
-        return AuthenticationResult.failure('Invalid token signature');
-      }
-
-      // Verify issuer if configured
-      if (issuer != null) {
-        final tokenIssuer = jwt.payload['iss'] as String?;
-        if (tokenIssuer != issuer) {
-          return AuthenticationResult.failure('Invalid token issuer');
-        }
-      }
-
-      // Verify audience if configured
-      if (audience != null) {
-        final tokenAudience = jwt.payload['aud'] as String?;
-        if (tokenAudience != audience) {
-          return AuthenticationResult.failure('Invalid token audience');
-        }
-      }
-
-      // Extract user ID from sub claim
-      final userId = jwt.payload['sub'] as String?;
-      if (userId == null) {
-        return AuthenticationResult.failure('Token missing subject');
-      }
-
-      // Parse claims using provided callback
-      final claims = _parseClaimsFromJson(jwt.payload as Map<String, dynamic>);
-
-      return AuthenticationResult.success(
-        userId: userId,
-        claims: claims,
-      );
-    } catch (e) {
-      return AuthenticationResult.failure('Invalid token: $e');
-    }
-  }
+  Future<AuthenticationResult<TClaims>> verifyCredential(String token) =>
+      JwtCredentialVerifier<TClaims>(
+        secret: secret,
+        parseClaimsFromJson: _parseClaimsFromJson,
+        issuer: issuer,
+        audience: audience,
+      ).verifyCredential(token);
 
   /// Issues new access and refresh tokens for a user
   ///

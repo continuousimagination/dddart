@@ -152,13 +152,14 @@ void main() async {
     items: [/* order items */],
   );
   
-  // Publish events
-  for (final event in order.getUncommittedEvents()) {
+  // Capture before asynchronous infrastructure work.
+  final batch = order.captureUncommittedEvents();
+  for (final event in batch.events) {
     eventBus.publish(event);
   }
   
   // Mark events as committed
-  order.markEventsAsCommitted();
+  order.markEventsAsCommitted(batch: batch);
   
   // Clean up
   await eventBus.close();
@@ -166,6 +167,18 @@ void main() async {
 ```
 
 ## Core Concepts
+
+Repositories can optionally publish captured events after successful persistence
+through `EventPublisher`. InMemory and generated repositories accept an
+`eventPublisher` argument. Custom repositories use `saveWithEvents`, or wrap a
+basic CRUD repository with `EventPublishingRepository`. Publication failure leaves
+the event pending and does not undo a successful save. The
+[distributed events guide](../../docs/DISTRIBUTED_EVENTS.md) explains the separate
+REST event contract, shared retries and asynchronous acknowledgment lifecycle.
+
+Transport adapters use `EventBus.deliver` for remote receipt; application handlers
+still receive it through `on`. Bridges use `onPublished` to avoid echoing remote
+events. `EventBus(logger: logger)` accepts an application logger.
 
 ### Domain Events
 

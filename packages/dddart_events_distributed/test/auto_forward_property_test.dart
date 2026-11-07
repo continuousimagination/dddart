@@ -12,6 +12,7 @@ import 'dart:math';
 import 'package:dddart/dddart.dart';
 import 'package:dddart_events_distributed/src/event_bus_client.dart';
 import 'package:dddart_events_distributed/src/event_registry.dart';
+import 'package:dddart_events_distributed/src/retrying_event_publisher.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:test/test.dart';
@@ -232,6 +233,7 @@ void main() {
         for (var i = 0; i < 50; i++) {
           final eventBus = EventBus();
           final forwardedEvents = <Map<String, dynamic>>[];
+          final attemptsById = <String, int>{};
           var postCount = 0;
 
           // Mock client that fails 30% of the time
@@ -239,13 +241,19 @@ void main() {
             if (request.url.path.endsWith('/events')) {
               if (request.method == 'POST') {
                 postCount++;
+                final body = jsonDecode(request.body) as Map<String, dynamic>;
+                final id = body['id'] as String;
+                attemptsById.update(
+                  id,
+                  (count) => count + 1,
+                  ifAbsent: () => 1,
+                );
 
                 // Fail 30% of requests
                 if (random.nextDouble() < 0.3) {
                   return http.Response('Internal Server Error', 500);
                 }
 
-                final body = jsonDecode(request.body) as Map<String, dynamic>;
                 forwardedEvents.add(body);
 
                 return http.Response(
@@ -274,23 +282,29 @@ void main() {
             pollingInterval: const Duration(seconds: 10),
             autoForward: true,
             httpClient: mockClient,
+            retryPolicy:
+                EventRetryPolicy(initialDelay: Duration.zero, jitter: 0),
           );
 
           // Publish multiple events
           final eventCount = 10 + random.nextInt(11); // 10-20 events
+          final eventIds = <String>{};
           for (var j = 0; j < eventCount; j++) {
             final event = _generateRandomTestEvent(random);
+            eventIds.add(event.eventId.uuid);
             eventBus.publish(event);
           }
 
           // Wait for forwarding attempts
           await Future<void>.delayed(const Duration(milliseconds: 200));
 
-          // Verify that POST was attempted for all events
+          // Every original occurrence is attempted, with bounded same-ID retries.
+          expect(attemptsById.keys.toSet(), eventIds);
+          expect(attemptsById.values, everyElement(inInclusiveRange(1, 3)));
           expect(
             postCount,
-            equals(eventCount),
-            reason: 'Iteration $i: all events should be attempted',
+            inInclusiveRange(eventCount, eventCount * 3),
+            reason: 'Iteration $i: original occurrences retain bounded retries',
           );
 
           // Verify that some events were successfully forwarded

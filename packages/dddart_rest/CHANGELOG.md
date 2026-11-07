@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Share typed credential verification through `CredentialVerifier` and
+  `TokenAuthenticationHandler` across HTTP and native event authorization.
+  Built-in JWT issuance/refresh and optional OAuth verification remain available;
+  `JwtCredentialVerifier` works without a token repository or Shelf request.
+- Add narrow `credentials.dart` and `http.dart` exports for standalone runtimes.
+
 - POST validates the final aggregate's canonical REST key after preCreate and
   before authorization/persistence. Unsupported request identities return 400
   Problem Details without writes, matching the other CRUD routing constraints.

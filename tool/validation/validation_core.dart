@@ -506,7 +506,14 @@ void validateInventoryShape(ValidationInventory inventory) {
   const generationActions = {'none', 'required'};
   const entrypointActions = {'run', 'compile', 'service', 'excluded'};
   const sourceActions = {'analyze', 'excluded'};
-  const exampleServiceKinds = {'none', 'mongo', 'dynamodb', 'mysql', 'slack'};
+  const exampleServiceKinds = {
+    'none',
+    'mongo',
+    'dynamodb',
+    'mysql',
+    'slack',
+    'aws'
+  };
   const exampleServiceActions = {'not-required', 'compile', 'run'};
   final examplePaths = <String>{};
   for (final example in inventory.examples.values) {

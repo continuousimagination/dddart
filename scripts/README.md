@@ -14,6 +14,9 @@ lists must not be duplicated in this script or in the workflow.
 **Usage:**
 ```bash
 ./scripts/test-all.sh
+
+# Run the same complete gate locally with MongoDB, DynamoDB Local and MySQL:
+./scripts/test-all.sh --with-services
 ```
 
 **What it does:**
@@ -30,7 +33,7 @@ lists must not be duplicated in this script or in the workflow.
   inventory order;
 - rejects stale, duplicate, or unclassified external-service test tags by
   comparing the inventory with `dart_test.yaml` and test metadata;
-- analyzes, format-checks, and tests all 15 intended public packages;
+- analyzes, format-checks, and tests all 17 intended public packages;
 - excludes MongoDB, DynamoDB, and MySQL service tests locally according to the
   explicit policy (CI runs each adapter only with its package-scoped service);
 - runs `dart pub publish --dry-run` for packages whose metadata does not set

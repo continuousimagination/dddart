@@ -1,0 +1,16 @@
+name: dddart_events_appsync_example
+publish_to: none
+resolution: workspace
+environment:
+  sdk: '>=3.5.0 <4.0.0'
+dependencies:
+  dddart:
+  dddart_events_appsync:
+  dddart_events_distributed:
+  dddart_events_dynamodb:
+  dddart_repository_dynamodb:
+  dddart_rest:
+  dddart_serialization:
+  shelf: ^1.4.0
+dev_dependencies:
+  lints: ^3.0.0

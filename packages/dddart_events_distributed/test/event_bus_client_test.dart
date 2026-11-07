@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:dddart/dddart.dart';
 import 'package:dddart_events_distributed/src/event_bus_client.dart';
 import 'package:dddart_events_distributed/src/event_registry.dart';
+import 'package:dddart_events_distributed/src/retrying_event_publisher.dart';
 import 'package:dddart_events_distributed/src/stored_event.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:http/http.dart' as http;
@@ -11,6 +12,77 @@ import 'package:http/testing.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('remote polling delivery never echoes through auto-forwarding bridges',
+      () {
+    fakeAsync((clock) {
+      final bus = EventBus();
+      final received = <String>[];
+      bus.on<_Event>().listen((event) => received.add(event.label));
+      var posts = 0;
+      final client = EventBusClient(
+        localEventBus: bus,
+        serverUrl: 'https://example.test',
+        eventRegistry: _testRegistry(),
+        initialTimestamp: _epoch,
+        pollingInterval: const Duration(seconds: 1),
+        autoForward: true,
+        httpClient: MockClient((request) async {
+          if (request.method == 'POST') {
+            posts++;
+            return http.Response('', 201);
+          }
+          return http.Response(jsonEncode([_stored('remote', 1)]), 200);
+        }),
+      );
+      final peer = EventBusClient(
+        localEventBus: bus,
+        serverUrl: 'https://peer.test',
+        eventRegistry: _testRegistry(),
+        pollingInterval: const Duration(days: 1),
+        autoForward: true,
+        httpClient: MockClient((_) async {
+          posts++;
+          return http.Response('', 201);
+        }),
+      );
+      clock.elapse(const Duration(seconds: 3));
+      expect(received, ['remote']);
+      expect(posts, 0);
+      unawaited(peer.close());
+      unawaited(client.close());
+      clock.flushMicrotasks();
+    });
+  });
+
+  test('awaitable HTTP publisher retries same UUID and stops on denial',
+      () async {
+    final ids = <String>[];
+    var status = 503;
+    final client = EventBusClient(
+      localEventBus: EventBus(),
+      serverUrl: 'https://example.test',
+      eventRegistry: _testRegistry(),
+      pollingInterval: const Duration(days: 1),
+      retryPolicy: EventRetryPolicy(initialDelay: Duration.zero, jitter: 0),
+      httpClient: MockClient((request) async {
+        ids.add(
+          (jsonDecode(request.body) as Map<String, dynamic>)['id'] as String,
+        );
+        return http.Response('', status);
+      }),
+    );
+    addTearDown(client.close);
+    final event = _Event('originated');
+    expect(await client.publisher.publish(event), isFalse);
+    expect(ids, List.filled(3, event.eventId.uuid));
+    status = 403;
+    expect(await client.publisher.publish(event), isFalse);
+    expect(ids, hasLength(4));
+    status = 201;
+    expect(await client.publisher.publish(event), isTrue);
+    expect(ids, hasLength(5));
+  });
+
   group('request credentials', () {
     for (final staticToken in [null, 'constructor-token']) {
       test('provider overrides $staticToken for GET and POST after rotation',

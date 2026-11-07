@@ -140,6 +140,31 @@
         "dddart_json",
         "dddart_events_distributed"
       ]
+    },
+    {
+      "name": "dddart_events_dynamodb",
+      "path": "packages/dddart_events_dynamodb",
+      "generation": "none",
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_serialization",
+        "dddart_json",
+        "dddart_events_distributed",
+        "dddart_repository_dynamodb",
+        "dddart_events_dynamodb"
+      ]
+    },
+    {
+      "name": "dddart_events_appsync",
+      "path": "packages/dddart_events_appsync",
+      "generation": "none",
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_serialization",
+        "dddart_json",
+        "dddart_events_distributed",
+        "dddart_events_appsync"
+      ]
     }
   ],
   "examples": [
@@ -904,6 +929,99 @@
         "ciAction": "not-required",
         "reason": "Only the independent JSON-004 round-trip is runnable; all EVENT integration surfaces are legacy WIP exclusions."
       }
+    },
+    {
+      "name": "dddart_events_dynamodb_example",
+      "path": "packages/dddart_events_dynamodb/example",
+      "category": "runnable",
+      "status": "active",
+      "owners": [
+        "dddart_events_dynamodb"
+      ],
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_serialization",
+        "dddart_json",
+        "dddart_events_distributed",
+        "dddart_repository_dynamodb",
+        "dddart_events_dynamodb"
+      ],
+      "resolution": "workspace",
+      "generation": {
+        "action": "none",
+        "builders": [],
+        "disabledBuilders": [],
+        "outputs": []
+      },
+      "entrypoints": [
+        {
+          "path": "history.dart",
+          "classification": "runnable",
+          "action": "service",
+          "reason": "Finite history and rotation against an isolated DynamoDB Local table."
+        }
+      ],
+      "sourceOverrides": [],
+      "externalService": {
+        "kind": "dynamodb",
+        "localAction": "compile",
+        "ciAction": "run",
+        "testTag": "requires-dynamodb",
+        "reason": "CI supplies DynamoDB Local; the example creates and deletes only its own isolated local table."
+      }
+    },
+    {
+      "name": "dddart_events_appsync_example",
+      "path": "packages/dddart_events_appsync/example",
+      "category": "runnable",
+      "status": "active",
+      "owners": [
+        "dddart_events_appsync"
+      ],
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_serialization",
+        "dddart_json",
+        "dddart_events_distributed",
+        "dddart_rest",
+        "dddart_repository_dynamodb",
+        "dddart_events_dynamodb",
+        "dddart_events_appsync"
+      ],
+      "resolution": "workspace",
+      "generation": {
+        "action": "none",
+        "builders": [],
+        "disabledBuilders": [],
+        "outputs": []
+      },
+      "entrypoints": [
+        {
+          "path": "native_invocation.dart",
+          "classification": "runnable",
+          "action": "run",
+          "reason": "Finite native invocation with explicit local test authentication."
+        },
+        {
+          "path": "lambda.dart",
+          "classification": "runnable",
+          "action": "compile",
+          "reason": "Complete custom runtime, requiring explicit AWS deployment."
+        },
+        {
+          "path": "aws_smoke.dart",
+          "classification": "runnable",
+          "action": "compile",
+          "reason": "Explicit opt-in smoke against existing AWS resources."
+        }
+      ],
+      "sourceOverrides": [],
+      "externalService": {
+        "kind": "aws",
+        "localAction": "compile",
+        "ciAction": "compile",
+        "reason": "Native invocation runs locally; Lambda and smoke entrypoints require explicitly configured AWS resources."
+      }
     }
   ],
   "workspaceExemptions": [],
@@ -923,7 +1041,7 @@
     },
     {
       "tag": "requires-dynamodb",
-      "packages": ["dddart_repository_dynamodb"],
+      "packages": ["dddart_repository_dynamodb", "dddart_events_dynamodb"],
       "localAction": "exclude",
       "ciAction": "run",
       "reason": "Local validation does not assume DynamoDB Local; CI supplies it on localhost:8000.",

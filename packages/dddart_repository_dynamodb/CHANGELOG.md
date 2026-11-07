@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0] - Unreleased
 
 ### Changed
+- Generated repositories accept an optional `eventPublisher` and publish safely
+  captured pending events after successful persistence through core shared code.
 - **Breaking identity API:** generated repositories implement `Repository<T, I>`
   and accept an optional named `identityCodecs` registry shared with JSON.
 - Native/scoped keys use explicit canonical codecs, validated as 1–2048 UTF-8
