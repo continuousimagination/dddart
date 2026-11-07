@@ -109,6 +109,7 @@ class AggregateEventClient {
   final Map<String, _WatchState> _watches = {};
   Timer? _timer;
   Future<void>? _syncing;
+  Future<void>? _pausing;
   bool _again = false;
   bool _paused = false;
   bool _closed = false;
@@ -378,12 +379,18 @@ class AggregateEventClient {
   }
 
   /// App lifecycle hook: stop subscriptions and periodic requests in background.
-  Future<void> pause() async {
-    if (_closed || _paused) return;
-    _paused = true;
+  Future<void> pause() {
+    if (_closed) return Future.value();
+    // Even an already-paused client must invalidate a resume awaiting old I/O.
     _generation++;
+    if (_paused) return _pausing ?? Future.value();
+    _paused = true;
     _timer?.cancel();
     _timer = null;
+    return _pausing = _pauseResources();
+  }
+
+  Future<void> _pauseResources() async {
     if (transport is SuspendableEventTransport) {
       await (transport as SuspendableEventTransport).suspend();
     }
@@ -404,8 +411,13 @@ class AggregateEventClient {
       await synchronize();
       return;
     }
-    // Let cancelled work settle while still paused, then start a fresh generation.
-    await _syncing;
+    // Let cancellation and old I/O settle before starting a fresh generation.
+    final generation = _generation;
+    await Future.wait<void>([
+      if (_syncing != null) _syncing!,
+      if (_pausing != null) _pausing!,
+    ]);
+    if (_closed || !_paused || generation != _generation) return;
     _paused = false;
     _generation++;
     for (final state in _watches.values) {
