@@ -447,6 +447,81 @@ void main() {
     expect(watch.status, EventWatchStatus.active);
   });
 
+  test('a newer pause cancels resume waiting for an old synchronization',
+      () async {
+    final reference = fixture.reference('game');
+    fixture.allow(reference, ['alice']);
+    Completer<void>? gate;
+    var calls = 0;
+    final transport = _LiveControl(
+      HttpAggregateEventTransport(
+        baseUrl: Uri.parse('http://local/events'),
+        wire: fixture.wire,
+        tokenProvider: () async => 'alice',
+        client: MockClient((request) async {
+          calls++;
+          await gate?.future;
+          return fixture.route(request);
+        }),
+      ),
+    );
+    final client = AggregateEventClient(
+      transport: transport,
+      registry: fixture.registry,
+      aggregateKind: (_) => 'game',
+      interval: const Duration(hours: 1),
+    );
+    fixture.clients.add(client);
+    final watch = client.watch(reference);
+    await watch.ready;
+    gate = Completer<void>();
+    final syncing = client.synchronize();
+    await Future<void>.delayed(Duration.zero);
+    await client.pause();
+    final resuming = client.resume();
+    await Future<void>.delayed(Duration.zero);
+    await client.pause();
+    final pausedCalls = calls;
+    gate.complete();
+    await Future.wait([syncing, resuming]);
+    expect(watch.status, EventWatchStatus.paused);
+    expect(calls, pausedCalls);
+    await client.resume();
+    expect(watch.status, EventWatchStatus.active);
+  });
+
+  test('resume waits for asynchronous transport suspension to finish',
+      () async {
+    final reference = fixture.reference('game');
+    fixture.allow(reference, ['alice']);
+    final transport = _SuspendingLiveControl(
+      HttpAggregateEventTransport(
+        baseUrl: Uri.parse('http://local/events'),
+        wire: fixture.wire,
+        tokenProvider: () async => 'alice',
+        client: MockClient(fixture.route),
+      ),
+    );
+    final client = AggregateEventClient(
+      transport: transport,
+      registry: fixture.registry,
+      aggregateKind: (_) => 'game',
+      interval: const Duration(hours: 1),
+    );
+    fixture.clients.add(client);
+    final watch = client.watch(reference);
+    await watch.ready;
+    final paused = client.pause();
+    final resuming = client.resume();
+    final calls = fixture.requests.length;
+    await Future<void>.delayed(Duration.zero);
+    expect(fixture.requests.length, calls);
+    transport.suspending.complete();
+    await Future.wait([paused, resuming]);
+    expect(watch.status, EventWatchStatus.active);
+    expect(fixture.requests.length, greaterThan(calls));
+  });
+
   test('refresh credentials per request and single flight through slow HTTP',
       () async {
     final reference = fixture.reference('game');
@@ -630,6 +705,14 @@ class _LiveControl implements LiveAggregateEventTransport {
     disconnected = onDisconnect;
     return _LiveLease();
   }
+}
+
+class _SuspendingLiveControl extends _LiveControl
+    implements SuspendableEventTransport {
+  _SuspendingLiveControl(super.control);
+  final suspending = Completer<void>();
+  @override
+  Future<void> suspend() => suspending.future;
 }
 
 class _LiveLease implements EventLiveSubscription {
