@@ -1,0 +1,7 @@
+---
+import Base from '../layouts/Base.astro';
+import { base, doc } from '../lib/site';
+---
+<Base title="Page not found" description="Find your way back to the dddart documentation.">
+  <main id="main-content" class="not-found"><p class="eyebrow">404 / OUTSIDE THE BOUNDARY</p><h1>This page wandered<br />out of its domain.</h1><p>Let’s get you back to something useful.</p><div class="button-row"><a class="button button-dark" href={base}>Back to home <span>↗</span></a><a class="text-link" href={doc('getting-started')}>Read the docs →</a></div></main>
+</Base>

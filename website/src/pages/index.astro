@@ -1,0 +1,81 @@
+---
+import { Code } from 'astro:components';
+import Base from '../layouts/Base.astro';
+import { doc, repo } from '../lib/site';
+import '../styles/home.css';
+const examples = [
+  { id: 'model', title: '01 / Model', file: 'order.dart', note: 'Your language. Your rules. Ordinary Dart.', code: `import 'package:dddart/dddart.dart';
+
+class Order extends UuidAggregateRoot {
+  Order({required this.customer});
+
+  final String customer;
+  bool _placed = false;
+
+  bool get isPlaced => _placed;
+
+  void place() {
+    if (_placed) return;
+    _placed = true;
+    touch();
+  }
+}` },
+  { id: 'repository', title: '02 / Persist', file: 'place_order.dart', note: 'One contract. Choose the implementation at the edge.', code: `// Uses the Order model in the first tab.
+Future<void> placeOrder(
+  Repository<Order, UuidValue> orders,
+  UuidValue orderId,
+) async {
+  final order = await orders.getById(orderId);
+  order.place();
+  await orders.save(order);
+}
+
+// Start in memory. Add an adapter as you grow.
+final orders =
+    InMemoryRepository<Order, UuidValue>();` },
+  { id: 'events', title: '03 / React', file: 'order_placed.dart', note: 'Name what happened in the language of your business.', code: `import 'package:dddart/dddart.dart';
+
+class OrderPlaced extends DomainEvent<UuidValue> {
+  OrderPlaced({required UuidValue orderId})
+      : super(aggregateId: orderId);
+}
+
+Future<void> main() async {
+  final bus = EventBus();
+  bus.on<OrderPlaced>().listen((event) {
+    print('Order placed: ' + event.aggregateId.toString());
+  });
+  bus.publish(OrderPlaced(
+    orderId: UuidValue.generate(),
+  ));
+  await bus.close();
+}` },
+];
+const groups = [
+  { number: '01', title: 'Model & serialize', text: 'Entities, values, typed identity, and generated JSON.', link: 'modeling', packages: ['dddart', 'dddart_serialization', 'dddart_json'] },
+  { number: '02', title: 'Store & retrieve', text: 'Repository contracts with the backend that fits.', link: 'repositories', packages: ['dddart_repository_sqlite', 'dddart_repository_mysql', 'dddart_repository_mongodb', 'dddart_repository_dynamodb', 'dddart_repository_rest'] },
+  { number: '03', title: 'Connect & react', text: 'HTTP APIs, local events, aggregate watches, and live delivery.', link: 'events', packages: ['dddart_rest', 'dddart_rest_client', 'dddart_events_distributed', 'dddart_events_dynamodb', 'dddart_events_appsync'] },
+  { number: '04', title: 'Make it your own', text: 'Layered configuration and verified webhook integrations.', link: 'integrations', packages: ['dddart_config', 'dddart_webhooks', 'dddart_webhooks_slack'] },
+];
+---
+<Base title="dddart" description="A modular toolkit for domain-driven Dart. Share your language, models, and contracts across server, web, and mobile." home>
+  <main id="main-content">
+    <section class="hero">
+      <div class="hero-inner">
+        <div class="hero-copy"><p class="eyebrow"><span class="status-dot"></span> DOMAIN-DRIVEN DESIGN FOR DART</p><h1>Your domain.<br /><span>Pure Dart.</span></h1><p class="hero-description">Build software that speaks<br class="desktop-break" /> your team’s language.</p><p class="hero-detail">A modular toolkit for expressive models, shared contracts, and less infrastructure boilerplate. From your server to your Flutter app.</p><div class="button-row"><a class="button button-lime" href={doc('getting-started')}>Start building <span aria-hidden="true">↗</span></a><a class="text-link" href={doc('philosophy')}>Meet the philosophy <span aria-hidden="true">→</span></a></div><div class="hero-footnote"><span>Open source. MIT licensed.</span><span>Pre-release · Git install</span></div></div>
+        <div class="hero-demo"><div class="demo-label"><span>SMALL BUILDING BLOCKS. BIG POSSIBILITIES.</span><span aria-hidden="true">↙</span></div><div class="code-window"><div class="code-tabs" role="tablist" aria-label="Dart examples">{examples.map((example, i) => <button id={`tab-${example.id}`} role="tab" aria-selected={i === 0} aria-controls={`panel-${example.id}`} tabindex={i === 0 ? 0 : -1} data-code-tab>{example.title}</button>)}</div>{examples.map((example, i) => <div role="tabpanel" id={`panel-${example.id}`} aria-labelledby={`tab-${example.id}`} hidden={i !== 0}><div class="code-filename"><span>{example.file}</span><span>Dart</span></div><Code code={example.code} lang="dart" theme="github-dark" /><div class="code-caption"><span aria-hidden="true">↳</span> {example.note}</div></div>)}</div><div class="demo-footer"><span class="orbit-dot"></span><span>Start with a model. Keep the possibilities open.</span></div></div>
+      </div>
+      <div class="hero-bottom"><span>THINK IN YOUR DOMAIN</span><div><span>Server</span><span aria-hidden="true">↔</span><span>Web</span><span aria-hidden="true">↔</span><span>Mobile</span></div><a href="#why">Explore the toolkit <span aria-hidden="true">↓</span></a></div>
+    </section>
+
+    <section id="why" class="principles section-inner"><div class="section-heading"><div><p class="eyebrow">LESS TRANSLATION. MORE UNDERSTANDING.</p><h2>Good software starts<br />with a shared language.</h2></div><p>The concepts in your code should be the concepts in your conversations. dddart helps you carry them all the way through.</p></div><div class="principle-grid"><article><span class="principle-number">01 / SPEAK CLEARLY</span><h3>The model is the message.</h3><p>Orders, reservations, memberships. Give your business concepts a home—with identity, behavior, and meaningful boundaries.</p><a href={doc('modeling')}>Meet the building blocks <span>↗</span></a></article><article><span class="principle-number">02 / KEEP YOUR OPTIONS</span><h3>Contracts travel well.</h3><p>Write against repository and event contracts. Reuse domain logic across apps, then select the adapters each environment needs.</p><a href={doc('contracts')}>See how the pieces fit <span>↗</span></a></article><article><span class="principle-number">03 / BUILD WHAT MATTERS</span><h3>Let the plumbing follow.</h3><p>Generate JSON serializers and repository implementations. Add HTTP, distributed events, and integrations when you need them.</p><a href={doc('serialization')}>Generate the repetitive parts <span>↗</span></a></article></div></section>
+
+    <section class="manifesto"><div class="manifesto-inner"><div class="manifesto-copy"><p class="eyebrow">A LITTLE DDD. A LOT OF COMMON GROUND.</p><h2>One language.<br />Across the table.<br /><span>Across the stack.</span></h2><p>We take the parts of domain-driven design that help people build together: a shared vocabulary, clear responsibilities, and boundaries you can trust.</p><p>No prescribed architecture for your entire application. Start small. Keep what helps.</p><a class="text-link" href={doc('philosophy')}>Read our philosophy <span>↗</span></a></div><div class="domain-diagram" role="img" aria-label="Product, design, engineering, and operations share one domain language. Domain models and contracts connect to server, web, and mobile implementations."><div class="diagram-top"><span>PRODUCT</span><span>DESIGN</span><span>ENGINEERING</span><span>OPERATIONS</span></div><div class="diagram-connectors" aria-hidden="true"></div><div class="domain-center"><span class="diagram-caption">A SHARED UNDERSTANDING</span><strong>Your domain</strong><span>Models · Repositories · Events</span><div class="domain-words"><span>Order</span><span>Place order</span><span>Order placed</span></div></div><div class="diagram-stem" aria-hidden="true"></div><div class="diagram-platforms"><div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="4" y="3" width="16" height="7" rx="1"/><rect x="4" y="14" width="16" height="7" rx="1"/><path d="M7 6.5h2m-2 11h2"/></svg><strong>Server</strong><span>Database adapters</span></div><div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="1"/><path d="M2 9h20M5 6.5h1m2 0h1"/></svg><strong>Web</strong><span>HTTP clients</span></div><div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M10 5h4m-3 14h2"/></svg><strong>Mobile</strong><span>Local & remote</span></div></div><p class="diagram-note">Shared contracts. Platform-appropriate implementations.</p></div></div></section>
+
+    <section class="ecosystem section-inner"><div class="section-heading"><div><p class="eyebrow">A TOOLKIT, NOT A TAKEOVER</p><h2>Small pieces.<br />Thoughtful connections.</h2></div><div><p>Choose the packages your application needs.<br />Leave room for the ones you’ll write yourself.</p><a class="text-link" href={doc('packages')}>Explore all 17 packages <span>↗</span></a></div></div><div class="package-groups">{groups.map(group => <article class="package-group"><span class="package-number">{group.number}</span><div class="package-description"><h3><a href={doc(group.link)}>{group.title} <span>↗</span></a></h3><p>{group.text}</p></div><div class="package-chips">{group.packages.map(name => <a href={`${repo}/tree/main/packages/${name}`} title={`Source and API notes for ${name}`}>{name.replace('dddart_', '')}</a>)}</div></article>)}</div></section>
+
+    <section class="learning section-inner"><div class="section-heading"><div><p class="eyebrow">FROM FIRST MODEL TO CONNECTED APPLICATION</p><h2>A field guide for your next idea.</h2></div></div><div class="learning-grid"><a href={doc('getting-started')}><span class="guide-kind">THE FIRST 10 MINUTES</span><h3>Make something<br /> meaningful.</h3><p>Install the core, model an order, save it, and react to a domain event.</p><span class="guide-arrow">Get started ↗</span></a><a href={doc('http')}><span class="guide-kind">THE NEXT CONNECTION</span><h3>Take your model<br /> over HTTP.</h3><p>Connect a server-side repository to clients through an explicit API boundary.</p><span class="guide-arrow">Build an API ↗</span></a><a href={doc('examples')}><span class="guide-kind">THE HANDS-ON ROUTE</span><h3>Learn from<br /> working code.</h3><p>Explore examples, with their setup, services, and validation scope explained.</p><span class="guide-arrow">Browse examples ↗</span></a></div></section>
+
+    <section class="start-section"><div class="start-panel"><div><p class="eyebrow">LET’S BUILD SOMETHING THAT MAKES SENSE.</p><h2>Your next idea<br />deserves a good domain.</h2></div><div><a class="button button-lime" href={doc('getting-started')}>Start with dddart <span>↗</span></a><p>Free to use. Yours to shape.</p></div></div></section>
+  </main>
+</Base>

@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://continuousimagination.github.io/dddart/sitemap.xml

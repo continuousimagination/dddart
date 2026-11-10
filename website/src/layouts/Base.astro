@@ -1,0 +1,53 @@
+---
+import Brand from '../components/Brand.astro';
+import { base, doc, repo } from '../lib/site';
+import '../styles/global.css';
+interface Props { title: string; description: string; home?: boolean; }
+const { title, description, home = false } = Astro.props;
+const canonical = new URL(Astro.url.pathname.replace(/\/404\/$/, '/404.html'), Astro.site);
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#141d28" />
+    <title>{title === 'dddart' ? 'dddart — Your domain. Pure Dart.' : `${title} · dddart`}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title === 'dddart' ? 'dddart — Your domain. Pure Dart.' : `${title} · dddart`} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta name="color-scheme" content="light" />
+  </head>
+  <body class:list={[{ 'home-page': home }]}>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <header class="site-header">
+      <div class="header-inner">
+        <Brand />
+        <button class="mobile-toggle" aria-expanded="false" aria-controls="site-navigation">Menu <span aria-hidden="true">＋</span></button>
+        <nav id="site-navigation" aria-label="Main navigation">
+          <a href={doc('getting-started')}>Documentation</a>
+          <a href={doc('philosophy')}>Philosophy</a>
+          <a href={doc('packages')}>Packages</a>
+          <button class="search-trigger" data-search-open aria-label="Search documentation"><svg viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg><span>Search docs</span><kbd>⌘ K</kbd></button>
+          <a class="github-link" href={repo}>GitHub <span aria-hidden="true">↗</span></a>
+        </nav>
+      </div>
+    </header>
+    <slot />
+    <footer class="site-footer">
+      <div class="footer-inner"><div><Brand /><p>A shared language. A world of possibilities.</p></div><div class="footer-links"><a href={doc('philosophy')}>Why dddart</a><a href={doc('examples')}>Examples</a><a href={`${repo}/blob/main/packages/dddart/LICENSE`}>MIT license</a><a href={repo}>Made in the open ↗</a></div></div>
+      <div class="footer-bottom"><span>Domain-driven design, in Dart.</span><span>Built for people who build things.</span></div>
+    </footer>
+    <dialog class="search-dialog" aria-label="Search documentation" data-search-index={`${base}search-index.json`}>
+      <form method="dialog"><label class="sr-only" for="docs-search">Search documentation</label><input id="docs-search" type="search" placeholder="Search guides, concepts, and packages…" autocomplete="off" /><button aria-label="Close search">Esc</button></form>
+      <p class="search-status" role="status">Type to search the documentation.</p>
+      <ul class="search-results"></ul>
+      <div class="search-help">↑ ↓ to move <span>Enter to open · Esc to close</span></div>
+    </dialog>
+    <script src="../scripts/site.ts"></script>
+  </body>
+</html>
