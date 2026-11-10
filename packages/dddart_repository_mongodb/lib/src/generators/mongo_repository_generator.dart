@@ -261,13 +261,15 @@ class MongoRepositoryGenerator
     buffer.writeln('  ///');
     buffer.writeln('  /// [database] - An open MongoDB database connection.');
     buffer.writeln(
-      '  ${className}MongoRepository(this._database, {IdentityCodecRegistry? identityCodecs}) : _identityCodecs = identityCodecs ?? IdentityCodecRegistry();',
+      '  ${className}MongoRepository(this._database, {IdentityCodecRegistry? identityCodecs, this.eventPublisher}) : _identityCodecs = identityCodecs ?? IdentityCodecRegistry();',
     );
     buffer.writeln();
 
     // Task 5.1: Generate fields and getters
     buffer.writeln('  /// The MongoDB database instance (library-private).');
     buffer.writeln('  final Db _database;');
+    buffer.writeln('  /// Optional shared publisher for raised events.');
+    buffer.writeln('  final EventPublisher? eventPublisher;');
     buffer.writeln();
     buffer.writeln('  /// The collection name for $className aggregates.');
     buffer.writeln("  String get collectionName => '$collectionName';");
@@ -350,7 +352,13 @@ class MongoRepositoryGenerator
   String _generateSaveMethod(String className, String identityType) {
     return '''
   @override
-  Future<void> save($className aggregate) async {
+  Future<void> save($className aggregate) => saveWithEvents(
+    aggregate: aggregate,
+    persist: () => _saveAggregate(aggregate),
+    publisher: eventPublisher,
+  );
+
+  Future<void> _saveAggregate($className aggregate) async {
     final key = encodeMongoIdentityKey<$identityType>(_identityCodecs, aggregate.id);
     try {
       final doc = _serializer.toJson(aggregate);
@@ -487,13 +495,15 @@ class MongoRepositoryGenerator
     buffer.writeln('  ///');
     buffer.writeln('  /// [database] - An open MongoDB database connection.');
     buffer.writeln(
-      '  ${className}MongoRepositoryBase(this._database, {IdentityCodecRegistry? identityCodecs}) : _identityCodecs = identityCodecs ?? IdentityCodecRegistry();',
+      '  ${className}MongoRepositoryBase(this._database, {IdentityCodecRegistry? identityCodecs, this.eventPublisher}) : _identityCodecs = identityCodecs ?? IdentityCodecRegistry();',
     );
     buffer.writeln();
 
     // Task 6.1: Generate fields and getters (same as concrete class)
     buffer.writeln('  /// The MongoDB database instance (library-private).');
     buffer.writeln('  final Db _database;');
+    buffer.writeln('  /// Optional shared publisher for raised events.');
+    buffer.writeln('  final EventPublisher? eventPublisher;');
     buffer.writeln();
     buffer.writeln('  /// The collection name for $className aggregates.');
     buffer.writeln("  String get collectionName => '$collectionName';");

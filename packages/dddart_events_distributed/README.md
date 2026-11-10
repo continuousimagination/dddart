@@ -1,9 +1,26 @@
 # dddart_events_distributed
 
-Persist and distribute domain events through HTTP polling. This pre-release
+Persist and distribute domain events through aggregate-scoped HTTP polling. This pre-release
 package supports typed aggregate references, explicit event/identity codecs,
 authentication and authorization filtering, retention, inclusive catch-up and
 optional forwarding of locally published events.
+
+The [distributed events guide](../../docs/DISTRIBUTED_EVENTS.md) covers
+`AggregateEventClient`, explicit `AggregateReference` watches, `EventEnvelope`,
+retained history, shared access policy and bounded retrying publication. Use
+`HttpAggregateEventTransport` independently, or add optional
+[`dddart_events_appsync`](../dddart_events_appsync/) for live delivery and
+[`dddart_events_dynamodb`](../dddart_events_dynamodb/) for server persistence.
+InMemory history/channels support local tests. The older timestamp poller below
+remains a distinct legacy API; migrate explicitly using the guide.
+
+For repository-driven publication, configure `eventPublisher: client.publisher`
+and await `repository.save(aggregate)`. The publisher sends a separate event POST,
+retries bounded transient failures and leaves rejected events pending. New client
+watches start at the server head, recover from per-aggregate checkpoints, and
+surface typed revocation or resynchronization requirements. Received
+events are delivered locally without being auto-forwarded back to the server.
+Do not also auto-forward the same pending events through the local bus.
 
 ## Identity and wire contracts
 

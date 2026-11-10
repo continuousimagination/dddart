@@ -793,7 +793,14 @@ $fromJsonWithConfigBody
       // instance fields and computed expressions still require an assertion.
       final present =
           {'item', 'key', 'value'}.contains(value) ? value : '$value!';
-      return '$value != null ? ${_encodeValue(type, present, nonNull: true)} : null';
+      final encoded = _encodeValue(type, present, nonNull: true);
+      // Primitive encoding already preserves null. Keep identity/DDD type
+      // dispatch authoritative even when an application shadows a core name.
+      if (encoded == present) return value;
+      if (encoded.startsWith('$present.')) {
+        return '$value?.${encoded.substring(present.length + 1)}';
+      }
+      return '$value != null ? $encoded : null';
     }
     final name = type.getDisplayString(withNullability: false);
     if (type is InterfaceType && _uuidType.isExactly(type.element)) {
@@ -837,8 +844,9 @@ $fromJsonWithConfigBody
       }
       return '${name}JsonSerializer.withIdentityCodecs(_identityCodecs).toJson($value, effectiveConfig)';
     }
-    if (_isPrimitiveType(name) || name == 'Object' || name == 'Null')
+    if (_isPrimitiveType(name) || name == 'Object' || name == 'Null') {
       return value;
+    }
     throw InvalidGenerationSourceError('Unsupported JSON field type: $name');
   }
 

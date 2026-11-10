@@ -624,13 +624,15 @@ class MysqlRepositoryGenerator
     buffer.writeln('  ///');
     buffer.writeln('  /// [connection] - An open MySQL database connection.');
     buffer.writeln(
-      '  ${className}MysqlRepository(this._connection, {IdentityCodecRegistry? identityCodecs}) : _identityCodecs = identityCodecs ?? IdentityCodecRegistry();',
+      '  ${className}MysqlRepository(this._connection, {IdentityCodecRegistry? identityCodecs, this.eventPublisher}) : _identityCodecs = identityCodecs ?? IdentityCodecRegistry();',
     );
     buffer.writeln();
 
     // Fields and getters
     buffer.writeln('  /// The MySQL database connection.');
     buffer.writeln('  final MysqlConnection _connection;');
+    buffer.writeln('  /// Optional shared publisher for raised events.');
+    buffer.writeln('  final EventPublisher? eventPublisher;');
     buffer.writeln();
     buffer.writeln('  /// The SQL dialect for MySQL.');
     buffer.writeln('  final _dialect = MysqlDialect();');
@@ -703,13 +705,15 @@ class MysqlRepositoryGenerator
     buffer.writeln('  ///');
     buffer.writeln('  /// [connection] - An open MySQL database connection.');
     buffer.writeln(
-      '  ${className}MysqlRepositoryBase(this._connection, {IdentityCodecRegistry? identityCodecs}) : _identityCodecs = identityCodecs ?? IdentityCodecRegistry();',
+      '  ${className}MysqlRepositoryBase(this._connection, {IdentityCodecRegistry? identityCodecs, this.eventPublisher}) : _identityCodecs = identityCodecs ?? IdentityCodecRegistry();',
     );
     buffer.writeln();
 
     // Protected fields for subclass access
     buffer.writeln('  /// The MySQL database connection (library-private).');
     buffer.writeln('  final MysqlConnection _connection;');
+    buffer.writeln('  /// Optional shared publisher for raised events.');
+    buffer.writeln('  final EventPublisher? eventPublisher;');
     buffer.writeln();
     buffer.writeln('  /// The SQL dialect for MySQL (library-private).');
     buffer.writeln('  final _dialect = MysqlDialect();');
@@ -1056,7 +1060,16 @@ class MysqlRepositoryGenerator
   ) {
     final buffer = StringBuffer();
     buffer.writeln('  @override');
-    buffer.writeln('  Future<void> save($className aggregate) async {');
+    buffer.writeln(
+      '  Future<void> save($className aggregate) => saveWithEvents(',
+    );
+    buffer.writeln('    aggregate: aggregate,');
+    buffer.writeln('    persist: () => _saveAggregate(aggregate),');
+    buffer.writeln('    publisher: eventPublisher,');
+    buffer.writeln('  );');
+    buffer.writeln();
+    buffer
+        .writeln('  Future<void> _saveAggregate($className aggregate) async {');
     buffer.writeln('    _encodeIdentity(aggregate.id);');
     buffer.writeln('    await _validateIdentitySchema();');
     buffer.writeln('    await _connection.transaction(() async {');

@@ -259,12 +259,14 @@ class RestRepositoryGenerator
     buffer.writeln('  ///');
     buffer.writeln('  /// [connection] - A REST connection to the API server.');
     buffer.writeln(
-        '  ${className}RestRepository(this._connection, {IdentityCodecRegistry? identityCodecs}) : _identityCodecs = identityCodecs ?? IdentityCodecRegistry();');
+        '  ${className}RestRepository(this._connection, {IdentityCodecRegistry? identityCodecs, this.eventPublisher}) : _identityCodecs = identityCodecs ?? IdentityCodecRegistry();');
     buffer.writeln();
 
     // Generate fields and getters
     buffer.writeln('  /// The REST connection instance.');
     buffer.writeln('  final RestConnection _connection;');
+    buffer.writeln('  /// Optional shared publisher for raised events.');
+    buffer.writeln('  final EventPublisher? eventPublisher;');
     buffer.writeln();
     buffer.writeln('  /// The resource path for $className aggregates.');
     buffer.writeln("  String get _resourcePath => '$resourcePath';");
@@ -335,12 +337,14 @@ class RestRepositoryGenerator
     buffer.writeln('  ///');
     buffer.writeln('  /// [connection] - A REST connection to the API server.');
     buffer.writeln(
-        '  ${className}RestRepositoryBase(this._connection, {IdentityCodecRegistry? identityCodecs}) : _identityCodecs = identityCodecs ?? IdentityCodecRegistry();');
+        '  ${className}RestRepositoryBase(this._connection, {IdentityCodecRegistry? identityCodecs, this.eventPublisher}) : _identityCodecs = identityCodecs ?? IdentityCodecRegistry();');
     buffer.writeln();
 
     // Generate fields and getters (same as concrete class)
     buffer.writeln('  /// The REST connection instance.');
     buffer.writeln('  final RestConnection _connection;');
+    buffer.writeln('  /// Optional shared publisher for raised events.');
+    buffer.writeln('  final EventPublisher? eventPublisher;');
     buffer.writeln();
     buffer.writeln('  /// The resource path for $className aggregates.');
     buffer.writeln("  String get _resourcePath => '$resourcePath';");
@@ -440,7 +444,13 @@ class RestRepositoryGenerator
   String _generateSaveMethod(String className, String identityType) {
     return '''
   @override
-  Future<void> save($className aggregate) async {
+  Future<void> save($className aggregate) => saveWithEvents(
+    aggregate: aggregate,
+    persist: () => _saveAggregate(aggregate),
+    publisher: eventPublisher,
+  );
+
+  Future<void> _saveAggregate($className aggregate) async {
     try {
       final uri = _identityUri(aggregate.id);
       final json = _serializer.toJson(aggregate);

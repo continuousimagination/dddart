@@ -27,3 +27,7 @@ workspace:
   - packages/dddart_webhooks_slack
   - packages/dddart_events_distributed
   - packages/dddart_events_distributed/example
+  - packages/dddart_events_dynamodb
+  - packages/dddart_events_dynamodb/example
+  - packages/dddart_events_appsync
+  - packages/dddart_events_appsync/example

@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Generated repositories accept an optional `eventPublisher` and publish safely
+  captured pending events after successful persistence through core shared code.
+
 - Breaking: repositories implement `Repository<T, I>` with concrete identity
   lookup/deletion and optional injected `identityCodecs` shared with JSON.
 - Breaking storage migration: `_id` contains canonical key UTF-8 bytes as BSON

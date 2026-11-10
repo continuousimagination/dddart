@@ -26,9 +26,13 @@ import 'package:logging/logging.dart';
 /// eventBus.close();
 /// ```
 class EventBus {
-  final Logger _logger = Logger('dddart.eventbus');
-  final StreamController<DomainEvent<Identity>> _controller =
-      StreamController<DomainEvent<Identity>>.broadcast();
+  /// Creates a local bus with an optional application-provided logger.
+  EventBus({Logger? logger}) : logger = logger ?? Logger('dddart.eventbus');
+
+  /// Logger used for local delivery and lifecycle diagnostics.
+  final Logger logger;
+  final StreamController<_EventDelivery> _controller =
+      StreamController<_EventDelivery>.broadcast();
 
   /// Publishes a domain event to all subscribers.
   ///
@@ -37,13 +41,27 @@ class EventBus {
   ///
   /// [event] The domain event to publish.
   void publish(DomainEvent<Identity> event) {
+    _dispatch(event, originated: true);
+  }
+
+  /// Delivers a received event without originating an outgoing publication.
+  ///
+  /// Transport adapters use this for remote receipt. Ordinary application
+  /// subscribers still receive the event through [on], while forwarding and
+  /// persistence bridges listening through [onPublished] do not re-originate it.
+  /// Origin is delivery metadata, never a field in the domain event payload.
+  void deliver(DomainEvent<Identity> event) {
+    _dispatch(event, originated: false);
+  }
+
+  void _dispatch(DomainEvent<Identity> event, {required bool originated}) {
     if (_controller.isClosed) {
       throw StateError('Cannot publish event: EventBus is closed');
     }
-    _logger.fine(
+    logger.fine(
       'Publishing event: ${event.runtimeType} for aggregate ${event.aggregateId}',
     );
-    _controller.add(event);
+    _controller.add(_EventDelivery(event, originated: originated));
   }
 
   /// Subscribes to events of a specific type.
@@ -60,8 +78,26 @@ class EventBus {
   /// });
   /// ```
   Stream<T> on<T extends DomainEvent<Identity>>() {
-    _logger.fine('Creating subscription for event type: $T');
-    final stream = _controller.stream.where((event) => event is T).cast<T>();
+    return _events<T>(originatedOnly: false);
+  }
+
+  /// Subscribes only to events originated through [publish] on this bus.
+  ///
+  /// Infrastructure bridges use this to avoid forwarding remote deliveries.
+  /// Application event handlers normally use [on] to see both kinds of delivery.
+  Stream<T> onPublished<T extends DomainEvent<Identity>>() {
+    return _events<T>(originatedOnly: true);
+  }
+
+  Stream<T> _events<T extends DomainEvent<Identity>>({
+    required bool originatedOnly,
+  }) {
+    logger.fine('Creating subscription for event type: $T');
+    final stream = _controller.stream
+        .where((delivery) => !originatedOnly || delivery.originated)
+        .map((delivery) => delivery.event)
+        .where((event) => event is T)
+        .cast<T>();
 
     // Wrap the stream to log handler exceptions
     return stream.transform(
@@ -70,7 +106,7 @@ class EventBus {
           sink.add(event);
         },
         handleError: (error, stackTrace, sink) {
-          _logger.severe('Event handler threw exception', error, stackTrace);
+          logger.severe('Event handler threw exception', error, stackTrace);
           sink.addError(error, stackTrace);
         },
       ),
@@ -82,10 +118,17 @@ class EventBus {
   /// After calling close(), no more events can be published.
   /// Any active subscriptions will be completed.
   Future<void> close() async {
-    _logger.info('EventBus closing');
+    logger.info('EventBus closing');
     await _controller.close();
   }
 
   /// Returns true if the event bus has been closed.
   bool get isClosed => _controller.isClosed;
+}
+
+class _EventDelivery {
+  _EventDelivery(this.event, {required this.originated});
+
+  final DomainEvent<Identity> event;
+  final bool originated;
 }

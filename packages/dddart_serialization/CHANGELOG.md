@@ -6,6 +6,9 @@ All notable changes to `dddart_serialization` will be documented in this file.
 
 ### Added
 
+- `IdentityCodecRegistry.toTaggedKey` returns an explicit registered kind and
+  validated canonical key for heterogeneous aggregate stream references.
+
 - `IdentityCodec<I>`, stock `UuidIdentityCodec`, and instance-local
   `IdentityCodecRegistry`, with explicit stable tagged kinds and canonical,
   lossless key validation for native and scoped identities.

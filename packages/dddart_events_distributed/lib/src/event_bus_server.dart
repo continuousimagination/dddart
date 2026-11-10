@@ -50,8 +50,9 @@ class EventBusServer<T extends StoredEvent<Identity>> {
     this.retentionDuration,
   }) {
     // Subscribe to all events and persist them
-    _subscription =
-        localEventBus.on<DomainEvent<Identity>>().listen(_persistEvent);
+    _subscription = localEventBus
+        .onPublished<DomainEvent<Identity>>()
+        .listen(_persistEvent);
     _logger.info('EventBusServer started');
   }
 

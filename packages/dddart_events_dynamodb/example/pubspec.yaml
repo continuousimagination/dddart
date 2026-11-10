@@ -1,0 +1,12 @@
+name: dddart_events_dynamodb_example
+publish_to: none
+resolution: workspace
+environment:
+  sdk: '>=3.5.0 <4.0.0'
+dependencies:
+  dddart:
+  dddart_events_distributed:
+  dddart_events_dynamodb:
+  dddart_repository_dynamodb:
+dev_dependencies:
+  lints: ^3.0.0

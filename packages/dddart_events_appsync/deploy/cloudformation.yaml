@@ -1,0 +1,319 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: DDDart AppSync Events, durable history, and JWT-authenticated control routes.
+Parameters:
+  Name:
+    Type: String
+    Default: dddart-events
+    AllowedPattern: '[A-Za-z0-9-]{1,50}'
+  Namespace:
+    Type: String
+    Default: aggregates
+    AllowedPattern: '[A-Za-z0-9](?:[A-Za-z0-9-]{0,48}[A-Za-z0-9])?'
+  ImageUri:
+    Type: String
+    Description: Application image containing the compiled Dart Lambda runtime entrypoint.
+  AuthMode:
+    Type: String
+    Default: AWS_LAMBDA
+    AllowedValues: [AWS_LAMBDA, AMAZON_COGNITO_USER_POOLS, OPENID_CONNECT]
+  TokenIssuer:
+    Type: String
+    Default: https://example.com
+  TokenAudience:
+    Type: String
+    Default: dddart
+  JwtSecretArn:
+    Type: String
+    Default: ''
+    Description: Existing Secrets Manager secret with a jwtSecret JSON field (custom JWT mode).
+  NativeJwksUri:
+    Type: String
+    Default: ''
+    Description: Existing provider JWKS URL used by the same HTTP credential verifier.
+  CognitoUserPoolId:
+    Type: String
+    Default: ''
+  CognitoRegion:
+    Type: String
+    Default: us-east-1
+  ExistingTableName:
+    Type: String
+    Default: ''
+    Description: Optional existing pk/sk table with expiresAt TTL; blank creates a retained table.
+  RetentionDays:
+    Type: Number
+    Default: 7
+    MinValue: 1
+    MaxValue: 365
+  CreateControlUrl:
+    Type: String
+    Default: 'true'
+    AllowedValues: ['true', 'false']
+  ExistingControlBaseUrl:
+    Type: String
+    Default: ''
+    Description: App-owned /events URL when CreateControlUrl is false.
+  AllowedOrigins:
+    Type: CommaDelimitedList
+    Default: https://localhost
+Rules:
+  CustomJwtSecret:
+    RuleCondition: !Equals [!Ref AuthMode, AWS_LAMBDA]
+    Assertions:
+      - Assert: !Not [!Equals [!Ref JwtSecretArn, '']]
+        AssertDescription: Custom JWT mode requires the existing signing-secret ARN.
+  NativeVerifier:
+    RuleCondition: !Not [!Equals [!Ref AuthMode, AWS_LAMBDA]]
+    Assertions:
+      - Assert: !Not [!Equals [!Ref NativeJwksUri, '']]
+        AssertDescription: Native provider mode requires its HTTP verifier JWKS URL.
+  CognitoPool:
+    RuleCondition: !Equals [!Ref AuthMode, AMAZON_COGNITO_USER_POOLS]
+    Assertions:
+      - Assert: !Not [!Equals [!Ref CognitoUserPoolId, '']]
+        AssertDescription: Supply an existing pool; this template does not create Cognito.
+  ExistingControl:
+    RuleCondition: !Equals [!Ref CreateControlUrl, 'false']
+    Assertions:
+      - Assert: !Not [!Equals [!Ref ExistingControlBaseUrl, '']]
+        AssertDescription: Supply the application-owned event control URL.
+Conditions:
+  CustomJwt: !Equals [!Ref AuthMode, AWS_LAMBDA]
+  Cognito: !Equals [!Ref AuthMode, AMAZON_COGNITO_USER_POOLS]
+  NewTable: !Equals [!Ref ExistingTableName, '']
+  ControlUrl: !Equals [!Ref CreateControlUrl, 'true']
+Resources:
+  EventTable:
+    Type: AWS::DynamoDB::Table
+    Condition: NewTable
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      TimeToLiveSpecification:
+        AttributeName: expiresAt
+        Enabled: true
+      SSESpecification:
+        SSEEnabled: true
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: {Service: lambda.amazonaws.com}
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: EventStorage
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:UpdateItem, dynamodb:DeleteItem, dynamodb:Query, dynamodb:Scan, dynamodb:ConditionCheckItem]
+                Resource: !If [NewTable, !GetAtt EventTable.Arn, !Sub 'arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ExistingTableName}']
+  AuthorizerRole:
+    Type: AWS::IAM::Role
+    Condition: CustomJwt
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: {Service: lambda.amazonaws.com}
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: ReadMembership
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: dynamodb:GetItem
+                Resource: !If [NewTable, !GetAtt EventTable.Arn, !Sub 'arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ExistingTableName}']
+  AuthorizerFunction:
+    Type: AWS::Lambda::Function
+    Condition: CustomJwt
+    Properties:
+      PackageType: Image
+      Code: {ImageUri: !Ref ImageUri}
+      Architectures: [x86_64]
+      Role: !GetAtt AuthorizerRole.Arn
+      MemorySize: 512
+      Timeout: 10
+      Environment:
+        Variables:
+          DDDART_MODE: authorizer
+          EVENT_TABLE: !If [NewTable, !Ref EventTable, !Ref ExistingTableName]
+          EVENT_NAMESPACE: !Ref Namespace
+          EVENT_RETENTION_DAYS: !Ref RetentionDays
+          AUTH_MODE: !Ref AuthMode
+          TOKEN_ISSUER: !Ref TokenIssuer
+          TOKEN_AUDIENCE: !Ref TokenAudience
+          JWT_SECRET: !Sub '{{resolve:secretsmanager:${JwtSecretArn}:SecretString:jwtSecret}}'
+  EventApi:
+    Type: AWS::AppSync::Api
+    Properties:
+      Name: !Ref Name
+      EventConfig:
+        AuthProviders:
+          - AuthType: AWS_IAM
+          - !If
+            - CustomJwt
+            - AuthType: AWS_LAMBDA
+              LambdaAuthorizerConfig:
+                AuthorizerUri: !GetAtt AuthorizerFunction.Arn
+                AuthorizerResultTtlInSeconds: 0
+            - !If
+              - Cognito
+              - AuthType: AMAZON_COGNITO_USER_POOLS
+                CognitoConfig:
+                  UserPoolId: !Ref CognitoUserPoolId
+                  AwsRegion: !Ref CognitoRegion
+                  AppIdClientRegex: !Ref TokenAudience
+              - AuthType: OPENID_CONNECT
+                OpenIDConnectConfig:
+                  Issuer: !Ref TokenIssuer
+                  ClientId: !Ref TokenAudience
+        ConnectionAuthModes:
+          - AuthType: !Ref AuthMode
+        DefaultSubscribeAuthModes:
+          - AuthType: !Ref AuthMode
+        DefaultPublishAuthModes:
+          - AuthType: !Ref AuthMode
+          - AuthType: AWS_IAM
+  AuthorizerPermission:
+    Type: AWS::Lambda::Permission
+    Condition: CustomJwt
+    Properties:
+      FunctionName: !GetAtt AuthorizerFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: appsync.amazonaws.com
+      SourceAccount: !Ref AWS::AccountId
+      SourceArn: !GetAtt EventApi.ApiArn
+  HandlerFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      PackageType: Image
+      Code: {ImageUri: !Ref ImageUri}
+      Architectures: [x86_64]
+      Role: !GetAtt ExecutionRole.Arn
+      MemorySize: 512
+      Timeout: 30
+      Environment:
+        Variables:
+          DDDART_MODE: handler
+          EVENT_TABLE: !If [NewTable, !Ref EventTable, !Ref ExistingTableName]
+          EVENT_NAMESPACE: !Ref Namespace
+          EVENT_RETENTION_DAYS: !Ref RetentionDays
+          EVENT_HTTP_ENDPOINT: !Sub https://${EventApi.Dns.Http}/event
+          TRUSTED_RELAY_ROLE: !GetAtt ExecutionRole.Arn
+          AUTH_MODE: !Ref AuthMode
+          TOKEN_ISSUER: !Ref TokenIssuer
+          TOKEN_AUDIENCE: !Ref TokenAudience
+          NATIVE_JWKS_URI: !Ref NativeJwksUri
+          JWT_SECRET: !If [CustomJwt, !Sub '{{resolve:secretsmanager:${JwtSecretArn}:SecretString:jwtSecret}}', '']
+  RelayPermission:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: EventRelay
+      Roles: [!Ref ExecutionRole]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action: appsync:EventPublish
+            Resource: !Sub '${EventApi.ApiArn}/channelNamespace/${Namespace}'
+  InvokeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: {Service: appsync.amazonaws.com}
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals: {aws:SourceAccount: !Ref 'AWS::AccountId'}
+              ArnEquals: {aws:SourceArn: !GetAtt EventApi.ApiArn}
+      Policies:
+        - PolicyName: InvokeEventHandler
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: !GetAtt HandlerFunction.Arn
+  DataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !GetAtt EventApi.ApiId
+      Name: DDDartEvents
+      Type: AWS_LAMBDA
+      LambdaConfig: {LambdaFunctionArn: !GetAtt HandlerFunction.Arn}
+      ServiceRoleArn: !GetAtt InvokeRole.Arn
+  Channels:
+    Type: AWS::AppSync::ChannelNamespace
+    DependsOn: RelayPermission
+    Properties:
+      ApiId: !GetAtt EventApi.ApiId
+      Name: !Ref Namespace
+      HandlerConfigs:
+        OnSubscribe:
+          Behavior: DIRECT
+          Integration:
+            DataSourceName: !GetAtt DataSource.Name
+            LambdaConfig: {InvokeType: REQUEST_RESPONSE}
+        OnPublish:
+          Behavior: DIRECT
+          Integration:
+            DataSourceName: !GetAtt DataSource.Name
+            LambdaConfig: {InvokeType: REQUEST_RESPONSE}
+  ControlFunctionUrl:
+    Type: AWS::Lambda::Url
+    Condition: ControlUrl
+    Properties:
+      TargetFunctionArn: !GetAtt HandlerFunction.Arn
+      AuthType: NONE
+      Cors:
+        AllowOrigins: !Ref AllowedOrigins
+        AllowMethods: [POST]
+        AllowHeaders: [authorization, content-type]
+  ControlUrlPermission:
+    Type: AWS::Lambda::Permission
+    Condition: ControlUrl
+    Properties:
+      FunctionName: !GetAtt HandlerFunction.Arn
+      Action: lambda:InvokeFunctionUrl
+      Principal: '*'
+      FunctionUrlAuthType: NONE
+  ControlInvokePermission:
+    Type: AWS::Lambda::Permission
+    Condition: ControlUrl
+    Properties:
+      FunctionName: !GetAtt HandlerFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: '*'
+      InvokedViaFunctionUrl: true
+Outputs:
+  ApiId: {Value: !GetAtt EventApi.ApiId}
+  HttpEndpoint: {Value: !Sub 'https://${EventApi.Dns.Http}/event'}
+  RealtimeEndpoint: {Value: !Sub 'wss://${EventApi.Dns.Realtime}/event/realtime'}
+  Namespace: {Value: !Ref Namespace}
+  TableName: {Value: !If [NewTable, !Ref EventTable, !Ref ExistingTableName]}
+  ControlBaseUrl: {Value: !If [ControlUrl, !Sub '${ControlFunctionUrl.FunctionUrl}events', !Ref ExistingControlBaseUrl]}
+  HandlerArn: {Value: !GetAtt HandlerFunction.Arn}
+  RelayRoleArn: {Value: !GetAtt ExecutionRole.Arn}

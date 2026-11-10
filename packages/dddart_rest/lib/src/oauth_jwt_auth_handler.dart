@@ -1,7 +1,6 @@
-import 'package:dddart_rest/src/authentication_handler.dart';
 import 'package:dddart_rest/src/authentication_result.dart';
+import 'package:dddart_rest/src/token_authentication_handler.dart';
 import 'package:jose/jose.dart';
-import 'package:shelf/shelf.dart';
 
 /// Handles JWT validation for OAuth2/OIDC providers
 ///
@@ -21,7 +20,7 @@ import 'package:shelf/shelf.dart';
 ///   clockSkewTolerance: const Duration(seconds: 30),
 /// );
 /// ```
-class OAuthJwtAuthHandler<TClaims> extends AuthenticationHandler<TClaims> {
+class OAuthJwtAuthHandler<TClaims> extends TokenAuthenticationHandler<TClaims> {
   /// Creates an OAuth JWT authentication handler
   OAuthJwtAuthHandler({
     required this.jwksUri,
@@ -68,20 +67,8 @@ class OAuthJwtAuthHandler<TClaims> extends AuthenticationHandler<TClaims> {
   late final JsonWebKeyStore _keyStore;
 
   @override
-  Future<AuthenticationResult<TClaims>> authenticate(Request request) async {
+  Future<AuthenticationResult<TClaims>> verifyCredential(String token) async {
     try {
-      // Extract Bearer token from Authorization header
-      final authHeader = request.headers['authorization'];
-      if (authHeader == null) {
-        return AuthenticationResult.failure('Missing authorization header');
-      }
-
-      if (!authHeader.startsWith('Bearer ')) {
-        return AuthenticationResult.failure('Invalid token format');
-      }
-
-      final token = authHeader.substring(7).trim();
-
       // Parse and verify JWT
       JsonWebToken jwt;
       try {
@@ -154,7 +141,7 @@ class OAuthJwtAuthHandler<TClaims> extends AuthenticationHandler<TClaims> {
 
       // Extract user ID from sub claim
       final userId = jwt.claims['sub'] as String?;
-      if (userId == null) {
+      if (userId == null || userId.isEmpty) {
         return AuthenticationResult.failure('Token missing subject');
       }
 

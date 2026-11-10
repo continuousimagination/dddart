@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Generated repositories accept an optional `eventPublisher` and await separate
+  event publication after successful public aggregate CRUD. Failed publication
+  leaves the event pending without failing an already successful save.
+
 - **BREAKING:** Generated repositories implement Repository<T, I> with concrete
   IDs, optional identityCodecs injection and shared JSON codecs. Canonical keys
   are URI-encoded once; invalid keys fail before HTTP I/O. HTTP 400 maps to a
