@@ -53,10 +53,11 @@ The Website workflow also supports manual dispatch. Only `website/dist` is uploa
 Pull requests have read-only permissions and do not deploy. The deploy job alone
 receives Pages and OpenID Connect write permissions.
 
-Pages must use **GitHub Actions** as its build source, with HTTPS enforced. The initial
-setup enables Actions for this workflow while keeping the pre-existing Dart `Test`
-workflow disabled, preserving its effective state when repository Actions were off.
-Re-enable that test workflow separately if desired.
+Pages must use **GitHub Actions** as its build source, with HTTPS enforced. Actions
+was disabled repository-wide when this site was prepared. The proposed initial
+setup enables Actions while keeping the pre-existing Dart `Test` workflow disabled,
+preserving that workflow's prior effective state. This CI settings change requires
+the repository owner's approval. Re-enable the test workflow separately if desired.
 
 ## Verification scope
 

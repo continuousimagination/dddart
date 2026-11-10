@@ -85,6 +85,7 @@ For an actual AWS deployment, follow the [integration guide](/dddart/docs/integr
 The documentation examples were checked against revision `b4aacf0671873e729a1a390dc2bb609b80c723e5` using Dart 3.9.4:
 
 - Complete core/domain, configuration, and generated JSON examples were analyzed and run.
+- All 17 packages resolved in a separate application from the pinned Git revision using the downloadable override fragment; the getting-started program ran there.
 - The SQLite guide's generated model passed create, identity-preserving load, upsert, delete, and missing-record checks.
 - Representative core, generated JSON, configuration, HTTP/auth, and aggregate/AppSync client compositions compiled to JavaScript. Selected domain, JSON, and configuration programs also ran under Node.
 - The HTTP server helper and Slack server compiled; local event delivery/metadata checks and the native invocation example ran.
