@@ -1,0 +1,96 @@
+# Merge these sections into your application pubspec.yaml.
+# Keep direct Git dependencies and overrides on the same revision.
+# Add packages you import directly under dependencies (this example uses core).
+dependencies:
+  dddart:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: b4aacf0671873e729a1a390dc2bb609b80c723e5
+      path: packages/dddart
+
+dependency_overrides:
+  dddart:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: b4aacf0671873e729a1a390dc2bb609b80c723e5
+      path: packages/dddart
+  dddart_config:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: b4aacf0671873e729a1a390dc2bb609b80c723e5
+      path: packages/dddart_config
+  dddart_events_appsync:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: b4aacf0671873e729a1a390dc2bb609b80c723e5
+      path: packages/dddart_events_appsync
+  dddart_events_distributed:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: b4aacf0671873e729a1a390dc2bb609b80c723e5
+      path: packages/dddart_events_distributed
+  dddart_events_dynamodb:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: b4aacf0671873e729a1a390dc2bb609b80c723e5
+      path: packages/dddart_events_dynamodb
+  dddart_json:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: b4aacf0671873e729a1a390dc2bb609b80c723e5
+      path: packages/dddart_json
+  dddart_repository_dynamodb:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: b4aacf0671873e729a1a390dc2bb609b80c723e5
+      path: packages/dddart_repository_dynamodb
+  dddart_repository_mongodb:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: b4aacf0671873e729a1a390dc2bb609b80c723e5
+      path: packages/dddart_repository_mongodb
+  dddart_repository_mysql:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: b4aacf0671873e729a1a390dc2bb609b80c723e5
+      path: packages/dddart_repository_mysql
+  dddart_repository_rest:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: b4aacf0671873e729a1a390dc2bb609b80c723e5
+      path: packages/dddart_repository_rest
+  dddart_repository_sql:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: b4aacf0671873e729a1a390dc2bb609b80c723e5
+      path: packages/dddart_repository_sql
+  dddart_repository_sqlite:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: b4aacf0671873e729a1a390dc2bb609b80c723e5
+      path: packages/dddart_repository_sqlite
+  dddart_rest:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: b4aacf0671873e729a1a390dc2bb609b80c723e5
+      path: packages/dddart_rest
+  dddart_rest_client:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: b4aacf0671873e729a1a390dc2bb609b80c723e5
+      path: packages/dddart_rest_client
+  dddart_serialization:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: b4aacf0671873e729a1a390dc2bb609b80c723e5
+      path: packages/dddart_serialization
+  dddart_webhooks:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: b4aacf0671873e729a1a390dc2bb609b80c723e5
+      path: packages/dddart_webhooks
+  dddart_webhooks_slack:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: b4aacf0671873e729a1a390dc2bb609b80c723e5
+      path: packages/dddart_webhooks_slack

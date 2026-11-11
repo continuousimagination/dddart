@@ -2,6 +2,11 @@
 
 A collection of packages for Domain-Driven Design in Dart with automatic JSON serialization.
 
+**[Homepage and documentation](https://continuousimagination.github.io/dddart/)** ·
+[Philosophy](https://continuousimagination.github.io/dddart/docs/philosophy/) ·
+[Getting started](https://continuousimagination.github.io/dddart/docs/getting-started/) ·
+[Package map](https://continuousimagination.github.io/dddart/docs/packages/)
+
 ## Packages
 
 The [aggregate events and AppSync guide](docs/DISTRIBUTED_EVENTS.md) describes
@@ -38,14 +43,17 @@ CloudFormation deployment. Uses existing JWT authentication or Cognito/OIDC.
 
 2. **Create your domain models**:
 ```dart
+import 'dart:convert';
+
 import 'package:dddart/dddart.dart';
+import 'package:dddart_json/dddart_json.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 part 'user.g.dart';
 
 @Serializable()
-class User extends AggregateRoot {
-  const User({
+class User extends UuidAggregateRoot {
+  User({
     required this.name,
     required this.email,
     super.id,
