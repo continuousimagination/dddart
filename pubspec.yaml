@@ -6,6 +6,7 @@ environment:
 
 workspace:
   - packages/dddart
+  - packages/dddart_repository_indexeddb
   - packages/dddart_serialization
   - packages/dddart_json
   - packages/dddart_json/example

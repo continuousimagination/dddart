@@ -838,3 +838,19 @@ Contributions are welcome! Please read our contributing guidelines and submit pu
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Optional conditional repositories
+
+`ConditionalRepository<T, I>` is a portable capability separate from the basic
+`Repository<T, I>` CRUD contract. Its `ConditionalCommit<T, I>` groups typed
+put/delete mutations, expected revisions and caller-normalized unique values.
+Implementations atomically apply all changes and store an operation receipt.
+`VersionedAggregate<T, I>` carries a detached snapshot and opaque revision;
+`CommitResult<I>` returns revisions keyed by the concrete aggregate identity.
+Operation IDs remain `UuidValue` even when aggregate IDs are application-defined.
+An absent receipt is uncertain, not rollback proof; retry with the same operation
+ID and identical encoded payload. Core adds no browser dependency or domain
+normalization policy, and basic repositories do not acquire conditional semantics.
+
+The Git-only [IndexedDB adapter](../dddart_repository_indexeddb/README.md)
+implements this capability with application-owned snapshot and identity codecs.
