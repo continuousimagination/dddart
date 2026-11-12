@@ -1,3 +1,9 @@
+## Unreleased
+
+- Add a repeatable native-Chrome separate-tab isolation harness covering revision
+  and unique-value races, delete/recreate ABA, and durable receipt replay after
+  both pages are destroyed and reopened. Retain source and browser evidence in CI.
+
 ## 0.9.0
 
 - Integrate the reviewed IndexedDB CRUD, atomic conditional writes, uniqueness,
