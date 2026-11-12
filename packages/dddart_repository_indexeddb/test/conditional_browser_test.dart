@@ -49,6 +49,9 @@ class _ReceiptFaultDatabase extends Database {
   final Database delegate;
 
   @override
+  Stream<VersionChangeEvent> get onVersionChange => delegate.onVersionChange;
+
+  @override
   Iterable<String> get objectStoreNames => delegate.objectStoreNames;
 
   @override

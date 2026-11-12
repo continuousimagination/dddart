@@ -61,8 +61,45 @@ ownership, before the upgrade; their bytes are left intact. An interrupted
 upgrade rolls back the marker and version change, so opening again can retry.
 An incompatible codec, malformed legacy record, or unexpected store fails the
 upgrade and preserves the old database for an explicit migration. Separate
-contexts opening version 2 must agree on the codec version. Close old tabs that
-still hold version-1 connections so the upgrade can proceed.
+contexts opening version 2 must agree on the codec version.
+
+### Blocked upgrades and connection lifecycle
+
+If an older tab, iframe or worker holds a version-1 connection open, the browser
+cannot begin the version-2 upgrade. On its native `blocked` event, operations
+waiting for that open fail promptly with `IndexedDbOpenBlockedException` (a
+`RepositoryException` with type `connection` and a `databaseName`). No data
+transaction has been dispatched: neither schema version/marker nor aggregates,
+unique claims or receipts are changed. This is an explicit failure, not a timeout
+or an `uncertain` conditional-commit result. `resolveOperation` retains its
+existing contract: connection failures yield `uncertain`, not rollback proof.
+
+```dart
+try {
+  await repository.save(aggregate);
+} on IndexedDbOpenBlockedException catch (error) {
+  // Ask the user to close/reload older contexts using error.databaseName.
+  // After those connections are released, retry this operation.
+}
+```
+
+IndexedDB cannot cancel a queued open request. The adapter abandons that request,
+observes its eventual completion/error, aborts its eventual upgrade **before any
+schema or record changes**, and closes any late connection. While it is still
+queued/draining, repeated calls fail with the same blocked error rather than
+silently queuing behind it. After it drains, retry on the same repository starts
+a fresh atomic upgrade. Close/reload the older contexts first; retry can still
+report blocked while their connection release is being processed. The adapter
+never deletes the database or forces another context to close. An external
+legacy connection must handle `versionchange` itself or be closed by its owner.
+
+Connections opened by this adapter automatically close on `versionchange`,
+including database deletion requests. Existing transactions may finish; the
+repository is permanently invalidated and new operations fail with a connection
+error explaining the version change. Reload the application before constructing
+a replacement with the compatible schema/codec; the old instance never silently
+reopens against a different schema. `close()` is also permanent and can abandon
+a queued open without waiting indefinitely for another context to release it.
 
 `save` is an upsert, as specified by `Repository<T, I>`. It waits for the
 IndexedDB transaction to commit before returning. `getById` validates the
@@ -192,9 +229,15 @@ Use `dart test -p vm` for the memory/failure checks alone and
 `idbFactoryNative` and cover UUID schema recovery plus scoped typed CRUD,
 conditional writes, uniqueness, receipts and reopening.
 
+The blocked-upgrade regression holds a native version-1 connection in a separate
+same-origin iframe and requests version 2 from the parent context. It checks the
+entire old store while blocked and after abandonment, then verifies a fresh
+atomic upgrade, payload/unique-claim/receipt preservation, and schema/codec
+fences. Native tests also cover closing a queued open and automatic release on
+version change. These Chrome tests are not a physical WebKit verification.
+
 The existing native conditional race uses separate connections in one browser
 context; it is **not** a separate-tab isolation proof. Cancellation of in-flight
-operations (#74), separate-tab isolation (#75), blocked schema upgrades (#76),
-and physical iPhone/WebKit verification (#77) remain separate follow-ups. This
-integration does not claim those guarantees have been verified. Public pub.dev
-publication is tracked separately in #30.
+operations (#74), separate-tab isolation (#75), and physical iPhone/WebKit
+verification (#77) remain separate follow-ups. Public pub.dev publication is
+tracked separately in #30.
