@@ -1,0 +1,2 @@
+# The package gate must exercise native IndexedDB, not just the memory fake.
+platforms: [vm, chrome]

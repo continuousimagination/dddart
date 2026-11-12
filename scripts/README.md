@@ -33,7 +33,7 @@ lists must not be duplicated in this script or in the workflow.
   inventory order;
 - rejects stale, duplicate, or unclassified external-service test tags by
   comparing the inventory with `dart_test.yaml` and test metadata;
-- analyzes, format-checks, and tests all 17 intended public packages;
+- analyzes, format-checks, and tests all 18 intended public packages;
 - excludes MongoDB, DynamoDB, and MySQL service tests locally according to the
   explicit policy (CI runs each adapter only with its package-scoped service);
 - runs `dart pub publish --dry-run` for packages whose metadata does not set
@@ -82,6 +82,18 @@ dart tool/validation/validate.dart examples --mode=local
 # Fast policy and dependency-boundary regression tests
 dart tool/validation/self_test.dart
 ```
+
+### Immutable IndexedDB Git consumer
+
+```bash
+dart tool/validation/verify_indexeddb_git_consumer.dart <full-commit-sha>
+```
+
+Creates an outside-workspace consumer without dependency overrides, verifies
+core/serialization/adapter Git lockfile revisions, and runs typed memory and
+native Chrome contracts. The IndexedDB package gate itself also requires Chrome
+through its `dart_test.yaml` platforms. Set `CHROME_EXECUTABLE` when needed.
+Run browser lanes sequentially on thread-constrained development hosts.
 
 ### `setup-hooks.sh`
 
