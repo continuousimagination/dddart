@@ -236,8 +236,51 @@ atomic upgrade, payload/unique-claim/receipt preservation, and schema/codec
 fences. Native tests also cover closing a queued open and automatic release on
 version change. These Chrome tests are not a physical WebKit verification.
 
-The existing native conditional race uses separate connections in one browser
-context; it is **not** a separate-tab isolation proof. Cancellation of in-flight
-operations (#74), separate-tab isolation (#75), and physical iPhone/WebKit
-verification (#77) remain separate follow-ups. Public pub.dev publication is
-tracked separately in #30.
+### Separate-tab isolation harness
+
+From the repository root, with `dart pub get` completed:
+
+```sh
+dart packages/dddart_repository_indexeddb/tool/verify_cross_tab.dart > cross-tab-results.json
+# Optional positive argument selects the number of race rounds (default: 10).
+```
+
+The harness compiles a generic sample participant with Dart, serves it on an
+ephemeral loopback origin, and launches an isolated temporary Chrome profile.
+Chrome DevTools Protocol creates two **top-level pages**, each independently
+loading the compiled Dart program and opening `idbFactoryNative`. These are
+same-origin tabs in one storage partition, not two connections in one Dart
+context, iframes, memory factories, or isolated incognito partitions. A prepare
+barrier stages both requests before dispatching either commit; no application
+lock serializes them. Native IndexedDB provides transaction serialization.
+
+Each round asserts one committed writer and one durable stale-revision rejection,
+then races a shared unique value and checks both tabs' records and ownership.
+A tab retaining an old revision also attempts a write after the other tab deletes
+and recreates that ID. Both pages are then destroyed and independently reopened.
+Every original operation is resolved and retried with its original ID, payload,
+and digest, including a unique-conflict rejection whose competing owner has now
+been deleted. Receipts, records, unique owners, and revisions must stay unchanged.
+Changed-payload operation-ID reuse and resolution with its changed digest must
+still fail with `constraint`.
+
+A failed assertion, command timeout, or persistent cleanup failure exits nonzero.
+Profile deletion retries transient filesystem failures at most five times; all
+teardown steps run and cleanup diagnostics never replace a verification error.
+Only after successful cleanup does a passing run write a JSON report to stdout
+containing the browser version, base Git SHA, working-tree status, source hashes
+(to identify uncommitted harness changes honestly), page
+and Dart-context IDs, and original/replayed outcomes. Compilation diagnostics go
+to stderr. `CHROME_EXECUTABLE` selects Chrome (default: `google-chrome` on Linux,
+standard application path on macOS). Chrome's sandbox stays enabled. The temporary
+browser, profile, server, and database are test-owned.
+The adapter CI lane runs this harness after the package tests and retains its JSON
+report; `scripts/test-all.sh` runs the same check locally. The [issue #75 work record](../../docs/worky/indexeddb-cross-tab-work-record.md)
+records the local verification and independent-review boundary. This harness can
+also provide independently loaded participants for later lifecycle tests; it does
+not currently exercise blocked upgrades or cancellation.
+
+Cancellation of in-flight operations (#74) and physical iPhone/WebKit
+verification (#77) remain separate follow-ups. Chromium results are not physical
+WebKit evidence. Public pub.dev publication is tracked
+separately in #30.

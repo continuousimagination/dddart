@@ -1,3 +1,9 @@
+## Unreleased
+
+- Add a repeatable native-Chrome separate-tab isolation harness covering revision
+  and unique-value races, delete/recreate ABA, and durable receipt replay after
+  both pages are destroyed and reopened. Retain source and browser evidence in CI.
+
 ## 0.9.0
 
 - Fail blocked schema opens with a recoverable typed connection error, abort

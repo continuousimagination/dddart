@@ -24,6 +24,8 @@ lists must not be duplicated in this script or in the workflow.
 - verifies that every root workspace member is either an intended public package
   or has a justified exemption;
 - analyzes, format-checks, and self-tests the shared validation tooling;
+- verifies native IndexedDB isolation and receipt replay across independently
+  loaded same-origin Chrome tabs, matching the adapter's CI lane;
 - isolates nested Git and Pub subprocesses from repository-local environment
   variables exported by hooks, so fixture repositories cannot affect the
   caller's index or configuration;
