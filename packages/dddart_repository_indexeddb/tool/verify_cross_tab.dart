@@ -5,6 +5,8 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:dddart/dddart.dart';
 
+import 'verification_cleanup.dart';
+
 /// Runs native IndexedDB operations in independently loaded same-origin pages.
 ///
 /// No Node, WebDriver, popup permission, or browser automation package is needed.
@@ -22,6 +24,8 @@ Future<void> main(List<String> arguments) async {
   Process? browser;
   _Cdp? cdp;
   final diagnostics = StringBuffer();
+  var verificationFailed = false;
+  late String report;
   try {
     final compiled = await Process.run(
         Platform.resolvedExecutable,
@@ -111,6 +115,7 @@ Future<void> main(List<String> arguments) async {
             .map((file) => file.path.substring(root.path.length + 1)),
       'packages/dddart_repository_indexeddb/tool/cross_tab_participant.dart',
       'packages/dddart_repository_indexeddb/tool/verify_cross_tab.dart',
+      'packages/dddart_repository_indexeddb/tool/verification_cleanup.dart',
     ]..sort();
     final sourceHashes = {
       for (final path in sourcePaths)
@@ -118,7 +123,7 @@ Future<void> main(List<String> arguments) async {
             .convert(File('${root.path}/$path').readAsBytesSync())
             .toString(),
     };
-    stdout.writeln(const JsonEncoder.withIndent('  ').convert({
+    report = const JsonEncoder.withIndent('  ').convert({
       'result': 'PASS',
       'browser': version,
       'dartVersion': Platform.version,
@@ -130,26 +135,38 @@ Future<void> main(List<String> arguments) async {
       'rounds': rounds,
       ...results,
       'independentReview': 'Worky-owned; not asserted by this test',
-    }));
+    });
   } catch (_) {
+    verificationFailed = true;
     stderr.write(diagnostics);
     rethrow;
   } finally {
-    if (cdp != null) {
-      try {
-        await cdp.send('Browser.close');
-      } catch (_) {
-        // Chrome can close the socket before acknowledging Browser.close.
-      }
-      await cdp.close();
-    }
-    if (browser != null) {
-      browser.kill();
-      await browser.exitCode;
-    }
-    await server?.close(force: true);
-    temporary.deleteSync(recursive: true);
+    await cleanupVerification([
+      () async {
+        final connection = cdp;
+        if (connection != null) {
+          try {
+            await connection.send('Browser.close');
+          } catch (_) {
+            // Chrome can close the socket before acknowledging Browser.close.
+          }
+          await connection.close().timeout(const Duration(seconds: 5));
+        }
+      },
+      () async {
+        if (browser != null) {
+          browser.kill();
+          await browser.exitCode.timeout(const Duration(seconds: 10));
+        }
+      },
+      () async {
+        await server?.close(force: true).timeout(const Duration(seconds: 5));
+      },
+      () => deleteTemporaryDirectory(temporary),
+    ], verificationFailed: verificationFailed);
   }
+  // A passing report also guarantees cleanup completed successfully.
+  stdout.writeln(report);
 }
 
 void _check(bool condition, String label) {

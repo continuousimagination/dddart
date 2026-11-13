@@ -45,6 +45,9 @@ class _Database extends Database {
   _Failure failure = _Failure.none;
 
   @override
+  Stream<VersionChangeEvent> get onVersionChange => const Stream.empty();
+
+  @override
   Iterable<String> get objectStoreNames => const ['samples'];
 
   @override
