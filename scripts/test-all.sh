@@ -52,4 +52,6 @@ cd "$REPOSITORY_ROOT"
 dart analyze --fatal-infos tool/validation
 dart format --output=none --set-exit-if-changed tool/validation
 dart tool/validation/self_test.dart
+# Keep the independent-page browser check aligned with the adapter CI lane.
+dart packages/dddart_repository_indexeddb/tool/verify_cross_tab.dart
 dart tool/validation/validate.dart all --mode="$DDDART_VALIDATION_MODE"

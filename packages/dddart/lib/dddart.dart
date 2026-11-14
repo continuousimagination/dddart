@@ -56,6 +56,7 @@ export 'package:logging/logging.dart' show Level, Logger;
 
 // Export all public classes
 export 'src/aggregate_root.dart';
+export 'src/conditional_repository.dart';
 export 'src/domain_event.dart';
 export 'src/entity.dart';
 export 'src/event_bus.dart';
