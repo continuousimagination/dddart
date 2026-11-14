@@ -5,8 +5,16 @@
 - Make close a dispatch barrier for calls awaiting database opening; document
   non-draining close and independent timeouts. Add deterministic VM/native
   browser cancellation, late-error, receipt/retry and close regressions.
+- Add a repeatable native-Chrome separate-tab isolation harness covering revision
+  and unique-value races, delete/recreate ABA, and durable receipt replay after
+  both pages are destroyed and reopened. Retain source and browser evidence in CI.
 
 ## 0.9.0
+
+- Fail blocked schema opens with a recoverable typed connection error, abort
+  abandoned queued upgrades, and release connections on version change.
+- Add a native cross-context iframe regression for blocked/abandoned upgrades,
+  safe retry, record/metadata preservation, and schema/codec fences.
 
 - Integrate the reviewed IndexedDB CRUD, atomic conditional writes, uniqueness,
   receipts and schema recovery implementations with current typed core APIs.

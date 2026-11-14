@@ -1,0 +1,486 @@
+{
+  "scope": "Issue #75 / PR #83 R1 cleanup revision integrated with supplied parent #79 / issue #76 target",
+  "assignmentId": "773340d8-a9b1-4e13-b636-f395c443d944",
+  "merge": {
+    "branch": "feature/75-indexeddb-prove-conditional-write-isolation-across-separate-browser-tabs",
+    "head": "b726123d00c4aaaf41c6be83319c82caed61dc5d",
+    "mergeHead": "3164d1e81eddb3bfc17fdfd05d14a3e77dec4efc",
+    "targetBranch": "feature/79-complete-indexeddb-integration-lifecycle-guarantees-and-browser-verifica",
+    "command": "git merge --no-commit --no-ff 3164d1e81eddb3bfc17fdfd05d14a3e77dec4efc",
+    "initialExitCode": 1,
+    "conflicts": [
+      "packages/dddart_repository_indexeddb/README.md"
+    ],
+    "resolution": "Keep both parent blocked-upgrade/lifecycle documentation and issue75 separate-tab harness section; remove obsolete claims that #75/#76 coverage remains unimplemented; document R1 teardown behavior.",
+    "unresolvedEntries": 0,
+    "mergeCommitCreated": false,
+    "note": "MERGE_HEAD deliberately retained for Worky commit/publication. HEAD alone does not identify the tested uncommitted merge; source hashes below do."
+  },
+  "recovery": {
+    "readOnlySourceWorktree": "/home/ec2-user/.openclaw/workspace-dev/.worky-attempt.SfL6xIF0G6/clone",
+    "exactRecoveredFileSha256": {
+      "packages/dddart_repository_indexeddb/tool/verify_cross_tab.dart": "1e0690de645dd4342ef80fb02e742fd9af928318c2c666928842501a3d1ecf11",
+      "packages/dddart_repository_indexeddb/tool/verification_cleanup.dart": "d919c7a6ed05d9ecafe2960bf7e5f30ee73189e487328294a1cac9370fa39599",
+      "packages/dddart_repository_indexeddb/test/verification_cleanup_test.dart": "09ad523f4e4deb1f32aca0d1b29c01d7d2b66f024f9b695fc0c55185d64f5ae2"
+    },
+    "historicalEvidenceReference": {
+      "path": "/home/ec2-user/.openclaw/workspace-dev/.worky-attempt.SfL6xIF0G6/clone/docs/worky/indexeddb-cross-tab-cleanup-results.json",
+      "sha256": "569023e064dc1b3176b998418d50d583b280e226737f6e0eaef2c262e57999f9",
+      "bytes": 18315
+    },
+    "historicalEvidenceLimit": "Historical R1 evidence is reference only; it does not validate the new integrated adapter sources. All passing results in this report were rerun in the new prepared worktree."
+  },
+  "sourceManifestSha256": "e4670ca8824190b63e156df41c3c9928c285e1965928079b9e0ab406dffe4783",
+  "sourceHashes": {
+    "packages/dddart/lib/dddart.dart": "703a307ddc90eb5013fecb230ec25754683c665714d4ce1857b31fa6e9da4fe3",
+    "packages/dddart/lib/src/aggregate_root.dart": "e5af63ca3b3d80092396c1d45afb15e374058ea3e677ffb2e5ef69af874522a1",
+    "packages/dddart/lib/src/conditional_repository.dart": "3b0a9f019eb8b7d8ff16fe637ee0c0180852be0e66f495339399f13c2a89e77b",
+    "packages/dddart/lib/src/domain_event.dart": "e83d097d16860c456973099db95beec6c9214a61725130e9e170b97fb67166aa",
+    "packages/dddart/lib/src/entity.dart": "9d21c4b105ac9d56d60e6f4dbd86bd9dc52046aacda2a8f92e014fa4baf7d4c1",
+    "packages/dddart/lib/src/event_bus.dart": "3846a3bd740edf02cbb9962cfd458c4a46922568bb7260394345c05df7391028",
+    "packages/dddart/lib/src/event_publisher.dart": "b24f63d71a80f4e286d51af4686b28acd329df708e726a9fdd4db6ae76bf31ea",
+    "packages/dddart/lib/src/event_publishing_repository.dart": "e380efdf534526d028d18ae47a724c27b2478d17ab779e6470b17ee6b8db64ca",
+    "packages/dddart/lib/src/file_log_handler.dart": "c27571159dfc91eefa1ab8b12cee7d5cda7f4850a269f9beb086025b3676cea9",
+    "packages/dddart/lib/src/identity.dart": "b3abde1545b4ff22121c387afd019f18df785e07412d5bb545559cadb0175e33",
+    "packages/dddart/lib/src/in_memory_repository.dart": "9fb0a1ef0efae59f6056e87e8f0efef7e6c710a59018f351d0b51790c4f9071f",
+    "packages/dddart/lib/src/repository.dart": "3e081b5016c4dc7f31dd8afd192b519480c6e4a87ae2089ab32137a618d8e900",
+    "packages/dddart/lib/src/repository_exception.dart": "7909388f4b921b0a4516e1f314251f4b56ff9df6f6c0e73b4dae3bbe02488d47",
+    "packages/dddart/lib/src/save_with_events.dart": "71796289965bd64333ff68d0ecf65c797e4eef4f59db5ad4d24bab236ca58509",
+    "packages/dddart/lib/src/uuid_value.dart": "068dace3a969e805b84de1efc930a1e1abbdf5ba263dff37347eb389401d9ad3",
+    "packages/dddart/lib/src/value.dart": "a92b0ad396ac0bd3346c8a18d0c41c14c20937612d13640f4f0dcd408e14f70c",
+    "packages/dddart/pubspec.yaml": "4b89c18869d5f6022664758ffa621f813a9741b7572a5e4bc090689aef58e187",
+    "packages/dddart_repository_indexeddb/lib/dddart_repository_indexeddb.dart": "1db38b13b3e98e17094e9bd3e9635b7e6c78752463af96298109fae23fb7bcb1",
+    "packages/dddart_repository_indexeddb/lib/src/indexeddb_repository.dart": "1c09d2fb1aa337517db36d089d8ce94379dda80874812adffe477c023d45ca3e",
+    "packages/dddart_repository_indexeddb/lib/src/transaction_error_guard_stub.dart": "d8a6a117c53d4b6ff9a4aae2bc66c5fedcc7e11e6cbfdab9a4c2fa69914bab63",
+    "packages/dddart_repository_indexeddb/lib/src/transaction_error_guard_web.dart": "41838732068585718eb19fe7799bec83823f51a37f4cfbe6708217ddb8174085",
+    "packages/dddart_repository_indexeddb/pubspec.yaml": "0195751c85b70f2358adbe441ac7ab947ed7198df45f7fadba790063876dcc4d",
+    "packages/dddart_repository_indexeddb/tool/cross_tab_participant.dart": "74883bcc644c2e24af08068cbd47ab4a4e6c4872de94f895b209c3a7351e63a6",
+    "packages/dddart_repository_indexeddb/tool/verification_cleanup.dart": "d919c7a6ed05d9ecafe2960bf7e5f30ee73189e487328294a1cac9370fa39599",
+    "packages/dddart_repository_indexeddb/tool/verify_cross_tab.dart": "1e0690de645dd4342ef80fb02e742fd9af928318c2c666928842501a3d1ecf11",
+    "packages/dddart_serialization/lib/dddart_serialization.dart": "15463a29c7f5154bbd3c412314c51b8209dcc02cb6ebf06d6d4119f1bff84211",
+    "packages/dddart_serialization/lib/src/identity_codec.dart": "f54e9290c42f66e1da2c6982ab686277b023f4c3671b1f93f4143f5ce926f78f",
+    "packages/dddart_serialization/lib/src/serializable_annotation.dart": "6bd1fc90b6a7880fd296dbfaa19da328add5415202bac2593c184a8b132b8b69",
+    "packages/dddart_serialization/lib/src/serialization_config.dart": "456b07970dc2511a65dd7d1843fafb8aa00cf0cee7304d79c79e8eeaa6c578ea",
+    "packages/dddart_serialization/lib/src/serialization_contracts.dart": "7f524b5448eb3e363a7c149e5656cf7e462f8e1aff03c59d03700ef13c23ab4b",
+    "packages/dddart_serialization/lib/src/serialization_utils.dart": "1a9c29d4940e5150897e4c1cc49d618cb53cfc9694c0de6744f9f6289d396e56",
+    "packages/dddart_serialization/pubspec.yaml": "53aa9bab7aa4fde496f852969117fb96db64620559c179feb8bc664a15e222db"
+  },
+  "cleanupTestSha256": "09ad523f4e4deb1f32aca0d1b29c01d7d2b66f024f9b695fc0c55185d64f5ae2",
+  "allTrackedNonEvidenceSourceSnapshot": {
+    "path": "/tmp/issue75-integrated.Uuw1Nm/integrated-source-hashes.json",
+    "sha256": "a711bba3d80642535f6ea02315b9b61ca9e347b9560c8539fceb628d98e1fe9f",
+    "bytes": 107869
+  },
+  "trackedNonEvidenceSourceFilesUnchangedDuringGate": 841,
+  "focusedChecks": [
+    {
+      "name": "pub-get",
+      "exitCode": 0,
+      "log": {
+        "path": "/tmp/issue75-integrated.Uuw1Nm/pub-get.log",
+        "sha256": "dd85165ede4002aed0d87afbeba1051f7d7cfecca69e52330915d6b6eb102148",
+        "bytes": 3802
+      }
+    },
+    {
+      "name": "analyze",
+      "exitCode": 0,
+      "log": {
+        "path": "/tmp/issue75-integrated.Uuw1Nm/analyze.log",
+        "sha256": "70f8c99d26dc1c9ade8a697725bb5110eb2b4ffe7767fac691bd1a0345ddfabe",
+        "bytes": 70
+      }
+    },
+    {
+      "name": "format",
+      "exitCode": 0,
+      "log": {
+        "path": "/tmp/issue75-integrated.Uuw1Nm/format.log",
+        "sha256": "d05c2078020069454faa3331d317c054803127e52263e66ea43942451d0873f1",
+        "bytes": 48
+      }
+    },
+    {
+      "name": "cleanup-tests",
+      "exitCode": 0,
+      "log": {
+        "path": "/tmp/issue75-integrated.Uuw1Nm/cleanup-tests.log",
+        "sha256": "234973ebdd088fc49d5667c64847ad40732f3397977ae20f889708c26b7496fd",
+        "bytes": 1111
+      }
+    },
+    {
+      "name": "fix-dry-run",
+      "exitCode": 0,
+      "log": {
+        "path": "/tmp/issue75-integrated.Uuw1Nm/fix-dry-run.log",
+        "sha256": "582ae25a2443c3c627844974a83161bf84da848834445c1ab6675341b5b14152",
+        "bytes": 76
+      }
+    }
+  ],
+  "focusedCleanupTestsPassed": 9,
+  "runs": [
+    {
+      "run": 1,
+      "result": "PASS",
+      "exitCode": 0,
+      "freshTemporaryProfile": true,
+      "rounds": 10,
+      "durableOperationsResolvedAndRetried": 45,
+      "browser": {
+        "protocolVersion": "1.3",
+        "product": "Chrome/156.0.8078.47",
+        "revision": "@1d17a2e2ee147bb7d6ae2ab6abdb3a2510c17775",
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+        "jsVersion": "15.6.75.19"
+      },
+      "dartVersion": "3.13.7 (stable) (Thu Oct 22 14:28:57 2026 -0700) on \"linux_arm64\"",
+      "pageTargetIds": [
+        "1F57221B1BB57079971D10B79C4D201E",
+        "352A25785B475F4AA9D5D1A774AC9383",
+        "EB25BBD7A2EF0E1152E339F66B4089B1",
+        "BA248E61D8D08229CFF79115D79FD3DE"
+      ],
+      "independentContextIds": [
+        "80da38bd-83c1-4690-bd37-f88fb3009633",
+        "2dce3712-60f5-4655-ac0e-06047fd79dea",
+        "2f891e49-8718-413d-8ac4-4929e4f44213",
+        "6a4081c7-d908-44f4-9908-96d152f216a6"
+      ],
+      "outcomes": {
+        "committed": 24,
+        "rejected/staleRevision": 11,
+        "rejected/uniqueConflict": 10
+      },
+      "checks": [
+        "same-revision race",
+        "unique-value race and consistent records",
+        "cross-tab delete/recreate ABA",
+        "durable rejection after unique release",
+        "destroy/reopen both pages",
+        "resolve and retry every original operation",
+        "no duplicate mutation or revision",
+        "changed-payload reuse rejected"
+      ],
+      "rawReport": {
+        "path": "/tmp/issue75-integrated.Uuw1Nm/cross-tab-1.json",
+        "sha256": "3ef4dba4bec8edea1d260222ba81c073e07ec1b6db0555cf30aa83fdda5048f3",
+        "bytes": 40665
+      },
+      "stderr": {
+        "path": "/tmp/issue75-integrated.Uuw1Nm/cross-tab-1.stderr",
+        "sha256": "e4c5203153b57232f7baee5b0075fc2e435cc134c71a36a6b6bde0d929f65163",
+        "bytes": 111
+      },
+      "exitFile": {
+        "path": "/tmp/issue75-integrated.Uuw1Nm/cross-tab-1.exit",
+        "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "bytes": 2
+      }
+    },
+    {
+      "run": 2,
+      "result": "PASS",
+      "exitCode": 0,
+      "freshTemporaryProfile": true,
+      "rounds": 10,
+      "durableOperationsResolvedAndRetried": 45,
+      "browser": {
+        "protocolVersion": "1.3",
+        "product": "Chrome/156.0.8078.47",
+        "revision": "@1d17a2e2ee147bb7d6ae2ab6abdb3a2510c17775",
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+        "jsVersion": "15.6.75.19"
+      },
+      "dartVersion": "3.13.7 (stable) (Thu Oct 22 14:28:57 2026 -0700) on \"linux_arm64\"",
+      "pageTargetIds": [
+        "1F13317D00511BCF15DD7D9AD1FC9E28",
+        "CFC4AB76C6FB150DB442E29F680EEE6F",
+        "B83EABFA765D3C74AC8B68A6F9F394F3",
+        "E808A3DFC9E95C25B23F70F9980BE0B9"
+      ],
+      "independentContextIds": [
+        "10b28843-3278-4407-b8a1-a8992515c47f",
+        "5283d11c-16b8-4e04-b001-451f1356f1c0",
+        "7db76b59-f107-4f7b-a368-fd2fedafda9a",
+        "1de3351e-1be6-4057-86c8-4739e3634c1a"
+      ],
+      "outcomes": {
+        "committed": 24,
+        "rejected/staleRevision": 11,
+        "rejected/uniqueConflict": 10
+      },
+      "checks": [
+        "same-revision race",
+        "unique-value race and consistent records",
+        "cross-tab delete/recreate ABA",
+        "durable rejection after unique release",
+        "destroy/reopen both pages",
+        "resolve and retry every original operation",
+        "no duplicate mutation or revision",
+        "changed-payload reuse rejected"
+      ],
+      "rawReport": {
+        "path": "/tmp/issue75-integrated.Uuw1Nm/cross-tab-2.json",
+        "sha256": "459e6d733e355c87b040e48e51aeaf420583dd6f97b51e7954592c040fed44dc",
+        "bytes": 40665
+      },
+      "stderr": {
+        "path": "/tmp/issue75-integrated.Uuw1Nm/cross-tab-2.stderr",
+        "sha256": "3712866daa068c2ae5cb4749b9c7b0bdc3889a4552e49d29dedecbcf6f3e6bf1",
+        "bytes": 111
+      },
+      "exitFile": {
+        "path": "/tmp/issue75-integrated.Uuw1Nm/cross-tab-2.exit",
+        "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "bytes": 2
+      }
+    },
+    {
+      "run": 3,
+      "result": "PASS",
+      "exitCode": 0,
+      "freshTemporaryProfile": true,
+      "rounds": 10,
+      "durableOperationsResolvedAndRetried": 45,
+      "browser": {
+        "protocolVersion": "1.3",
+        "product": "Chrome/156.0.8078.47",
+        "revision": "@1d17a2e2ee147bb7d6ae2ab6abdb3a2510c17775",
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+        "jsVersion": "15.6.75.19"
+      },
+      "dartVersion": "3.13.7 (stable) (Thu Oct 22 14:28:57 2026 -0700) on \"linux_arm64\"",
+      "pageTargetIds": [
+        "EFB67261CDA9B25C7C1CE3D31BB04270",
+        "2BA7092DCE0E77AFBE2069D6B718E3C6",
+        "84A3CB2E0D3FC78DBD6B630C5C39BA34",
+        "64A58E8188FF4E06FF5A30D6AD588B26"
+      ],
+      "independentContextIds": [
+        "357d67ec-b821-4791-b08b-7e2ab81a2a00",
+        "adbd273b-726c-40ab-9c77-37ddd92e923d",
+        "7e3e59bd-2a7e-414b-b330-0ca251b5cd0a",
+        "b788a9a4-6d4b-42b4-8dbd-2fff86de0d6e"
+      ],
+      "outcomes": {
+        "committed": 24,
+        "rejected/staleRevision": 11,
+        "rejected/uniqueConflict": 10
+      },
+      "checks": [
+        "same-revision race",
+        "unique-value race and consistent records",
+        "cross-tab delete/recreate ABA",
+        "durable rejection after unique release",
+        "destroy/reopen both pages",
+        "resolve and retry every original operation",
+        "no duplicate mutation or revision",
+        "changed-payload reuse rejected"
+      ],
+      "rawReport": {
+        "path": "/tmp/issue75-integrated.Uuw1Nm/cross-tab-3.json",
+        "sha256": "18e2fcd009186f14186f77f39537cbe4fc53ae20ce7897e77910f8b416f86996",
+        "bytes": 40665
+      },
+      "stderr": {
+        "path": "/tmp/issue75-integrated.Uuw1Nm/cross-tab-3.stderr",
+        "sha256": "3d684cf60acd428a3bd9f78e92699ea7267d0841d9e6ceeb2823185ce19715e0",
+        "bytes": 111
+      },
+      "exitFile": {
+        "path": "/tmp/issue75-integrated.Uuw1Nm/cross-tab-3.exit",
+        "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "bytes": 2
+      }
+    }
+  ],
+  "fullRepositoryGate": {
+    "result": "PASS",
+    "exitCode": 0,
+    "command": "./scripts/test-all.sh",
+    "mode": "local",
+    "workingDirectory": "/home/ec2-user/.openclaw/workspace-dev/.worky-attempt.Ie4wFpZfp4/clone",
+    "startedUtc": "2026-11-13T16:55:28Z",
+    "finishedUtc": "2026-11-13T17:32:57Z",
+    "capture": "Direct stdout/stderr redirection; original shell wrote $? immediately to test-all.exit, then exited with the same script status. No tee/grep pipeline status substitution.",
+    "terminalExitFile": {
+      "path": "/tmp/issue75-integrated.Uuw1Nm/test-all.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2
+    },
+    "log": {
+      "path": "/tmp/issue75-integrated.Uuw1Nm/test-all.log",
+      "sha256": "1d5910c86a474276bc842b9838b6c32466c0a34a4febb3a84c9a942260448187",
+      "bytes": 1272830
+    },
+    "environmentOverrides": {
+      "PATH": "/home/ec2-user/.local/share/flutter-3.47.8/bin/cache/dart-sdk/bin:$PATH (inherited tail preserved)",
+      "CHROME_EXECUTABLE": "/home/ec2-user/.local/share/chrome-for-testing-156.0.8078.47/chrome-linux-arm64/chrome",
+      "LD_LIBRARY_PATH": "/tmp/issue75-integrated.Uuw1Nm/lib"
+    },
+    "sqliteRuntimeAlias": {
+      "symlink": "/tmp/issue75-integrated.Uuw1Nm/lib/libsqlite3.so",
+      "target": "/lib64/libsqlite3.so.0",
+      "scope": "Task-local alias to existing runtime; no host package, service, or configuration changes."
+    },
+    "browserCheck": {
+      "result": "PASS",
+      "rounds": 10,
+      "durableOperationsResolvedAndRetried": 45,
+      "sourceManifestSha256": "e4670ca8824190b63e156df41c3c9928c285e1965928079b9e0ab406dffe4783",
+      "extractedReport": {
+        "path": "/tmp/issue75-integrated.Uuw1Nm/cross-tab-full-gate.json",
+        "sha256": "1c2d3825ada43708984b13b386baa7a49f0e5ee50caa45f20c5ec17632e659c3",
+        "bytes": 40665
+      }
+    },
+    "integratedPackageResults": [
+      {
+        "package": "dddart_repository_indexeddb",
+        "passed": 73,
+        "skipped": 0
+      },
+      {
+        "package": "dddart",
+        "passed": 223,
+        "skipped": 0
+      },
+      {
+        "package": "dddart_serialization",
+        "passed": 23,
+        "skipped": 0
+      },
+      {
+        "package": "dddart_json",
+        "passed": 114,
+        "skipped": 0
+      },
+      {
+        "package": "dddart_rest",
+        "passed": 311,
+        "skipped": 0
+      },
+      {
+        "package": "dddart_rest_client",
+        "passed": 88,
+        "skipped": 0
+      },
+      {
+        "package": "dddart_config",
+        "passed": 156,
+        "skipped": 0
+      },
+      {
+        "package": "dddart_repository_mongodb",
+        "passed": 43,
+        "skipped": 0
+      },
+      {
+        "package": "dddart_repository_dynamodb",
+        "passed": 73,
+        "skipped": 0
+      },
+      {
+        "package": "dddart_repository_rest",
+        "passed": 112,
+        "skipped": 0
+      },
+      {
+        "package": "dddart_repository_sql",
+        "passed": 85,
+        "skipped": 0
+      },
+      {
+        "package": "dddart_repository_sqlite",
+        "passed": 97,
+        "skipped": 0
+      },
+      {
+        "package": "dddart_repository_mysql",
+        "passed": 93,
+        "skipped": 1
+      },
+      {
+        "package": "dddart_webhooks",
+        "passed": 26,
+        "skipped": 0
+      },
+      {
+        "package": "dddart_webhooks_slack",
+        "passed": 29,
+        "skipped": 0
+      },
+      {
+        "package": "dddart_events_distributed",
+        "passed": 125,
+        "skipped": 0
+      },
+      {
+        "package": "dddart_events_dynamodb",
+        "passed": 2,
+        "skipped": 0
+      },
+      {
+        "package": "dddart_events_appsync",
+        "passed": 17,
+        "skipped": 0
+      }
+    ],
+    "integratedTestsPassed": 1690,
+    "integratedTestsSkipped": 1,
+    "isolatedConsumersCompleted": [
+      "dddart_repository_indexeddb",
+      "dddart",
+      "dddart_serialization",
+      "dddart_json",
+      "dddart_rest",
+      "dddart_rest_client",
+      "dddart_config",
+      "dddart_repository_mongodb",
+      "dddart_repository_dynamodb",
+      "dddart_repository_rest",
+      "dddart_repository_sql",
+      "dddart_repository_sqlite",
+      "dddart_repository_mysql",
+      "dddart_webhooks",
+      "dddart_webhooks_slack",
+      "dddart_events_distributed",
+      "dddart_events_dynamodb",
+      "dddart_events_appsync"
+    ],
+    "examplesCompleted": [
+      "dddart_events_example",
+      "dddart_config_example",
+      "dddart_json_example",
+      "dddart_rest_client_example",
+      "dddart_rest_example",
+      "dddart_repository_rest_example",
+      "dddart_repository_sqlite_example",
+      "dddart_repository_mysql_example",
+      "dddart_repository_mongodb_example",
+      "dddart_repository_dynamodb_example",
+      "dddart_webhooks_example",
+      "dddart_webhooks_slack_example",
+      "dddart_events_distributed_example",
+      "dddart_events_dynamodb_example",
+      "dddart_events_appsync_example"
+    ],
+    "exampleEntrypoints": {
+      "compiled": 53,
+      "executed": 17,
+      "legacyExcluded": 6,
+      "compileOnly": 36
+    },
+    "failureMarkersFound": 0
+  },
+  "limits": [
+    "Default local gate, not CI or --with-services. requires-mongo, requires-dynamodb and requires-mysql tests are excluded by the shared repository policy; MySQL additionally reports one skipped test.",
+    "Service-backed examples are compiled, not run against MongoDB, DynamoDB or MySQL. Live Slack/AWS integrations are not asserted.",
+    "Chromium native IndexedDB and page destruction/reopening only: no physical iPhone/WebKit, browser crash/power-loss durability, origin-eviction resistance or OS-process isolation claim.",
+    "Filesystem races are deterministically injected by focused tests; successful browser runs do not claim Chrome reproduced the transient deletion failure.",
+    "No candidate commit, publication, workflow/project mutation, formal independent review, approval, final merge or deployment is claimed. Worky owns commit/publication and review handoff.",
+    "Raw logs/reports are retained task-local temporary artifacts, not committed files. Compact evidence and work record are intended repository changes."
+  ]
+}

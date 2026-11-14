@@ -19,6 +19,23 @@ typedef AggregateEncoder<T extends AggregateRoot<Identity>> = String Function(
 typedef AggregateDecoder<T extends AggregateRoot<Identity>> = T Function(
     String snapshot);
 
+/// A schema upgrade cannot start until another context releases its connection.
+///
+/// No repository operation was dispatched. Close/reload older tabs or workers,
+/// then retry the operation on the same repository (unless it was closed).
+class IndexedDbOpenBlockedException extends RepositoryException {
+  /// Identifies the database whose upgrade was blocked.
+  const IndexedDbOpenBlockedException(this.databaseName)
+      : super(
+          'IndexedDB upgrade blocked by another connection; close or reload '
+          'older tabs/workers, then retry',
+          type: RepositoryExceptionType.connection,
+        );
+
+  /// Database requiring the older connection to be released.
+  final String databaseName;
+}
+
 /// An IndexedDB-backed implementation of dddart's basic Repository contract.
 ///
 /// The caller supplies an [IdbFactory] so browser code can use
@@ -61,14 +78,24 @@ class IndexedDbRepository<T extends AggregateRoot<I>, I extends Identity>
   final int maxReceipts;
   Future<Database>? _opening;
   bool _closed = false;
+  bool _versionChanged = false;
+  void Function()? _abandonOpen;
+  IndexedDbOpenBlockedException? _blockedOpen;
+
+  RepositoryException get _closedFailure => RepositoryException(
+        _versionChanged
+            ? 'Repository connection closed for a version change; reload the '
+                'application before creating a new repository'
+            : 'Repository has been closed',
+        type: RepositoryExceptionType.connection,
+      );
 
   Future<Database> _database() {
     if (_closed) {
-      throw const RepositoryException(
-        'Repository has been closed',
-        type: RepositoryExceptionType.connection,
-      );
+      throw _closedFailure;
     }
+    final blocked = _blockedOpen;
+    if (blocked != null) throw blocked;
     return _opening ??= _openAndValidate().catchError((Object error) {
       _opening = null;
       if (error is RepositoryException) throw error;
@@ -91,11 +118,32 @@ class IndexedDbRepository<T extends AggregateRoot<I>, I extends Identity>
   Future<Database> _openAndValidate() async {
     Database? db;
     RepositoryException? upgradeFailure;
+    final opened = Completer<Database>();
+    var abandoned = false;
+    void abandon(RepositoryException error) {
+      abandoned = true;
+      if (!opened.isCompleted) opened.completeError(error);
+    }
+
+    final abandonOnClose = () => abandon(_closedFailure);
+    _abandonOpen = abandonOnClose;
     try {
-      db = await _factory.open(
+      // IndexedDB cannot cancel a queued open request. Settle our caller on
+      // blocked/close, then drain the native request and abort its eventual
+      // upgrade before inspecting or changing any records.
+      final pending = _factory.open(
         databaseName,
         version: _schemaVersion,
+        onBlocked: (_) {
+          final error = IndexedDbOpenBlockedException(databaseName);
+          _blockedOpen = error;
+          abandon(error);
+        },
         onUpgradeNeeded: (event) async {
+          if (abandoned || _closed) {
+            event.transaction.abort();
+            return;
+          }
           try {
             if (!event.database.objectStoreNames.contains(storeName)) {
               if (event.oldVersion != 0) {
@@ -130,6 +178,25 @@ class IndexedDbRepository<T extends AggregateRoot<I>, I extends Identity>
           }
         },
       );
+      unawaited(pending.then<void>((database) {
+        _blockedOpen = null;
+        if (abandoned || _closed) {
+          database.close();
+        } else {
+          opened.complete(database);
+        }
+      }, onError: (Object error, StackTrace stack) {
+        _blockedOpen = null;
+        if (!opened.isCompleted) opened.completeError(error, stack);
+      }));
+      db = await opened.future;
+      db.onVersionChange.listen((_) {
+        // Close synchronously so this context cannot block a future upgrade or
+        // deletion. Existing transactions may finish; new operations fail.
+        _versionChanged = true;
+        _closed = true;
+        db!.close();
+      });
       final transaction = db.transaction(storeName, idbModeReadOnly);
       final marker = await _runCommitted(
         transaction,
@@ -141,11 +208,14 @@ class IndexedDbRepository<T extends AggregateRoot<I>, I extends Identity>
           marker['codecVersion'] != codecVersion) {
         throw _invalidStored('Database schema or codec is incompatible');
       }
+      if (_closed) throw _closedFailure;
       return db;
     } catch (_) {
       db?.close();
       if (upgradeFailure != null) throw upgradeFailure!;
       rethrow;
+    } finally {
+      if (identical(_abandonOpen, abandonOnClose)) _abandonOpen = null;
     }
   }
 
@@ -958,13 +1028,21 @@ class IndexedDbRepository<T extends AggregateRoot<I>, I extends Identity>
   ///
   /// Transactions already created continue to completion; this neither aborts
   /// them nor waits for their results. Calls awaiting database opening cannot
-  /// dispatch after this barrier. This instance cannot be reopened; use a new
-  /// repository to reconcile an uncertain operation.
+  /// dispatch after this barrier. A pending open is abandoned; a queued native
+  /// upgrade is drained and aborted when unblocked. This instance cannot be
+  /// reopened; use a new repository to reconcile an uncertain operation.
   Future<void> close() async {
     if (_closed) return;
     _closed = true;
+    _abandonOpen?.call();
     final opening = _opening;
-    if (opening != null) (await opening).close();
+    if (opening != null) {
+      try {
+        (await opening).close();
+      } on RepositoryException {
+        // A failed/abandoned open has no connection to close.
+      }
+    }
   }
 
   /// Attach the completion error handler before issuing the first request.

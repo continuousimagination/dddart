@@ -1,5 +1,9 @@
 # IndexedDB cancellation work record — issue #74
 
+The initial implementation evidence below is historical. The revision section
+records integration with the updated parent target and supersedes the original
+pending-open close behavior and source fingerprint.
+
 ## Scope and contract
 
 Prepared base: `503190f7b2db51010acfee3bb7be0fb988442110`.
@@ -26,6 +30,9 @@ change, UI policy, cross-tab claim, or physical WebKit claim is introduced.
   transactions already created continue normally; calls awaiting opening cannot
   dispatch afterward. Opening/validation itself may finish before close returns.
   New instances can reconcile receipts after closing the original instance.
+  Revision note: the integrated #76 behavior now abandons a pending open promptly,
+  drains its late connection, and aborts an abandoned queued upgrade; it does not
+  cancel operation transactions already dispatched.
 
 ## Deterministic regression design
 
@@ -127,3 +134,102 @@ candidate PR URL and full tested head SHA alongside this record and its validati
 results; independent review must inspect that exact candidate. Final merge
 remains with the human owner. Physical iPhone/WebKit validation remains #77;
 separate-tab isolation and blocked upgrades remain #75 and #76.
+
+## Revision: merge conflict resolution (2026-11-14)
+
+Existing deliverable: https://github.com/continuousimagination/dddart/pull/82.
+Prepared branch: `feature/74-indexeddb-define-and-verify-cancellation-of-in-flight-operations`.
+Prepared head: `21959bc0fc8db79abf6690d9eb4cc940e1559890`.
+Merged target: `feature/79-complete-indexeddb-integration-lifecycle-guarantees-and-browser-verifica`
+at `0d9ea4c39866c3363588d80c2bbb247284c71af5`.
+
+Resolved the CHANGELOG, README, and repository `close()` documentation conflicts
+by retaining both sets of changes. The integrated repository retains the #74
+synchronous dispatch barrier and uncertain-result cancellation contract alongside
+#76's prompt pending-open abandonment, late-request draining, queued-upgrade
+abort, and version-change invalidation. The README retains #75's independent-tab
+harness and removes outdated statements that #75/#76 are still missing.
+
+The first focused VM regression run reproduced nine setup failures because the
+#74 database wrapper did not delegate #76's new `onVersionChange` stream. The
+wrapper now delegates that stream. The deterministic close-during-open test now
+awaits close and all callers **before releasing the native open**, checks zero
+transactions (including schema reads), then releases and explicitly awaits the
+late connection's closure. Both VM and native Chrome exercise this combined
+contract without a timing sleep. No existing operation transaction is aborted.
+
+Validation of the merged working sources (Linux ARM64, Dart 3.13.7, native Chrome
+156.0.8078.47, sandbox enabled):
+
+- `dart pub get` from the repository root: exit 0, without dependency overrides.
+- `dart analyze --fatal-infos packages/dddart_repository_indexeddb tool/validation`:
+  exit 0, no issues.
+- `dart format --output=none --set-exit-if-changed packages/dddart_repository_indexeddb tool/validation`:
+  exit 0, 27 Dart files unchanged.
+- `(cd packages/dddart_repository_indexeddb && dart test --reporter expanded)`:
+  exit 0, **94 passing tests, 3 explicit memory-only dispatched-close skips**.
+  Includes all 12 native cancellation cases, all four native blocked-upgrade/
+  version-change cases, and the VM/native pending-open lifecycle regressions.
+  Log: `/tmp/issue74-revision-adapter.log`.
+
+The final adapter fingerprint covers 28 tracked files, sorted by repository-relative
+path, hashing `path + NUL + bytes + NUL` for each file with SHA-256:
+
+`7b0487c495bd97f14ef95d7ce0a6f46bb57ea606ee133a843def5b2041c51687`
+
+This fingerprint identifies the actual tested merged sources, not the old PR head.
+Worky retains ownership of the merge commit, publication to the existing PR,
+recording the new tested head SHA, independent review, and workflow handoff.
+No publication, formal review, merge to the target, or physical WebKit verification
+is asserted here.
+
+Additional revision checks:
+
+- `dart fix --dry-run packages/dddart_repository_indexeddb`: exit 0, nothing to fix.
+- `dart tool/validation/validate.dart consumer dddart_repository_indexeddb`:
+  exit 0; isolated consumer analysis/execution passed with only core,
+  serialization, and the adapter in its allowed local closure. This validator
+  uses temporary consumer-only path overrides, not a published-Git dependency
+  verification. Log: `/tmp/issue74-revision-consumer.log`.
+- The required repository wrapper's native separate-tab harness passed **10
+  rounds**, with successful browser/profile cleanup. Its merged implementation
+  source manifest SHA-256 is
+  `41991a80167c1d9092bbbedae78cfedd47c96e03c69f723487fb1f36af3decf2`.
+  Its report correctly identifies the prepared HEAD plus dirty working sources,
+  not a nonexistent published merge commit. The JSON is retained in
+  `/tmp/issue74-revision-full-gate.log`.
+
+### Full repository gate limitation on this runner
+
+`./scripts/test-all.sh` was run against the merged sources. Its policy self-tests,
+inventory validation, independent-tab harness, and complete adapter package lane
+passed (the latter independently reported 94 passes and 3 intended skips).
+However, the unrelated `dddart_repository_sqlite` tests fail at connection setup:
+
+```text
+Invalid argument(s): Failed to load dynamic library 'libsqlite3.so':
+libsqlite3.so: cannot open shared object file: No such file or directory
+```
+
+Read-only `ldconfig -p` lists `/lib64/libsqlite3.so.0`, not the unversioned
+`libsqlite3.so` requested by the Dart dependency. The subsequent SQLite
+`Connection is not open` failures follow that loader failure. No SQLite files,
+host libraries, loader configuration, service state, or test exclusions were
+changed to work around it. The complete repository gate is **not passing** on
+this runner and is not represented as accepted CI or independent-review evidence.
+The implementation/conflict resolution is complete; repository-wide validation
+and candidate publication remain distinct Worky/operator handoff concerns.
+
+The wrapper was terminated by its configured 1,800-second command timeout
+(SIGTERM) while running the core isolated-consumer lane. Before termination,
+all 18 integrated package lanes were attempted: 17 reported passing tests and
+SQLite reported the native-loader failures above. The adapter isolated-consumer
+lane also passed within the wrapper (in addition to the separate successful
+consumer run). Remaining isolated-consumer lanes and all example lanes were not
+completed. No full-wrapper exit-0 result is claimed. All task-owned validation
+commands have ended; no retry, host mutation, commit, or publication was performed.
+
+The three conflict resolutions and the small harness/documentation updates are
+staged with no unmerged entries or unstaged changes. `HEAD` remains the prepared
+PR head and `MERGE_HEAD` remains the supplied target; Worky can finalize the merge
+commit and publish the existing PR using its own handoff.

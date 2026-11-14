@@ -61,8 +61,45 @@ ownership, before the upgrade; their bytes are left intact. An interrupted
 upgrade rolls back the marker and version change, so opening again can retry.
 An incompatible codec, malformed legacy record, or unexpected store fails the
 upgrade and preserves the old database for an explicit migration. Separate
-contexts opening version 2 must agree on the codec version. Close old tabs that
-still hold version-1 connections so the upgrade can proceed.
+contexts opening version 2 must agree on the codec version.
+
+### Blocked upgrades and connection lifecycle
+
+If an older tab, iframe or worker holds a version-1 connection open, the browser
+cannot begin the version-2 upgrade. On its native `blocked` event, operations
+waiting for that open fail promptly with `IndexedDbOpenBlockedException` (a
+`RepositoryException` with type `connection` and a `databaseName`). No data
+transaction has been dispatched: neither schema version/marker nor aggregates,
+unique claims or receipts are changed. This is an explicit failure, not a timeout
+or an `uncertain` conditional-commit result. `resolveOperation` retains its
+existing contract: connection failures yield `uncertain`, not rollback proof.
+
+```dart
+try {
+  await repository.save(aggregate);
+} on IndexedDbOpenBlockedException catch (error) {
+  // Ask the user to close/reload older contexts using error.databaseName.
+  // After those connections are released, retry this operation.
+}
+```
+
+IndexedDB cannot cancel a queued open request. The adapter abandons that request,
+observes its eventual completion/error, aborts its eventual upgrade **before any
+schema or record changes**, and closes any late connection. While it is still
+queued/draining, repeated calls fail with the same blocked error rather than
+silently queuing behind it. After it drains, retry on the same repository starts
+a fresh atomic upgrade. Close/reload the older contexts first; retry can still
+report blocked while their connection release is being processed. The adapter
+never deletes the database or forces another context to close. An external
+legacy connection must handle `versionchange` itself or be closed by its owner.
+
+Connections opened by this adapter automatically close on `versionchange`,
+including database deletion requests. Existing transactions may finish; the
+repository is permanently invalidated and new operations fail with a connection
+error explaining the version change. Reload the application before constructing
+a replacement with the compatible schema/codec; the old instance never silently
+reopens against a different schema. `close()` is also permanent and can abandon
+a queued open without waiting indefinitely for another context to release it.
 
 `save` is an upsert, as specified by `Repository<T, I>`. It waits for the
 IndexedDB transaction to commit before returning. `getById` validates the
@@ -203,14 +240,16 @@ try {
   discipline; its `TimeoutException` alone contains no operation ID or digest.
 - **`close()` is a dispatch barrier, not cancellation or a drain.** It immediately
   prevents new operation transactions, including calls waiting for opening, and
-  requests closure of the connection after opening/validation finishes. Already
-  created transactions keep running, and their futures retain their normal
+  requests closure of the connection. Already created transactions keep running,
+  and their futures retain their normal
   outcomes. `close()` does not wait for those futures; await them separately.
   Calls prevented from dispatching fail with a typed connection error
   (`resolveOperation` instead returns uncertain). The instance stays closed;
   use a new repository with the same database and codec to reconcile receipts.
-  Closing a never-opened repository does not open storage. Pending/blocked schema
-  opens are not forcibly cancelled; blocked upgrades remain a separate concern.
+  Closing a never-opened repository does not open storage. A pending open is
+  abandoned and its callers settle without waiting for the native request. The
+  native request itself cannot be cancelled: its eventual connection is closed,
+  or its queued upgrade is aborted when unblocked, without changing records.
 
 The signal is not a general transaction-abort API. A missing receipt is always
 uncertain, not proof of rollback, and this contract adds no application policy
@@ -271,7 +310,58 @@ and unique-claim consistency, receipt counts, reconciliation and exact retry.
 The memory fake closes shared handles immediately, so dispatched-close behavior
 is asserted only against native IndexedDB. See the #74 work record in
 `docs/worky/indexeddb-cancellation-work-record.md` for validation evidence.
-Separate-tab isolation (#75), blocked schema upgrades (#76), and physical
-iPhone/WebKit verification (#77) remain separate follow-ups; Chrome evidence
-does not establish those guarantees. Public pub.dev publication is tracked
+
+The blocked-upgrade regression holds a native version-1 connection in a separate
+same-origin iframe and requests version 2 from the parent context. It checks the
+entire old store while blocked and after abandonment, then verifies a fresh
+atomic upgrade, payload/unique-claim/receipt preservation, and schema/codec
+fences. Native tests also cover closing a queued open and automatic release on
+version change. These Chrome tests are not a physical WebKit verification.
+
+### Separate-tab isolation harness
+
+From the repository root, with `dart pub get` completed:
+
+```sh
+dart packages/dddart_repository_indexeddb/tool/verify_cross_tab.dart > cross-tab-results.json
+# Optional positive argument selects the number of race rounds (default: 10).
+```
+
+The harness compiles a generic sample participant with Dart, serves it on an
+ephemeral loopback origin, and launches an isolated temporary Chrome profile.
+Chrome DevTools Protocol creates two **top-level pages**, each independently
+loading the compiled Dart program and opening `idbFactoryNative`. These are
+same-origin tabs in one storage partition, not two connections in one Dart
+context, iframes, memory factories, or isolated incognito partitions. A prepare
+barrier stages both requests before dispatching either commit; no application
+lock serializes them. Native IndexedDB provides transaction serialization.
+
+Each round asserts one committed writer and one durable stale-revision rejection,
+then races a shared unique value and checks both tabs' records and ownership.
+A tab retaining an old revision also attempts a write after the other tab deletes
+and recreates that ID. Both pages are then destroyed and independently reopened.
+Every original operation is resolved and retried with its original ID, payload,
+and digest, including a unique-conflict rejection whose competing owner has now
+been deleted. Receipts, records, unique owners, and revisions must stay unchanged.
+Changed-payload operation-ID reuse and resolution with its changed digest must
+still fail with `constraint`.
+
+A failed assertion, command timeout, or persistent cleanup failure exits nonzero.
+Profile deletion retries transient filesystem failures at most five times; all
+teardown steps run and cleanup diagnostics never replace a verification error.
+Only after successful cleanup does a passing run write a JSON report to stdout
+containing the browser version, base Git SHA, working-tree status, source hashes
+(to identify uncommitted harness changes honestly), page
+and Dart-context IDs, and original/replayed outcomes. Compilation diagnostics go
+to stderr. `CHROME_EXECUTABLE` selects Chrome (default: `google-chrome` on Linux,
+standard application path on macOS). Chrome's sandbox stays enabled. The temporary
+browser, profile, server, and database are test-owned.
+The adapter CI lane runs this harness after the package tests and retains its JSON
+report; `scripts/test-all.sh` runs the same check locally. The [issue #75 work record](../../docs/worky/indexeddb-cross-tab-work-record.md)
+records the local verification and independent-review boundary. This harness can
+also provide independently loaded participants for later lifecycle tests; it does
+not currently exercise blocked upgrades or cancellation.
+
+Physical iPhone/WebKit verification remains tracked in #77. Chromium results
+are not physical WebKit evidence. Public pub.dev publication is tracked
 separately in #30.

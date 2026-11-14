@@ -32,6 +32,7 @@ class _Factory implements IdbFactory {
   final IdbFactory delegate;
   Completer<void>? openGate;
   final openStarted = Completer<void>();
+  final closed = Completer<void>();
   _Control? nextWrite;
   int opens = 0;
   int transactions = 0;
@@ -69,6 +70,9 @@ class _Database extends Database {
   final Database delegate;
 
   @override
+  Stream<VersionChangeEvent> get onVersionChange => delegate.onVersionChange;
+
+  @override
   Transaction transaction(Object storeNameOrStoreNames, String mode) {
     final controlFactory = factory as _Factory;
     controlFactory.transactions++;
@@ -82,8 +86,10 @@ class _Database extends Database {
 
   @override
   void close() {
-    (factory as _Factory).closes++;
+    final controlFactory = factory as _Factory;
+    controlFactory.closes++;
     delegate.close();
+    if (!controlFactory.closed.isCompleted) controlFactory.closed.complete();
   }
 
   @override
@@ -344,12 +350,14 @@ void cancellationContract(IdbFactory Function() createFactory,
     final resolving =
         fresh.resolveOperation(request.operationId, fresh.digestFor(request));
     await openingFactory.openStarted.future;
-    final closing = fresh.close();
-    openingFactory.openGate!.complete();
+    await fresh.close(); // settles callers before the native open returns
     await Future.wait(observed);
     expect((await resolving).decision, CommitDecision.uncertain);
-    await closing;
-    expect(openingFactory.transactions, 1); // only the opening schema read
+    expect(openingFactory.transactions, 0);
+    expect(openingFactory.closes, 0);
+    openingFactory.openGate!.complete();
+    await openingFactory.closed.future; // the late connection is drained
+    expect(openingFactory.transactions, 0); // not even a schema read
     expect(openingFactory.closes, 1);
     await fresh.close();
     expect(openingFactory.closes, 1);
