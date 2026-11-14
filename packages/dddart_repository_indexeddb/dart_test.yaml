@@ -1,2 +1,4 @@
 # The package gate must exercise native IndexedDB, not just the memory fake.
 platforms: [vm, chrome]
+# Native browser suites share a host; avoid overlapping compiler/render workers.
+concurrency: 1

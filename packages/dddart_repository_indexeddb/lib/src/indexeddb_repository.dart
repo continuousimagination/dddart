@@ -103,6 +103,18 @@ class IndexedDbRepository<T extends AggregateRoot<I>, I extends Identity>
     });
   }
 
+  // Keep this check synchronous with transaction creation: close() can run
+  // at any await boundary, including while the shared database open is pending.
+  Transaction _dispatch(Database db, String mode) {
+    if (_closed) {
+      throw const RepositoryException(
+        'Repository has been closed before dispatch',
+        type: RepositoryExceptionType.connection,
+      );
+    }
+    return db.transaction(storeName, mode);
+  }
+
   Future<Database> _openAndValidate() async {
     Database? db;
     RepositoryException? upgradeFailure;
@@ -295,7 +307,7 @@ class IndexedDbRepository<T extends AggregateRoot<I>, I extends Identity>
     final Object? stored;
     try {
       final db = await _database();
-      final transaction = db.transaction(storeName, idbModeReadOnly);
+      final transaction = _dispatch(db, idbModeReadOnly);
       stored = await _runCommitted(
         transaction,
         () => transaction.objectStore(storeName).getObject(_key(id)),
@@ -347,7 +359,7 @@ class IndexedDbRepository<T extends AggregateRoot<I>, I extends Identity>
     }
     try {
       final db = await _database();
-      final transaction = db.transaction(storeName, idbModeReadWrite);
+      final transaction = _dispatch(db, idbModeReadWrite);
       await _runCommitted(transaction, () async {
         final store = transaction.objectStore(storeName);
         final previous = await store.getObject(_key(aggregate.id));
@@ -371,7 +383,7 @@ class IndexedDbRepository<T extends AggregateRoot<I>, I extends Identity>
     _key(id);
     try {
       final db = await _database();
-      final transaction = db.transaction(storeName, idbModeReadWrite);
+      final transaction = _dispatch(db, idbModeReadWrite);
       await _runCommitted(transaction, () async {
         final store = transaction.objectStore(storeName);
         final existing = await store.getObject(_key(id));
@@ -398,7 +410,7 @@ class IndexedDbRepository<T extends AggregateRoot<I>, I extends Identity>
     final Object? raw;
     try {
       final db = await _database();
-      final transaction = db.transaction(storeName, idbModeReadOnly);
+      final transaction = _dispatch(db, idbModeReadOnly);
       raw = await _runCommitted(
         transaction,
         () => transaction.objectStore(storeName).getObject(_key(id)),
@@ -422,7 +434,7 @@ class IndexedDbRepository<T extends AggregateRoot<I>, I extends Identity>
     final key = _uniqueKey(value);
     try {
       final db = await _database();
-      final transaction = db.transaction(storeName, idbModeReadOnly);
+      final transaction = _dispatch(db, idbModeReadOnly);
       final result = await _runCommitted(transaction, () async {
         final store = transaction.objectStore(storeName);
         final index = await store.getObject(key);
@@ -456,19 +468,56 @@ class IndexedDbRepository<T extends AggregateRoot<I>, I extends Identity>
   @override
   String digestFor(ConditionalCommit<T, I> request) => _prepare(request).digest;
 
+  /// Commits atomically, optionally allowing the caller to stop waiting.
+  ///
+  /// Before transaction creation, [cancellation] prevents dispatch and throws
+  /// [IndexedDbOperationCancelled]. An already pending database open is allowed
+  /// to finish before cancellation is checked. After dispatch, cancellation
+  /// returns an uncertain result with the prepared operation ID and digest;
+  /// it does not abort the transaction. The eventual result/error is observed
+  /// internally. A confirmed result observed first wins the cancellation race.
   @override
   Future<CommitResult<I>> commitConditional(
-      ConditionalCommit<T, I> request) async {
+    ConditionalCommit<T, I> request, {
+    IndexedDbCancellation? cancellation,
+  }) async {
     final prepared = _prepare(request);
+    void checkCancellation() {
+      if (cancellation?.isCancelled ?? false) {
+        throw IndexedDbOperationCancelled(
+            prepared.operationId, prepared.digest);
+      }
+    }
+
+    checkCancellation();
     final Transaction transaction;
     try {
       final db = await _database();
-      transaction = db.transaction(storeName, idbModeReadWrite);
+      checkCancellation();
+      transaction = _dispatch(db, idbModeReadWrite);
+    } on IndexedDbOperationCancelled {
+      rethrow;
     } on RepositoryException {
       rethrow;
     } catch (error) {
       throw _storageFailure('start conditional transaction', error);
     }
+    final operation = _commitDispatched(transaction, prepared);
+    if (cancellation == null) return operation;
+    // Future.any observes both branches, including a late transaction error
+    // after the caller has received an uncertain cancellation result.
+    return Future.any([
+      operation,
+      cancellation._cancelled.future.then(
+        (_) => _uncertain(prepared.operationId, prepared.digest),
+      ),
+    ]);
+  }
+
+  Future<CommitResult<I>> _commitDispatched(
+    Transaction transaction,
+    _PreparedCommit<I> prepared,
+  ) async {
     try {
       final result = await _runCommitted(
         transaction,
@@ -492,7 +541,7 @@ class IndexedDbRepository<T extends AggregateRoot<I>, I extends Identity>
     if (payloadDigest.isEmpty) throw ArgumentError.value(payloadDigest);
     try {
       final db = await _database();
-      final transaction = db.transaction(storeName, idbModeReadOnly);
+      final transaction = _dispatch(db, idbModeReadOnly);
       final raw = await _runCommitted(
         transaction,
         () => transaction
@@ -975,8 +1024,13 @@ class IndexedDbRepository<T extends AggregateRoot<I>, I extends Identity>
         type: RepositoryExceptionType.constraint,
       );
 
-  /// Permanently closes this repository, abandoning a pending open if needed.
-  /// A queued native upgrade is drained and aborted when it is unblocked.
+  /// Prevents new transaction dispatch and requests connection closure.
+  ///
+  /// Transactions already created continue to completion; this neither aborts
+  /// them nor waits for their results. Calls awaiting database opening cannot
+  /// dispatch after this barrier. A pending open is abandoned; a queued native
+  /// upgrade is drained and aborted when unblocked. This instance cannot be
+  /// reopened; use a new repository to reconcile an uncertain operation.
   Future<void> close() async {
     if (_closed) return;
     _closed = true;
@@ -1089,4 +1143,38 @@ final class _StoredState {
 
   final String revision;
   final List<String> uniqueKeys;
+}
+
+/// One-way, adapter-local cancellation signal for a conditional operation.
+///
+/// Use one signal per call. Cancelling a Dart Future, a timeout wrapper, or a
+/// subscription does not implicitly trigger this signal or abort IndexedDB.
+final class IndexedDbCancellation {
+  final Completer<void> _cancelled = Completer<void>();
+
+  /// Whether [cancel] has been called.
+  bool get isCancelled => _cancelled.isCompleted;
+
+  /// Prevents dispatch if still possible; otherwise only stops waiting.
+  void cancel() {
+    if (!isCancelled) _cancelled.complete();
+  }
+}
+
+/// Confirmed cancellation before an IndexedDB transaction was dispatched.
+///
+/// No mutations or receipt were issued for this call. This says nothing about
+/// earlier attempts with the same operation ID, which may need reconciliation.
+final class IndexedDbOperationCancelled implements Exception {
+  /// Retains the prepared request identity for diagnostics or a deliberate retry.
+  const IndexedDbOperationCancelled(this.operationId, this.payloadDigest);
+
+  /// Operation ID supplied by the caller.
+  final UuidValue operationId;
+
+  /// Digest of the detached payload and conditions prepared for this call.
+  final String payloadDigest;
+
+  @override
+  String toString() => 'IndexedDbOperationCancelled: cancelled before dispatch';
 }

@@ -184,6 +184,77 @@ or completion and separately awaits each request. A native duplicate-key
 regression test exercises this path. Remove the guard when the dependency is
 fixed and retested.
 
+## Cancellation, timeouts, and close
+
+Dart `Future`s do not have an IndexedDB abort contract. Dropping a future,
+wrapping it in `Future.timeout`, or cancelling a subscription **only stops the
+caller waiting**; it does not cancel an operation. Observe the returned future
+(or use a wrapper that observes late errors). Basic CRUD has no operation
+receipts: after an independent timeout it cannot promise rollback or an
+idempotent retry. Use conditional operations when reconciliation is required.
+
+The concrete adapter adds an optional `IndexedDbCancellation` signal to
+`commitConditional`; the portable core interface remains unchanged. Use one
+signal per call and keep an immutable, detached request:
+
+```dart
+final cancellation = IndexedDbCancellation();
+final digest = repository.digestFor(request); // retain before dispatch
+final pending = repository.commitConditional(
+  request,
+  cancellation: cancellation,
+);
+// A caller-owned UI/lifecycle/deadline handler may call cancellation.cancel().
+try {
+  final result = await pending;
+  if (result.decision == CommitDecision.uncertain) {
+    final resolved = await repository.resolveOperation(
+      result.operationId,
+      result.payloadDigest,
+    );
+    // If still uncertain, retry the exact request with the same operation ID.
+    // Do not mutate/re-encode it or use a new ID to guess that it rolled back.
+  }
+} on IndexedDbOperationCancelled catch (cancelled) {
+  // This call never dispatched a transaction or wrote a receipt.
+  // cancelled.operationId and cancelled.payloadDigest identify its request.
+  // An earlier attempt with this same ID may still need reconciliation.
+}
+```
+
+- **Before dispatch** (creation of the operation's IndexedDB transaction), a
+  signalled cancellation throws `IndexedDbOperationCancelled`. The adapter still
+  validates/encodes the request first. An already cancelled signal does not open
+  storage. Cancellation during a pending database open is checked after that
+  open/validation completes; it does not cancel or unblock the open itself.
+  No operation mutations or receipt are issued. Prior committed data is intact.
+- **After dispatch**, cancellation stops waiting and returns
+  `CommitDecision.uncertain`, preserving the prepared operation ID and payload
+  digest, with no revisions or rejection reason. It does **not** abort the
+  transaction, even if cancellation happens before any write request. Aggregate,
+  unique-claim, and receipt changes still commit or abort atomically. The adapter
+  continues observing the late result/errors internally. If a confirmed outcome
+  is observed before cancellation, that outcome wins; cancellation can also win
+  after storage commits but before its acknowledgment is observed. Never label
+  that race as rollback. An independent timeout needs the same reconciliation
+  discipline; its `TimeoutException` alone contains no operation ID or digest.
+- **`close()` is a dispatch barrier, not cancellation or a drain.** It immediately
+  prevents new operation transactions, including calls waiting for opening, and
+  requests closure of the connection. Already created transactions keep running,
+  and their futures retain their normal
+  outcomes. `close()` does not wait for those futures; await them separately.
+  Calls prevented from dispatching fail with a typed connection error
+  (`resolveOperation` instead returns uncertain). The instance stays closed;
+  use a new repository with the same database and codec to reconcile receipts.
+  Closing a never-opened repository does not open storage. A pending open is
+  abandoned and its callers settle without waiting for the native request. The
+  native request itself cannot be cancelled: its eventual connection is closed,
+  or its queued upgrade is aborted when unblocked, without changing records.
+
+The signal is not a general transaction-abort API. A missing receipt is always
+uncertain, not proof of rollback, and this contract adds no application policy
+or browser dependencies to core.
+
 ## Typed identity and migration
 
 The aggregate and repository use the same concrete identity type, just like core:
@@ -228,6 +299,17 @@ Use `dart test -p vm` for the memory/failure checks alone and
 `CHROME_EXECUTABLE` if it is not on the usual path. Native tests explicitly use
 `idbFactoryNative` and cover UUID schema recovery plus scoped typed CRUD,
 conditional writes, uniqueness, receipts and reopening.
+
+The existing native conditional race uses separate connections in one browser
+context; it is **not** a separate-tab isolation proof. Cancellation tests use
+controlled open/acknowledgment barriers around real memory/native transactions,
+not timing sleeps to guess the commit race. Native Chrome regressions cover
+cancellation before and after commit, independent timeout, close during opening
+and dispatched conditional/basic writes, late abort/error observation, aggregate
+and unique-claim consistency, receipt counts, reconciliation and exact retry.
+The memory fake closes shared handles immediately, so dispatched-close behavior
+is asserted only against native IndexedDB. See the #74 work record in
+`docs/worky/indexeddb-cancellation-work-record.md` for validation evidence.
 
 The blocked-upgrade regression holds a native version-1 connection in a separate
 same-origin iframe and requests version 2 from the parent context. It checks the
@@ -280,7 +362,6 @@ records the local verification and independent-review boundary. This harness can
 also provide independently loaded participants for later lifecycle tests; it does
 not currently exercise blocked upgrades or cancellation.
 
-Cancellation of in-flight operations (#74) and physical iPhone/WebKit
-verification (#77) remain separate follow-ups. Chromium results are not physical
-WebKit evidence. Public pub.dev publication is tracked
+Physical iPhone/WebKit verification remains tracked in #77. Chromium results
+are not physical WebKit evidence. Public pub.dev publication is tracked
 separately in #30.
