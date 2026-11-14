@@ -92,6 +92,20 @@ jobs:
           dart tool/validation/validate.dart package
           "${{ matrix.name }}" --mode=ci
 
+      - name: Verify IndexedDB isolation in separate tabs
+        if: matrix.name == 'dddart_repository_indexeddb'
+        run: >-
+          dart packages/dddart_repository_indexeddb/tool/verify_cross_tab.dart
+          > "$RUNNER_TEMP/indexeddb-cross-tab-results.json"
+
+      - name: Retain separate-tab browser evidence
+        if: matrix.name == 'dddart_repository_indexeddb'
+        uses: actions/upload-artifact@v4
+        with:
+          name: indexeddb-cross-tab-results
+          path: ${{ runner.temp }}/indexeddb-cross-tab-results.json
+          if-no-files-found: error
+
       - name: Validate isolated minimal consumer
         run: >-
           dart tool/validation/validate.dart consumer

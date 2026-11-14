@@ -34,6 +34,11 @@ and other concurrent servers. InMemory remains available for local tests.
 Optional AWS AppSync Events live transport, native Lambda handlers and
 CloudFormation deployment. Uses existing JWT authentication or Cognito/OIDC.
 
+### [dddart_repository_indexeddb](packages/dddart_repository_indexeddb/)
+Browser IndexedDB persistence with typed identities, application-owned codecs,
+atomic conditional transactions and durable operation receipts. Physical WebKit
+and separate-tab/lifecycle guarantees remain explicit follow-ups.
+
 ## Quick Start
 
 1. **Add dependencies** using the [Git installation guide](docs/GIT_INSTALLATION.md).
