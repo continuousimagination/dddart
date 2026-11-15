@@ -186,8 +186,22 @@ void main() {
           ]);
         }
 
-        final positive =
-            await compile("repository.getById(const IssueId('native'));");
+        final positive = await compile("""
+repository.getById(const IssueId('native'));
+final mutation = ConditionalMutation<Issue, IssueId>.put(
+  issue, expected: const ExpectedRevision.absent());
+final IssueId id = mutation.id;
+final request = ConditionalCommit<Issue, IssueId>(
+  operationId: UuidValue.generate(), mutations: [mutation]);
+void conditional(ConditionalRepository<Issue, IssueId> repository) {
+  repository.getVersioned(id);
+  repository.commitConditional(request);
+}
+final result = CommitResult<IssueId>(operationId: request.operationId,
+  payloadDigest: 'digest', decision: CommitDecision.committed,
+  revisions: {id: 'revision'});
+final Map<IssueId, String> revisions = result.revisions;
+""");
         expect(
           positive.exitCode,
           0,
@@ -199,6 +213,10 @@ void main() {
           "issue.raiseEvent(OtherEvent(aggregateId: const OtherId('wrong')));",
           'InMemoryRepository<Issue, OtherId>();',
           'Issue();',
+          "ConditionalMutation<Issue, IssueId>.delete(const OtherId('wrong'), expected: const ExpectedRevision.match('v'));",
+          'ConditionalCommit<Issue, OtherId>(operationId: UuidValue.generate(), mutations: []);',
+          "void wrong(ConditionalRepository<Issue, IssueId> r) { r.getVersioned(const OtherId('wrong')); }",
+          "CommitResult<IssueId>(operationId: UuidValue.generate(), payloadDigest: 'd', decision: CommitDecision.committed, revisions: {const OtherId('wrong'): 'v'});",
         ]) {
           final negative = await compile(statement);
           expect(negative.exitCode, isNot(0), reason: statement);

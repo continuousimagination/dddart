@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'validation_core.dart';
+import 'verify_indexeddb_git_consumer.dart' show verifyIndexedDbGitLock;
 
 Future<void> main() async {
   final repositoryRoot =
@@ -9,6 +10,29 @@ Future<void> main() async {
   final inventory = loadInventory(repositoryRoot);
 
   validateInventoryShape(inventory);
+
+  const acceptedSha = '0123456789012345678901234567890123456789';
+  const wrongSha = 'abcdefabcdefabcdefabcdefabcdefabcdefabcd';
+  final gitLock = [
+    for (final name in const [
+      'dddart',
+      'dddart_serialization',
+      'dddart_repository_indexeddb',
+    ])
+      "  $name:\n    description:\n      resolved-ref: \"$acceptedSha\"\n    source: git\n",
+  ].join();
+  verifyIndexedDbGitLock(gitLock, acceptedSha);
+  _expectFailure(
+      () => verifyIndexedDbGitLock(
+          gitLock.replaceFirst(acceptedSha, wrongSha), acceptedSha),
+      'one mismatched Git revision cannot borrow another package revision');
+  _expectFailure(
+      () => verifyIndexedDbGitLock(
+          gitLock.replaceFirst('source: git', 'source: hosted'), acceptedSha),
+      'all Git consumer packages must come from Git');
+  _expectFailure(() => verifyIndexedDbGitLock('', acceptedSha),
+      'missing Git lock entries are not evidence');
+
   _expect(
     inventory.packages.isNotEmpty,
     'the shared inventory declares public packages',

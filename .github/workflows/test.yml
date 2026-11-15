@@ -9,6 +9,8 @@ on:
 permissions:
   contents: read
 
+# Workspace resolution includes idb_shim 2.10.1+1 (Dart >=3.12).
+# Keep every job on the same verified SDK, including service/example lanes.
 jobs:
   inventory:
     runs-on: ubuntu-latest
@@ -28,7 +30,7 @@ jobs:
       - name: Setup Dart
         uses: dart-lang/setup-dart@v1
         with:
-          sdk: 3.9.4
+          sdk: 3.13.7
 
       - name: Resolve workspace dependencies
         run: dart pub get
@@ -72,7 +74,7 @@ jobs:
       - name: Setup Dart
         uses: dart-lang/setup-dart@v1
         with:
-          sdk: 3.9.4
+          sdk: 3.13.7
 
       - name: Cache Dart dependencies
         uses: actions/cache@v4
@@ -91,6 +93,20 @@ jobs:
         run: >-
           dart tool/validation/validate.dart package
           "${{ matrix.name }}" --mode=ci
+
+      - name: Verify IndexedDB isolation in separate tabs
+        if: matrix.name == 'dddart_repository_indexeddb'
+        run: >-
+          dart packages/dddart_repository_indexeddb/tool/verify_cross_tab.dart
+          > "$RUNNER_TEMP/indexeddb-cross-tab-results.json"
+
+      - name: Retain separate-tab browser evidence
+        if: matrix.name == 'dddart_repository_indexeddb'
+        uses: actions/upload-artifact@v4
+        with:
+          name: indexeddb-cross-tab-results
+          path: ${{ runner.temp }}/indexeddb-cross-tab-results.json
+          if-no-files-found: error
 
       - name: Validate isolated minimal consumer
         run: >-
@@ -120,7 +136,7 @@ jobs:
       - name: Setup Dart
         uses: dart-lang/setup-dart@v1
         with:
-          sdk: 3.9.4
+          sdk: 3.13.7
 
       - name: Cache Dart dependencies
         uses: actions/cache@v4
@@ -163,7 +179,7 @@ jobs:
       - name: Setup Dart
         uses: dart-lang/setup-dart@v1
         with:
-          sdk: 3.9.4
+          sdk: 3.13.7
 
       - name: Cache Dart dependencies
         uses: actions/cache@v4
@@ -215,7 +231,7 @@ jobs:
       - name: Setup Dart
         uses: dart-lang/setup-dart@v1
         with:
-          sdk: 3.9.4
+          sdk: 3.13.7
 
       - name: Cache Dart dependencies
         uses: actions/cache@v4
@@ -253,7 +269,7 @@ jobs:
       - name: Setup Dart
         uses: dart-lang/setup-dart@v1
         with:
-          sdk: 3.9.4
+          sdk: 3.13.7
 
       - name: Cache Dart dependencies
         uses: actions/cache@v4
@@ -296,7 +312,7 @@ jobs:
       - name: Setup Dart
         uses: dart-lang/setup-dart@v1
         with:
-          sdk: 3.9.4
+          sdk: 3.13.7
 
       - name: Cache Dart dependencies
         uses: actions/cache@v4
@@ -334,7 +350,7 @@ jobs:
       - name: Setup Dart
         uses: dart-lang/setup-dart@v1
         with:
-          sdk: 3.9.4
+          sdk: 3.13.7
 
       - name: Cache Dart dependencies
         uses: actions/cache@v4
@@ -381,7 +397,7 @@ jobs:
       - name: Setup Dart
         uses: dart-lang/setup-dart@v1
         with:
-          sdk: 3.9.4
+          sdk: 3.13.7
 
       - name: Cache Dart dependencies
         uses: actions/cache@v4
