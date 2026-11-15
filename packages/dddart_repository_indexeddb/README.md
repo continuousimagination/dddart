@@ -362,6 +362,27 @@ records the local verification and independent-review boundary. This harness can
 also provide independently loaded participants for later lifecycle tests; it does
 not currently exercise blocked upgrades or cancellation.
 
-Physical iPhone/WebKit verification remains tracked in #77. Chromium results
-are not physical WebKit evidence. Public pub.dev publication is tracked
-separately in #30.
+### Physical iPhone evidence
+
+[Issue #77](https://github.com/continuousimagination/dddart/issues/77) records a
+completed physical iPhone 14 Plus **Safari browser-tab** run on 15 November 2026.
+The [original report](https://github.com/continuousimagination/dddart/blob/a6460b05727614fb4c1900f89cb05eef167cb3df/tool/iphone_indexeddb/results/2026-11-15-iphone-14-plus.json)
+and [procedure](https://github.com/continuousimagination/dddart/blob/fe5feff185ae0c58a38467da25ff7f153bf2047a/tool/iphone_indexeddb/README.md)
+pin core, serialization and adapter to
+`62af23ffa369c2d2cba13c93e39eee4c90c2325d`, without dependency overrides.
+Committed CRUD, conditional revision/uniqueness and atomicity, durable receipts,
+lost-result reconciliation/identical retry, schema recovery and injected storage
+failures passed. Reload, background/resume and Safari close/reopen preserved the
+expected records and all ten operation receipts.
+
+The operator-entered iOS version is `26.7.1`; the raw user agent is preserved in
+the report and does not establish an exact underlying WebKit build. Hardware and
+app-close actions rely on explicit operator attestations. Independent device
+review was **not performed**; #77 records Sean's requested closure with that limit.
+Installed PWA/Home Screen, offline loading, real quota exhaustion/eviction,
+forced OS termination during a write and long-term retention remain untested.
+Lost completion was deliberately discarded, and fault triggers were injected
+over native IndexedDB; neither is a device-crash claim. Chromium results remain
+separate from this device evidence. See the [parent integration record](../../docs/worky/indexeddb-parent-work-record.md)
+for source equivalence and integrated validation. Public pub.dev publication
+remains separate in #30.
