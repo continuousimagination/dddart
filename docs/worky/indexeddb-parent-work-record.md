@@ -182,3 +182,68 @@ was performed. Worky owns those handoffs; human final-merge authority is unchang
 Repeat the immutable consumer at the final accepted main SHA after publication
 and merge. The documented physical-device scope and missing independent device
 review must remain explicit during that review.
+
+## PR #85 revision — R1: CI SDK compatibility
+
+Review source: [R1 at prepared head
+`c0decb7ea6c14d222140da90dcdd3252f3b34db0`](https://github.com/continuousimagination/dddart/pull/85#pullrequestreview-5912749342).
+The pinned `idb_shim 2.10.1+1` declares Dart `^3.12.0`; the workflow's
+Dart 3.9.4 selections therefore could not resolve the integrated workspace.
+
+All nine Dart setup steps in `.github/workflows/test.yml` now select **3.13.7**:
+inventory, unserviced/service-backed packages, and unserviced/service-backed
+examples. Every job resolves the same workspace, so changing only the IndexedDB
+matrix entry would not fix the other jobs. This uses the exact SDK already used
+for the integrated validation above instead of changing the verified dependency.
+No package SDK declarations, dependency versions, application sources, test
+exclusions, service configuration, workflow triggers or permissions are changed.
+This is a CI toolchain selection, not a claim that the current dependency graph
+resolves on the older SDK lower bounds declared by individual packages.
+
+Fresh checks on Linux ARM64 with Dart 3.13.7:
+
+- `dart pub get`: passed from the clean prepared checkout with no lockfile or
+  dependency overrides; selected `idb_shim 2.10.1+1`. The resulting workspace
+  lockfile requires Dart `>=3.13.0 <4.0.0`, satisfied by the selected SDK.
+- Inventory-job commands passed: fatal-info validation-tool analysis, formatting
+  (four files, no changes), validation-policy self-tests and workspace checks
+  covering 18 packages and 15 examples.
+- All eight package/example service-kind matrix commands passed. JSON coverage
+  checks confirmed that every package/example appears exactly once across its
+  four service partitions.
+- Parsed the workflow as YAML and asserted that every one of its nine jobs has
+  exactly one Dart setup step selecting `3.13.7` and resolves the workspace.
+
+- `dart tool/validation/validate.dart package dddart_repository_indexeddb
+  --mode=ci`: passed analysis, formatting and 94 VM/native-Chrome test runs;
+  three memory-factory dispatched-close cases explicitly skipped because that
+  factory closes shared handles immediately. Native browser cases passed.
+  The existing `publish_to: none` dry-run exemption is unchanged.
+- `dart packages/dddart_repository_indexeddb/tool/verify_cross_tab.dart`:
+  passed ten rounds, including destroying/reopening both pages and resolving
+  and retrying all 45 original operations. Browser sandbox remained enabled.
+  Source manifest SHA-256 remains
+  `41991a80167c1d9092bbbedae78cfedd47c96e03c69f723487fb1f36af3decf2`.
+- `dart tool/validation/validate.dart consumer dddart_repository_indexeddb`:
+  passed resolution, fatal-info analysis and execution with only its allowed
+  local closure. This validator intentionally uses fixture-only path overrides;
+  it is not an immutable public Git consumer verification.
+- `dart tool/validation/validate.dart package dddart --mode=ci`: passed
+  analysis, formatting, all 223 tests and the publication dry-run (zero warnings).
+- `dart tool/validation/validate.dart consumer dddart`: passed resolution,
+  fatal-info analysis and execution with only the core fixture dependency.
+- `git diff --check`: passed. Only the CI workflow and this revision record
+  changed; the prepared branch and HEAD remain unchanged for Worky's publication.
+
+Reproduction uses Dart 3.13.7 on PATH and `CHROME_EXECUTABLE` pointing to native
+Chrome for Testing 156.0.8078.47. Raw logs, matrix JSON and direct gate exit codes
+are retained locally at `/tmp/issue79-r1-validation.msXn7R/`.
+
+These are fresh local executions of the applicable inventory and core/IndexedDB
+CI commands, not a hosted Actions result. The complete repository gate and
+service-backed MongoDB/DynamoDB/MySQL lanes were not rerun for this SDK-selection
+revision; their earlier local coverage above remains historical. No physical
+WebKit run was repeated. Obtaining hosted CI evidence for the published revised
+head remains Worky/operator-owned, as stated in the supplied coordination
+finding; no workflow dispatch, PR publication, status mutation or merge was
+performed here.

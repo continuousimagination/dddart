@@ -9,6 +9,8 @@ on:
 permissions:
   contents: read
 
+# Workspace resolution includes idb_shim 2.10.1+1 (Dart >=3.12).
+# Keep every job on the same verified SDK, including service/example lanes.
 jobs:
   inventory:
     runs-on: ubuntu-latest
@@ -28,7 +30,7 @@ jobs:
       - name: Setup Dart
         uses: dart-lang/setup-dart@v1
         with:
-          sdk: 3.9.4
+          sdk: 3.13.7
 
       - name: Resolve workspace dependencies
         run: dart pub get
@@ -72,7 +74,7 @@ jobs:
       - name: Setup Dart
         uses: dart-lang/setup-dart@v1
         with:
-          sdk: 3.9.4
+          sdk: 3.13.7
 
       - name: Cache Dart dependencies
         uses: actions/cache@v4
@@ -134,7 +136,7 @@ jobs:
       - name: Setup Dart
         uses: dart-lang/setup-dart@v1
         with:
-          sdk: 3.9.4
+          sdk: 3.13.7
 
       - name: Cache Dart dependencies
         uses: actions/cache@v4
@@ -177,7 +179,7 @@ jobs:
       - name: Setup Dart
         uses: dart-lang/setup-dart@v1
         with:
-          sdk: 3.9.4
+          sdk: 3.13.7
 
       - name: Cache Dart dependencies
         uses: actions/cache@v4
@@ -229,7 +231,7 @@ jobs:
       - name: Setup Dart
         uses: dart-lang/setup-dart@v1
         with:
-          sdk: 3.9.4
+          sdk: 3.13.7
 
       - name: Cache Dart dependencies
         uses: actions/cache@v4
@@ -267,7 +269,7 @@ jobs:
       - name: Setup Dart
         uses: dart-lang/setup-dart@v1
         with:
-          sdk: 3.9.4
+          sdk: 3.13.7
 
       - name: Cache Dart dependencies
         uses: actions/cache@v4
@@ -310,7 +312,7 @@ jobs:
       - name: Setup Dart
         uses: dart-lang/setup-dart@v1
         with:
-          sdk: 3.9.4
+          sdk: 3.13.7
 
       - name: Cache Dart dependencies
         uses: actions/cache@v4
@@ -348,7 +350,7 @@ jobs:
       - name: Setup Dart
         uses: dart-lang/setup-dart@v1
         with:
-          sdk: 3.9.4
+          sdk: 3.13.7
 
       - name: Cache Dart dependencies
         uses: actions/cache@v4
@@ -395,7 +397,7 @@ jobs:
       - name: Setup Dart
         uses: dart-lang/setup-dart@v1
         with:
-          sdk: 3.9.4
+          sdk: 3.13.7
 
       - name: Cache Dart dependencies
         uses: actions/cache@v4
