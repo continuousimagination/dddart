@@ -1,0 +1,1124 @@
+{
+  "reportVersion": 1,
+  "runId": "76bccfbc-6dd7-4241-8269-2f6f5c519170",
+  "startedAt": "2026-11-15T11:36:24.885Z",
+  "testedSha": "62af23ffa369c2d2cba13c93e39eee4c90c2325d",
+  "harnessCommit": "fe5feff185ae0c58a38467da25ff7f153bf2047a",
+  "sourceDirty": false,
+  "model": "Iphone 14 plus",
+  "osVersion": "26.7.1",
+  "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6.2 Mobile/15E148 Safari/604.1",
+  "platform": "iPhone",
+  "mode": "browser-tab",
+  "origin": "http://192.168.0.18:8787",
+  "https": false,
+  "nativeIndexedDb": true,
+  "events": [
+    {
+      "at": "2026-11-15T11:36:24.898Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "info",
+      "message": "Operator details recorded; native IndexedDB only."
+    },
+    {
+      "at": "2026-11-15T11:36:24.951Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "pass",
+      "message": "CRUD create/read"
+    },
+    {
+      "at": "2026-11-15T11:36:24.953Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "pass",
+      "message": "CRUD update"
+    },
+    {
+      "at": "2026-11-15T11:36:24.957Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "pass",
+      "message": "CRUD delete (typed notFound)"
+    },
+    {
+      "at": "2026-11-15T11:36:24.963Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "pass",
+      "message": "Two-record create committed"
+    },
+    {
+      "at": "2026-11-15T11:36:24.968Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "pass",
+      "message": "Two-record update committed"
+    },
+    {
+      "at": "2026-11-15T11:36:24.970Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "pass",
+      "message": "Stale revision rejects entire multi-record operation"
+    },
+    {
+      "at": "2026-11-15T11:36:24.971Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "pass",
+      "message": "Rejected operation did not partially update the other record"
+    },
+    {
+      "at": "2026-11-15T11:36:24.973Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "pass",
+      "message": "Duplicate unique value rejected"
+    },
+    {
+      "at": "2026-11-15T11:36:24.973Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "pass",
+      "message": "Rejected unique claimant absent (typed notFound)"
+    },
+    {
+      "at": "2026-11-15T11:36:24.975Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "pass",
+      "message": "ABA seed committed"
+    },
+    {
+      "at": "2026-11-15T11:36:24.977Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "pass",
+      "message": "Conditional deletion committed"
+    },
+    {
+      "at": "2026-11-15T11:36:24.978Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "pass",
+      "message": "Delete/recreate generates a new revision"
+    },
+    {
+      "at": "2026-11-15T11:36:24.979Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "pass",
+      "message": "ABA stale token rejected"
+    },
+    {
+      "at": "2026-11-15T11:36:24.987Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "pass",
+      "message": "Committed CRUD value retained"
+    },
+    {
+      "at": "2026-11-15T11:36:24.988Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "pass",
+      "message": "deleted remains absent (typed notFound)"
+    },
+    {
+      "at": "2026-11-15T11:36:24.988Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "pass",
+      "message": "collision remains absent (typed notFound)"
+    },
+    {
+      "at": "2026-11-15T11:36:24.989Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "pass",
+      "message": "a: committed value and exact revision retained"
+    },
+    {
+      "at": "2026-11-15T11:36:24.989Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "pass",
+      "message": "b: committed value and exact revision retained"
+    },
+    {
+      "at": "2026-11-15T11:36:24.990Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "pass",
+      "message": "aba: committed value and exact revision retained"
+    },
+    {
+      "at": "2026-11-15T11:36:24.991Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "pass",
+      "message": "a: unique ownership retained"
+    },
+    {
+      "at": "2026-11-15T11:36:24.992Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "pass",
+      "message": "b: unique ownership retained"
+    },
+    {
+      "at": "2026-11-15T11:36:24.995Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "pass",
+      "message": "Durable committed receipt 06a005fb-df4d-4f01-a901-6c5b0b39ac07"
+    },
+    {
+      "at": "2026-11-15T11:36:24.997Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "pass",
+      "message": "Durable committed receipt 12b09a84-c856-4e3e-8a75-836d55dfd04d"
+    },
+    {
+      "at": "2026-11-15T11:36:24.999Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "pass",
+      "message": "Durable rejected receipt f31ddfe9-ce40-45ab-8bcb-980fe90190dc"
+    },
+    {
+      "at": "2026-11-15T11:36:25.002Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "pass",
+      "message": "Durable rejected receipt 7152b9e6-28b9-4e19-bbb1-15538d2a038a"
+    },
+    {
+      "at": "2026-11-15T11:36:25.005Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "pass",
+      "message": "Durable committed receipt ac8e62e7-bd6b-4cc0-a912-711a948500e0"
+    },
+    {
+      "at": "2026-11-15T11:36:25.011Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "pass",
+      "message": "Durable committed receipt 2c045155-e6e8-4072-802b-bcd86608ec64"
+    },
+    {
+      "at": "2026-11-15T11:36:25.013Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "pass",
+      "message": "Durable committed receipt 0009064a-487a-48a6-b61c-fd39871eb03b"
+    },
+    {
+      "at": "2026-11-15T11:36:25.014Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "pass",
+      "message": "Durable rejected receipt 03a7206b-d462-4e6b-9a95-84e71a3cbd76"
+    },
+    {
+      "at": "2026-11-15T11:36:25.015Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "pass",
+      "message": "Baseline complete"
+    },
+    {
+      "at": "2026-11-15T11:36:40.938Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "info",
+      "message": "visibility:hidden"
+    },
+    {
+      "at": "2026-11-15T11:36:48.929Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "info",
+      "message": "visibility:visible"
+    },
+    {
+      "at": "2026-11-15T11:36:57.784Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "info",
+      "message": "visibility:hidden"
+    },
+    {
+      "at": "2026-11-15T11:37:12.922Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "info",
+      "message": "visibility:visible"
+    },
+    {
+      "at": "2026-11-15T11:37:15.755Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "info",
+      "message": "Completion deliberately discarded; this is not a forced OS crash."
+    },
+    {
+      "at": "2026-11-15T11:37:15.756Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "pass",
+      "message": "Unobserved completion complete"
+    },
+    {
+      "at": "2026-11-15T11:37:15.824Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "info",
+      "message": "pagehide"
+    },
+    {
+      "at": "2026-11-15T11:37:15.824Z",
+      "documentId": "ce23f989-57e2-4ac7-a343-c693a1432222",
+      "status": "info",
+      "message": "visibility:hidden"
+    },
+    {
+      "at": "2026-11-15T11:37:16.059Z",
+      "documentId": "d71044ce-d894-4172-bb5a-06dcbdd3175e",
+      "status": "info",
+      "message": "Page loaded; previous run restored without reseeding."
+    },
+    {
+      "at": "2026-11-15T11:37:16.065Z",
+      "documentId": "d71044ce-d894-4172-bb5a-06dcbdd3175e",
+      "status": "info",
+      "message": "pageshow"
+    },
+    {
+      "at": "2026-11-15T11:37:20.395Z",
+      "documentId": "d71044ce-d894-4172-bb5a-06dcbdd3175e",
+      "status": "pass",
+      "message": "Reload reconstructed identical request digest"
+    },
+    {
+      "at": "2026-11-15T11:37:20.411Z",
+      "documentId": "d71044ce-d894-4172-bb5a-06dcbdd3175e",
+      "status": "info",
+      "message": "Initial reconciliation: committed; absent receipts mean uncertain."
+    },
+    {
+      "at": "2026-11-15T11:37:20.414Z",
+      "documentId": "d71044ce-d894-4172-bb5a-06dcbdd3175e",
+      "status": "pass",
+      "message": "Exact operation retry committed or recovered receipt"
+    },
+    {
+      "at": "2026-11-15T11:37:20.415Z",
+      "documentId": "d71044ce-d894-4172-bb5a-06dcbdd3175e",
+      "status": "pass",
+      "message": "Retry preserved reconciled revisions"
+    },
+    {
+      "at": "2026-11-15T11:37:20.418Z",
+      "documentId": "d71044ce-d894-4172-bb5a-06dcbdd3175e",
+      "status": "pass",
+      "message": "Second identical retry did not apply mutations again"
+    },
+    {
+      "at": "2026-11-15T11:37:20.421Z",
+      "documentId": "d71044ce-d894-4172-bb5a-06dcbdd3175e",
+      "status": "pass",
+      "message": "Same operation ID with changed payload rejected (typed constraint)"
+    },
+    {
+      "at": "2026-11-15T11:37:20.429Z",
+      "documentId": "d71044ce-d894-4172-bb5a-06dcbdd3175e",
+      "status": "pass",
+      "message": "pendingA: recovered value and revision retained"
+    },
+    {
+      "at": "2026-11-15T11:37:20.430Z",
+      "documentId": "d71044ce-d894-4172-bb5a-06dcbdd3175e",
+      "status": "pass",
+      "message": "pendingB: recovered value and revision retained"
+    },
+    {
+      "at": "2026-11-15T11:37:20.430Z",
+      "documentId": "d71044ce-d894-4172-bb5a-06dcbdd3175e",
+      "status": "pass",
+      "message": "Reconciliation and identical retry complete"
+    },
+    {
+      "at": "2026-11-15T11:37:26.323Z",
+      "documentId": "d71044ce-d894-4172-bb5a-06dcbdd3175e",
+      "status": "pass",
+      "message": "INJECTED upgrade abort reports connection failure (typed connection)"
+    },
+    {
+      "at": "2026-11-15T11:37:26.329Z",
+      "documentId": "d71044ce-d894-4172-bb5a-06dcbdd3175e",
+      "status": "pass",
+      "message": "Native rollback preserved version-1 data after INJECTED abort"
+    },
+    {
+      "at": "2026-11-15T11:37:26.332Z",
+      "documentId": "d71044ce-d894-4172-bb5a-06dcbdd3175e",
+      "status": "pass",
+      "message": "Aborted upgrade did not commit schema marker"
+    },
+    {
+      "at": "2026-11-15T11:37:26.341Z",
+      "documentId": "d71044ce-d894-4172-bb5a-06dcbdd3175e",
+      "status": "pass",
+      "message": "Compatible upgrade retry retained data"
+    },
+    {
+      "at": "2026-11-15T11:37:26.347Z",
+      "documentId": "d71044ce-d894-4172-bb5a-06dcbdd3175e",
+      "status": "pass",
+      "message": "Native codec mismatch rejected (typed constraint)"
+    },
+    {
+      "at": "2026-11-15T11:37:26.350Z",
+      "documentId": "d71044ce-d894-4172-bb5a-06dcbdd3175e",
+      "status": "pass",
+      "message": "Codec mismatch preserved original payload"
+    },
+    {
+      "at": "2026-11-15T11:37:26.351Z",
+      "documentId": "d71044ce-d894-4172-bb5a-06dcbdd3175e",
+      "status": "pass",
+      "message": "INJECTED unavailable storage reports typed connection failure (typed connection)"
+    },
+    {
+      "at": "2026-11-15T11:37:26.354Z",
+      "documentId": "d71044ce-d894-4172-bb5a-06dcbdd3175e",
+      "status": "pass",
+      "message": "Native storage works again after removing injected unavailability"
+    },
+    {
+      "at": "2026-11-15T11:37:26.367Z",
+      "documentId": "d71044ce-d894-4172-bb5a-06dcbdd3175e",
+      "status": "pass",
+      "message": "INJECTED receipt write failure yields uncertain outcome"
+    },
+    {
+      "at": "2026-11-15T11:37:26.369Z",
+      "documentId": "d71044ce-d894-4172-bb5a-06dcbdd3175e",
+      "status": "pass",
+      "message": "Native transaction rolled back queued aggregate after injected failure (typed notFound)"
+    },
+    {
+      "at": "2026-11-15T11:37:26.369Z",
+      "documentId": "d71044ce-d894-4172-bb5a-06dcbdd3175e",
+      "status": "pass",
+      "message": "Native transaction rolled back queued aggregate after injected failure (typed notFound)"
+    },
+    {
+      "at": "2026-11-15T11:37:26.371Z",
+      "documentId": "d71044ce-d894-4172-bb5a-06dcbdd3175e",
+      "status": "pass",
+      "message": "Unique claim rolled back: fault-a (typed notFound)"
+    },
+    {
+      "at": "2026-11-15T11:37:26.372Z",
+      "documentId": "d71044ce-d894-4172-bb5a-06dcbdd3175e",
+      "status": "pass",
+      "message": "Unique claim rolled back: fault-b (typed notFound)"
+    },
+    {
+      "at": "2026-11-15T11:37:26.374Z",
+      "documentId": "d71044ce-d894-4172-bb5a-06dcbdd3175e",
+      "status": "pass",
+      "message": "No partial receipt or receipt count survived abort"
+    },
+    {
+      "at": "2026-11-15T11:37:26.375Z",
+      "documentId": "d71044ce-d894-4172-bb5a-06dcbdd3175e",
+      "status": "pass",
+      "message": "Missing receipt correctly remains uncertain"
+    },
+    {
+      "at": "2026-11-15T11:37:26.378Z",
+      "documentId": "d71044ce-d894-4172-bb5a-06dcbdd3175e",
+      "status": "pass",
+      "message": "Exact retry succeeds after removing injected fault"
+    },
+    {
+      "at": "2026-11-15T11:37:26.379Z",
+      "documentId": "d71044ce-d894-4172-bb5a-06dcbdd3175e",
+      "status": "pass",
+      "message": "Both recovered records present"
+    },
+    {
+      "at": "2026-11-15T11:37:26.380Z",
+      "documentId": "d71044ce-d894-4172-bb5a-06dcbdd3175e",
+      "status": "pass",
+      "message": "Schema and injected failures complete"
+    },
+    {
+      "at": "2026-11-15T11:37:34.386Z",
+      "documentId": "d71044ce-d894-4172-bb5a-06dcbdd3175e",
+      "status": "info",
+      "message": "Armed reload; run URL must remain unchanged."
+    },
+    {
+      "at": "2026-11-15T11:37:34.388Z",
+      "documentId": "d71044ce-d894-4172-bb5a-06dcbdd3175e",
+      "status": "pass",
+      "message": "Arm reload complete"
+    },
+    {
+      "at": "2026-11-15T11:37:34.522Z",
+      "documentId": "d71044ce-d894-4172-bb5a-06dcbdd3175e",
+      "status": "info",
+      "message": "pagehide"
+    },
+    {
+      "at": "2026-11-15T11:37:34.526Z",
+      "documentId": "d71044ce-d894-4172-bb5a-06dcbdd3175e",
+      "status": "info",
+      "message": "visibility:hidden"
+    },
+    {
+      "at": "2026-11-15T11:37:34.728Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "info",
+      "message": "Page loaded; previous run restored without reseeding."
+    },
+    {
+      "at": "2026-11-15T11:37:34.735Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "info",
+      "message": "pageshow"
+    },
+    {
+      "at": "2026-11-15T11:37:42.026Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "Committed CRUD value retained"
+    },
+    {
+      "at": "2026-11-15T11:37:42.030Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "deleted remains absent (typed notFound)"
+    },
+    {
+      "at": "2026-11-15T11:37:42.032Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "collision remains absent (typed notFound)"
+    },
+    {
+      "at": "2026-11-15T11:37:42.036Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "a: committed value and exact revision retained"
+    },
+    {
+      "at": "2026-11-15T11:37:42.038Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "b: committed value and exact revision retained"
+    },
+    {
+      "at": "2026-11-15T11:37:42.040Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "aba: committed value and exact revision retained"
+    },
+    {
+      "at": "2026-11-15T11:37:42.042Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "a: unique ownership retained"
+    },
+    {
+      "at": "2026-11-15T11:37:42.044Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "b: unique ownership retained"
+    },
+    {
+      "at": "2026-11-15T11:37:42.050Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "Durable committed receipt 06a005fb-df4d-4f01-a901-6c5b0b39ac07"
+    },
+    {
+      "at": "2026-11-15T11:37:42.054Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "Durable committed receipt 12b09a84-c856-4e3e-8a75-836d55dfd04d"
+    },
+    {
+      "at": "2026-11-15T11:37:42.058Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "Durable rejected receipt f31ddfe9-ce40-45ab-8bcb-980fe90190dc"
+    },
+    {
+      "at": "2026-11-15T11:37:42.061Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "Durable rejected receipt 7152b9e6-28b9-4e19-bbb1-15538d2a038a"
+    },
+    {
+      "at": "2026-11-15T11:37:42.064Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "Durable committed receipt ac8e62e7-bd6b-4cc0-a912-711a948500e0"
+    },
+    {
+      "at": "2026-11-15T11:37:42.067Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "Durable committed receipt 2c045155-e6e8-4072-802b-bcd86608ec64"
+    },
+    {
+      "at": "2026-11-15T11:37:42.070Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "Durable committed receipt 0009064a-487a-48a6-b61c-fd39871eb03b"
+    },
+    {
+      "at": "2026-11-15T11:37:42.072Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "Durable rejected receipt 03a7206b-d462-4e6b-9a95-84e71a3cbd76"
+    },
+    {
+      "at": "2026-11-15T11:37:42.075Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "Durable committed receipt 22efa0c9-c753-4995-b7f1-b15519b25adb"
+    },
+    {
+      "at": "2026-11-15T11:37:42.079Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "Durable committed receipt 2056daf3-a12f-4599-9f5c-a276fc44fb8f"
+    },
+    {
+      "at": "2026-11-15T11:37:42.081Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "pendingA: recovered value and revision retained"
+    },
+    {
+      "at": "2026-11-15T11:37:42.082Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "pendingB: recovered value and revision retained"
+    },
+    {
+      "at": "2026-11-15T11:37:42.083Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "Lifecycle verification complete"
+    },
+    {
+      "at": "2026-11-15T11:37:49.134Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "info",
+      "message": "Armed background; run URL must remain unchanged."
+    },
+    {
+      "at": "2026-11-15T11:37:49.136Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "Arm background complete"
+    },
+    {
+      "at": "2026-11-15T11:37:54.656Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "info",
+      "message": "visibility:hidden"
+    },
+    {
+      "at": "2026-11-15T11:38:12.844Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "info",
+      "message": "visibility:visible"
+    },
+    {
+      "at": "2026-11-15T11:38:19.493Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "Committed CRUD value retained"
+    },
+    {
+      "at": "2026-11-15T11:38:19.496Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "deleted remains absent (typed notFound)"
+    },
+    {
+      "at": "2026-11-15T11:38:19.499Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "collision remains absent (typed notFound)"
+    },
+    {
+      "at": "2026-11-15T11:38:19.503Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "a: committed value and exact revision retained"
+    },
+    {
+      "at": "2026-11-15T11:38:19.505Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "b: committed value and exact revision retained"
+    },
+    {
+      "at": "2026-11-15T11:38:19.509Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "aba: committed value and exact revision retained"
+    },
+    {
+      "at": "2026-11-15T11:38:19.511Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "a: unique ownership retained"
+    },
+    {
+      "at": "2026-11-15T11:38:19.513Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "b: unique ownership retained"
+    },
+    {
+      "at": "2026-11-15T11:38:19.520Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "Durable committed receipt 06a005fb-df4d-4f01-a901-6c5b0b39ac07"
+    },
+    {
+      "at": "2026-11-15T11:38:19.523Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "Durable committed receipt 12b09a84-c856-4e3e-8a75-836d55dfd04d"
+    },
+    {
+      "at": "2026-11-15T11:38:19.527Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "Durable rejected receipt f31ddfe9-ce40-45ab-8bcb-980fe90190dc"
+    },
+    {
+      "at": "2026-11-15T11:38:19.530Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "Durable rejected receipt 7152b9e6-28b9-4e19-bbb1-15538d2a038a"
+    },
+    {
+      "at": "2026-11-15T11:38:19.534Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "Durable committed receipt ac8e62e7-bd6b-4cc0-a912-711a948500e0"
+    },
+    {
+      "at": "2026-11-15T11:38:19.536Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "Durable committed receipt 2c045155-e6e8-4072-802b-bcd86608ec64"
+    },
+    {
+      "at": "2026-11-15T11:38:19.539Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "Durable committed receipt 0009064a-487a-48a6-b61c-fd39871eb03b"
+    },
+    {
+      "at": "2026-11-15T11:38:19.541Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "Durable rejected receipt 03a7206b-d462-4e6b-9a95-84e71a3cbd76"
+    },
+    {
+      "at": "2026-11-15T11:38:19.545Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "Durable committed receipt 22efa0c9-c753-4995-b7f1-b15519b25adb"
+    },
+    {
+      "at": "2026-11-15T11:38:19.548Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "Durable committed receipt 2056daf3-a12f-4599-9f5c-a276fc44fb8f"
+    },
+    {
+      "at": "2026-11-15T11:38:19.551Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "pendingA: recovered value and revision retained"
+    },
+    {
+      "at": "2026-11-15T11:38:19.552Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "pendingB: recovered value and revision retained"
+    },
+    {
+      "at": "2026-11-15T11:38:19.553Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "Lifecycle verification complete"
+    },
+    {
+      "at": "2026-11-15T11:38:26.583Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "info",
+      "message": "Armed reopen; run URL must remain unchanged."
+    },
+    {
+      "at": "2026-11-15T11:38:26.585Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "pass",
+      "message": "Arm reopen complete"
+    },
+    {
+      "at": "2026-11-15T11:38:47.559Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "info",
+      "message": "visibility:hidden"
+    },
+    {
+      "at": "2026-11-15T11:38:53.411Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "info",
+      "message": "pagehide"
+    },
+    {
+      "at": "2026-11-15T11:38:53.428Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "status": "info",
+      "message": "visibility:hidden"
+    },
+    {
+      "at": "2026-11-15T11:39:12.661Z",
+      "documentId": "a64936e9-65ef-4f2e-b86d-26776ed9d4a2",
+      "status": "info",
+      "message": "Page loaded; previous run restored without reseeding."
+    },
+    {
+      "at": "2026-11-15T11:39:12.669Z",
+      "documentId": "a64936e9-65ef-4f2e-b86d-26776ed9d4a2",
+      "status": "info",
+      "message": "pageshow"
+    },
+    {
+      "at": "2026-11-15T11:39:13.399Z",
+      "documentId": "a64936e9-65ef-4f2e-b86d-26776ed9d4a2",
+      "status": "info",
+      "message": "visibility:visible"
+    },
+    {
+      "at": "2026-11-15T11:39:40.462Z",
+      "documentId": "a64936e9-65ef-4f2e-b86d-26776ed9d4a2",
+      "status": "info",
+      "message": "visibility:hidden"
+    },
+    {
+      "at": "2026-11-15T11:39:41.864Z",
+      "documentId": "a64936e9-65ef-4f2e-b86d-26776ed9d4a2",
+      "status": "info",
+      "message": "visibility:visible"
+    },
+    {
+      "at": "2026-11-15T11:39:43.779Z",
+      "documentId": "a64936e9-65ef-4f2e-b86d-26776ed9d4a2",
+      "status": "info",
+      "message": "visibility:hidden"
+    },
+    {
+      "at": "2026-11-15T11:42:24.509Z",
+      "documentId": "a64936e9-65ef-4f2e-b86d-26776ed9d4a2",
+      "status": "info",
+      "message": "visibility:visible"
+    },
+    {
+      "at": "2026-11-15T11:42:30.075Z",
+      "documentId": "378a96cb-728e-4844-bee9-029682e9c6a2",
+      "status": "info",
+      "message": "Page loaded; previous run restored without reseeding."
+    },
+    {
+      "at": "2026-11-15T11:42:30.084Z",
+      "documentId": "378a96cb-728e-4844-bee9-029682e9c6a2",
+      "status": "info",
+      "message": "pageshow"
+    },
+    {
+      "at": "2026-11-15T11:42:30.723Z",
+      "documentId": "378a96cb-728e-4844-bee9-029682e9c6a2",
+      "status": "info",
+      "message": "visibility:visible"
+    },
+    {
+      "at": "2026-11-15T11:42:43.390Z",
+      "documentId": "378a96cb-728e-4844-bee9-029682e9c6a2",
+      "status": "pass",
+      "message": "Committed CRUD value retained"
+    },
+    {
+      "at": "2026-11-15T11:42:43.394Z",
+      "documentId": "378a96cb-728e-4844-bee9-029682e9c6a2",
+      "status": "pass",
+      "message": "deleted remains absent (typed notFound)"
+    },
+    {
+      "at": "2026-11-15T11:42:43.396Z",
+      "documentId": "378a96cb-728e-4844-bee9-029682e9c6a2",
+      "status": "pass",
+      "message": "collision remains absent (typed notFound)"
+    },
+    {
+      "at": "2026-11-15T11:42:43.400Z",
+      "documentId": "378a96cb-728e-4844-bee9-029682e9c6a2",
+      "status": "pass",
+      "message": "a: committed value and exact revision retained"
+    },
+    {
+      "at": "2026-11-15T11:42:43.401Z",
+      "documentId": "378a96cb-728e-4844-bee9-029682e9c6a2",
+      "status": "pass",
+      "message": "b: committed value and exact revision retained"
+    },
+    {
+      "at": "2026-11-15T11:42:43.402Z",
+      "documentId": "378a96cb-728e-4844-bee9-029682e9c6a2",
+      "status": "pass",
+      "message": "aba: committed value and exact revision retained"
+    },
+    {
+      "at": "2026-11-15T11:42:43.404Z",
+      "documentId": "378a96cb-728e-4844-bee9-029682e9c6a2",
+      "status": "pass",
+      "message": "a: unique ownership retained"
+    },
+    {
+      "at": "2026-11-15T11:42:43.406Z",
+      "documentId": "378a96cb-728e-4844-bee9-029682e9c6a2",
+      "status": "pass",
+      "message": "b: unique ownership retained"
+    },
+    {
+      "at": "2026-11-15T11:42:43.411Z",
+      "documentId": "378a96cb-728e-4844-bee9-029682e9c6a2",
+      "status": "pass",
+      "message": "Durable committed receipt 06a005fb-df4d-4f01-a901-6c5b0b39ac07"
+    },
+    {
+      "at": "2026-11-15T11:42:43.414Z",
+      "documentId": "378a96cb-728e-4844-bee9-029682e9c6a2",
+      "status": "pass",
+      "message": "Durable committed receipt 12b09a84-c856-4e3e-8a75-836d55dfd04d"
+    },
+    {
+      "at": "2026-11-15T11:42:43.416Z",
+      "documentId": "378a96cb-728e-4844-bee9-029682e9c6a2",
+      "status": "pass",
+      "message": "Durable rejected receipt f31ddfe9-ce40-45ab-8bcb-980fe90190dc"
+    },
+    {
+      "at": "2026-11-15T11:42:43.419Z",
+      "documentId": "378a96cb-728e-4844-bee9-029682e9c6a2",
+      "status": "pass",
+      "message": "Durable rejected receipt 7152b9e6-28b9-4e19-bbb1-15538d2a038a"
+    },
+    {
+      "at": "2026-11-15T11:42:43.422Z",
+      "documentId": "378a96cb-728e-4844-bee9-029682e9c6a2",
+      "status": "pass",
+      "message": "Durable committed receipt ac8e62e7-bd6b-4cc0-a912-711a948500e0"
+    },
+    {
+      "at": "2026-11-15T11:42:43.425Z",
+      "documentId": "378a96cb-728e-4844-bee9-029682e9c6a2",
+      "status": "pass",
+      "message": "Durable committed receipt 2c045155-e6e8-4072-802b-bcd86608ec64"
+    },
+    {
+      "at": "2026-11-15T11:42:43.427Z",
+      "documentId": "378a96cb-728e-4844-bee9-029682e9c6a2",
+      "status": "pass",
+      "message": "Durable committed receipt 0009064a-487a-48a6-b61c-fd39871eb03b"
+    },
+    {
+      "at": "2026-11-15T11:42:43.429Z",
+      "documentId": "378a96cb-728e-4844-bee9-029682e9c6a2",
+      "status": "pass",
+      "message": "Durable rejected receipt 03a7206b-d462-4e6b-9a95-84e71a3cbd76"
+    },
+    {
+      "at": "2026-11-15T11:42:43.432Z",
+      "documentId": "378a96cb-728e-4844-bee9-029682e9c6a2",
+      "status": "pass",
+      "message": "Durable committed receipt 22efa0c9-c753-4995-b7f1-b15519b25adb"
+    },
+    {
+      "at": "2026-11-15T11:42:43.435Z",
+      "documentId": "378a96cb-728e-4844-bee9-029682e9c6a2",
+      "status": "pass",
+      "message": "Durable committed receipt 2056daf3-a12f-4599-9f5c-a276fc44fb8f"
+    },
+    {
+      "at": "2026-11-15T11:42:43.437Z",
+      "documentId": "378a96cb-728e-4844-bee9-029682e9c6a2",
+      "status": "pass",
+      "message": "pendingA: recovered value and revision retained"
+    },
+    {
+      "at": "2026-11-15T11:42:43.438Z",
+      "documentId": "378a96cb-728e-4844-bee9-029682e9c6a2",
+      "status": "pass",
+      "message": "pendingB: recovered value and revision retained"
+    },
+    {
+      "at": "2026-11-15T11:42:43.439Z",
+      "documentId": "378a96cb-728e-4844-bee9-029682e9c6a2",
+      "status": "pass",
+      "message": "Lifecycle verification complete"
+    }
+  ],
+  "lifecycle": [
+    {
+      "kind": "reload",
+      "armedAt": "2026-11-15T11:37:34.386Z",
+      "documentId": "d71044ce-d894-4172-bb5a-06dcbdd3175e",
+      "verifiedAt": "2026-11-15T11:37:42.082Z",
+      "status": "pass",
+      "operatorConfirmed": true,
+      "newDocument": true
+    },
+    {
+      "kind": "background",
+      "armedAt": "2026-11-15T11:37:49.134Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "verifiedAt": "2026-11-15T11:38:19.553Z",
+      "status": "pass",
+      "operatorConfirmed": true,
+      "newDocument": false
+    },
+    {
+      "kind": "reopen",
+      "armedAt": "2026-11-15T11:38:26.583Z",
+      "documentId": "90298174-9ff8-4a37-ab19-637655be131d",
+      "verifiedAt": "2026-11-15T11:42:43.439Z",
+      "status": "pass",
+      "operatorConfirmed": true,
+      "newDocument": true
+    }
+  ],
+  "limitations": [
+    "Operator confirms physical device and lifecycle actions; browser metadata alone cannot prove them.",
+    "Lost-result recovery deliberately discards completion; no forced OS kill during a transaction is claimed.",
+    "Upgrade abort, unavailable storage and receipt-write failure are injected over native IndexedDB.",
+    "Actual quota exhaustion, storage eviction, long-term retention, offline loading and other browser/modes are untested.",
+    "WebKit is recorded through the user agent plus operator-supplied iOS version; exact engine build may not be exposed.",
+    "Independent review pending; a completed checklist is not a platform support claim."
+  ],
+  "baselineStarted": true,
+  "receipts": [
+    {
+      "database": "main",
+      "operationId": "06a005fb-df4d-4f01-a901-6c5b0b39ac07",
+      "digest": "7430c1757ded724abf9ffb4303737f6697abab9ed9c7113acb2c52da25fd90a0",
+      "decision": "committed",
+      "rejection": null,
+      "revisions": {
+        "ce9857b7-a536-420b-97d0-0913d3793dd5": "9c1af3e7-c7c3-447d-9089-2faf84325d6a",
+        "cf0bae37-81c5-4016-903c-c6410d2cd3b8": "266c6221-0a3e-4adc-b770-444f57aa2205"
+      }
+    },
+    {
+      "database": "main",
+      "operationId": "12b09a84-c856-4e3e-8a75-836d55dfd04d",
+      "digest": "7deaa048e9e624f50dd8c62ea02d8d6f2f107037d80e4a76c5cba7d8f4cb3a80",
+      "decision": "committed",
+      "rejection": null,
+      "revisions": {
+        "ce9857b7-a536-420b-97d0-0913d3793dd5": "5f50d44b-801f-4f2e-8970-aa70875dbf3b",
+        "cf0bae37-81c5-4016-903c-c6410d2cd3b8": "0e3c212a-1d43-4e0c-a696-a6c807e54d0d"
+      }
+    },
+    {
+      "database": "main",
+      "operationId": "f31ddfe9-ce40-45ab-8bcb-980fe90190dc",
+      "digest": "9e03c25655a1b7434e715e68fb8dcc1e90bab0a34dab4bf9a96ead3a27db1903",
+      "decision": "rejected",
+      "rejection": "staleRevision",
+      "revisions": {}
+    },
+    {
+      "database": "main",
+      "operationId": "7152b9e6-28b9-4e19-bbb1-15538d2a038a",
+      "digest": "e4edc0dc2942d440264c542a7efa4ef71d3f6294cdd3512a41eb5e2b721aa5d4",
+      "decision": "rejected",
+      "rejection": "uniqueConflict",
+      "revisions": {}
+    },
+    {
+      "database": "main",
+      "operationId": "ac8e62e7-bd6b-4cc0-a912-711a948500e0",
+      "digest": "700699eeebd021b99b0589464bfff33143c03cc2b0ddfcea127d780df038e17d",
+      "decision": "committed",
+      "rejection": null,
+      "revisions": {
+        "23069874-2f05-4bb0-b9e7-bb55e664980c": "45cf49fd-821e-439f-8ec7-ec35faa769a4"
+      }
+    },
+    {
+      "database": "main",
+      "operationId": "2c045155-e6e8-4072-802b-bcd86608ec64",
+      "digest": "7ce6217df8918fd82ec9fa9dfabade086c024b9a5320ea6901a8a43466911d92",
+      "decision": "committed",
+      "rejection": null,
+      "revisions": {}
+    },
+    {
+      "database": "main",
+      "operationId": "0009064a-487a-48a6-b61c-fd39871eb03b",
+      "digest": "f476d1058b8f9203e55b53ef7b1a2de5cd753302aba0803c327b429a7da9b214",
+      "decision": "committed",
+      "rejection": null,
+      "revisions": {
+        "23069874-2f05-4bb0-b9e7-bb55e664980c": "8633506c-bf03-4f52-9d34-01dc9516be8c"
+      }
+    },
+    {
+      "database": "main",
+      "operationId": "03a7206b-d462-4e6b-9a95-84e71a3cbd76",
+      "digest": "03ffad660f79f6ce10635d4b4d7c7cb6f748ae620e7e033d982d8e7f74fb28d0",
+      "decision": "rejected",
+      "rejection": "staleRevision",
+      "revisions": {}
+    },
+    {
+      "database": "recovery",
+      "operationId": "22efa0c9-c753-4995-b7f1-b15519b25adb",
+      "digest": "ecac0321d07695a23a93ec773799ac73845e73ab0e7c7afa3714047f2505cd03",
+      "decision": "committed",
+      "rejection": null,
+      "revisions": {
+        "3c6f09e7-aa1b-496e-934b-5702e71a0c9e": "caaf5cf3-cc0b-48d7-89b4-40317b300499",
+        "de028cf6-23cc-473f-8149-6944ffb77db3": "bdb026bc-168d-421a-b216-e2a33727a7a1"
+      }
+    },
+    {
+      "database": "fault",
+      "operationId": "2056daf3-a12f-4599-9f5c-a276fc44fb8f",
+      "digest": "69f10a3cfa6d75443341f9f1fd1085b76f6b65fcb16bba9f850b5e0388d81747",
+      "decision": "committed",
+      "rejection": null,
+      "revisions": {
+        "190a207b-922c-4b11-8664-57eb0e0f5c44": "92c9a0ce-991d-4140-8865-19c538f5d633",
+        "c208d2df-cbd2-4326-acf9-959b4cb6d5e2": "632b1b1e-c316-4f5d-ac86-a064da0fee05"
+      }
+    }
+  ],
+  "crud": "a6b2a609-c8d7-4c6b-badb-d84c3bb78058",
+  "deleted": "57aa0d46-7b95-4275-b50b-755933c2c92c",
+  "a": "ce9857b7-a536-420b-97d0-0913d3793dd5",
+  "b": "cf0bae37-81c5-4016-903c-c6410d2cd3b8",
+  "collision": "3bf1babc-9cb2-41e2-a451-d84545a967bc",
+  "aba": "23069874-2f05-4bb0-b9e7-bb55e664980c",
+  "aRevision": "5f50d44b-801f-4f2e-8970-aa70875dbf3b",
+  "bRevision": "0e3c212a-1d43-4e0c-a696-a6c807e54d0d",
+  "abaRevision": "8633506c-bf03-4f52-9d34-01dc9516be8c",
+  "baselineComplete": true,
+  "pendingA": "3c6f09e7-aa1b-496e-934b-5702e71a0c9e",
+  "pendingB": "de028cf6-23cc-473f-8149-6944ffb77db3",
+  "pendingOperation": "22efa0c9-c753-4995-b7f1-b15519b25adb",
+  "pendingDigest": "ecac0321d07695a23a93ec773799ac73845e73ab0e7c7afa3714047f2505cd03",
+  "recoveryDispatchedAt": "2026-11-15T11:37:15.718Z",
+  "pendingARevision": "caaf5cf3-cc0b-48d7-89b4-40317b300499",
+  "pendingBRevision": "bdb026bc-168d-421a-b216-e2a33727a7a1",
+  "recoveryComplete": true,
+  "failuresStarted": true,
+  "failuresComplete": true,
+  "operatorNotes": "",
+  "exportedAt": "2026-11-15T11:43:53.060Z",
+  "summary": {
+    "hasFailures": false,
+    "baselineComplete": true,
+    "recoveryComplete": true,
+    "failureSuiteComplete": true,
+    "lifecyclePassed": [
+      "reload",
+      "background",
+      "reopen"
+    ],
+    "independentReview": "pending"
+  }
+}
