@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>dddart · iPhone persistence check</title>
+<style>
+:root{font:16px/1.5 system-ui,sans-serif;color:#172c36;background:#eef3f5}body{max-width:760px;margin:auto;padding:24px 18px 60px}h1{font-size:1.8rem;line-height:1.2}h2{font-size:1.2rem}section{background:white;padding:18px;margin:16px 0;border-radius:12px;border:1px solid #d5e0e5}label{display:block;margin:10px 0}input:not([type=checkbox]),textarea{box-sizing:border-box;width:100%;font:inherit;padding:10px;border:1px solid #a0b5be;border-radius:6px}button{font:inherit;font-weight:600;padding:13px 16px;margin:6px 6px 6px 0;background:#174e63;color:white;border:0;border-radius:7px;cursor:pointer}button:disabled{opacity:.4;cursor:default}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}#status{font-weight:700;padding:12px;background:#fff3c8;border-radius:8px}.passed{background:#d7f4de!important}.failed{background:#ffe0dc!important}#run-url{overflow-wrap:anywhere;font-size:13px}small{color:#48636f}#log{max-height:350px;overflow:auto}#report-text{height:260px}
+</style><script defer src="main.dart.js"></script></head><body>
+<small>DD DART / ISSUE #77</small><h1>iPhone persistence check</h1>
+<p>Use a physical iPhone and a regular Safari tab. Keep the Mac server running and use the same address throughout. Allow about 10 minutes.</p>
+<div id="status" role="status">Loading harness…</div><p id="run"></p>
+<p><strong>Save this exact run URL before closing Safari:</strong><br><span id="run-url"></span></p>
+<section><h2>1. Create the test data</h2>
+<label>iPhone model <input id="model" placeholder="e.g. iPhone 15"></label>
+<label>iOS version, including build if available <input id="ios" placeholder="Settings → General → About → iOS Version"></label>
+<button disabled id="baseline">Start baseline</button>
+<p>Checks CRUD, revisions, uniqueness, atomic operations, and success/rejection receipts. After a failure, preserve the run and export it.</p></section>
+<section><h2>2. Recover a lost result</h2>
+<p>Saves an operation's identity, deliberately discards its completion, then reloads. This checks an unobserved result; it does not simulate an OS crash.</p>
+<button disabled id="unknown">Discard result and reload</button><button disabled id="reconcile">Reconcile and retry</button></section>
+<section><h2>3. Check failure recovery</h2><button disabled id="failures">Run schema and fault checks</button>
+<p>Native IndexedDB with injected upgrade abort, unavailable-storage, and receipt-write errors. Checks rollback, compatible retry, and codec mismatch. Actual quota exhaustion and eviction are not tested.</p></section>
+<section><h2>4. Check the iPhone lifecycle</h2><p>Complete each action, then tick the confirmation and tap Verify. These checks only read existing data.</p>
+<ol><li><strong>Reload:</strong> tap Reload below; the page reloads automatically.</li>
+<li><strong>Background:</strong> tap Arm background, switch to another app for at least 15 seconds, then return.</li>
+<li><strong>Reopen:</strong> save the exact run URL above in a bookmark or Notes. Tap Arm reopen, close this Safari tab, swipe Safari away in the app switcher, then reopen Safari and the saved URL.</li></ol>
+<button disabled id="reload">Reload</button><button disabled id="background">Arm background</button><button disabled id="reopen">Arm reopen</button>
+<p id="pending"></p><label><input type="checkbox" id="confirm"> I completed the armed action on this device.</label><button disabled id="verify">Verify saved state</button></section>
+<section><h2>5. Send the report</h2><label>Notes or unexpected behavior <textarea id="notes" rows="3" placeholder="Include failures or different steps."></textarea></label>
+<button disabled id="export">Download results JSON</button><button disabled id="report">Show / select report</button><textarea id="report-text" hidden readonly aria-label="Results JSON"></textarea>
+<p>Send the JSON file back in this chat, or attach it to issue #77. If downloading is awkward, use Show / select report and copy the text. If your run cannot be restored, send its URL and a screenshot.</p>
+<p>A passing checklist still needs review. It covers only the device and mode actually used.</p></section>
+<details><summary>Test log</summary><pre id="log"></pre></details><details><summary>Code versions</summary><pre id="provenance"></pre></details>
+</body></html>

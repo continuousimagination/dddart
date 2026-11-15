@@ -1,0 +1,23 @@
+name: dddart_iphone_probe
+publish_to: none
+environment:
+  sdk: '>=3.12.0 <4.0.0'
+dependencies:
+  dddart:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: 62af23ffa369c2d2cba13c93e39eee4c90c2325d
+      path: packages/dddart
+  dddart_serialization:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: 62af23ffa369c2d2cba13c93e39eee4c90c2325d
+      path: packages/dddart_serialization
+  dddart_repository_indexeddb:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: 62af23ffa369c2d2cba13c93e39eee4c90c2325d
+      path: packages/dddart_repository_indexeddb
+  idb_shim: 2.10.1+1
+dev_dependencies:
+  test: ^1.24.0
