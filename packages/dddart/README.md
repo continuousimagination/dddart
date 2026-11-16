@@ -854,3 +854,11 @@ normalization policy, and basic repositories do not acquire conditional semantic
 
 The Git-only [IndexedDB adapter](../dddart_repository_indexeddb/README.md)
 implements this capability with application-owned snapshot and identity codecs.
+
+## Conditional persistence
+
+Use `ConditionalAggregateRepository<T, I>` for detached revision reads and atomic
+single-aggregate writes when a backend supports it. Ordinary CRUD stays available.
+See the [conditional-write contract](../../docs/CONDITIONAL_WRITES.md) and
+[runnable example](example/conditional_writes.dart). IndexedDB's richer
+`ConditionalRepository` retains its multi-record and operation-receipt guarantees.

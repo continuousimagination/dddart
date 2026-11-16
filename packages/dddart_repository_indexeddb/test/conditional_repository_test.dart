@@ -169,6 +169,41 @@ ConditionalCommit<_Sample, UuidValue> _put(
     );
 
 void main() {
+  test('shared revision reads preserve the receipt-capable IndexedDB contract',
+      () async {
+    final repository = _repository('shared-versioned-interface');
+    addTearDown(repository.close);
+    final sample = _Sample(name: 'One');
+    final request = ConditionalCommit<_Sample, UuidValue>(
+      operationId: UuidValue.generate(),
+      mutations: [
+        ConditionalMutation.put(sample,
+            expected: const ExpectedRevision.absent())
+      ],
+    );
+    final committed = await repository.commitConditional(request);
+    final VersionedRepository<_Sample, UuidValue> versioned = repository;
+    expect((await versioned.getVersioned(sample.id)).revision,
+        committed.revisions[sample.id]);
+    for (final token in ['', 'bad\ntoken']) {
+      final malformed = ConditionalCommit<_Sample, UuidValue>(
+        operationId: UuidValue.generate(),
+        mutations: [
+          ConditionalMutation.put(sample,
+              expected: ExpectedRevision.match(token))
+        ],
+      );
+      await expectLater(
+          repository.commitConditional(malformed), throwsArgumentError);
+    }
+    expect(
+      (await repository.resolveOperation(
+              request.operationId, repository.digestFor(request)))
+          .decision,
+      CommitDecision.committed,
+    );
+  });
+
   test('missing store and invalidated connection are typed pre-dispatch',
       () async {
     final memory = newIdbFactoryMemory();
