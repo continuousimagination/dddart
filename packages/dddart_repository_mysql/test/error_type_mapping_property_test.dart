@@ -81,8 +81,8 @@ void main() {
               // Try to insert again with same ID
               try {
                 await helper!.connection.execute(
-                  'INSERT INTO simple_product (id, name, price, createdAt, updatedAt) '
-                  'VALUES (?, ?, ?, NOW(), NOW())',
+                  'INSERT INTO simple_product (id, name, price, createdAt, updatedAt, __dddart_revision) '
+                  'VALUES (?, ?, ?, NOW(), NOW(), UUID())',
                   [product.id.toString(), 'Duplicate', 99.99],
                 );
                 fail('Should have thrown exception for duplicate key');
@@ -356,8 +356,8 @@ void main() {
           // Try to insert duplicate
           try {
             await helper!.connection.execute(
-              'INSERT INTO simple_product (id, name, price, createdAt, updatedAt) '
-              'VALUES (?, ?, ?, NOW(), NOW())',
+              'INSERT INTO simple_product (id, name, price, createdAt, updatedAt, __dddart_revision) '
+              'VALUES (?, ?, ?, NOW(), NOW(), UUID())',
               [product.id.toString(), 'Duplicate', 99.99],
             );
             fail('Should have thrown exception');
@@ -425,8 +425,8 @@ void main() {
           // Try to insert duplicate
           try {
             await helper!.connection.execute(
-              'INSERT INTO simple_product (id, name, price, createdAt, updatedAt) '
-              'VALUES (?, ?, ?, NOW(), NOW())',
+              'INSERT INTO simple_product (id, name, price, createdAt, updatedAt, __dddart_revision) '
+              'VALUES (?, ?, ?, NOW(), NOW(), UUID())',
               [product.id.toString(), 'Duplicate', 99.99],
             );
             fail('Should have thrown exception');

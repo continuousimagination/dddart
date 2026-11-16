@@ -202,6 +202,14 @@ class MysqlConnection implements SqlConnection {
     }
   }
 
+  /// Runs publication after the outer commit, discarding it on rollback.
+  Future<void> afterCommit(Future<void> Function() action) =>
+      _coordinator.afterCommit(action);
+
+  /// Conditional writes must own their commit to report a confirmed revision.
+  void requireStandaloneTransaction() =>
+      _coordinator.requireOutsideTransaction();
+
   @override
   Future<T> transaction<T>(Future<T> Function() action) =>
       _coordinator.transaction(

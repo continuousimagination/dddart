@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:dddart/dddart.dart';
+
 /// Serializes independent callers of one physical SQL connection.
 ///
 /// Transactions own the connection in their asynchronous execution context.
@@ -42,11 +44,22 @@ class SqlConnectionCoordinator {
     }
   }
 
+  /// Defers publication until the outer transaction has committed.
+  Future<void> afterCommit(Future<void> Function() action) async {
+    final owner = _owner;
+    if (owner == null) {
+      await action();
+    } else {
+      owner.afterCommit.add(action);
+    }
+  }
+
   /// Owns the connection until commit/rollback completes.
   ///
   /// Driver callbacks must bypass [run]. A failed begin, failed commit, or failed
   /// rollback invalidates the physical connection; [invalidate] must close it.
-  /// The original error is retained if cleanup also fails.
+  /// A failed commit has an uncertain outcome; cleanup cannot prove rollback.
+  /// Other original errors are retained if cleanup also fails.
   Future<T> transaction<T>({
     required Future<T> Function() action,
     required Future<void> Function() begin,
@@ -63,8 +76,8 @@ class SqlConnectionCoordinator {
         rethrow;
       }
     }
-    return _queue.run(() async {
-      final owner = _TransactionOwner();
+    final owner = _TransactionOwner();
+    final result = await _queue.run(() async {
       return runZoned(
         () async {
           var began = false;
@@ -79,7 +92,7 @@ class SqlConnectionCoordinator {
             committing = true;
             await commit();
             return result;
-          } catch (_) {
+          } catch (error) {
             owner.accepting = false;
             await owner.commands.drain;
             var broken = !began || committing;
@@ -97,6 +110,9 @@ class SqlConnectionCoordinator {
                 // Keep the original transaction error, not a cleanup error.
               }
             }
+            if (committing) {
+              throw ConditionalWriteUncertainException(cause: error);
+            }
             rethrow;
           } finally {
             owner.active = false;
@@ -105,6 +121,10 @@ class SqlConnectionCoordinator {
         zoneValues: {_zoneKey: owner},
       );
     });
+    for (final callback in owner.afterCommit) {
+      await callback();
+    }
+    return result;
   }
 }
 
@@ -123,6 +143,7 @@ class _TransactionOwner {
   bool accepting = true;
   bool rollbackOnly = false;
   final commands = _SerialQueue();
+  final afterCommit = <Future<void> Function()>[];
 }
 
 class _SerialQueue {

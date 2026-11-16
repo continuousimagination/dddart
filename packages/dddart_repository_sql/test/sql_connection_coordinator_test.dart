@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dddart/dddart.dart';
 import 'package:dddart_repository_sql/dddart_repository_sql.dart';
 import 'package:test/test.dart';
 
@@ -18,6 +19,7 @@ void main() {
       await expectLater(
         coordinator.transaction(
           action: () async {
+            await coordinator.afterCommit(() => command('publish'));
             if (failure == 'rollback') throw original;
           },
           begin: () => command('begin'),
@@ -25,9 +27,15 @@ void main() {
           rollback: () => command('rollback'),
           invalidate: () => command('invalidate'),
         ),
-        throwsA(same(original)),
+        throwsA(
+          failure == 'commit'
+              ? isA<ConditionalWriteUncertainException>()
+                  .having((e) => e.cause, 'cause', same(original))
+              : same(original),
+        ),
       );
       expect(calls.last, 'invalidate');
+      expect(calls, isNot(contains('publish')));
       expect(await coordinator.run(() async => 42), 42);
     });
   }
