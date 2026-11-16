@@ -394,8 +394,8 @@ class MongoRepositoryGenerator
   }
 
   Future<String> _saveAggregate($className aggregate, {ExpectedRevision? expected}) async {
-    if (!_database.isConnected) throw RepositoryException('MongoDB connection is not open', type: RepositoryExceptionType.connection);
     final key = encodeMongoIdentityKey<$identityType>(_identityCodecs, aggregate.id);
+    if (!_database.isConnected) throw RepositoryException('MongoDB connection is not open', type: RepositoryExceptionType.connection);
     final doc = _serializer.toJson(aggregate);
     final revision = UuidValue.generate().uuid;
     doc['_id'] = key;
@@ -432,8 +432,8 @@ class MongoRepositoryGenerator
   }
 
   Future<void> _deleteAggregate($identityType id, {ExpectedRevision? expected}) async {
-    if (!_database.isConnected) throw RepositoryException('MongoDB connection is not open', type: RepositoryExceptionType.connection);
     final key = encodeMongoIdentityKey<$identityType>(_identityCodecs, id);
+    if (!_database.isConnected) throw RepositoryException('MongoDB connection is not open', type: RepositoryExceptionType.connection);
     try {
       if (expected?.isAbsent ?? false) {
         // A primary-side no-op asserts absence without deleting a competing record.
