@@ -98,6 +98,23 @@ policy using stored ownership, explicit owner transfer, public objects and scope
 queries. Treat proposed ownership/tenant fields as untrusted unless server-owned
 normalization has assigned them. Policies must check the stored state first.
 
+### Run the public/protected example
+
+From `packages/dddart_rest/example`, run:
+
+```bash
+dart pub get
+dart run public_leaderboard_example.dart
+```
+
+The example starts an ephemeral local HTTP server, exercises anonymous leaderboard
+reads, authenticated submissions and moderator corrections/deletions, then checks
+public/private document scope and an unconfigured public CRUD resource. It closes
+the server and exits. Its credential verifier uses deterministic local fixtures;
+replace that verifier with JWT/OAuth verification in an application. The policies
+and optional/public operation configuration remain the same. This entrypoint is
+registered in the normal validation inventory and is executed, not just compiled.
+
 ### Read authorization and query scope
 
 Item policy evaluates a detached view of persisted state before the HTTP response

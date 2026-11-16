@@ -431,6 +431,12 @@
           "reason": "Requires user-supplied OAuth/OIDC configuration and tokens."
         },
         {
+          "path": "public_leaderboard_example.dart",
+          "classification": "runnable",
+          "action": "run",
+          "reason": "Finite local HTTP demonstration of public leaderboard reads, protected writes, scoped private documents and unconfigured public CRUD; no external credentials."
+        },
+        {
           "path": "self_hosted_auth_example.dart",
           "classification": "runnable",
           "action": "compile",
