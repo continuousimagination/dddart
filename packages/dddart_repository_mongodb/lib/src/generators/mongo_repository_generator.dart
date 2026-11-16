@@ -394,6 +394,7 @@ class MongoRepositoryGenerator
   }
 
   Future<String> _saveAggregate($className aggregate, {ExpectedRevision? expected}) async {
+    if (!_database.isConnected) throw RepositoryException('MongoDB connection is not open', type: RepositoryExceptionType.connection);
     final key = encodeMongoIdentityKey<$identityType>(_identityCodecs, aggregate.id);
     final doc = _serializer.toJson(aggregate);
     final revision = UuidValue.generate().uuid;
@@ -431,6 +432,7 @@ class MongoRepositoryGenerator
   }
 
   Future<void> _deleteAggregate($identityType id, {ExpectedRevision? expected}) async {
+    if (!_database.isConnected) throw RepositoryException('MongoDB connection is not open', type: RepositoryExceptionType.connection);
     final key = encodeMongoIdentityKey<$identityType>(_identityCodecs, id);
     try {
       if (expected?.isAbsent ?? false) {
