@@ -1,4 +1,5 @@
 import 'package:dddart/src/aggregate_root.dart';
+import 'package:dddart/src/conditional_aggregate_repository.dart';
 import 'package:dddart/src/identity.dart';
 import 'package:dddart/src/uuid_value.dart';
 
@@ -23,9 +24,7 @@ final class ExpectedRevision {
   const ExpectedRevision.absent() : revision = null;
 
   /// Expects the record to still have [revision].
-  const ExpectedRevision.match(String token)
-      : revision = token,
-        assert(token != '', 'Revision must be nonempty');
+  const ExpectedRevision.match(String token) : revision = token;
 
   /// The expected token, or null for an absent record.
   final String? revision;
@@ -149,8 +148,9 @@ final class CommitResult<I extends Identity> {
 /// every affected record, and store an operation receipt. An uncertain result
 /// must be retried with the same operation ID and identical encoded payload.
 abstract interface class ConditionalRepository<T extends AggregateRoot<I>,
-    I extends Identity> {
+    I extends Identity> implements VersionedRepository<T, I> {
   /// Reads an aggregate and the revision needed to change it.
+  @override
   Future<VersionedAggregate<T, I>> getVersioned(I id);
 
   /// Reads the aggregate owning a unique value in one consistent transaction.
