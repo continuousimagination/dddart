@@ -58,6 +58,44 @@ class UserClaims {
       );
 }
 
+// This example needs atomic revision checks for ownership-based writes.
+class DocumentRepository
+    extends InMemoryConditionalRepository<Document, UuidValue> {
+  DocumentRepository()
+      : super(
+            clone: (value) => DocumentSerializer()
+                .deserialize(DocumentSerializer().serialize(value)));
+  final _ids = <UuidValue>{};
+  @override
+  Future<void> save(Document value) async {
+    await super.save(value);
+    _ids.add(value.id);
+  }
+
+  @override
+  Future<String> saveConditional(Document value,
+      {required ExpectedRevision expected}) async {
+    final revision = await super.saveConditional(value, expected: expected);
+    _ids.add(value.id);
+    return revision;
+  }
+
+  @override
+  Future<void> deleteById(UuidValue id) async {
+    await super.deleteById(id);
+    _ids.remove(id);
+  }
+
+  @override
+  Future<void> deleteConditional(UuidValue id,
+      {required ExpectedRevision expected}) async {
+    await super.deleteConditional(id, expected: expected);
+    _ids.remove(id);
+  }
+
+  Future<List<Document>> all() => Future.wait(_ids.map(getById));
+}
+
 // Query selection uses a verified scope, never a caller-supplied owner filter.
 class DocumentScope implements QueryScope {
   const DocumentScope(this.claims);
@@ -101,8 +139,7 @@ Future<QueryResult<Document>> documentQuery(
     int take,
     AuthorizedQuery<UserClaims> authorization) async {
   final scope = authorization.scope as DocumentScope;
-  final visible = (repo as InMemoryRepository<Document, UuidValue>)
-      .getAllSync()
+  final visible = (await (repo as DocumentRepository).all())
       .where(scope.includes)
       .where((document) =>
           !filters.containsKey('ownerId') ||
@@ -144,7 +181,7 @@ void main() async {
   print('Starting authorization example...\n');
 
   // Create repositories
-  final documentRepo = InMemoryRepository<Document, UuidValue>();
+  final documentRepo = DocumentRepository();
   final refreshTokenRepo = InMemoryRefreshTokenRepository<RefreshToken>();
   final deviceCodeRepo = InMemoryDeviceCodeRepository<DeviceCode>(
     lifecycle: const StandardDeviceCodeLifecycle(),

@@ -358,7 +358,10 @@ void main() {
       createdAt: timestamp,
       updatedAt: timestamp,
     );
-    final repository = _CountingRepository([user]);
+    final repository = InMemoryConditionalRepository<_TestUser, UuidValue>(
+      clone: (value) => serializer.deserialize(serializer.serialize(value)),
+    );
+    await repository.save(user);
     final authentication = _CountingAuthenticationHandler();
     final authorization = _CountingAuthorizationHandler();
     final resource = CrudResource<_TestUser, UuidValue, String>(
@@ -385,8 +388,7 @@ void main() {
     expect(response.statusCode, 200);
     expect(authentication.calls, 1);
     expect(authorization.calls, 1);
-    expect(repository.getByIdCalls, 1);
-    expect(repository.saveCalls, 1);
+    expect((await repository.getById(id)).name, 'Updated identity');
     final responseBody = jsonDecode(await response.readAsString()) as Map;
     expect(responseBody['id'], id.toString());
     expect(responseBody['name'], 'Updated identity');
