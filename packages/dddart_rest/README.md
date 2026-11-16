@@ -98,6 +98,21 @@ policy using stored ownership, explicit owner transfer, public objects and scope
 queries. Treat proposed ownership/tenant fields as untrusted unless server-owned
 normalization has assigned them. Policies must check the stored state first.
 
+### Read authorization and query scope
+
+Item policy evaluates a detached view of persisted state before the HTTP response
+encoder or ETag builder runs. The JSON value codec is used internally to detach
+policy snapshots; a denied read produces no aggregate response. A concealed denial
+and a missing item share the generic 404 body.
+
+Filtered, unfiltered and pagination-only reads all pass through the same selected
+collection policy. Scope is application-owned: constrain both the datastore query
+and its count with the verified tenant/owner, then apply request filters and
+pagination. A request such as `?tenant=someone-else` must never replace that verified
+scope. An empty page can still carry the authorized total count, but never a global
+count. The ownership example applies its scope before filtering and pagination;
+production repositories should perform the equivalent selection in their datastore.
+
 ## Features
 
 - **Automatic CRUD endpoints** - Expose aggregate roots through REST APIs with a single configuration
