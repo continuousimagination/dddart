@@ -19,6 +19,7 @@ export 'src/annotations/generate_sql_repository.dart';
 
 // Connection
 export 'src/connection/sql_connection.dart';
+export 'src/connection/sql_connection_coordinator.dart';
 
 // Dialect
 export 'src/dialect/sql_dialect.dart';
