@@ -220,6 +220,7 @@ abstract interface class ScopedReads<T, I> {
 abstract interface class ScopedIssueRepository
     implements
         Repository<ScopedIssue, ScopedId>,
+        ConditionalAggregateRepository<ScopedIssue, ScopedId>,
         ScopedReads<ScopedIssue, ScopedId> {}
 
 /// A scoped-ID aggregate with a custom generated repository interface.

@@ -42,11 +42,11 @@ void main() {
         }
       });
 
-      test('should map ConditionalCheckFailedException to duplicate', () {
+      test('should map DuplicateItemException to duplicate', () {
         for (var i = 0; i < 100; i++) {
           final errorMessage = _generateRandomErrorMessage(
             random,
-            'ConditionalCheckFailedException',
+            'DuplicateItemException',
           );
           final exception = _createMockException(errorMessage);
           final mapped = _mapDynamoException(exception, 'testOperation');
@@ -55,13 +55,12 @@ void main() {
             mapped.type,
             equals(RepositoryExceptionType.duplicate),
             reason:
-                'Iteration $i: ConditionalCheckFailedException should map to duplicate',
+                'Iteration $i: DuplicateItemException should map to duplicate',
           );
           expect(
             mapped.message,
-            contains('Conditional check failed'),
-            reason:
-                'Iteration $i: Message should indicate conditional check failure',
+            contains('Duplicate item'),
+            reason: 'Iteration $i: Message should indicate a duplicate item',
           );
           expect(
             mapped.cause,
@@ -165,7 +164,7 @@ void main() {
       test('should preserve original exception in cause for all mappings', () {
         final allErrorTypes = [
           'ResourceNotFoundException',
-          'ConditionalCheckFailedException',
+          'DuplicateItemException',
           'connection',
           'timeout',
           'UnknownError',
@@ -281,10 +280,10 @@ RepositoryException _mapDynamoException(
     );
   }
 
-  // Map ConditionalCheckFailedException to duplicate
-  if (errorString.contains('ConditionalCheckFailedException')) {
+  // Map DuplicateItemException to duplicate
+  if (errorString.contains('DuplicateItemException')) {
     return RepositoryException(
-      'Conditional check failed during $operation: $errorString',
+      'Duplicate item during $operation: $errorString',
       type: RepositoryExceptionType.duplicate,
       cause: error,
     );
