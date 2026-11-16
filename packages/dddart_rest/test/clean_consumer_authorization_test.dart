@@ -31,7 +31,7 @@ dependency_overrides:
     path: ${packagesRoot.path}/dddart_serialization
 ''');
       Directory('${fixture.path}/bin').createSync();
-      File('${fixture.path}/bin/main.dart').writeAsStringSync(r'''
+      File('${fixture.path}/bin/main.dart').writeAsStringSync('''
 import 'package:dddart/dddart.dart';
 import 'package:dddart_json/dddart_json.dart';
 import 'package:dddart_rest/dddart_rest.dart';
