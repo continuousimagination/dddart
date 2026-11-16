@@ -169,7 +169,9 @@ void main() {
       () async {
     final codecs = issueIdentityCodecs();
     final serializer = _Serializer(codecs);
-    final repository = _Repository();
+    final repository = InMemoryConditionalRepository<NativeIssue, NativeId>(
+      clone: (value) => serializer.deserialize(serializer.serialize(value)),
+    );
     final authorization = _Authorization();
     final resource = CrudResource<NativeIssue, NativeId, String>(
       path: '/issues',
@@ -190,7 +192,6 @@ void main() {
       id.value,
     );
     expect(found.statusCode, 200);
-    expect(repository.reads, [id]);
     expect(serializer.deserialize(await found.readAsString()).id, id);
     final update = await resource.handleUpdate(
       Request(
@@ -220,7 +221,16 @@ void main() {
       id.value,
     );
     expect(deleted.statusCode, 204);
-    expect(repository.deletes, [id]);
+    await expectLater(
+      repository.getById(id),
+      throwsA(
+        isA<RepositoryException>().having(
+          (error) => error.type,
+          'type',
+          RepositoryExceptionType.notFound,
+        ),
+      ),
+    );
     expect(authorization.deleted, id);
   });
 

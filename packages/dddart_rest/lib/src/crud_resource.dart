@@ -288,6 +288,81 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
     return result;
   }
 
+  Future<({T aggregate, String? revision})?> _current(I id) async {
+    try {
+      if (repository is VersionedRepository<T, I>) {
+        final snapshot =
+            await (repository as VersionedRepository<T, I>).getVersioned(id);
+        return (aggregate: snapshot.aggregate, revision: snapshot.revision);
+      }
+      return (aggregate: await repository.getById(id), revision: null);
+    } on RepositoryException catch (error) {
+      if (error.type == RepositoryExceptionType.notFound) return null;
+      rethrow;
+    }
+  }
+
+  ExpectedRevision _expectedAtSnapshot(
+    WritePrecondition? condition,
+    String? revision,
+  ) {
+    if (condition != null) {
+      if (condition.absent
+          ? revision != null
+          : revision == null || !condition.revisions.contains(revision)) {
+        throw const PreconditionException.failed();
+      }
+    }
+    return revision == null
+        ? const ExpectedRevision.absent()
+        : ExpectedRevision.match(revision);
+  }
+
+  Never _implicitConflict() => throw const RepositoryException(
+        'The resource changed while access was evaluated. Reload and authorize a new request.',
+        type: RepositoryExceptionType.conflict,
+      );
+
+  Future<String?> _createOnly(
+    T aggregate,
+    WritePrecondition? condition, {
+    bool checkedAbsent = false,
+  }) async {
+    if (condition != null && !condition.absent) {
+      throw const PreconditionException.unsupported(
+        'POST/create requires absence, not an existing revision. Use PUT to update.',
+      );
+    }
+    if (repository is ConditionalAggregateRepository<T, I>) {
+      try {
+        return await (repository as ConditionalAggregateRepository<T, I>)
+            .saveConditional(
+          aggregate,
+          expected: const ExpectedRevision.absent(),
+        );
+      } on RevisionConflictException<I> {
+        if (condition != null) rethrow;
+        throw const RepositoryException(
+          'A resource with this identity already exists',
+          type: RepositoryExceptionType.conflict,
+        );
+      }
+    }
+    if (condition != null || _policy(CrudOperation.create).handler != null) {
+      throw const ConditionalCapabilityUnsupportedException();
+    }
+    // Plain public/authentication-only CRUD has no atomic capability. Reject
+    // sequential POST overwrite; concurrent create isolation requires the capability.
+    if (!checkedAbsent && await _current(aggregate.id) != null) {
+      throw const RepositoryException(
+        'A resource with this identity already exists',
+        type: RepositoryExceptionType.conflict,
+      );
+    }
+    await repository.save(aggregate);
+    return null;
+  }
+
   I _identityFromKey(String key) {
     if (key.isEmpty ||
         key == '.' ||
@@ -485,8 +560,8 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
 
   /// Handles POST /resource
   ///
-  /// Deserializes a JSON request body, calls repository.save(), and returns the
-  /// created aggregate as JSON. Content-Type must be application/json and the
+  /// Creates a previously absent aggregate and returns it as JSON. POST cannot
+  /// overwrite an existing identity, even when If-Match is supplied. Content-Type must be application/json and the
   /// Accept header must allow JSON.
   ///
   /// Versioned repositories include a strong storage-revision ETag. Plain
@@ -549,17 +624,8 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
       }
 
       final condition = WritePrecondition.parse(request.headers);
-      String? etag;
-      if (condition == null) {
-        await repository.save(aggregate);
-      } else {
-        final conditional = requireConditionalAggregateRepository(repository);
-        final revision = await conditional.saveConditional(
-          aggregate,
-          expected: await condition.resolve(conditional, aggregate.id),
-        );
-        etag = RevisionETag.encode(revision);
-      }
+      final revision = await _createOnly(aggregate, condition);
+      final etag = revision == null ? null : RevisionETag.encode(revision);
 
       final response = _responseBuilder.created(
         aggregate,
@@ -585,8 +651,9 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   /// Supports atomic conditional writes via the If-Match header:
   /// A supplied precondition uses atomic repository writes. Strong ETags come
   /// from storage revisions, not timestamps or payload hashes. A successful
-  /// conditional PUT returns its new ETag. Unconditional PUT returns no ETag;
-  /// GET a coherent snapshot before the next conditional edit.
+  /// conditional PUT returns its new ETag. Custom mutation policies also bind
+  /// their decision to the loaded revision. Public ordinary updates return no
+  /// ETag; GET a coherent snapshot before the next conditional edit.
   ///
   /// If auth handler is configured, authenticates the request first.
   /// The selected custom policy always runs, including for anonymous callers.
@@ -637,34 +704,73 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
         return response;
       }
 
-      if (_policy(CrudOperation.update).handler != null) {
-        await _authorize(
-          UpdateContext(
-            caller: authCheck.caller,
-            current: _policySnapshot(await repository.getById(identity)),
-            proposed: _policySnapshot(aggregate),
-          ),
-        );
-      }
-
       final condition = WritePrecondition.parse(
         request.headers,
         required: requirePrecondition,
       );
-      String? etag;
-      if (condition == null) {
-        await repository.save(aggregate);
-      } else {
-        final conditional = requireConditionalAggregateRepository(repository);
-        final expected = await condition.resolve(conditional, identity);
+      if (condition != null) requireConditionalAggregateRepository(repository);
+      final current = await _current(identity);
+      if (current == null) {
+        // PUT is an upsert route: a missing record also needs create permission.
+        // The update gate above cannot be used to bypass a stricter create policy.
+        final createAuth = authCheck.caller.isAuthenticated
+            ? authCheck
+            : await _authenticate(request, CrudOperation.create);
+        if (createAuth.response != null) return createAuth.response!;
+        if (preCreate != null) {
+          aggregate = preCreate!(aggregate, createAuth.caller);
+        }
+        _validateCreatedIdentity(aggregate.id);
+        if (aggregate.id != identity) {
+          return _responseBuilder
+              .badRequest('preCreate must preserve the PUT route identity.');
+        }
+        if (_policy(CrudOperation.create).handler != null) {
+          await _authorize(
+            CreateContext(
+              caller: createAuth.caller,
+              proposed: _policySnapshot(aggregate),
+            ),
+          );
+        }
+        if (condition != null && !condition.absent) {
+          throw const PreconditionException.failed();
+        }
         final revision =
-            await conditional.saveConditional(aggregate, expected: expected);
-        etag = RevisionETag.encode(revision);
+            await _createOnly(aggregate, condition, checkedAbsent: true);
+        return _responseBuilder.created(
+          aggregate,
+          serializer,
+          etag: revision == null ? null : RevisionETag.encode(revision),
+        );
       }
-
-      final response = condition?.absent ?? false
-          ? _responseBuilder.created(aggregate, serializer, etag: etag)
-          : _responseBuilder.ok(aggregate, serializer, etag: etag);
+      final custom = _policy(CrudOperation.update).handler != null;
+      if (custom) {
+        requireConditionalAggregateRepository(repository);
+        await _authorize(
+          UpdateContext(
+            caller: authCheck.caller,
+            current: _policySnapshot(current.aggregate),
+            proposed: _policySnapshot(aggregate),
+          ),
+        );
+      }
+      String? etag;
+      if (condition != null || custom) {
+        final conditional = requireConditionalAggregateRepository(repository);
+        final expected = _expectedAtSnapshot(condition, current.revision);
+        try {
+          final revision =
+              await conditional.saveConditional(aggregate, expected: expected);
+          etag = RevisionETag.encode(revision);
+        } on RevisionConflictException<I> {
+          if (condition != null) rethrow;
+          _implicitConflict();
+        }
+      } else {
+        await repository.save(aggregate);
+      }
+      final response = _responseBuilder.ok(aggregate, serializer, etag: etag);
       _logger.fine('PUT /$path/$id - ${response.statusCode}');
       return response;
     } catch (e, stackTrace) {
@@ -702,27 +808,49 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
 
       final identity = _identityFromKey(id);
 
-      if (_policy(CrudOperation.delete).handler != null) {
-        await _authorize(
-          DeleteContext(
-            caller: authCheck.caller,
-            current: _policySnapshot(await repository.getById(identity)),
-          ),
-        );
-      }
-
       final condition = WritePrecondition.parse(
         request.headers,
         required: requirePrecondition,
       );
-      if (condition == null) {
-        await repository.deleteById(identity);
-      } else {
-        final conditional = requireConditionalAggregateRepository(repository);
-        await conditional.deleteConditional(
-          identity,
-          expected: await condition.resolve(conditional, identity),
+      final custom = _policy(CrudOperation.delete).handler != null;
+      if (condition != null || custom) {
+        requireConditionalAggregateRepository(repository);
+      }
+      final current = await _current(identity);
+      if (current == null) {
+        if (condition?.absent ?? false) {
+          await requireConditionalAggregateRepository(repository)
+              .deleteConditional(
+            identity,
+            expected: const ExpectedRevision.absent(),
+          );
+          return _responseBuilder.noContent();
+        }
+        if (condition != null) throw const PreconditionException.failed();
+        throw const RepositoryException(
+          'Resource not found',
+          type: RepositoryExceptionType.notFound,
         );
+      }
+      if (custom) {
+        await _authorize(
+          DeleteContext(
+            caller: authCheck.caller,
+            current: _policySnapshot(current.aggregate),
+          ),
+        );
+      }
+      if (condition != null || custom) {
+        final expected = _expectedAtSnapshot(condition, current.revision);
+        try {
+          await requireConditionalAggregateRepository(repository)
+              .deleteConditional(identity, expected: expected);
+        } on RevisionConflictException<I> {
+          if (condition != null) rethrow;
+          _implicitConflict();
+        }
+      } else {
+        await repository.deleteById(identity);
       }
       final response = _responseBuilder.noContent();
       _logger.fine('DELETE /$path/$id - ${response.statusCode}');

@@ -85,7 +85,7 @@ The framework does not infer a tenant predicate. Denied/thrown collection polici
 never invoke query code, including unfiltered and pagination-only requests.
 
 Requests negotiate JSON first, then verify credentials, deserialize/validate
-identities, apply `preCreate` for POST, load any current state required by policy,
+identities, apply `preCreate` for creation, load any current state required by policy,
 evaluate access, and only then return protected data or perform mutations.
 Missing/invalid required credentials return 401; verified or custom anonymous
 denial returns 403. `AuthorizationResult.deny(conceal: true)` returns the same
@@ -112,6 +112,45 @@ pagination. A request such as `?tenant=someone-else` must never replace that ver
 scope. An empty page can still carry the authorized total count, but never a global
 count. The ownership example applies its scope before filtering and pagination;
 production repositories should perform the equivalent selection in their datastore.
+
+### Mutation authorization and atomic persistence
+
+Custom mutation policies require `ConditionalAggregateRepository<T, I>`. An
+incapable repository returns 501 before mutation; it never falls back to a
+read/check/ordinary save. Generated SQLite, MySQL, MongoDB and DynamoDB repositories
+and `InMemoryConditionalRepository` provide this capability.
+
+For an existing PUT or DELETE, the policy receives the persisted aggregate and
+caller (plus the separate PUT proposal). Its decision is bound to that loaded
+revision even when the client omits If-Match. If another writer changes ownership
+before commit, the CAS rejects the operation: 409 for an implicit policy condition,
+or 412 for a client-supplied condition. Reload and make a new authorization decision;
+the framework never retries with old permission and a new token. Ownership and
+tenant transfer are application policy, not framework-defined roles or immutable
+fields. The example checks stored ownership and explicitly permits administrator
+transfers while rejecting ordinary owner/tenant reassignment.
+
+POST is create-only. It authorizes the final `preCreate` proposal and uses atomic
+create-if-absent when available. An existing identity returns 409 (412 with explicit
+`If-None-Match: *`); POST with If-Match is unsupported (501), so create permission
+cannot overwrite a protected record. PUT of a missing identity additionally uses
+the create policy and `preCreate`, preserving the route ID. It returns 201 when
+created. PUT's selected authentication requirement still applies before this lookup;
+creation cannot be used to evade a stricter create policy.
+
+A missing ordinary DELETE returns 404; a matching-revision delete of a missing
+record returns 412. Explicit assert-absence deletion can return 204 after atomic
+absence confirmation. No aggregate-specific hook runs when there is no aggregate
+to inspect. Denial, exceptions and conflicts cause no persistence/publication or
+pending-event acknowledgment. Policy snapshots cannot normalize stored/proposed
+state; use `preCreate` for server-owned creation fields.
+
+Unconfigured public CRUD and deliberately anonymous custom policies remain
+supported. Plain repositories retain public/authentication-only CRUD and reject
+sequential POST overwrite, but they cannot guarantee isolation of competing
+creations. Use the conditional capability for that guarantee or for custom mutation
+policy. An authenticated-only policy verifies identity without making an ownership
+decision; use a custom policy when permissions depend on stored state.
 
 ## Features
 
@@ -637,14 +676,15 @@ final resource = CrudResource<User, UuidValue, void>(
 | Strong tag list | Select a matching revision, then retain that condition through the atomic write. |
 | Weak tags | Never match; a list can still match another strong tag. |
 | `If-Match: *` | Explicit 501: the shared capability does not expose existence-only writes. GET a revision first. |
-| `If-None-Match: *` | Atomic create-if-absent on PUT (201), or assert-absence on DELETE (204). An existing record returns 412. |
+| `If-None-Match: *` | Atomic create-if-absent on POST/PUT (201), or assert-absence on DELETE (204). An existing record returns 412. |
 | Other valid `If-None-Match` shapes | Explicit 501. |
 | Malformed or conflicting condition headers | 400; no mutation. |
 | No condition | Ordinary CRUD by default; 428 on PUT/DELETE when `requirePrecondition` is enabled. |
 
-Successful conditional PUT returns its committed revision ETag. Successful
-unconditional POST/PUT returns no validator: its basic save API does not return a
-committed token. GET again before a conditional edit. A plain repository returns
+Successful conditional PUT, custom-policy PUT, and creation through a conditional
+repository return their committed revision ETag. Public ordinary updates return
+no validator: the basic save API does not return a committed token. GET again
+before a conditional edit. A plain repository returns
 no ETag on GET and rejects requested atomic mutations with 501; requiring
 preconditions with such a repository is a configuration error.
 

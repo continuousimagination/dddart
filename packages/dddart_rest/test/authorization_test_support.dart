@@ -15,12 +15,14 @@ class Document extends UuidAggregateRoot {
     this.role = 'member',
     this.isPublic = false,
     this.content = 'private content',
+    this.tags = const [],
   });
   final String owner;
   final String tenant;
   final String role;
   final bool isPublic;
   final String content;
+  final List<String> tags;
   Document copy({
     String? owner,
     String? tenant,
@@ -35,6 +37,7 @@ class Document extends UuidAggregateRoot {
         role: role ?? this.role,
         isPublic: isPublic ?? this.isPublic,
         content: content ?? this.content,
+        tags: List.of(tags),
       );
 }
 
@@ -54,6 +57,7 @@ class DocumentSerializer extends TestJsonSerializer<Document> {
         'role': value.role,
         'isPublic': value.isPublic,
         'content': value.content,
+        'tags': value.tags,
       });
   @override
   Document deserialize(String data, [dynamic config]) {
@@ -65,6 +69,7 @@ class DocumentSerializer extends TestJsonSerializer<Document> {
       role: json['role'] as String,
       isPublic: json['isPublic'] as bool,
       content: json['content'] as String,
+      tags: (json['tags'] as List? ?? []).cast<String>().toList(),
     );
   }
 }
@@ -78,6 +83,7 @@ class Documents extends InMemoryConditionalRepository<Document, UuidValue> {
   int reads = 0;
   int writes = 0;
   Future<void> Function()? beforeConditionalSave;
+  Future<void> Function()? beforeConditionalDelete;
   @override
   Future<VersionedAggregate<Document, UuidValue>> getVersioned(UuidValue id) {
     reads++;
@@ -116,6 +122,7 @@ class Documents extends InMemoryConditionalRepository<Document, UuidValue> {
     required ExpectedRevision expected,
   }) async {
     writes++;
+    await beforeConditionalDelete?.call();
     await super.deleteConditional(id, expected: expected);
     ids.remove(id);
   }
@@ -181,3 +188,56 @@ Request request(
       },
       body: document == null ? null : DocumentSerializer().serialize(document),
     );
+
+class DocumentChanged extends DomainEvent<UuidValue> {
+  DocumentChanged(UuidValue id) : super(aggregateId: id);
+}
+
+class RecordingPublisher implements EventPublisher {
+  final events = <DomainEvent<Identity>>[];
+  @override
+  Future<bool> publish(DomainEvent<Identity> event) async {
+    events.add(event);
+    return true;
+  }
+}
+
+class EventSerializer extends DocumentSerializer {
+  final candidates = <Document>[];
+  @override
+  Document deserialize(String data, [dynamic config]) {
+    final value = super.deserialize(data, config);
+    value.raiseEvent(DocumentChanged(value.id));
+    candidates.add(value);
+    return value;
+  }
+}
+
+AuthorizationResult ownershipPolicy(
+  AuthorizationContext<Document, UuidValue, Claims> context,
+) {
+  final claims = context.caller.claims;
+  bool owns(Document value) =>
+      claims != null &&
+      (claims.admin ||
+          (value.owner == claims.user && value.tenant == claims.tenant));
+  final allowed = switch (context) {
+    ReadContext<Document, UuidValue, Claims>() =>
+      context.current.isPublic || owns(context.current),
+    QueryContext<Document, UuidValue, Claims>() => claims != null,
+    CreateContext<Document, UuidValue, Claims>() => claims != null &&
+        context.proposed.owner == claims.user &&
+        context.proposed.tenant == claims.tenant &&
+        context.proposed.role == 'member',
+    UpdateContext<Document, UuidValue, Claims>() => owns(context.current) &&
+        (claims!.admin ||
+            (context.proposed.owner == context.current.owner &&
+                context.proposed.tenant == context.current.tenant &&
+                context.proposed.role == context.current.role &&
+                context.proposed.isPublic == context.current.isPublic)),
+    DeleteContext<Document, UuidValue, Claims>() => owns(context.current),
+  };
+  return allowed
+      ? AuthorizationResult.allow(scope: TenantScope(claims?.tenant ?? ''))
+      : const AuthorizationResult.deny();
+}
