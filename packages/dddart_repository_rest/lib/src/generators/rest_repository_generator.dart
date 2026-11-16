@@ -68,7 +68,14 @@ class RestRepositoryGenerator
 
     // Analyze interface to determine if abstract base is needed
     final interfaceMethods = _getInterfaceMethods(customInterface);
-    final baseRepositoryMethods = {'getById', 'save', 'deleteById'};
+    final baseRepositoryMethods = {
+      'getById',
+      'save',
+      'deleteById',
+      'getVersioned',
+      'saveConditional',
+      'deleteConditional'
+    };
     final objectMethods = {
       'toString',
       'hashCode',
@@ -238,8 +245,8 @@ class RestRepositoryGenerator
     InterfaceType? implements,
   }) {
     final interfaceClause = implements != null
-        ? 'implements ${implements.element.name}'
-        : 'implements Repository<$className, $identityType>';
+        ? 'implements ${implements.element.name}, ConditionalAggregateRepository<$className, $identityType>'
+        : 'implements Repository<$className, $identityType>, ConditionalAggregateRepository<$className, $identityType>';
 
     final buffer = StringBuffer();
 
@@ -282,6 +289,7 @@ class RestRepositoryGenerator
     buffer.writeln(_generateGetByIdMethod(className, identityType));
     buffer.writeln();
 
+    buffer.writeln(_generateConditionalMethods(className, identityType));
     buffer.writeln(_generateSaveMethod(className, identityType));
     buffer.writeln();
 
@@ -329,7 +337,7 @@ class RestRepositoryGenerator
     );
     buffer.writeln('/// the repository implementation.');
     buffer.writeln(
-      'abstract class ${className}RestRepositoryBase implements ${implements.element.name} {',
+      'abstract class ${className}RestRepositoryBase implements ${implements.element.name}, ConditionalAggregateRepository<$className, $identityType> {',
     );
 
     // Constructor
@@ -360,6 +368,7 @@ class RestRepositoryGenerator
     buffer.writeln(_generateGetByIdMethod(className, identityType));
     buffer.writeln();
 
+    buffer.writeln(_generateConditionalMethods(className, identityType));
     buffer.writeln(_generateSaveMethod(className, identityType));
     buffer.writeln();
 
@@ -439,6 +448,83 @@ class RestRepositoryGenerator
     }
   }''';
   }
+
+  String _generateConditionalMethods(String className, String identityType) =>
+      '''
+  @override
+  Future<VersionedAggregate<$className, $identityType>> getVersioned($identityType id) async {
+    final response = await _connection.executeRequest(
+      () => _connection.client.get(_identityUri(id), headers: {'Accept': 'application/json'}),
+      operation: 'retrieve versioned $className',
+    );
+    if (response.statusCode != 200) throw _mapHttpException(response.statusCode, response.body);
+    final revision = decodeRestRevisionETag(response.headers['etag']);
+    if (revision == null) throw const ConditionalCapabilityUnsupportedException();
+    final aggregate = _serializer.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    if (aggregate.id != id) throw const RepositoryException('Response identity does not match requested identity', type: RepositoryExceptionType.constraint);
+    return VersionedAggregate(aggregate, revision);
+  }
+
+  @override
+  Future<String> saveConditional($className aggregate, {required ExpectedRevision expected}) async {
+    validateExpectedRevision(expected);
+    late String revision;
+    await saveWithEvents(
+      aggregate: aggregate,
+      persist: () async { revision = await _saveConditional(aggregate, expected); },
+      publisher: eventPublisher,
+    );
+    return revision;
+  }
+
+  Map<String, String> _conditionHeaders(ExpectedRevision expected) => {
+    'Accept': 'application/json',
+    if (expected.isAbsent) 'If-None-Match': '*' else 'If-Match': encodeRestRevisionETag(expected.revision!),
+  };
+
+  Future<String> _saveConditional($className aggregate, ExpectedRevision expected) async {
+    final uri = _identityUri(aggregate.id);
+    final body = jsonEncode(_serializer.toJson(aggregate));
+    // No retry or shared ETag slot: each operation keeps its caller's condition.
+    try {
+      final response = await _connection.executeRequest(
+        () => _connection.client.put(uri, body: body,
+          headers: {..._conditionHeaders(expected), 'Content-Type': 'application/json'}),
+        operation: 'conditionally save $className',
+      );
+      _checkConditionalResponse(response.statusCode, response.body, aggregate.id, expected);
+      final revision = decodeRestRevisionETag(response.headers['etag']);
+      if (revision == null) throw const ConditionalWriteUncertainException();
+      return revision;
+    } on RepositoryException catch (error) {
+      if (error.type == RepositoryExceptionType.connection || error.type == RepositoryExceptionType.timeout) throw ConditionalWriteUncertainException(cause: error);
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> deleteConditional($identityType id, {required ExpectedRevision expected}) async {
+    validateExpectedRevision(expected);
+    final uri = _identityUri(id);
+    try {
+      final response = await _connection.executeRequest(
+        () => _connection.client.delete(uri, headers: _conditionHeaders(expected)),
+        operation: 'conditionally delete $className',
+      );
+      _checkConditionalResponse(response.statusCode, response.body, id, expected);
+    } on RepositoryException catch (error) {
+      if (error.type == RepositoryExceptionType.connection || error.type == RepositoryExceptionType.timeout) throw ConditionalWriteUncertainException(cause: error);
+      rethrow;
+    }
+  }
+
+  void _checkConditionalResponse(int status, String body, $identityType id, ExpectedRevision expected) {
+    if (status == 412) throw RevisionConflictException(id, expected);
+    if (status == 501) throw const ConditionalCapabilityUnsupportedException();
+    if (status >= 500) throw ConditionalWriteUncertainException(cause: _mapHttpException(status, body));
+    if (status != 200 && status != 201 && status != 204) throw _mapHttpException(status, body);
+  }
+''';
 
   /// Generates the save method implementation.
   String _generateSaveMethod(String className, String identityType) {

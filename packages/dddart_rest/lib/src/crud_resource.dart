@@ -6,9 +6,9 @@ import 'package:dddart_rest/src/authentication_handler.dart';
 import 'package:dddart_rest/src/authentication_result.dart';
 import 'package:dddart_rest/src/authorization_handler.dart';
 import 'package:dddart_rest/src/error_mapper.dart';
-import 'package:dddart_rest/src/etag_generator.dart';
 import 'package:dddart_rest/src/query_handler.dart';
 import 'package:dddart_rest/src/response_builder.dart';
+import 'package:dddart_rest/src/revision_etag.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:shelf/shelf.dart';
 
@@ -54,7 +54,7 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   /// - [defaultSkip]: Default skip value for pagination (defaults to 0)
   /// - [defaultTake]: Default take value for pagination (defaults to 50)
   /// - [maxTake]: Maximum allowed take value to prevent excessive queries (defaults to 100)
-  /// - [etagStrategy]: Strategy for generating ETags (defaults to timestamp)
+  /// - [requirePrecondition]: Require a write condition on PUT and DELETE
   /// - [preCreate]: Optional callback to modify aggregate before creation (e.g., set fields from auth context)
   ///
   /// Throws [ArgumentError] if:
@@ -71,7 +71,7 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
     this.defaultSkip = 0,
     this.defaultTake = 50,
     this.maxTake = 100,
-    ETagStrategy etagStrategy = ETagStrategy.timestamp,
+    this.requirePrecondition = false,
     this.preCreate,
     IdentityCodecRegistry? identityCodecs,
   }) : identityCodecs = identityCodecs ?? IdentityCodecRegistry() {
@@ -83,11 +83,12 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
       throw ArgumentError('path cannot be empty');
     }
 
-    // Initialize ETag generator
-    _etagGenerator = ETagGenerator<T>(
-      strategy: etagStrategy,
-      serializer: etagStrategy == ETagStrategy.contentHash ? serializer : null,
-    );
+    if (requirePrecondition &&
+        repository is! ConditionalAggregateRepository<T, I>) {
+      throw ArgumentError(
+        'Required preconditions need an atomic conditional repository.',
+      );
+    }
   }
 
   /// The base path for this resource (e.g., '/users')
@@ -175,8 +176,11 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   /// ResponseBuilder instance for creating HTTP responses
   late final ResponseBuilder<T> _responseBuilder = ResponseBuilder<T>();
 
-  /// ETag generator for conditional request checks
-  late final ETagGenerator<T> _etagGenerator;
+  /// Whether PUT/DELETE must supply an atomic write condition.
+  ///
+  /// Public/unconditional CRUD remains the default. A plain repository cannot
+  /// satisfy this configuration; construction rejects it before serving traffic.
+  final bool requirePrecondition;
 
   /// Logger instance for REST API request/response logging
   final Logger _logger = Logger('dddart.rest');
@@ -232,7 +236,8 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   /// Parses the ID, calls repository.getById(), and returns a JSON aggregate.
   /// The Accept header must allow JSON when it is present.
   ///
-  /// Includes an ETag header for use in later conditional requests.
+  /// Versioned repositories include a strong storage-revision ETag. Plain
+  /// repositories return no validator and cannot accept conditional mutations.
   ///
   /// If auth handler is configured, authenticates the request first.
   ///
@@ -258,10 +263,16 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
       }
 
       final identity = _identityFromKey(id);
-      final aggregate = await repository.getById(identity);
-
-      // Generate ETag for the aggregate
-      final etag = _etagGenerator.generate(aggregate);
+      final T aggregate;
+      String? etag;
+      if (repository is VersionedRepository<T, I>) {
+        final snapshot = await (repository as VersionedRepository<T, I>)
+            .getVersioned(identity);
+        aggregate = snapshot.aggregate;
+        etag = RevisionETag.encode(snapshot.revision);
+      } else {
+        aggregate = await repository.getById(identity);
+      }
 
       final response = _responseBuilder.ok(
         aggregate,
@@ -409,7 +420,8 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   /// created aggregate as JSON. Content-Type must be application/json and the
   /// Accept header must allow JSON.
   ///
-  /// Includes an ETag header for use in later conditional requests.
+  /// Versioned repositories include a strong storage-revision ETag. Plain
+  /// repositories return no validator and cannot accept conditional mutations.
   ///
   /// If auth handler is configured, authenticates the request first.
   /// If authorization handler is configured, authorizes the request after authentication.
@@ -480,10 +492,18 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
         }
       }
 
-      await repository.save(aggregate);
-
-      // Generate ETag for the created aggregate
-      final etag = _etagGenerator.generate(aggregate);
+      final condition = WritePrecondition.parse(request.headers);
+      String? etag;
+      if (condition == null) {
+        await repository.save(aggregate);
+      } else {
+        final conditional = requireConditionalAggregateRepository(repository);
+        final revision = await conditional.saveConditional(
+          aggregate,
+          expected: await condition.resolve(conditional, aggregate.id),
+        );
+        etag = RevisionETag.encode(revision);
+      }
 
       final response = _responseBuilder.created(
         aggregate,
@@ -506,16 +526,11 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   /// The route ID is authoritative and must match the deserialized aggregate
   /// ID. A mismatch returns 400 before authorization, ETag lookup, or saving.
   ///
-  /// Supports best-effort stale-update detection via the If-Match header:
-  /// - If If-Match header is present, validates ETag before updating
-  /// - If ETag doesn't match, returns 412 Precondition Failed
-  /// - If If-Match is not present, update proceeds without validation
-  ///
-  /// The ETag read/comparison and [Repository.save] are separate operations.
-  /// Overlapping updates can both pass validation before either save completes;
-  /// this is not an atomic conditional-write guarantee.
-  ///
-  /// Includes ETag header in response.
+  /// Supports atomic conditional writes via the If-Match header:
+  /// A supplied precondition uses atomic repository writes. Strong ETags come
+  /// from storage revisions, not timestamps or payload hashes. A successful
+  /// conditional PUT returns its new ETag. Unconditional PUT returns no ETag;
+  /// GET a coherent snapshot before the next conditional edit.
   ///
   /// If auth handler is configured, authenticates the request first.
   /// If authorization handler is configured, authorizes the request after authentication.
@@ -566,35 +581,6 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
         return response;
       }
 
-      // Check If-Match before saving. This read/check is not atomic with save.
-      final ifMatch = request.headers['if-match'];
-      if (ifMatch != null) {
-        // Fetch current aggregate to validate ETag
-        final currentAggregate = await repository.getById(identity);
-        final currentETag = _etagGenerator.generate(currentAggregate);
-
-        if (ifMatch != currentETag) {
-          // ETag mismatch - return 412 Precondition Failed
-          final response = Response(
-            412,
-            headers: {
-              'Content-Type': 'application/problem+json',
-              'ETag': currentETag,
-            },
-            body: jsonEncode({
-              'type': 'about:blank',
-              'title': 'Precondition Failed',
-              'status': 412,
-              'detail': 'The provided ETag does not match the current resource '
-                  'state. Fetch the current representation before retrying.',
-            }),
-          );
-          _logger
-              .fine('PUT /$path/$id - ${response.statusCode} (ETag mismatch)');
-          return response;
-        }
-      }
-
       // Authorize if handler is configured
       if (authorizationHandler != null && authCheck.authResult != null) {
         final authzResult = await authorizationHandler!.authorizeUpdate(
@@ -617,16 +603,24 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
         }
       }
 
-      await repository.save(aggregate);
-
-      // Generate ETag for the updated aggregate
-      final etag = _etagGenerator.generate(aggregate);
-
-      final response = _responseBuilder.ok(
-        aggregate,
-        serializer,
-        etag: etag,
+      final condition = WritePrecondition.parse(
+        request.headers,
+        required: requirePrecondition,
       );
+      String? etag;
+      if (condition == null) {
+        await repository.save(aggregate);
+      } else {
+        final conditional = requireConditionalAggregateRepository(repository);
+        final expected = await condition.resolve(conditional, identity);
+        final revision =
+            await conditional.saveConditional(aggregate, expected: expected);
+        etag = RevisionETag.encode(revision);
+      }
+
+      final response = condition?.absent ?? false
+          ? _responseBuilder.created(aggregate, serializer, etag: etag)
+          : _responseBuilder.ok(aggregate, serializer, etag: etag);
       _logger.fine('PUT /$path/$id - ${response.statusCode}');
       return response;
     } catch (e, stackTrace) {
@@ -686,7 +680,19 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
         }
       }
 
-      await repository.deleteById(identity);
+      final condition = WritePrecondition.parse(
+        request.headers,
+        required: requirePrecondition,
+      );
+      if (condition == null) {
+        await repository.deleteById(identity);
+      } else {
+        final conditional = requireConditionalAggregateRepository(repository);
+        await conditional.deleteConditional(
+          identity,
+          expected: await condition.resolve(conditional, identity),
+        );
+      }
       final response = _responseBuilder.noContent();
       _logger.fine('DELETE /$path/$id - ${response.statusCode}');
       return response;

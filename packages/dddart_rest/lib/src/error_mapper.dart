@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/src/exceptions.dart';
+import 'package:dddart_rest/src/revision_etag.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:shelf/shelf.dart';
 
@@ -35,7 +36,12 @@ class ErrorMapper {
   ///
   /// Returns: A [Response] object with appropriate status code and RFC 7807 body
   static Response mapException(Object error, StackTrace stackTrace) {
-    if (error is RepositoryException) {
+    if (error is PreconditionException) {
+      return _problemResponse(error.status, error.title, error.detail);
+    } else if (error is RevisionConflictException<Identity>) {
+      const failure = PreconditionException.failed();
+      return _problemResponse(failure.status, failure.title, failure.detail);
+    } else if (error is RepositoryException) {
       return _mapRepositoryException(error);
     } else if (error is DeserializationException) {
       return _problemResponse(
@@ -90,6 +96,10 @@ class ErrorMapper {
         return _problemResponse(404, 'Not Found', e.message);
       case RepositoryExceptionType.duplicate:
         return _problemResponse(409, 'Conflict', e.message);
+      case RepositoryExceptionType.conflict:
+        return _problemResponse(409, 'Conflict', e.message);
+      case RepositoryExceptionType.unsupported:
+        return _problemResponse(501, 'Not Implemented', e.message);
       case RepositoryExceptionType.constraint:
         return _problemResponse(422, 'Unprocessable Entity', e.message);
       default:

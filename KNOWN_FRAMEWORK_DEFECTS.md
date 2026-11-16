@@ -3,7 +3,7 @@
 Snapshot: 2026-08-10, after the authentication fixes and the
 QueryableRepository/DynamoDB cleanup were merged.
 
-This register contains the 6 implementation defects that remain. Resolved
+This register contains the 5 implementation defects that remain. Resolved
 entries are removed once their completion tests pass. It is not an exhaustive
 issue tracker; source and executable tests remain authoritative.
 
@@ -19,10 +19,6 @@ Suggested priorities are provisional:
 
 - **EVENT-001** through **EVENT-004**: the distributed-events feature remains a
   work in progress.
-- **REST-004**: accepted as a low-current-priority limitation. The existing
-  `If-Match` check can detect a change persisted before validation when that
-  change produces a different ETag, but it does not make the later repository
-  save atomic.
 - **AUTH-002**: revisit the authorization contract later.
 
 ## Summary
@@ -33,7 +29,6 @@ Suggested priorities are provisional:
 | EVENT-002 | P2 | Distributed events | POST ingestion ignores its server and cannot safely support a custom stored-event subtype. |
 | EVENT-003 | P1 | Distributed events | `autoForward` can forward a remotely polled event back to the server. |
 | EVENT-004 | P1 | Distributed events | Polling advances its cursor before an event is successfully reconstructed and published. |
-| REST-004 | P3 | REST server | ETag validation is a non-atomic read/check/save sequence. |
 | AUTH-002 | P1 | Authorization | Item GET and unfiltered collection GET bypass `AuthorizationHandler`. |
 
 ## Confirmed generator and persistence defects
@@ -92,20 +87,6 @@ Suggested priorities are provisional:
 
 ## REST, authentication, and authorization defects
 
-### REST-004 — ETag checks are not atomic writes
-
-- **Evidence:** `handleUpdate()` loads the current aggregate, compares the ETag,
-  and later calls ordinary `repository.save()` as a separate operation.
-- **Impact:** two concurrent writers can both pass the comparison and overwrite
-  one another. `If-Match` is also optional, so unconditional updates remain
-  possible by design.
-- **Current disposition:** accepted as a documented, low-current-priority
-  limitation while dddart does not target high-contention multi-writer use.
-- **Done when:** a repository-level conditional write/version contract makes the
-  compare-and-save atomic and a concurrency test proves only one stale writer
-  succeeds. Until then, public documentation must describe ETags as a
-  best-effort stale-update check rather than an atomic concurrency guarantee.
-
 ### AUTH-002 — authorization is not applied to two read paths
 
 - **Evidence:** `AuthorizationHandler` is invoked for create, update, delete, and
@@ -116,3 +97,13 @@ Suggested priorities are provisional:
 - **Done when:** read authorization hooks cover both paths, or the framework
   requires an explicit policy that disables those routes. Tests should prove a
   denied identity cannot read either form.
+
+## Resolved concurrency regression
+
+REST-004 was resolved by #91. REST validators now carry coherent storage
+revisions and requested conditions execute through atomic repository operations.
+The regression in `packages/dddart_repository_mysql/test/rest_concurrency_integration_test.dart`
+uses two HTTP servers and independent MySQL connections: exactly one competing
+If-Match write succeeds. REST and generated-client suites also cover absence,
+recreation, unsupported capabilities and uncertain outcomes. Unconditional CRUD
+remains optional by design; `requirePrecondition` enables mandatory conditions.
