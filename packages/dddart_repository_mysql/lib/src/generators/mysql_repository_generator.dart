@@ -603,8 +603,8 @@ class MysqlRepositoryGenerator
     InterfaceType? implements,
   }) {
     final interfaceClause = implements != null
-        ? 'implements ${implements.element.name}'
-        : 'implements Repository<$className, $_rootIdentityType>';
+        ? 'implements ${implements.element.name}, ConditionalAggregateRepository<$className, $_rootIdentityType>'
+        : 'implements Repository<$className, $_rootIdentityType>, ConditionalAggregateRepository<$className, $_rootIdentityType>';
 
     final buffer = StringBuffer();
 
@@ -655,6 +655,7 @@ class MysqlRepositoryGenerator
     buffer.writeln(_generateGetByIdMethod(className, tableName, tables));
     buffer.writeln();
 
+    buffer.writeln(_generateConditionalMethods(className, tableName));
     buffer.writeln(_generateSaveMethod(className, tableName, tables));
     buffer.writeln();
 
@@ -697,7 +698,7 @@ class MysqlRepositoryGenerator
     );
     buffer.writeln('/// implement the abstract methods.');
     buffer.writeln(
-      'abstract class ${className}MysqlRepositoryBase implements ${implements.element.name} {',
+      'abstract class ${className}MysqlRepositoryBase implements ${implements.element.name}, ConditionalAggregateRepository<$className, $_rootIdentityType> {',
     );
 
     // Constructor
@@ -736,6 +737,7 @@ class MysqlRepositoryGenerator
     buffer.writeln(_generateGetByIdMethod(className, tableName, tables));
     buffer.writeln();
 
+    buffer.writeln(_generateConditionalMethods(className, tableName));
     buffer.writeln(_generateSaveMethod(className, tableName, tables));
     buffer.writeln();
 
@@ -795,7 +797,7 @@ class MysqlRepositoryGenerator
     buffer.writeln('      // Create table: ${aggregateTable.tableName}');
     buffer.writeln('      await _connection.execute(');
     buffer.writeln("        '''");
-    buffer.writeln(_generateCreateTableSql(aggregateTable));
+    buffer.writeln(_generateCreateTableSql(aggregateTable, root: true));
     buffer.writeln("        ''',");
     buffer.writeln('      );');
     buffer.writeln();
@@ -907,7 +909,7 @@ class MysqlRepositoryGenerator
   }
 
   /// Generates CREATE TABLE SQL for a table definition.
-  String _generateCreateTableSql(TableDefinition table) {
+  String _generateCreateTableSql(TableDefinition table, {bool root = false}) {
     final buffer = StringBuffer();
     buffer.writeln('CREATE TABLE IF NOT EXISTS ${table.tableName} (');
 
@@ -930,6 +932,14 @@ class MysqlRepositoryGenerator
       columnDefs.add('  ${parts.join(' ')}');
     }
 
+    if (root) {
+      if (table.columns.any((column) => column.name == '__dddart_revision')) {
+        throw InvalidGenerationSourceError(
+          'The __dddart_revision column is reserved for repository metadata.',
+        );
+      }
+      columnDefs.add('  __dddart_revision VARCHAR(36) NOT NULL');
+    }
     buffer.write(columnDefs.join(',\n'));
 
     // Add foreign key constraints
@@ -994,7 +1004,7 @@ class MysqlRepositoryGenerator
 
     buffer.writeln('        final rows = await _connection.query(');
     buffer.writeln(
-      "          'SELECT $selectClause FROM $tableName WHERE id = ?',",
+      "          'SELECT $selectClause FROM $tableName WHERE id = ? FOR UPDATE',",
     );
     buffer.writeln('          [_encodeIdentity(id)],');
     buffer.writeln('        );');
@@ -1064,16 +1074,29 @@ class MysqlRepositoryGenerator
       '  Future<void> save($className aggregate) => saveWithEvents(',
     );
     buffer.writeln('    aggregate: aggregate,');
-    buffer.writeln('    persist: () => _saveAggregate(aggregate),');
+    buffer
+        .writeln('    persist: () async { await _saveAggregate(aggregate); },');
     buffer.writeln('    publisher: eventPublisher,');
+    buffer.writeln('    afterCommit: _connection.afterCommit,');
     buffer.writeln('  );');
     buffer.writeln();
-    buffer
-        .writeln('  Future<void> _saveAggregate($className aggregate) async {');
+    buffer.writeln(
+      '  Future<String> _saveAggregate($className aggregate, {ExpectedRevision? expected}) async {',
+    );
     buffer.writeln('    _encodeIdentity(aggregate.id);');
     buffer.writeln('    await _validateIdentitySchema();');
-    buffer.writeln('    await _connection.transaction(() async {');
+    buffer.writeln(
+      '    if (expected != null) validateExpectedRevision(expected);',
+    );
+    buffer.writeln('    return await _connection.transaction(() async {');
     buffer.writeln('      try {');
+    buffer.writeln(
+      '        final current = expected != null && !expected.isAbsent ? await _readRevision(aggregate.id) : null;',
+    );
+    buffer.writeln(
+      '        if (expected != null) _checkRevision(aggregate.id, expected, current);',
+    );
+    buffer.writeln('        final revision = UuidValue.generate().toString();');
     buffer.writeln('        // Serialize aggregate to JSON');
     buffer.writeln('        final json = _serializer.toJson(aggregate);');
     buffer.writeln();
@@ -1102,6 +1125,7 @@ class MysqlRepositoryGenerator
     buffer.writeln(
       '        final rootData = _flattenForTable(json, [${excludeKeys.join(', ')}]);',
     );
+    buffer.writeln("        rootData['__dddart_revision'] = revision;");
     buffer.writeln('        final columns = rootData.keys.toList();');
     buffer.writeln(
       '        final values = columns.map((k) => _encodeValue(rootData[k], _fieldTypes[k])).toList();',
@@ -1112,13 +1136,27 @@ class MysqlRepositoryGenerator
     );
     buffer.writeln('        final updateClauses = columns.map((c) => ');
     buffer.writeln(r"            '$c = VALUES($c)').join(', ');");
-    buffer.writeln('        await _connection.execute(');
     buffer.writeln(
-      "          'INSERT INTO $tableName (\${columns.join(', ')}) VALUES (\$placeholders) '",
+      "        final insert = 'INSERT INTO $tableName (\${columns.join(', ')}) VALUES (\$placeholders)';",
     );
-    buffer.writeln(r"          'ON DUPLICATE KEY UPDATE $updateClauses',");
-    buffer.writeln('          values,');
-    buffer.writeln('        );');
+    buffer.writeln('        if (expected?.isAbsent ?? false) {');
+    buffer.writeln('          try {');
+    buffer.writeln('            await _connection.execute(insert, values);');
+    buffer.writeln('          } catch (error) {');
+    buffer.writeln(
+      "            if (_mapMysqlException(error, 'create').type == RepositoryExceptionType.duplicate) {",
+    );
+    buffer.writeln(
+      '              throw RevisionConflictException(aggregate.id, expected!);',
+    );
+    buffer.writeln('            }');
+    buffer.writeln('            rethrow;');
+    buffer.writeln('          }');
+    buffer.writeln('        } else {');
+    buffer.writeln(
+      r"          await _connection.execute('$insert ON DUPLICATE KEY UPDATE $updateClauses', values);",
+    );
+    buffer.writeln('        }');
 
     // Then save nested entities (if any)
     if (entityTables.isNotEmpty) {
@@ -1141,6 +1179,7 @@ class MysqlRepositoryGenerator
         );
       }
     }
+    buffer.writeln('        return revision;');
     buffer.writeln('      } catch (e) {');
     buffer.writeln("        throw _mapMysqlException(e, 'save');");
     buffer.writeln('      }');
@@ -1151,32 +1190,29 @@ class MysqlRepositoryGenerator
   }
 
   /// Generates the deleteById method implementation.
-  String _generateDeleteByIdMethod(String className, String tableName) {
-    return '''
+  String _generateDeleteByIdMethod(String className, String tableName) => '''
   @override
-  Future<void> deleteById($_rootIdentityType id) async {
+  Future<void> deleteById($_rootIdentityType id) => _deleteAggregate(id);
+
+  @override
+  Future<void> deleteConditional($_rootIdentityType id, {required ExpectedRevision expected}) async {
+    validateExpectedRevision(expected);
+    _connection.requireStandaloneTransaction();
+    return _deleteAggregate(id, expected: expected);
+  }
+
+  Future<void> _deleteAggregate($_rootIdentityType id, {ExpectedRevision? expected}) async {
     _encodeIdentity(id);
     await _validateIdentitySchema();
     await _connection.transaction(() async {
       try {
-        // Check if aggregate exists
-        final rows = await _connection.query(
-          'SELECT id FROM $tableName WHERE id = ?',
-          [_encodeIdentity(id)],
-        );
-
-        if (rows.isEmpty) {
-          throw RepositoryException(
-            '$className with ID \$id not found',
-            type: RepositoryExceptionType.notFound,
-          );
+        final current = await _readRevision(id);
+        if (expected != null) _checkRevision(id, expected, current);
+        if (current == null) {
+          if (expected != null) return;
+          throw RepositoryException('$className with ID \$id not found', type: RepositoryExceptionType.notFound);
         }
-
-        // Delete aggregate (CASCADE will handle related entities)
-        await _connection.execute(
-          'DELETE FROM $tableName WHERE id = ?',
-          [_encodeIdentity(id)],
-        );
+        await _connection.execute('DELETE FROM `$tableName` WHERE `id` = ?', [_encodeIdentity(id)]);
       } on RepositoryException {
         rethrow;
       } catch (e) {
@@ -1184,7 +1220,48 @@ class MysqlRepositoryGenerator
       }
     });
   }''';
+
+  String _generateConditionalMethods(String className, String tableName) => '''
+  Future<String?> _readRevision($_rootIdentityType id) async {
+    final rows = await _connection.query(
+      'SELECT __dddart_revision FROM `$tableName` WHERE `id` = ? FOR UPDATE',
+      [_encodeIdentity(id)],
+    );
+    return rows.isEmpty ? null : rows.single['__dddart_revision'] as String;
   }
+
+  void _checkRevision($_rootIdentityType id, ExpectedRevision expected, String? current) {
+    if (expected.revision != current) {
+      throw RevisionConflictException<$_rootIdentityType>(id, expected);
+    }
+  }
+
+  @override
+  Future<VersionedAggregate<$className, $_rootIdentityType>> getVersioned($_rootIdentityType id) async {
+    _encodeIdentity(id);
+    return _connection.transaction(() async {
+      final revision = await _readRevision(id);
+      if (revision == null) {
+        throw RepositoryException('$className with ID \$id not found', type: RepositoryExceptionType.notFound);
+      }
+      return VersionedAggregate(await getById(id), revision);
+    });
+  }
+
+  @override
+  Future<String> saveConditional($className aggregate, {required ExpectedRevision expected}) async {
+    validateExpectedRevision(expected);
+    _connection.requireStandaloneTransaction();
+    late String revision;
+    await saveWithEvents(
+      aggregate: aggregate,
+      persist: () async { revision = await _saveAggregate(aggregate, expected: expected); },
+      publisher: eventPublisher,
+      afterCommit: _connection.afterCommit,
+    );
+    return revision;
+  }
+''';
 
   /// Generates the MySQL exception mapping helper method.
   String _generateMapMysqlExceptionMethod() {
@@ -1475,6 +1552,7 @@ class MysqlRepositoryGenerator
     final created = <Map<String,dynamic>>{};
     final paths = _paths(context);
     for(final entry in row.entries) {
+      if (entry.key == '__dddart_revision') continue;
       final path = paths[entry.key] ?? [entry.key];
       var target = json;
       for(final segment in path.take(path.length-1)) {

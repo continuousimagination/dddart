@@ -117,11 +117,34 @@ class SqliteConnection implements SqlConnection {
     }
   }
 
+  Future<void> _begin() async {
+    // Never block the Dart isolate while another connection needs to commit.
+    // Only lock acquisition is retried; user work and COMMIT are never replayed.
+    final deadline = DateTime.now().add(const Duration(seconds: 5));
+    while (true) {
+      try {
+        await _execute('BEGIN IMMEDIATE');
+        return;
+      } on SqliteException catch (error) {
+        if (error.resultCode != 5 || DateTime.now().isAfter(deadline)) rethrow;
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+      }
+    }
+  }
+
+  /// Runs publication after the outer commit, discarding it on rollback.
+  Future<void> afterCommit(Future<void> Function() action) =>
+      _coordinator.afterCommit(action);
+
+  /// Conditional writes must own their commit to report a confirmed revision.
+  void requireStandaloneTransaction() =>
+      _coordinator.requireOutsideTransaction();
+
   @override
   Future<T> transaction<T>(Future<T> Function() action) =>
       _coordinator.transaction(
         action: action,
-        begin: () => _execute('BEGIN'),
+        begin: _begin,
         commit: () => _execute('COMMIT'),
         rollback: () => _execute('ROLLBACK'),
         invalidate: _close,
