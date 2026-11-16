@@ -1,8 +1,10 @@
 import 'dart:convert';
 
 import 'package:dddart/dddart.dart';
+import 'package:dddart_rest/src/access_policy.dart';
 import 'package:dddart_rest/src/authentication_handler.dart';
 import 'package:dddart_rest/src/authentication_result.dart';
+import 'package:dddart_rest/src/authorization_context.dart';
 import 'package:dddart_rest/src/authorization_handler.dart';
 import 'package:dddart_rest/src/authorization_result.dart';
 import 'package:dddart_rest/src/crud_resource.dart';
@@ -95,41 +97,12 @@ class _CountingAuthenticationHandler implements AuthenticationHandler<String> {
 class _CountingAuthorizationHandler
     implements AuthorizationHandler<_TestUser, UuidValue, String> {
   int calls = 0;
-
   @override
-  Future<AuthorizationResult> authorizeCreate(
-    _TestUser aggregate,
-    AuthenticationResult<String> authResult,
+  Future<AuthorizationResult> authorize(
+    AuthorizationContext<_TestUser, UuidValue, String> context,
   ) async {
     calls++;
-    return AuthorizationResult.allow();
-  }
-
-  @override
-  Future<AuthorizationResult> authorizeDelete(
-    UuidValue aggregateId,
-    AuthenticationResult<String> authResult,
-  ) async {
-    calls++;
-    return AuthorizationResult.allow();
-  }
-
-  @override
-  Future<AuthorizationResult> authorizeQuery(
-    Map<String, String> queryParams,
-    AuthenticationResult<String> authResult,
-  ) async {
-    calls++;
-    return AuthorizationResult.allow();
-  }
-
-  @override
-  Future<AuthorizationResult> authorizeUpdate(
-    _TestUser aggregate,
-    AuthenticationResult<String> authResult,
-  ) async {
-    calls++;
-    return AuthorizationResult.allow();
+    return const AuthorizationResult.allow(scope: UnrestrictedQueryScope());
   }
 }
 
@@ -344,7 +317,10 @@ void main() {
       repository: repository,
       serializer: serializer,
       authenticationHandler: authentication,
-      authorizationHandler: authorization,
+      defaultPolicy: AccessPolicy.custom(
+        authorization,
+        authentication: AuthenticationRequirement.required,
+      ),
     );
 
     final response = await resource.handleUpdate(
@@ -390,7 +366,10 @@ void main() {
       repository: repository,
       serializer: serializer,
       authenticationHandler: authentication,
-      authorizationHandler: authorization,
+      defaultPolicy: AccessPolicy.custom(
+        authorization,
+        authentication: AuthenticationRequirement.required,
+      ),
     );
 
     final response = await resource.handleUpdate(
@@ -406,7 +385,7 @@ void main() {
     expect(response.statusCode, 200);
     expect(authentication.calls, 1);
     expect(authorization.calls, 1);
-    expect(repository.getByIdCalls, 0);
+    expect(repository.getByIdCalls, 1);
     expect(repository.saveCalls, 1);
     final responseBody = jsonDecode(await response.readAsString()) as Map;
     expect(responseBody['id'], id.toString());

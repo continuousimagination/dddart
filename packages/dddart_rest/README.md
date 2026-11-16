@@ -18,8 +18,9 @@ Register explicit `IdentityCodec<IssueId>` implementations in an instance-local
 repositories accept `identityCodecs: registry` and share it with body serialization.
 
 `CrudResource<T, I, TClaims>`, `AuthorizationHandler<T, I, TClaims>` and
-`QueryHandler<T, I>` retain concrete identity types. Delete authorization receives
-I. Query selection, pagination and authentication semantics are unchanged.
+`QueryHandler<T, I, TClaims>` retain concrete identity and claim types. Read and
+delete policies receive persisted aggregates; update policies receive separate
+current and proposed snapshots. Query handlers receive typed caller and scope.
 
 Client paths URI-encode canonical codec keys once. `HttpServer` decodes one
 segment once; direct `CrudResource.handleGetById/handleUpdate/handleDelete`
@@ -35,6 +36,67 @@ response with a different typed identity is rejected.
 RESTful CRUD API framework for DDDart - Provides REST endpoints for aggregate roots with minimal boilerplate.
 
 > **Note:** This package was previously named `dddart_http`. See the [Migration Guide](#migration-from-dddart_http) below.
+
+## Optional access policies
+
+No verifier or security policy means public CRUD. Installing an
+`authenticationHandler` defaults the resource to `AccessPolicy.authenticated()`.
+An explicit `defaultPolicy` replaces that default, and `operationPolicies`
+replaces it for each selected `CrudOperation`: `read`, `query`, `create`, `update`,
+`delete`. A public read override works without credentials on the same resource
+whose writes require authentication. No duplicate registration or dummy identity
+is needed.
+
+- `AccessPolicy.public()` permits anonymous requests.
+- `AccessPolicy.authenticated()` requires the configured verifier; this establishes
+  identity, not application ownership or tenant permissions.
+- `AccessPolicy.custom(handler, authentication: AuthenticationRequirement.optional)`
+  always calls the handler, including with `AnonymousCaller<TClaims>`. Select
+  `AuthenticationRequirement.required` when anonymous evaluation is inappropriate.
+
+Required authentication without a verifier is rejected at construction. Optional
+operations skip verification when credentials are missing. If a verifier is
+installed, supplied invalid credentials return 401 even on public operations;
+they never become anonymous after failure. The default detector checks for an
+Authorization header, including an empty one. Set `credentialsPresent` for a
+cookie or other credential transport. Without a verifier, public requests remain
+anonymous and request claims are never trusted.
+
+`AuthorizationHandler<T, I, TClaims>.authorize(context)` receives one of:
+
+| Context | Policy input supplied by the framework |
+| --- | --- |
+| `ReadContext` | Current persisted aggregate |
+| `QueryContext` | Typed caller and untrusted filter parameters |
+| `CreateContext` | Final proposed aggregate after `preCreate` |
+| `UpdateContext` | Separate current and proposed aggregate snapshots |
+| `DeleteContext` | Current persisted aggregate |
+
+Policies receive detached serializer snapshots, so changing a context object
+cannot modify storage or normalize the eventual proposal. Use `preCreate` for
+normalization. `Caller<TClaims>` is either `AnonymousCaller` (no claims) or
+`VerifiedCaller` (successful verifier result). Claims can be absent if the
+application's verifier intentionally returns none.
+
+Return `AuthorizationResult.allow()` or `AuthorizationResult.deny()`.
+An allowed custom collection decision must explicitly provide a `QueryScope`;
+`UnrestrictedQueryScope()` deliberately exposes all rows selected by that handler.
+The framework does not infer a tenant predicate. Denied/thrown collection policies
+never invoke query code, including unfiltered and pagination-only requests.
+
+Requests negotiate JSON first, then verify credentials, deserialize/validate
+identities, apply `preCreate` for POST, load any current state required by policy,
+evaluate access, and only then return protected data or perform mutations.
+Missing/invalid required credentials return 401; verified or custom anonymous
+denial returns 403. `AuthorizationResult.deny(conceal: true)` returns the same
+generic 404 as a missing record. Policy/verifier exceptions return generic 500,
+without their private exception text, body, ETag or query counts. Access failures
+cannot be overridden through `customExceptionHandlers`.
+
+See [the ownership example](example/authorization_example.dart) for an exhaustive
+policy using stored ownership, explicit owner transfer, public objects and scoped
+queries. Treat proposed ownership/tenant fields as untrusted unless server-owned
+normalization has assigned them. Policies must check the stored state first.
 
 ## Features
 
@@ -350,7 +412,7 @@ Future<QueryResult<User>> listUsers(
   Map<String, String> queryParams,
   int skip,
   int take,
-  dynamic authResult,
+  AuthorizedQuery<void> authorization,
 ) {
   return (repository as UserReadRepository).listPage(
     skip: skip,
@@ -363,7 +425,7 @@ Future<QueryResult<User>> firstNameHandler(
   Map<String, String> queryParams,
   int skip,
   int take,
-  dynamic authResult,
+  AuthorizedQuery<void> authorization,
 ) {
   final firstName = queryParams['firstName']!;
   return (repository as UserReadRepository).findByFirstName(
@@ -635,63 +697,48 @@ class HttpServer {
 }
 ```
 
-### CrudResource<T, UuidValue, TClaims>
-
-Configures and handles CRUD operations for an aggregate root type.
+### CrudResource<T, I, TClaims>
 
 ```dart
-class CrudResource<T extends AggregateRoot, TClaims> {
-  CrudResource({
-    required String path,
-    required Repository<T, UuidValue> repository,
-    required JsonSerializer<T> serializer,
-    QueryHandler<T, UuidValue>? collectionHandler,
-    Map<String, QueryHandler<T, UuidValue>> queryHandlers = const {},
-    Map<Type, Response Function(Object)> customExceptionHandlers = const {},
-    int defaultSkip = 0,
-    int defaultTake = 50,
-    int maxTake = 100,
-    bool requirePrecondition = false,
-  });
-}
-```
-
-**Parameters:**
-- `path` - Base URL path for the resource (e.g., '/users')
-- `repository` - Repository instance for persistence operations
-- `serializer` - JSON serializer for request and success response bodies
-- `collectionHandler` - Optional handler for an unfiltered collection GET. It
-  owns selection, ordering, pagination, and `totalCount`; without it the request
-  returns 400.
-- `queryHandlers` - Map of query parameter names to handler functions
-- `customExceptionHandlers` - Map of exception types to error response handlers
-- `defaultSkip` - Default skip value for pagination (default: 0)
-- `defaultTake` - Default take value for pagination (default: 50)
-- `maxTake` - Maximum allowed take value (default: 100)
-- `requirePrecondition` - Require conditions on PUT/DELETE (default: false)
-- `queryHandlers` - Map of query parameter names to handler functions
-- `customExceptionHandlers` - Map of exception types to error response handlers
-- `defaultSkip` - Default skip value for pagination (default: 0)
-- `defaultTake` - Default take value for pagination (default: 50)
-- `maxTake` - Maximum allowed take value (default: 100)
-
-### QueryHandler<T, UuidValue>
-
-Function signature for custom query handlers.
-
-```dart
-typedef QueryHandler<T extends AggregateRoot> = Future<QueryResult<T>> Function(
-  Repository<T, UuidValue> repository,
-  Map<String, String> queryParams,
-  int skip,
-  int take,
-  dynamic authResult,
+CrudResource<T, I, TClaims>(
+  path: '/records',
+  repository: repository,
+  serializer: serializer,
+  authenticationHandler: verifier, // Optional credential verification
+  defaultPolicy: const AccessPolicy.authenticated(),
+  operationPolicies: {
+    CrudOperation.read: const AccessPolicy.public(),
+    CrudOperation.query: const AccessPolicy.public(),
+  },
+  collectionHandler: collectionHandler,
+  queryHandlers: queryHandlers,
+  requirePrecondition: false,
 );
 ```
 
-For `collectionHandler`, `queryParams` is empty. Both collection and named
-handlers receive normalized pagination values and the current authentication
-result.
+`defaultSkip` (0), `defaultTake` (50), and `maxTake` (100) normalize pagination.
+`collectionHandler` handles unfiltered and pagination-only requests; if absent,
+those requests return 400. `queryHandlers` selects one named filter. The serializer
+and `identityCodecs` use the same typed identity vocabulary. `preCreate` receives
+`(T, Caller<TClaims>)` and returns the final proposal before create authorization.
+
+### QueryHandler<T, I, TClaims>
+
+```dart
+typedef QueryHandler<T extends AggregateRoot<I>, I extends Identity, TClaims>
+    = Future<QueryResult<T>> Function(
+  Repository<T, I> repository,
+  Map<String, String> queryParams,
+  int skip,
+  int take,
+  AuthorizedQuery<TClaims> authorization,
+);
+```
+
+`authorization.caller` retains the concrete claims type. `authorization.scope`
+is an application-defined `QueryScope`; apply it to rows AND totalCount before
+pagination. Untrusted owner/tenant filters may narrow this scope, never widen it.
+A handler can enforce stricter permissions with `AccessDeniedException`.
 
 ### QueryResult<T>
 

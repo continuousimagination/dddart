@@ -58,86 +58,58 @@ class UserClaims {
       );
 }
 
-// Authorization handler - enforces ownership rules
+// Query selection uses a verified scope, never a caller-supplied owner filter.
+class DocumentScope implements QueryScope {
+  const DocumentScope(this.claims);
+  final UserClaims? claims;
+  bool includes(Document document) =>
+      document.isPublic ||
+      (claims != null &&
+          (claims!.isAdmin || document.ownerId == claims!.userId));
+}
+
 class DocumentAuthorizationHandler
-    extends AuthorizationHandler<Document, UuidValue, UserClaims> {
+    implements AuthorizationHandler<Document, UuidValue, UserClaims> {
   @override
-  Future<AuthorizationResult> authorizeCreate(
-    Document aggregate,
-    AuthenticationResult<UserClaims> authResult,
-  ) async {
-    // Users can only create documents for themselves
-    final userId = authResult.claims!.userId;
-
-    if (aggregate.ownerId != userId) {
-      return AuthorizationResult.deny(
-        'You can only create documents for yourself',
-      );
-    }
-
-    return AuthorizationResult.allow();
+  Future<AuthorizationResult> authorize(
+      AuthorizationContext<Document, UuidValue, UserClaims> context) async {
+    final claims = context.caller.claims;
+    bool owns(Document document) =>
+        claims != null && (claims.isAdmin || document.ownerId == claims.userId);
+    final allowed = switch (context) {
+      ReadContext<Document, UuidValue, UserClaims>() =>
+        context.current.isPublic || owns(context.current),
+      QueryContext<Document, UuidValue, UserClaims>() => true,
+      CreateContext<Document, UuidValue, UserClaims>() =>
+        claims != null && context.proposed.ownerId == claims.userId,
+      UpdateContext<Document, UuidValue, UserClaims>() =>
+        owns(context.current) &&
+            (claims!.isAdmin ||
+                context.proposed.ownerId == context.current.ownerId),
+      DeleteContext<Document, UuidValue, UserClaims>() => owns(context.current),
+    };
+    return allowed
+        ? AuthorizationResult.allow(scope: DocumentScope(claims))
+        : const AuthorizationResult.deny();
   }
+}
 
-  @override
-  Future<AuthorizationResult> authorizeUpdate(
-    Document aggregate,
-    AuthenticationResult<UserClaims> authResult,
-  ) async {
-    // Users can only update their own documents (unless admin)
-    final userId = authResult.claims!.userId;
-    final isAdmin = authResult.claims!.isAdmin;
-
-    if (aggregate.ownerId != userId && !isAdmin) {
-      return AuthorizationResult.deny(
-        'You do not have permission to modify this document',
-      );
-    }
-
-    return AuthorizationResult.allow();
-  }
-
-  @override
-  Future<AuthorizationResult> authorizeDelete(
-    UuidValue aggregateId,
-    AuthenticationResult<UserClaims> authResult,
-  ) async {
-    // For delete, we need to fetch the document to check ownership
-    // In production, consider passing the aggregate or using a cache
-    final isAdmin = authResult.claims!.isAdmin;
-
-    // Admins can delete any document
-    if (isAdmin) {
-      return AuthorizationResult.allow();
-    }
-
-    // Note: In a real implementation, you'd fetch the document here
-    // to check ownership. For this example, we'll allow it and let
-    // the repository handle the not-found case.
-    // A better approach is to pass the document to this method.
-    return AuthorizationResult.allow();
-  }
-
-  @override
-  Future<AuthorizationResult> authorizeQuery(
-    Map<String, String> queryParams,
-    AuthenticationResult<UserClaims> authResult,
-  ) async {
-    // Users can only query their own documents (unless admin)
-    final userId = authResult.claims!.userId;
-    final isAdmin = authResult.claims!.isAdmin;
-
-    if (queryParams.containsKey('ownerId')) {
-      final queriedOwnerId = queryParams['ownerId'];
-
-      if (queriedOwnerId != userId && !isAdmin) {
-        return AuthorizationResult.deny(
-          'You can only query your own documents',
-        );
-      }
-    }
-
-    return AuthorizationResult.allow();
-  }
+Future<QueryResult<Document>> documentQuery(
+    Repository<Document, UuidValue> repo,
+    Map<String, String> filters,
+    int skip,
+    int take,
+    AuthorizedQuery<UserClaims> authorization) async {
+  final scope = authorization.scope as DocumentScope;
+  final visible = (repo as InMemoryRepository<Document, UuidValue>)
+      .getAllSync()
+      .where(scope.includes)
+      .where((document) =>
+          !filters.containsKey('ownerId') ||
+          document.ownerId == filters['ownerId'])
+      .toList();
+  return QueryResult(visible.skip(skip).take(take).toList(),
+      totalCount: visible.length);
 }
 
 // Simple serializer for Document
@@ -253,20 +225,14 @@ void main() async {
       repository: documentRepo,
       serializer: DocumentSerializer(),
       authenticationHandler: authHandler,
-      authorizationHandler: authzHandler, // Authorization handler added here
-      queryHandlers: {
-        'ownerId': (repo, params, skip, take, authResult) async {
-          final ownerId = params['ownerId'];
-          if (ownerId == null) {
-            return QueryResult([], totalCount: 0);
-          }
-
-          // For this example, we'll return empty results
-          // In production, you'd implement a proper query method
-          // or use a repository that supports filtering
-          return QueryResult([], totalCount: 0);
-        },
+      defaultPolicy: AccessPolicy.custom(authzHandler,
+          authentication: AuthenticationRequirement.required),
+      operationPolicies: {
+        CrudOperation.read: AccessPolicy.custom(authzHandler),
+        CrudOperation.query: AccessPolicy.custom(authzHandler),
       },
+      collectionHandler: documentQuery,
+      queryHandlers: {'ownerId': documentQuery},
     ),
   );
 

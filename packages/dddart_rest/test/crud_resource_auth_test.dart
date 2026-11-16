@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/src/authentication_handler.dart';
 import 'package:dddart_rest/src/authentication_result.dart';
+import 'package:dddart_rest/src/authorization_context.dart';
 import 'package:dddart_rest/src/crud_resource.dart';
 import 'package:dddart_rest/src/query_handler.dart';
 import 'package:shelf/shelf.dart';
@@ -287,7 +288,7 @@ void main() {
 
     test('collection handler receives the authentication result', () async {
       final authHandler = MockAuthHandler();
-      dynamic receivedAuthResult;
+      AuthorizedQuery<String>? receivedAuthResult;
       final resource = CrudResource<TestUser, UuidValue, String>(
         path: '/users',
         repository: repository,
@@ -302,7 +303,10 @@ void main() {
       final response = await resource.handleQuery(createRequest());
 
       expect(response.statusCode, equals(200));
-      expect(receivedAuthResult, same(authHandler.lastResult));
+      expect(
+        (receivedAuthResult!.caller as VerifiedCaller<String>).authentication,
+        same(authHandler.lastResult),
+      );
     });
 
     test('resource without auth handler allows unauthenticated access',

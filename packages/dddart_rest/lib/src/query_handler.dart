@@ -1,4 +1,5 @@
 import 'package:dddart/dddart.dart';
+import 'package:dddart_rest/src/authorization_context.dart';
 
 /// Result from a query handler including items and optional total count
 ///
@@ -25,55 +26,17 @@ class QueryResult<T extends AggregateRoot<Identity>> {
   final int? totalCount;
 }
 
-/// Function signature for query handlers
+/// Application-owned collection selection after resource authorization.
 ///
-/// Query handlers process collection reads and return explicitly selected
-/// results. Named handlers are invoked when a GET request includes the
-/// corresponding query parameter. A `CrudResource` can also register one as its
-/// unfiltered collection handler; that handler receives an empty parameter map.
-///
-/// Parameters:
-/// - [repository]: The repository instance to query
-/// - [queryParams]: Filter parameters from the request (excluding skip/take), or
-///   an empty map for an unfiltered collection request
-/// - [skip]: Number of items to skip (for pagination)
-/// - [take]: Number of items to return (for pagination)
-/// - [authResult]: Optional authentication result if auth handler is configured
-///
-/// Returns: QueryResult containing the filtered items and optional total count
-///
-/// Example:
-/// ```dart
-/// abstract interface class UserRepository implements Repository<User, UuidValue> {
-///   Future<({List<User> items, int totalCount})> findByFirstName(
-///     String firstName, {
-///     required int skip,
-///     required int take,
-///   });
-/// }
-///
-/// final firstNameHandler = (Repository<User, UuidValue> repository,
-///                           Map<String, String> queryParams,
-///                           int skip,
-///                           int take,
-///                           dynamic authResult) async {
-///   final firstName = queryParams['firstName']!;
-///   final page = await (repository as UserRepository).findByFirstName(
-///     firstName,
-///     skip: skip,
-///     take: take,
-///   );
-///   return QueryResult(
-///     page.items,
-///     totalCount: page.totalCount,
-///   );
-/// };
-/// ```
-typedef QueryHandler<T extends AggregateRoot<I>, I extends Identity>
+/// Apply the authorized scope to both rows and totalCount BEFORE pagination.
+/// Request filters may narrow that scope, never widen it. A handler may impose
+/// additional restrictions by throwing AccessDeniedException. Public queries
+/// receive an explicit UnrestrictedQueryScope rather than a fabricated identity.
+typedef QueryHandler<T extends AggregateRoot<I>, I extends Identity, C>
     = Future<QueryResult<T>> Function(
   Repository<T, I> repository,
   Map<String, String> queryParams,
   int skip,
   int take,
-  dynamic authResult,
+  AuthorizedQuery<C> authorization,
 );
