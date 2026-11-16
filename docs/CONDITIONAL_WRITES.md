@@ -73,6 +73,9 @@ its locks are released, and is discarded on rollback. A failed COMMIT is reporte
 as `ConditionalWriteUncertainException`, never as a stale revision. Lock acquisition
 and storage errors also remain distinct from confirmed revision conflicts.
 
-Provision fresh schemas using the updated generators. 1.0 is the first schema
+Provision fresh schemas using the updated generators. SQLite needs write access
+to the database file and directory. MySQL requires InnoDB tables, `CREATE` and
+`REFERENCES` permissions for schema creation, and `SELECT`, `INSERT`, `UPDATE`,
+and `DELETE` for repository operations. 1.0 is the first schema
 compatibility baseline; these changes do not provide upgrades for prerelease
 root tables that lack the revision column.

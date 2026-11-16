@@ -169,7 +169,7 @@ void main() {
       await first.save(item);
       final before = await first.getVersioned(item.id);
       await a.execute(
-        "CREATE TRIGGER fail_child BEFORE INSERT ON worky_native_issues_comments FOR EACH ROW BEGIN IF NEW.message = '99' THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'injected child failure'; END IF; END",
+        "CREATE TRIGGER fail_child BEFORE INSERT ON native_comment FOR EACH ROW BEGIN IF NEW.message = '99' THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'injected child failure'; END IF; END",
       );
       final proposed = native(99, item.id)..raiseEvent(Changed(item.id));
       await expectLater(
