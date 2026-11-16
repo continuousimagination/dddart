@@ -514,7 +514,11 @@ IdentityCodecRegistry identityCodecs() => IdentityCodecRegistry()
 /// Concrete custom interface implementation preserves typed lookups.
 class NativeIssueSqliteRepositoryImpl extends NativeIssueSqliteRepositoryBase {
   /// Creates the repository with application codecs.
-  NativeIssueSqliteRepositoryImpl(super.connection, {super.identityCodecs});
+  NativeIssueSqliteRepositoryImpl(
+    super.connection, {
+    super.identityCodecs,
+    super.eventPublisher,
+  });
   @override
   Future<NativeIssue?> lookupLabel(NativeId id, {String? label}) async {
     try {

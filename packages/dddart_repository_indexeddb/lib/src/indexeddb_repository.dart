@@ -565,6 +565,7 @@ class IndexedDbRepository<T extends AggregateRoot<I>, I extends Identity>
     final mutations = <_PreparedMutation<I>>[];
     final ids = <String>{};
     for (final mutation in request.mutations) {
+      validateExpectedRevision(mutation.expected);
       if (!ids.add(_key(mutation.id))) {
         throw ArgumentError('Duplicate aggregate ID in one commit');
       }

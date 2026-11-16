@@ -70,8 +70,8 @@ void main() {
               try {
                 // Insert row with NULL in required field
                 await helper!.connection.execute(
-                  'INSERT INTO simple_product (id, name, price, createdAt, updatedAt) '
-                  'VALUES (?, NULL, ?, NOW(), NOW())',
+                  'INSERT INTO simple_product (id, name, price, createdAt, updatedAt, __dddart_revision) '
+                  'VALUES (?, NULL, ?, NOW(), NOW(), UUID())',
                   [UuidValue.generate().toString(), 99.99],
                 );
 
@@ -115,7 +115,7 @@ void main() {
               try {
                 // Try to insert invalid price type
                 await helper!.connection.execute(
-                  'INSERT INTO simple_product (id, name, price, createdAt, updatedAt) '
+                  'INSERT INTO simple_product (id, name, price, createdAt, updatedAt, __dddart_revision) '
                   "VALUES (?, ?, 'invalid_price', NOW(), NOW())",
                   [UuidValue.generate().toString(), 'Test Product'],
                 );
@@ -142,8 +142,8 @@ void main() {
               try {
                 // Try to insert without required field
                 await helper!.connection.execute(
-                  'INSERT INTO simple_product (id, name, createdAt, updatedAt) '
-                  'VALUES (?, ?, NOW(), NOW())',
+                  'INSERT INTO simple_product (id, name, createdAt, updatedAt, __dddart_revision) '
+                  'VALUES (?, ?, NOW(), NOW(), UUID())',
                   [UuidValue.generate().toString(), 'Test Product'],
                 );
               } catch (e) {

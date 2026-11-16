@@ -73,10 +73,15 @@ class MysqlConnection implements SqlConnection {
   final Duration timeout;
 
   MySQLConnection? _connection;
-  int _transactionDepth = 0;
+  final _coordinator = SqlConnectionCoordinator();
 
   @override
   Future<void> open() async {
+    _coordinator.requireOutsideTransaction();
+    await _coordinator.run(_open);
+  }
+
+  Future<void> _open() async {
     if (_connection != null) {
       return; // Already open
     }
@@ -92,12 +97,18 @@ class MysqlConnection implements SqlConnection {
 
       await _connection!.connect(timeoutMs: timeout.inMilliseconds);
     } catch (e) {
+      await _close();
       throw _mapMysqlException(e, 'open connection');
     }
   }
 
   @override
   Future<void> close() async {
+    _coordinator.requireOutsideTransaction();
+    await _coordinator.run(_close);
+  }
+
+  Future<void> _close() async {
     if (_connection == null) {
       return; // Already closed
     }
@@ -109,7 +120,6 @@ class MysqlConnection implements SqlConnection {
       // This can happen if the connection was closed due to an error
     } finally {
       _connection = null;
-      _transactionDepth = 0;
     }
   }
 
@@ -117,7 +127,10 @@ class MysqlConnection implements SqlConnection {
   bool get isOpen => _connection != null;
 
   @override
-  Future<void> execute(String sql, [List<Object?>? parameters]) async {
+  Future<void> execute(String sql, [List<Object?>? parameters]) =>
+      _coordinator.run(() => _execute(sql, parameters));
+
+  Future<void> _execute(String sql, [List<Object?>? parameters]) async {
     if (_connection == null) {
       throw StateError('Connection is not open. Call open() first.');
     }
@@ -137,6 +150,12 @@ class MysqlConnection implements SqlConnection {
 
   @override
   Future<List<Map<String, Object?>>> query(
+    String sql, [
+    List<Object?>? parameters,
+  ]) =>
+      _coordinator.run(() => _query(sql, parameters));
+
+  Future<List<Map<String, Object?>>> _query(
     String sql, [
     List<Object?>? parameters,
   ]) async {
@@ -183,56 +202,23 @@ class MysqlConnection implements SqlConnection {
     }
   }
 
+  /// Runs publication after the outer commit, discarding it on rollback.
+  Future<void> afterCommit(Future<void> Function() action) =>
+      _coordinator.afterCommit(action);
+
+  /// Conditional writes must own their commit to report a confirmed revision.
+  void requireStandaloneTransaction() =>
+      _coordinator.requireOutsideTransaction();
+
   @override
-  Future<T> transaction<T>(Future<T> Function() action) async {
-    if (_connection == null) {
-      throw StateError('Connection is not open. Call open() first.');
-    }
-
-    // Support nested transactions by tracking depth
-    final isOuterTransaction = _transactionDepth == 0;
-
-    if (isOuterTransaction) {
-      // Manage transaction manually with START TRANSACTION, COMMIT, ROLLBACK
-      // We use manual management instead of mysql_client's transactional()
-      // to maintain full control over the connection state
-      _transactionDepth++;
-      try {
-        await _connection!.execute('START TRANSACTION');
-        try {
-          final result = await action();
-          await _connection!.execute('COMMIT');
-          _transactionDepth--;
-          return result;
-        } catch (e) {
-          // Rollback on error
-          try {
-            await _connection!.execute('ROLLBACK');
-          } catch (rollbackError) {
-            // If ROLLBACK fails, log but don't mask the original error
-            // The connection might be in a bad state
-          }
-          _transactionDepth--;
-          rethrow;
-        }
-      } catch (e) {
-        _transactionDepth = 0; // Reset on error
-        rethrow;
-      }
-    } else {
-      // For nested transactions, just execute the action
-      // The outer transaction will handle commit/rollback
-      _transactionDepth++;
-      try {
-        final result = await action();
-        _transactionDepth--;
-        return result;
-      } catch (e) {
-        _transactionDepth--;
-        rethrow;
-      }
-    }
-  }
+  Future<T> transaction<T>(Future<T> Function() action) =>
+      _coordinator.transaction(
+        action: action,
+        begin: () => _execute('START TRANSACTION'),
+        commit: () => _execute('COMMIT'),
+        rollback: () => _execute('ROLLBACK'),
+        invalidate: _close,
+      );
 
   /// Converts List-based parameters to Map-based parameters for mysql_client.
   ///

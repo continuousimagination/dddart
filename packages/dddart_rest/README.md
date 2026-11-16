@@ -39,7 +39,7 @@ RESTful CRUD API framework for DDDart - Provides REST endpoints for aggregate ro
 ## Features
 
 - **Automatic CRUD endpoints** - Expose aggregate roots through REST APIs with a single configuration
-- **ETag conditional checks** - Detect changed ETags before an update
+- **Atomic conditional writes** - Reject stale storage revisions without overwriting a competing update
 - **JWT Authentication** - Built-in support for self-hosted and OAuth/OIDC authentication
 - **Device Flow** - OAuth2 device flow for CLI tools and limited-input devices
 - **JSON media contract** - JSON success bodies, JSON arrays for collections, and RFC 7807 errors
@@ -532,150 +532,55 @@ All error responses use **RFC 7807 Problem Details** format with `Content-Type: 
 | Unsupported Content-Type | 415 | Unsupported Media Type |
 | Other exceptions | 500 | Internal Server Error |
 
-## ETag Conditional Update Checks
+## Atomic conditional writes
 
-`CrudResource` includes ETags in item responses and can compare an `If-Match`
-header with the currently stored aggregate before a PUT. This can detect a stale
-client when another update has already been persisted and produces a different
-ETag before the comparison.
+`CrudResource` uses the optional `ConditionalAggregateRepository<T, I>` capability
+for conditional PUT/DELETE. Generated SQLite, MySQL, MongoDB and DynamoDB
+repositories implement it. `InMemoryConditionalRepository` provides a detached
+reference store for examples/tests. Ordinary CRUD stays available by default.
 
-The comparison and `repository.save()` are separate operations. They are not an
-atomic conditional write, so overlapping requests can both pass validation and
-then overwrite one another. Treat this feature as best-effort stale-update
-detection, not guaranteed optimistic locking.
-
-### How It Works
-
-1. **GET requests** include an `ETag` header derived from the aggregate
-2. **PUT requests** can include an `If-Match` header with the ETag
-3. The server reads the current aggregate and compares its ETag
-4. If ETag doesn't match, returns `412 Precondition Failed`
-5. If it matches, the server later performs an ordinary repository save
-
-### Basic Usage
+GET from a versioned repository returns the aggregate and its coherent storage
+revision as a strong ETag (`"r1.<base64url UTF-8 revision>"`, without padding).
+The token is storage metadata; changing `updatedAt` does not grant permission to
+write. Every successful save changes the revision, including identical or
+unconditional saves. Deleting and recreating an ID invalidates previous tokens.
 
 ```dart
-// Configure resource with ETag support (enabled by default)
-server.registerResource(
-  CrudResource<User, UuidValue, void>(
-    path: '/users',
-    repository: repository,
-    serializer: serializer,
-    etagStrategy: ETagStrategy.timestamp,  // Default
-  ),
+final resource = CrudResource<User, UuidValue, void>(
+  path: '/users',
+  repository: conditionalRepository,
+  serializer: UserJsonSerializer(),
+  requirePrecondition: true, // Optional: require a condition on PUT/DELETE.
 );
 ```
 
-### Client Flow
+| Request | Behavior |
+|---|---|
+| PUT/DELETE with one strong `If-Match` tag | Atomic match-and-write/delete; a stale or missing record returns 412. |
+| Strong tag list | Select a matching revision, then retain that condition through the atomic write. |
+| Weak tags | Never match; a list can still match another strong tag. |
+| `If-Match: *` | Explicit 501: the shared capability does not expose existence-only writes. GET a revision first. |
+| `If-None-Match: *` | Atomic create-if-absent on PUT (201), or assert-absence on DELETE (204). An existing record returns 412. |
+| Other valid `If-None-Match` shapes | Explicit 501. |
+| Malformed or conflicting condition headers | 400; no mutation. |
+| No condition | Ordinary CRUD by default; 428 on PUT/DELETE when `requirePrecondition` is enabled. |
 
-```bash
-# Step 1: Fetch resource (receives ETag)
-curl http://localhost:8080/users/123
-# Response includes: ETag: "2024-01-15T10:30:00.000Z"
+Successful conditional PUT returns its committed revision ETag. Successful
+unconditional POST/PUT returns no validator: its basic save API does not return a
+committed token. GET again before a conditional edit. A plain repository returns
+no ETag on GET and rejects requested atomic mutations with 501; requiring
+preconditions with such a repository is a configuration error.
 
-# Step 2: Update with If-Match header
-curl -X PUT http://localhost:8080/users/123 \
-  -H "Content-Type: application/json" \
-  -H "If-Match: \"2024-01-15T10:30:00.000Z\"" \
-  -d '{"id":"123","name":"Updated",...}'
+A 412 problem response contains no current private content or ETag. Reload,
+recompute/re-authorize the intended change, then deliberately submit a new
+condition. Storage failures and uncertain commits are server errors, never fake
+412s or success. Neither the server nor generated repository retries with a fresh
+revision. Authentication and authorization remain separate from this contract.
 
-# Success: 200 OK with new ETag
-# Different current ETag: 412 Precondition Failed
-```
-
-### ETag Strategies
-
-**Timestamp Strategy** (default):
-- Uses aggregate's `updatedAt` timestamp
-- Fast and efficient
-- Detects changes only when application code advances `updatedAt`
-
-```dart
-etagStrategy: ETagStrategy.timestamp
-```
-
-**Content Hash Strategy**:
-- Uses SHA-256 hash of serialized content
-- More precise - detects serialized-content changes at comparison time
-- Slightly slower due to hashing
-
-Neither strategy makes the subsequent repository save atomic.
-
-```dart
-etagStrategy: ETagStrategy.contentHash
-```
-
-### Handling Conflicts
-
-When a `412 Precondition Failed` response is received:
-
-1. Response includes current ETag in header
-2. Client fetches latest version
-3. Client merges changes
-4. Client retries with new ETag
-
-**Example 412 Response:**
-```json
-{
-  "type": "about:blank",
-  "title": "Precondition Failed",
-  "status": 412,
-  "detail": "The provided ETag does not match the current resource state. Fetch the current representation before retrying."
-}
-```
-
-**Headers:**
-- `ETag: "2024-01-15T11:00:00.000Z"` - ETag derived from the current aggregate
-
-### Backward Compatibility
-
-ETags are **optional** - the `If-Match` header is not required:
-
-- **With If-Match**: Validates ETag, returns 412 on mismatch
-- **Without If-Match**: Updates without validation (backward compatible)
-
-This allows gradual adoption without breaking existing clients.
-
-### Sequential Stale-Update Example
-
-This flow rejects Client B because Client A's save completes before Client B's
-PUT begins. It does not model two overlapping PUT operations.
-
-```dart
-// Client A fetches user
-final responseA = await client.get('/users/123');
-final etagA = responseA.headers['etag'];
-
-// Client B fetches user (same ETag)
-final responseB = await client.get('/users/123');
-final etagB = responseB.headers['etag'];
-
-// Client A's update completes successfully
-await client.put(
-  '/users/123',
-  headers: {'If-Match': etagA},
-  body: updatedDataA,
-);
-
-// Client B's later update is rejected (stale ETag)
-final responseBUpdate = await client.put(
-  '/users/123',
-  headers: {'If-Match': etagB},  // Stale!
-  body: updatedDataB,
-);
-// Returns: 412 Precondition Failed
-
-// Client B fetches latest and retries
-final latestResponse = await client.get('/users/123');
-final latestETag = latestResponse.headers['etag'];
-await client.put(
-  '/users/123',
-  headers: {'If-Match': latestETag},
-  body: mergedData,
-);
-```
-
-See [example/etag_concurrency_example.dart](example/etag_concurrency_example.dart) for a complete working example.
+Run `dart run etag_concurrency_example.dart` from the example directory for a
+self-contained two-writer HTTP demonstration. See
+[conditional-write semantics](../../docs/CONDITIONAL_WRITES.md) for backend
+transaction, topology, and uncertainty boundaries.
 
 ## Complete Example
 
@@ -746,7 +651,7 @@ class CrudResource<T extends AggregateRoot, TClaims> {
     int defaultSkip = 0,
     int defaultTake = 50,
     int maxTake = 100,
-    ETagStrategy etagStrategy = ETagStrategy.timestamp,
+    bool requirePrecondition = false,
   });
 }
 ```
@@ -763,7 +668,7 @@ class CrudResource<T extends AggregateRoot, TClaims> {
 - `defaultSkip` - Default skip value for pagination (default: 0)
 - `defaultTake` - Default take value for pagination (default: 50)
 - `maxTake` - Maximum allowed take value (default: 100)
-- `etagStrategy` - Strategy for generating ETags (default: timestamp)
+- `requirePrecondition` - Require conditions on PUT/DELETE (default: false)
 - `queryHandlers` - Map of query parameter names to handler functions
 - `customExceptionHandlers` - Map of exception types to error response handlers
 - `defaultSkip` - Default skip value for pagination (default: 0)

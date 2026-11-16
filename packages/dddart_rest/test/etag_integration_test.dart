@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:dddart/dddart.dart';
@@ -47,467 +48,400 @@ class TestUserSerializer extends TestJsonSerializer<TestUser> {
   }
 }
 
-// Mock repository for testing
-class MockRepository implements Repository<TestUser, UuidValue> {
-  final Map<UuidValue, TestUser> _storage = {};
+TestUser copy(TestUser value) =>
+    TestUserSerializer().deserialize(TestUserSerializer().serialize(value));
+TestUser user(String name, [UuidValue? id]) =>
+    TestUser(name: name, email: 'a@example.com', id: id);
+Request put(TestUser value, Map<String, String> headers) => Request(
+      'PUT',
+      Uri.parse('http://localhost/users/${value.id}'),
+      headers: {'content-type': 'application/json', ...headers},
+      body: TestUserSerializer().serialize(value),
+    );
 
+class TestRepository
+    extends InMemoryConditionalRepository<TestUser, UuidValue> {
+  TestRepository({super.store, super.eventPublisher}) : super(clone: copy);
+  Future<void> Function()? barrier;
+  Exception? failure;
   @override
-  Future<TestUser> getById(UuidValue id) async {
-    final user = _storage[id];
-    if (user == null) {
-      throw RepositoryException(
-        'User with ID $id not found',
-        type: RepositoryExceptionType.notFound,
-      );
-    }
-    return user;
+  Future<String> saveConditional(
+    TestUser aggregate, {
+    required ExpectedRevision expected,
+  }) async {
+    await barrier?.call();
+    if (failure != null) throw failure!;
+    return super.saveConditional(aggregate, expected: expected);
   }
+}
 
+class Changed extends DomainEvent<UuidValue> {
+  Changed(UuidValue id) : super(aggregateId: id);
+}
+
+class RaisingSerializer extends TestUserSerializer {
+  final candidates = <TestUser>[];
   @override
-  Future<void> save(TestUser aggregate) async {
-    _storage[aggregate.id] = aggregate;
+  TestUser deserialize(String data, [dynamic config]) {
+    final value = super.deserialize(data, config)
+      ..raiseEvent(Changed(UuidValue.generate()));
+    candidates.add(value);
+    return value;
   }
+}
 
+class Publisher implements EventPublisher {
+  final events = <DomainEvent<Identity>>[];
   @override
-  Future<void> deleteById(UuidValue id) async {
-    if (!_storage.containsKey(id)) {
-      throw RepositoryException(
-        'User with ID $id not found',
-        type: RepositoryExceptionType.notFound,
-      );
-    }
-    _storage.remove(id);
-  }
-
-  void clear() {
-    _storage.clear();
+  Future<bool> publish(DomainEvent<Identity> event) async {
+    events.add(event);
+    return true;
   }
 }
 
 void main() {
-  group('ETag Integration Tests', () {
-    late MockRepository repository;
-    late CrudResource<TestUser, UuidValue, dynamic> resource;
-    late TestUser testUser;
+  late TestRepository repository;
+  late CrudResource<TestUser, UuidValue, void> resource;
+  late TestUser original;
+  late String etag;
+  setUp(() async {
+    repository = TestRepository();
+    resource = CrudResource(
+      path: '/users',
+      repository: repository,
+      serializer: TestUserSerializer(),
+    );
+    original = user('original');
+    await repository.save(original);
+    final response = await resource.handleGetById(
+      Request('GET', Uri.parse('http://localhost/users/${original.id}')),
+      original.id.uuid,
+    );
+    etag = response.headers['etag']!;
+    expect(
+      RevisionETag.tryDecode(etag),
+      (await repository.getVersioned(original.id)).revision,
+    );
+  });
 
-    setUp(() {
-      repository = MockRepository();
-      resource = CrudResource<TestUser, UuidValue, dynamic>(
-        path: '/users',
-        repository: repository,
-        serializer: TestUserSerializer(),
-      );
-
-      testUser = TestUser(
-        id: UuidValue.fromString('123e4567-e89b-12d3-a456-426614174000'),
-        name: 'John Doe',
-        email: 'john@example.com',
-        createdAt: DateTime.utc(2024, 1, 15, 10, 30),
-        updatedAt: DateTime.utc(2024, 1, 15, 10, 30),
-      );
-    });
-
-    group('GET requests', () {
-      test('includes ETag header in response', () async {
-        await repository.save(testUser);
-
-        final request = Request(
-          'GET',
-          Uri.parse('http://localhost/users/${testUser.id}'),
-        );
-
-        final response =
-            await resource.handleGetById(request, testUser.id.toString());
-
-        expect(response.statusCode, equals(200));
-        expect(response.headers['etag'], isNotNull);
-        expect(response.headers['etag'], equals('"2024-01-15T10:30:00.000Z"'));
-      });
-
-      test('ETag changes when aggregate is updated', () async {
-        await repository.save(testUser);
-
-        final request1 = Request(
-          'GET',
-          Uri.parse('http://localhost/users/${testUser.id}'),
-        );
-        final response1 =
-            await resource.handleGetById(request1, testUser.id.toString());
-        final etag1 = response1.headers['etag'];
-
-        // Update the user
-        final updatedUser = TestUser(
-          id: testUser.id,
-          name: 'Jane Doe',
-          email: testUser.email,
-          createdAt: testUser.createdAt,
-          updatedAt: DateTime.utc(2024, 1, 15, 11),
-        );
-        await repository.save(updatedUser);
-
-        final request2 = Request(
-          'GET',
-          Uri.parse('http://localhost/users/${testUser.id}'),
-        );
-        final response2 =
-            await resource.handleGetById(request2, testUser.id.toString());
-        final etag2 = response2.headers['etag'];
-
-        expect(etag1, isNot(equals(etag2)));
-      });
-    });
-
-    group('POST requests', () {
-      test('includes ETag header in response', () async {
-        final requestBody = jsonEncode({
-          'id': testUser.id.toString(),
-          'name': testUser.name,
-          'email': testUser.email,
-          'createdAt': testUser.createdAt.toIso8601String(),
-          'updatedAt': testUser.updatedAt.toIso8601String(),
-        });
-
-        final request = Request(
+  test('POST honors explicit conditions without downgrading to ordinary save',
+      () async {
+    Request post(TestUser value, String condition) => Request(
           'POST',
           Uri.parse('http://localhost/users'),
-          headers: {'content-type': 'application/json'},
-          body: requestBody,
+          headers: {
+            'content-type': 'application/json',
+            'if-none-match': condition,
+          },
+          body: TestUserSerializer().serialize(value),
         );
+    expect(
+      (await resource.handleCreate(post(user('overwrite', original.id), '*')))
+          .statusCode,
+      412,
+    );
+    expect((await repository.getById(original.id)).name, 'original');
+    final fresh = user('created');
+    final response = await resource.handleCreate(post(fresh, '*'));
+    expect(response.statusCode, 201);
+    expect(
+      RevisionETag.tryDecode(response.headers['etag']!),
+      (await repository.getVersioned(fresh.id)).revision,
+    );
+  });
 
-        final response = await resource.handleCreate(request);
+  test('two independent handlers at one revision commit exactly one candidate',
+      () async {
+    final store = InMemoryConditionalStore<TestUser, UuidValue>();
+    final publisher = Publisher();
+    final first = TestRepository(store: store, eventPublisher: publisher);
+    final second = TestRepository(store: store, eventPublisher: publisher);
+    await first.save(original);
+    final revision = (await first.getVersioned(original.id)).revision;
+    final serializer = RaisingSerializer();
+    final one = CrudResource<TestUser, UuidValue, void>(
+      path: '/users',
+      repository: first,
+      serializer: serializer,
+    );
+    final two = CrudResource<TestUser, UuidValue, void>(
+      path: '/users',
+      repository: second,
+      serializer: serializer,
+    );
+    var entered = 0;
+    final release = Completer<void>();
+    Future<void> barrier() async {
+      if (++entered == 2) release.complete();
+      await release.future;
+    }
 
-        expect(response.statusCode, equals(201));
-        expect(response.headers['etag'], isNotNull);
-      });
+    first.barrier = barrier;
+    second.barrier = barrier;
+    final tag = RevisionETag.encode(revision);
+    final responses = await Future.wait([
+      one.handleUpdate(
+        put(user('one', original.id), {'if-match': tag}),
+        original.id.uuid,
+      ),
+      two.handleUpdate(
+        put(user('two', original.id), {'if-match': tag}),
+        original.id.uuid,
+      ),
+    ]);
+    expect(responses.map((r) => r.statusCode), unorderedEquals([200, 412]));
+    final winner = responses.singleWhere((r) => r.statusCode == 200);
+    final snapshot = await first.getVersioned(original.id);
+    expect(
+      TestUserSerializer().deserialize(await winner.readAsString()).name,
+      snapshot.aggregate.name,
+    );
+    expect(RevisionETag.tryDecode(winner.headers['etag']!), snapshot.revision);
+    expect(publisher.events, hasLength(1));
+    expect(
+      serializer.candidates.map((a) => a.getUncommittedEvents().length),
+      unorderedEquals([0, 1]),
+    );
+    final loser = responses.singleWhere((r) => r.statusCode == 412);
+    expect(loser.headers['etag'], isNull);
+    expect(jsonDecode(await loser.readAsString())['status'], 412);
+  });
+
+  for (final shape in ['single', 'list', 'mixed weak', 'empty members']) {
+    test('strong $shape condition reaches an atomic write', () async {
+      final header = switch (shape) {
+        'list' => '${RevisionETag.encode('other')}, $etag',
+        'mixed weak' => 'W/"anything", $etag',
+        'empty members' => ', ,$etag,,',
+        _ => etag,
+      };
+      final response = await resource.handleUpdate(
+        put(user('next', original.id), {'if-match': header}),
+        original.id.uuid,
+      );
+      expect(response.statusCode, 200);
+      expect(response.headers['etag'], isNot(etag));
     });
-
-    group('PUT requests without If-Match', () {
-      test('updates successfully without ETag validation', () async {
-        await repository.save(testUser);
-
-        final updatedData = jsonEncode({
-          'id': testUser.id.toString(),
-          'name': 'Jane Doe',
-          'email': testUser.email,
-          'createdAt': testUser.createdAt.toIso8601String(),
-          'updatedAt': DateTime.utc(2024, 1, 15, 11).toIso8601String(),
-        });
-
-        final request = Request(
-          'PUT',
-          Uri.parse('http://localhost/users/${testUser.id}'),
-          headers: {'content-type': 'application/json'},
-          body: updatedData,
-        );
-
-        final response =
-            await resource.handleUpdate(request, testUser.id.toString());
-
-        expect(response.statusCode, equals(200));
-        expect(response.headers['etag'], isNotNull);
-      });
-
-      test('includes ETag in response', () async {
-        await repository.save(testUser);
-
-        final updatedData = jsonEncode({
-          'id': testUser.id.toString(),
-          'name': 'Jane Doe',
-          'email': testUser.email,
-          'createdAt': testUser.createdAt.toIso8601String(),
-          'updatedAt': DateTime.utc(2024, 1, 15, 11).toIso8601String(),
-        });
-
-        final request = Request(
-          'PUT',
-          Uri.parse('http://localhost/users/${testUser.id}'),
-          headers: {'content-type': 'application/json'},
-          body: updatedData,
-        );
-
-        final response =
-            await resource.handleUpdate(request, testUser.id.toString());
-
-        expect(response.headers['etag'], equals('"2024-01-15T11:00:00.000Z"'));
-      });
+  }
+  for (final entry in <String, int>{
+    '"unknown"': 412,
+    'W/"unknown"': 412,
+    '*': 501,
+    '': 400,
+    'unquoted': 400,
+    '"unterminated': 400,
+    '"a" "b"': 400,
+    '*, "a"': 400,
+    'w/"a"': 400,
+    '"a b"': 400,
+    ',,': 400,
+  }.entries) {
+    test('If-Match ${entry.key} fails closed with ${entry.value}', () async {
+      final response = await resource.handleUpdate(
+        put(user('rejected', original.id), {'if-match': entry.key}),
+        original.id.uuid,
+      );
+      expect(response.statusCode, entry.value);
+      expect((await repository.getById(original.id)).name, 'original');
     });
-
-    group('PUT requests with If-Match', () {
-      test('succeeds when ETag matches', () async {
-        await repository.save(testUser);
-
-        const currentETag = '"2024-01-15T10:30:00.000Z"';
-
-        final updatedData = jsonEncode({
-          'id': testUser.id.toString(),
-          'name': 'Jane Doe',
-          'email': testUser.email,
-          'createdAt': testUser.createdAt.toIso8601String(),
-          'updatedAt': DateTime.utc(2024, 1, 15, 11).toIso8601String(),
-        });
-
-        final request = Request(
-          'PUT',
-          Uri.parse('http://localhost/users/${testUser.id}'),
-          headers: {
-            'content-type': 'application/json',
-            'if-match': currentETag,
-          },
-          body: updatedData,
-        );
-
-        final response =
-            await resource.handleUpdate(request, testUser.id.toString());
-
-        expect(response.statusCode, equals(200));
-        final body = jsonDecode(await response.readAsString());
-        expect(body['name'], equals('Jane Doe'));
-      });
-
-      test('returns 412 when ETag does not match', () async {
-        await repository.save(testUser);
-
-        const wrongETag = '"2024-01-15T09:00:00.000Z"';
-
-        final updatedData = jsonEncode({
-          'id': testUser.id.toString(),
-          'name': 'Jane Doe',
-          'email': testUser.email,
-          'createdAt': testUser.createdAt.toIso8601String(),
-          'updatedAt': DateTime.utc(2024, 1, 15, 11).toIso8601String(),
-        });
-
-        final request = Request(
-          'PUT',
-          Uri.parse('http://localhost/users/${testUser.id}'),
-          headers: {
-            'content-type': 'application/json',
-            'if-match': wrongETag,
-          },
-          body: updatedData,
-        );
-
-        final response =
-            await resource.handleUpdate(request, testUser.id.toString());
-
-        expect(response.statusCode, equals(412));
-        expect(
-          response.headers['content-type'],
-          equals('application/problem+json'),
-        );
-      });
-
-      test('412 response includes current ETag', () async {
-        await repository.save(testUser);
-
-        const wrongETag = '"2024-01-15T09:00:00.000Z"';
-
-        final updatedData = jsonEncode({
-          'id': testUser.id.toString(),
-          'name': 'Jane Doe',
-          'email': testUser.email,
-          'createdAt': testUser.createdAt.toIso8601String(),
-          'updatedAt': DateTime.utc(2024, 1, 15, 11).toIso8601String(),
-        });
-
-        final request = Request(
-          'PUT',
-          Uri.parse('http://localhost/users/${testUser.id}'),
-          headers: {
-            'content-type': 'application/json',
-            'if-match': wrongETag,
-          },
-          body: updatedData,
-        );
-
-        final response =
-            await resource.handleUpdate(request, testUser.id.toString());
-
-        expect(response.headers['etag'], equals('"2024-01-15T10:30:00.000Z"'));
-      });
-
-      test('412 response follows RFC 7807 format', () async {
-        await repository.save(testUser);
-
-        const wrongETag = '"2024-01-15T09:00:00.000Z"';
-
-        final updatedData = jsonEncode({
-          'id': testUser.id.toString(),
-          'name': 'Jane Doe',
-          'email': testUser.email,
-          'createdAt': testUser.createdAt.toIso8601String(),
-          'updatedAt': DateTime.utc(2024, 1, 15, 11).toIso8601String(),
-        });
-
-        final request = Request(
-          'PUT',
-          Uri.parse('http://localhost/users/${testUser.id}'),
-          headers: {
-            'content-type': 'application/json',
-            'if-match': wrongETag,
-          },
-          body: updatedData,
-        );
-
-        final response =
-            await resource.handleUpdate(request, testUser.id.toString());
-        final body = jsonDecode(await response.readAsString());
-
-        expect(body['type'], equals('about:blank'));
-        expect(body['title'], equals('Precondition Failed'));
-        expect(body['status'], equals(412));
-        expect(body['detail'], contains('provided ETag does not match'));
-      });
-
-      test('does not update aggregate when ETag mismatches', () async {
-        await repository.save(testUser);
-
-        const wrongETag = '"2024-01-15T09:00:00.000Z"';
-
-        final updatedData = jsonEncode({
-          'id': testUser.id.toString(),
-          'name': 'Jane Doe',
-          'email': testUser.email,
-          'createdAt': testUser.createdAt.toIso8601String(),
-          'updatedAt': DateTime.utc(2024, 1, 15, 11).toIso8601String(),
-        });
-
-        final request = Request(
-          'PUT',
-          Uri.parse('http://localhost/users/${testUser.id}'),
-          headers: {
-            'content-type': 'application/json',
-            'if-match': wrongETag,
-          },
-          body: updatedData,
-        );
-
-        await resource.handleUpdate(request, testUser.id.toString());
-
-        // Verify the user was not updated
-        final storedUser = await repository.getById(testUser.id);
-        expect(storedUser.name, equals('John Doe'));
-      });
+  }
+  test('weak version of the actual validator never matches', () async {
+    final response = await resource.handleUpdate(
+      put(user('rejected', original.id), {'if-match': 'W/$etag'}),
+      original.id.uuid,
+    );
+    expect(response.statusCode, 412);
+  });
+  test('ordinary updates invalidate old tokens and return no speculative ETag',
+      () async {
+    final response = await resource.handleUpdate(
+      put(user('ordinary', original.id), {}),
+      original.id.uuid,
+    );
+    expect(response.statusCode, 200);
+    expect(response.headers['etag'], isNull);
+    final stale = await resource.handleUpdate(
+      put(user('stale', original.id), {'if-match': etag}),
+      original.id.uuid,
+    );
+    expect(stale.statusCode, 412);
+  });
+  test('matching deleted and recreated resources cannot pass an old condition',
+      () async {
+    await repository.deleteById(original.id);
+    expect(
+      (await resource.handleUpdate(
+        put(original, {'if-match': etag}),
+        original.id.uuid,
+      ))
+          .statusCode,
+      412,
+    );
+    await repository.save(user('recreated', original.id));
+    expect(
+      (await resource.handleUpdate(
+        put(original, {'if-match': etag}),
+        original.id.uuid,
+      ))
+          .statusCode,
+      412,
+    );
+    expect((await repository.getById(original.id)).name, 'recreated');
+  });
+  test(
+      'create-if-absent and conditional delete use the same repository contract',
+      () async {
+    final created = user('new');
+    final response = await resource.handleUpdate(
+      put(created, {'if-none-match': '*'}),
+      created.id.uuid,
+    );
+    expect(response.statusCode, 201);
+    expect(
+      (await resource.handleUpdate(
+        put(created, {'if-none-match': '*'}),
+        created.id.uuid,
+      ))
+          .statusCode,
+      412,
+    );
+    final deleted = await resource.handleDelete(
+      Request(
+        'DELETE',
+        Uri.parse('http://localhost/users/${created.id}'),
+        headers: {'if-match': response.headers['etag']!},
+      ),
+      created.id.uuid,
+    );
+    expect(deleted.statusCode, 204);
+    final absent = await resource.handleDelete(
+      Request(
+        'DELETE',
+        Uri.parse('http://localhost/users/${created.id}'),
+        headers: {'if-none-match': '*'},
+      ),
+      created.id.uuid,
+    );
+    expect(absent.statusCode, 204);
+  });
+  test('conflicting or unsupported precondition headers do not write',
+      () async {
+    expect(
+      (await resource.handleUpdate(
+        put(original, {'if-match': etag, 'if-none-match': '*'}),
+        original.id.uuid,
+      ))
+          .statusCode,
+      400,
+    );
+    expect(
+      (await resource.handleUpdate(
+        put(original, {'if-none-match': etag}),
+        original.id.uuid,
+      ))
+          .statusCode,
+      501,
+    );
+  });
+  test('required preconditions reject missing conditions on update and delete',
+      () async {
+    resource = CrudResource(
+      path: '/users',
+      repository: repository,
+      serializer: TestUserSerializer(),
+      requirePrecondition: true,
+    );
+    expect(
+      (await resource.handleUpdate(put(original, {}), original.id.uuid))
+          .statusCode,
+      428,
+    );
+    expect(
+      (await resource.handleDelete(
+        Request(
+          'DELETE',
+          Uri.parse('http://localhost/users/${original.id}'),
+        ),
+        original.id.uuid,
+      ))
+          .statusCode,
+      428,
+    );
+    expect((await repository.getById(original.id)).name, 'original');
+  });
+  test(
+      'plain repositories support CRUD but never pretend to enforce a condition',
+      () async {
+    final plain = InMemoryRepository<TestUser, UuidValue>();
+    await plain.save(original);
+    final public = CrudResource<TestUser, UuidValue, void>(
+      path: '/users',
+      repository: plain,
+      serializer: TestUserSerializer(),
+    );
+    final get = await public.handleGetById(
+      Request('GET', Uri.parse('http://localhost/users/${original.id}')),
+      original.id.uuid,
+    );
+    expect(get.statusCode, 200);
+    expect(get.headers['etag'], isNull);
+    expect(
+      (await public.handleUpdate(
+        put(user('rejected', original.id), {'if-match': etag}),
+        original.id.uuid,
+      ))
+          .statusCode,
+      501,
+    );
+    expect((await plain.getById(original.id)).name, 'original');
+    expect(
+      () => CrudResource<TestUser, UuidValue, void>(
+        path: '/users',
+        repository: plain,
+        serializer: TestUserSerializer(),
+        requirePrecondition: true,
+      ),
+      throwsArgumentError,
+    );
+  });
+  for (final failure in [
+    const RepositoryException(
+      'offline',
+      type: RepositoryExceptionType.connection,
+    ),
+    const ConditionalWriteUncertainException(),
+  ]) {
+    test('storage failure ${failure.type} is not a stale conflict or success',
+        () async {
+      repository.failure = failure;
+      final response = await resource.handleUpdate(
+        put(user('rejected', original.id), {'if-match': etag}),
+        original.id.uuid,
+      );
+      expect(response.statusCode, 500);
+      expect((await repository.getById(original.id)).name, 'original');
     });
-
-    group('sequential stale update scenario', () {
-      test('rejects stale If-Match after an earlier update completes',
-          () async {
-        // Client A fetches user
-        await repository.save(testUser);
-        final getRequest = Request(
-          'GET',
-          Uri.parse('http://localhost/users/${testUser.id}'),
-        );
-        final getResponse =
-            await resource.handleGetById(getRequest, testUser.id.toString());
-        final etagForClientA = getResponse.headers['etag']!;
-
-        // Client B fetches user (gets same ETag)
-        final etagForClientB = etagForClientA;
-
-        // Client A's update completes before Client B sends its update.
-        final clientAUpdate = jsonEncode({
-          'id': testUser.id.toString(),
-          'name': 'Updated by A',
-          'email': testUser.email,
-          'createdAt': testUser.createdAt.toIso8601String(),
-          'updatedAt': DateTime.utc(2024, 1, 15, 11).toIso8601String(),
-        });
-
-        final clientARequest = Request(
-          'PUT',
-          Uri.parse('http://localhost/users/${testUser.id}'),
-          headers: {
-            'content-type': 'application/json',
-            'if-match': etagForClientA,
-          },
-          body: clientAUpdate,
-        );
-
-        final clientAResponse = await resource.handleUpdate(
-          clientARequest,
-          testUser.id.toString(),
-        );
-        expect(clientAResponse.statusCode, equals(200));
-
-        // Client B later tries to update with the now-stale ETag.
-        final clientBUpdate = jsonEncode({
-          'id': testUser.id.toString(),
-          'name': 'Updated by B',
-          'email': testUser.email,
-          'createdAt': testUser.createdAt.toIso8601String(),
-          'updatedAt': DateTime.utc(2024, 1, 15, 11, 30).toIso8601String(),
-        });
-
-        final clientBRequest = Request(
-          'PUT',
-          Uri.parse('http://localhost/users/${testUser.id}'),
-          headers: {
-            'content-type': 'application/json',
-            'if-match': etagForClientB,
-          },
-          body: clientBUpdate,
-        );
-
-        final clientBResponse = await resource.handleUpdate(
-          clientBRequest,
-          testUser.id.toString(),
-        );
-
-        // Client B should get 412 Precondition Failed
-        expect(clientBResponse.statusCode, equals(412));
-
-        // Verify Client A's update was preserved
-        final finalUser = await repository.getById(testUser.id);
-        expect(finalUser.name, equals('Updated by A'));
-      });
-    });
-
-    group('contentHash strategy', () {
-      test('generates different ETags for different content', () async {
-        final contentHashResource = CrudResource<TestUser, UuidValue, dynamic>(
-          path: '/users',
-          repository: repository,
-          serializer: TestUserSerializer(),
-          etagStrategy: ETagStrategy.contentHash,
-        );
-
-        await repository.save(testUser);
-
-        final request1 = Request(
-          'GET',
-          Uri.parse('http://localhost/users/${testUser.id}'),
-        );
-        final response1 = await contentHashResource.handleGetById(
-          request1,
-          testUser.id.toString(),
-        );
-        final etag1 = response1.headers['etag'];
-
-        // Update user with same timestamp but different content
-        final updatedUser = TestUser(
-          id: testUser.id,
-          name: 'Jane Doe',
-          email: testUser.email,
-          createdAt: testUser.createdAt,
-          updatedAt: testUser.updatedAt, // Same timestamp
-        );
-        await repository.save(updatedUser);
-
-        final request2 = Request(
-          'GET',
-          Uri.parse('http://localhost/users/${testUser.id}'),
-        );
-        final response2 = await contentHashResource.handleGetById(
-          request2,
-          testUser.id.toString(),
-        );
-        final etag2 = response2.headers['etag'];
-
-        // Content hash should detect the change even with same timestamp
-        expect(etag1, isNot(equals(etag2)));
-      });
-    });
+  }
+  test('identity and media validation happen before conditional persistence',
+      () async {
+    expect(
+      (await resource.handleUpdate(
+        put(user('wrong'), {'if-match': etag}),
+        original.id.uuid,
+      ))
+          .statusCode,
+      400,
+    );
+    final request = Request(
+      'PUT',
+      Uri.parse('http://localhost/users/${original.id}'),
+      headers: {'if-match': etag, 'content-type': 'text/plain'},
+      body: '{}',
+    );
+    expect(
+      (await resource.handleUpdate(request, original.id.uuid)).statusCode,
+      415,
+    );
+    expect((await repository.getById(original.id)).name, 'original');
   });
 }

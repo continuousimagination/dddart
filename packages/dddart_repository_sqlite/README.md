@@ -945,3 +945,24 @@ For more information, see:
 ## License
 
 MIT License - see [LICENSE](LICENSE) file for details.
+
+## Sharing a connection and nested transactions
+
+One connection queues independent asynchronous transactions, queries, writes and
+close requests. Work inside a transaction callback owns that connection until the
+database commit or rollback finishes; unrelated callers cannot join it. Always
+await connection operations and transaction callbacks.
+
+Nested transactions join the owning transaction. If a nested transaction or SQL
+statement fails, the owner becomes rollback-only even if application code catches
+the failure. The outer transaction then throws `SqlTransactionRolledBack` instead
+of committing partial work. No savepoint semantics are implied.
+
+Opening or closing from inside a transaction is rejected. A failed BEGIN, failed
+COMMIT or failed ROLLBACK invalidates/closes the connection; queued commands then
+fail until it is explicitly reopened. Work that escapes a completed transaction
+callback cannot reuse its expired ownership context. A commit error may represent
+an uncertain database outcome and must not be treated as a confirmed rollback.
+
+This connection-local scheduling does not provide stale-write protection across
+separate connections or processes; that requires conditional repository writes.

@@ -167,6 +167,12 @@ Future<void> demonstrateErrorPatterns(UserRestRepository repository) async {
         print('   Operation is not permitted');
       case RepositoryExceptionType.duplicate:
         print('   Duplicate detected, using existing');
+      case RepositoryExceptionType.conflict:
+        print('Revision changed; reload before choosing a new write.');
+      case RepositoryExceptionType.unsupported:
+        print('The repository does not support this conditional operation.');
+      case RepositoryExceptionType.uncertain:
+        print('Write outcome is uncertain; reconcile before retrying.');
       case RepositoryExceptionType.unknown:
         print('   Unknown error: ${e.message}');
       case RepositoryExceptionType.constraint:

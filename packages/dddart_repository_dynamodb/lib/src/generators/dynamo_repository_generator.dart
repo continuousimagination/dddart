@@ -81,7 +81,14 @@ class DynamoRepositoryGenerator
 
     // Analyze interface to determine if abstract base is needed
     final interfaceMethods = _getInterfaceMethods(customInterface);
-    final baseRepositoryMethods = {'getById', 'save', 'deleteById'};
+    final baseRepositoryMethods = {
+      'getById',
+      'save',
+      'deleteById',
+      'getVersioned',
+      'saveConditional',
+      'deleteConditional',
+    };
     final objectMethods = {
       'toString',
       'hashCode',
@@ -232,7 +239,7 @@ class DynamoRepositoryGenerator
 
   /// Converts an item using the registered key and structural JSON codecs.
   $className fromItem(Map<String, AttributeValue> item) {
-    final json = AttributeValueConverter.attributeMapToJsonMap(item);
+    final json = AttributeValueConverter.attributeMapToJsonMap(item)..remove('__dddart_revision');
     final key = json['id'];
     if (key is! String) {
       throw const DeserializationException('Expected string DynamoDB identity key');
@@ -252,6 +259,7 @@ class DynamoRepositoryGenerator
     try {
       final response = await _connection.client.getItem(
         tableName: tableName,
+        consistentRead: true,
         key: {'id': AttributeValue(s: key)},
       );
       
@@ -275,68 +283,92 @@ class DynamoRepositoryGenerator
   }''';
   }
 
-  /// Generates the save method implementation.
-  String _generateSaveMethod(String className, String identityType) {
-    return '''
+  String _generateVersionedMethod(String className, String identityType) => '''
+  @override
+  Future<VersionedAggregate<$className, $identityType>> getVersioned($identityType id) async {
+    final key = encodeDynamoIdentityKey<$identityType>(_identityCodecs, id);
+    try {
+      final response = await _connection.client.getItem(tableName: tableName,
+        key: {'id': AttributeValue(s: key)}, consistentRead: true);
+      final item = response.item;
+      if (item == null || item.isEmpty) throw RepositoryException('$className with ID \$id not found', type: RepositoryExceptionType.notFound);
+      final aggregate = fromItem(item);
+      if (aggregate.id != id) throw const DeserializationException('Stored identity does not match requested key');
+      return VersionedAggregate(aggregate, item['__dddart_revision']!.s!);
+    } on RepositoryException { rethrow; }
+    catch (error) { throw _mapDynamoException(error, 'getVersioned'); }
+  }
+''';
+
+  String _generateSaveMethod(String className, String identityType) => '''
   @override
   Future<void> save($className aggregate) => saveWithEvents(
     aggregate: aggregate,
-    persist: () => _saveAggregate(aggregate),
+    persist: () async { await _saveAggregate(aggregate); },
     publisher: eventPublisher,
   );
 
-  Future<void> _saveAggregate($className aggregate) async {
-    final key = encodeDynamoIdentityKey<$identityType>(_identityCodecs, aggregate.id);
-    try {
-      final json = _serializer.toJson(aggregate);
-      json['id'] = key;
-      
-      // Convert JSON to DynamoDB AttributeValue map
-      final item = AttributeValueConverter.jsonMapToAttributeMap(json);
-      
-      // Upsert operation using PutItem
-      await _connection.client.putItem(
-        tableName: tableName,
-        item: item,
-      );
-    } catch (e) {
-      throw _mapDynamoException(e, 'save');
-    }
-  }''';
+  @override
+  Future<String> saveConditional($className aggregate, {required ExpectedRevision expected}) async {
+    validateExpectedRevision(expected);
+    late String revision;
+    await saveWithEvents(
+      aggregate: aggregate,
+      persist: () async { revision = await _saveAggregate(aggregate, expected: expected); },
+      publisher: eventPublisher,
+    );
+    return revision;
   }
 
-  /// Generates the deleteById method implementation.
-  String _generateDeleteByIdMethod(String className, String identityType) {
-    return '''
+  Future<String> _saveAggregate($className aggregate, {ExpectedRevision? expected}) async {
+    final key = encodeDynamoIdentityKey<$identityType>(_identityCodecs, aggregate.id);
+    final json = _serializer.toJson(aggregate);
+    final revision = UuidValue.generate().uuid;
+    json['id'] = key;
+    json['__dddart_revision'] = revision;
+    final item = AttributeValueConverter.jsonMapToAttributeMap(json);
+    try {
+      await _connection.client.putItem(
+        tableName: tableName, item: item,
+        conditionExpression: expected == null ? null : expected.isAbsent ? 'attribute_not_exists(#id)' : '#revision = :expected',
+        expressionAttributeNames: expected == null ? null : expected.isAbsent ? {'#id': 'id'} : {'#revision': '__dddart_revision'},
+        expressionAttributeValues: expected == null || expected.isAbsent ? null : {':expected': AttributeValue(s: expected.revision)},
+      );
+      return revision;
+    } on ConditionalCheckFailedException {
+      if (expected != null) throw RevisionConflictException(aggregate.id, expected);
+      rethrow;
+    } on ResourceNotFoundException catch (error) { throw _mapDynamoException(error, 'save'); }
+    catch (error) { throw ConditionalWriteUncertainException(cause: error); }
+  }
+''';
+
+  String _generateDeleteByIdMethod(String className, String identityType) => '''
   @override
-  Future<void> deleteById($identityType id) async {
+  Future<void> deleteById($identityType id) => _deleteAggregate(id);
+
+  @override
+  Future<void> deleteConditional($identityType id, {required ExpectedRevision expected}) async {
+    validateExpectedRevision(expected);
+    await _deleteAggregate(id, expected: expected);
+  }
+
+  Future<void> _deleteAggregate($identityType id, {ExpectedRevision? expected}) async {
     final key = encodeDynamoIdentityKey<$identityType>(_identityCodecs, id);
     try {
-      // First check if item exists
-      final getResponse = await _connection.client.getItem(
-        tableName: tableName,
-        key: {'id': AttributeValue(s: key)},
-      );
-      
-      if (getResponse.item == null || getResponse.item!.isEmpty) {
-        throw RepositoryException(
-          '$className with ID \$id not found',
-          type: RepositoryExceptionType.notFound,
-        );
-      }
-      
-      // Delete the item
       await _connection.client.deleteItem(
-        tableName: tableName,
-        key: {'id': AttributeValue(s: key)},
+        tableName: tableName, key: {'id': AttributeValue(s: key)},
+        conditionExpression: expected == null ? 'attribute_exists(#id)' : expected.isAbsent ? 'attribute_not_exists(#id)' : '#revision = :expected',
+        expressionAttributeNames: expected == null || expected.isAbsent ? {'#id': 'id'} : {'#revision': '__dddart_revision'},
+        expressionAttributeValues: expected == null || expected.isAbsent ? null : {':expected': AttributeValue(s: expected.revision)},
       );
-    } on RepositoryException {
-      rethrow;
-    } catch (e) {
-      throw _mapDynamoException(e, 'deleteById');
-    }
-  }''';
+    } on ConditionalCheckFailedException {
+      if (expected != null) throw RevisionConflictException(id, expected);
+      throw RepositoryException('$className with ID \$id not found', type: RepositoryExceptionType.notFound);
+    } on ResourceNotFoundException catch (error) { throw _mapDynamoException(error, 'deleteById'); }
+    catch (error) { throw ConditionalWriteUncertainException(cause: error); }
   }
+''';
 
   /// Generates the DynamoDB exception mapping helper method.
   String _generateMapDynamoExceptionMethod() {
@@ -357,10 +389,11 @@ class DynamoRepositoryGenerator
       );
     }
     
-    // Map ConditionalCheckFailedException to duplicate
-    if (errorString.contains('ConditionalCheckFailedException')) {
+    // Only actual duplicate-item failures map to duplicate.
+    // Revision conditions are handled at the conditional write call site.
+    if (errorString.contains('DuplicateItemException')) {
       return RepositoryException(
-        'Conditional check failed during $operation: $errorString',
+        'Duplicate item during $operation: $errorString',
         type: RepositoryExceptionType.duplicate,
         cause: error,
       );
@@ -521,8 +554,8 @@ Resources:
     InterfaceType? implements,
   }) {
     final interfaceClause = implements != null
-        ? 'implements ${implements.element.name}'
-        : 'implements Repository<$className, $identityType>';
+        ? 'implements ${implements.element.name}, ConditionalAggregateRepository<$className, $identityType>'
+        : 'implements Repository<$className, $identityType>, ConditionalAggregateRepository<$className, $identityType>';
 
     final buffer = StringBuffer();
 
@@ -564,6 +597,7 @@ Resources:
     buffer.writeln(_generateGetByIdMethod(className, identityType));
     buffer.writeln();
 
+    buffer.writeln(_generateVersionedMethod(className, identityType));
     buffer.writeln(_generateSaveMethod(className, identityType));
     buffer.writeln();
 
@@ -615,7 +649,7 @@ Resources:
     );
     buffer.writeln('/// the repository implementation.');
     buffer.writeln(
-      'abstract class ${className}DynamoRepositoryBase implements ${implements.element.name} {',
+      'abstract class ${className}DynamoRepositoryBase implements ${implements.element.name}, ConditionalAggregateRepository<$className, $identityType> {',
     );
 
     // Constructor
@@ -644,6 +678,7 @@ Resources:
     buffer.writeln(_generateGetByIdMethod(className, identityType));
     buffer.writeln();
 
+    buffer.writeln(_generateVersionedMethod(className, identityType));
     buffer.writeln(_generateSaveMethod(className, identityType));
     buffer.writeln();
 

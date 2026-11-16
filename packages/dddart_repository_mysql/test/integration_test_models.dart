@@ -554,7 +554,11 @@ IdentityCodecRegistry identityCodecs() => IdentityCodecRegistry()
 /// Concrete custom interface implementation preserves typed lookups.
 class NativeIssueMysqlRepositoryImpl extends NativeIssueMysqlRepositoryBase {
   /// Creates the repository with application codecs.
-  NativeIssueMysqlRepositoryImpl(super.connection, {super.identityCodecs});
+  NativeIssueMysqlRepositoryImpl(
+    super.connection, {
+    super.identityCodecs,
+    super.eventPublisher,
+  });
   @override
   Future<NativeIssue?> lookupLabel(NativeId id, {String? label}) async {
     try {
