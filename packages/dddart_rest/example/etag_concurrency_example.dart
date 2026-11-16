@@ -1,10 +1,12 @@
 // ignore_for_file: avoid_print
 
 import 'dart:convert';
+import 'dart:io' as io;
 
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/dddart_rest.dart';
 import 'package:http/http.dart' as http;
+import 'package:shelf/shelf_io.dart' as shelf_io;
 
 import 'lib/json_serializer_support.dart';
 
@@ -48,197 +50,68 @@ class UserSerializer extends ExampleJsonSerializer<User> {
   }
 }
 
-/// Example demonstrating ETag-based conditional update checks.
-///
-/// This example shows how an `If-Match` check rejects a stale update after an
-/// earlier update has completed. The ETag comparison and repository save are
-/// not atomic, so overlapping writes can both pass validation.
-///
-/// Run this example:
-/// ```bash
-/// dart run etag_concurrency_example.dart
-/// ```
-void main() async {
-  print('=== ETag Conditional Update Example ===\n');
-
-  // Create repository and server
-  final repository = InMemoryRepository<User, UuidValue>();
-  final server = HttpServer(port: 8080);
-
-  server.registerResource(
-    CrudResource<User, UuidValue, void>(
-      path: '/users',
-      repository: repository,
-      serializer: UserSerializer(),
-      etagStrategy: ETagStrategy.timestamp, // Use timestamp-based ETags
-    ),
-  );
-
-  await server.start();
-  print('Server started on http://localhost:8080\n');
-
-  try {
-    await _runConcurrencyDemo();
-  } finally {
-    await server.stop();
-    print('\nServer stopped');
-  }
-}
-
-Future<void> _runConcurrencyDemo() async {
+/// Runs concurrent edits through real HTTP and the conditional reference store.
+/// Production deployments use the same contract with a durable SQL/document adapter.
+Future<void> main() async {
+  final serializer = UserSerializer();
+  final repository = InMemoryConditionalRepository<User, UuidValue>(
+      clone: (user) => serializer.deserialize(serializer.serialize(user)));
+  final app = HttpServer()
+    ..registerResource(CrudResource<User, UuidValue, void>(
+        path: '/users', repository: repository, serializer: serializer));
+  final server = await shelf_io.serve(
+      app.buildHandler(), io.InternetAddress.loopbackIPv4, 0);
   final client = http.Client();
-
   try {
-    // Step 1: Create a user
-    print('Step 1: Creating a user...');
-    final createResponse = await client.post(
-      Uri.parse('http://localhost:8080/users'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'id': '123e4567-e89b-12d3-a456-426614174000',
-        'name': 'John Doe',
-        'email': 'john@example.com',
-        'createdAt': DateTime.now().toUtc().toIso8601String(),
-        'updatedAt': DateTime.now().toUtc().toIso8601String(),
-      }),
-    );
-
-    if (createResponse.statusCode != 201) {
-      print('Failed to create user: ${createResponse.statusCode}');
-      return;
+    final now = DateTime.now().toUtc();
+    final user = User(
+        id: UuidValue.generate(),
+        name: 'Original',
+        email: 'example@example.com',
+        createdAt: now,
+        updatedAt: now);
+    final uri = Uri.parse('http://127.0.0.1:${server.port}/users/${user.id}');
+    final created = await client.put(uri,
+        headers: {'content-type': 'application/json', 'if-none-match': '*'},
+        body: serializer.serialize(user));
+    if (created.statusCode != 201)
+      throw StateError('Create failed: ${created.statusCode}');
+    final snapshots = await Future.wait([client.get(uri), client.get(uri)]);
+    Future<http.Response> edit(int index) {
+      final changed = serializer
+          .toJson(serializer.deserialize(snapshots[index].body))
+        ..['name'] = 'Client $index';
+      return client.put(uri,
+          headers: {
+            'content-type': 'application/json',
+            'if-match': snapshots[index].headers['etag']!
+          },
+          body: jsonEncode(changed));
     }
 
-    final userId = jsonDecode(createResponse.body)['id'];
-    print('✓ User created with ID: $userId');
-    print('  ETag: ${createResponse.headers['etag']}\n');
+    final updates = await Future.wait([edit(0), edit(1)]);
+    final statuses = updates.map((response) => response.statusCode).toList()
+      ..sort();
+    if (statuses.toString() != '[200, 412]')
+      throw StateError('Expected one winner and one stale conflict: $statuses');
+    print('Concurrent edits: one committed, one returned 412.');
 
-    // Step 2: Client A fetches the user
-    print('Step 2: Client A fetches the user...');
-    final clientAGet = await client.get(
-      Uri.parse('http://localhost:8080/users/$userId'),
-    );
-    final clientAETag = clientAGet.headers['etag']!;
-    final clientAData = jsonDecode(clientAGet.body);
-    print('✓ Client A received user');
-    print('  Name: ${clientAData['name']}');
-    print('  ETag: $clientAETag\n');
-
-    // Step 3: Client B fetches the user (gets same ETag)
-    print('Step 3: Client B fetches the user...');
-    final clientBGet = await client.get(
-      Uri.parse('http://localhost:8080/users/$userId'),
-    );
-    final clientBETag = clientBGet.headers['etag']!;
-    final clientBData = jsonDecode(clientBGet.body);
-    print('✓ Client B received user');
-    print('  Name: ${clientBData['name']}');
-    print('  ETag: $clientBETag\n');
-
-    // Step 4: Client A updates the user (with If-Match header)
-    print('Step 4: Client A updates the user with If-Match header...');
-    clientAData['name'] = 'Jane Doe';
-    clientAData['updatedAt'] = DateTime.now().toUtc().toIso8601String();
-
-    final clientAUpdate = await client.put(
-      Uri.parse('http://localhost:8080/users/$userId'),
-      headers: {
-        'Content-Type': 'application/json',
-        'If-Match': clientAETag,
-      },
-      body: jsonEncode(clientAData),
-    );
-
-    if (clientAUpdate.statusCode == 200) {
-      final newETag = clientAUpdate.headers['etag']!;
-      print('✓ Client A update succeeded');
-      print('  New name: Jane Doe');
-      print('  New ETag: $newETag\n');
-    } else {
-      print('✗ Client A update failed: ${clientAUpdate.statusCode}\n');
-    }
-
-    // Step 5: Client B tries to update with stale ETag
-    print('Step 5: Client B tries to update with stale ETag...');
-    clientBData['name'] = 'John Smith';
-    clientBData['updatedAt'] = DateTime.now().toUtc().toIso8601String();
-
-    final clientBUpdate = await client.put(
-      Uri.parse('http://localhost:8080/users/$userId'),
-      headers: {
-        'Content-Type': 'application/json',
-        'If-Match': clientBETag, // Stale ETag!
-      },
-      body: jsonEncode(clientBData),
-    );
-
-    if (clientBUpdate.statusCode == 412) {
-      print('✓ Client B update rejected with 412 Precondition Failed');
-      print('  Current ETag: ${clientBUpdate.headers['etag']}');
-      final errorBody = jsonDecode(clientBUpdate.body);
-      print('  Error: ${errorBody['detail']}\n');
-    } else {
-      print('✗ Expected 412 but got: ${clientBUpdate.statusCode}\n');
-    }
-
-    // Step 6: Client B fetches latest version and retries
-    print('Step 6: Client B fetches latest version and retries...');
-    final clientBRefresh = await client.get(
-      Uri.parse('http://localhost:8080/users/$userId'),
-    );
-    final latestETag = clientBRefresh.headers['etag']!;
-    final latestData = jsonDecode(clientBRefresh.body);
-    print('✓ Client B fetched latest version');
-    print('  Current name: ${latestData['name']}');
-    print('  Latest ETag: $latestETag');
-
-    // Apply Client B's change to the latest version
-    latestData['name'] = 'Jane Smith';
-    latestData['updatedAt'] = DateTime.now().toUtc().toIso8601String();
-
-    final clientBRetry = await client.put(
-      Uri.parse('http://localhost:8080/users/$userId'),
-      headers: {
-        'Content-Type': 'application/json',
-        'If-Match': latestETag,
-      },
-      body: jsonEncode(latestData),
-    );
-
-    if (clientBRetry.statusCode == 200) {
-      print('✓ Client B retry succeeded');
-      final finalData = jsonDecode(clientBRetry.body);
-      print('  Final name: ${finalData['name']}\n');
-    } else {
-      print('✗ Client B retry failed: ${clientBRetry.statusCode}\n');
-    }
-
-    // Step 7: Demonstrate update without If-Match (backward compatible)
-    print('Step 7: Update without If-Match (backward compatible)...');
-    final noETagData = jsonDecode(clientBRetry.body);
-    noETagData['email'] = 'jane.smith@example.com';
-    noETagData['updatedAt'] = DateTime.now().toUtc().toIso8601String();
-
-    final noETagUpdate = await client.put(
-      Uri.parse('http://localhost:8080/users/$userId'),
-      headers: {'Content-Type': 'application/json'},
-      // No If-Match header
-      body: jsonEncode(noETagData),
-    );
-
-    if (noETagUpdate.statusCode == 200) {
-      print('✓ Update without If-Match succeeded (backward compatible)');
-      print(
-          '  ETag still included in response: ${noETagUpdate.headers['etag']}\n');
-    } else {
-      print('✗ Update failed: ${noETagUpdate.statusCode}\n');
-    }
-
-    print('=== Summary ===');
-    print('✓ If-Match rejected an update stale after an earlier save');
-    print('✓ 412 Precondition Failed returned when ETag mismatches');
-    print('✓ Current ETag included in 412 response for client retry');
-    print('✓ Backward compatible - If-Match header is optional');
+    // Reload and deliberately recompute after conflict. Never silently retry a
+    // stale payload with a freshly fetched token.
+    final latest = await client.get(uri);
+    final merged = serializer.toJson(serializer.deserialize(latest.body))
+      ..['name'] = 'Reviewed merge';
+    final retried = await client.put(uri,
+        headers: {
+          'content-type': 'application/json',
+          'if-match': latest.headers['etag']!
+        },
+        body: jsonEncode(merged));
+    if (retried.statusCode != 200) throw StateError('Reviewed update failed.');
+    print('Reloaded, recomputed, and committed the reviewed update.');
+    print('New revision ETag: ${retried.headers['etag']}');
   } finally {
     client.close();
+    await server.close(force: true);
   }
 }

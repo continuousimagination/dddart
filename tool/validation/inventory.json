@@ -415,8 +415,8 @@
         {
           "path": "etag_concurrency_example.dart",
           "classification": "runnable",
-          "action": "compile",
-          "reason": "HTTP concurrency demonstration requires an interactive server lifecycle."
+          "action": "run",
+          "reason": "Self-contained HTTP concurrency regression uses an ephemeral loopback port and closes its server."
         },
         {
           "path": "main.dart",

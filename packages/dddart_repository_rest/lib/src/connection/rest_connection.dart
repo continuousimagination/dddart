@@ -172,3 +172,26 @@ class RestConnection {
     client.close();
   }
 }
+
+/// Encodes a storage revision using the DDDart strong ETag wire contract.
+String encodeRestRevisionETag(String revision) {
+  validateExpectedRevision(ExpectedRevision.match(revision));
+  return '"r1.${base64Url.encode(utf8.encode(revision)).replaceAll('=', '')}"';
+}
+
+/// Decodes only canonical strong validators from the DDDart revision protocol.
+String? decodeRestRevisionETag(String? tag) {
+  if (tag == null || !tag.startsWith('"r1.') || !tag.endsWith('"')) return null;
+  try {
+    final revision = utf8.decode(
+      base64Url.decode(base64Url.normalize(tag.substring(4, tag.length - 1))),
+    );
+    return encodeRestRevisionETag(revision) == tag ? revision : null;
+  } on FormatException {
+    return null;
+    // Revision validation deliberately reports ArgumentError for invalid tokens.
+    // ignore: avoid_catching_errors
+  } on ArgumentError {
+    return null;
+  }
+}
