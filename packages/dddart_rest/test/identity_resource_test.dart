@@ -57,35 +57,17 @@ class _Auth implements AuthenticationHandler<String> {
 }
 
 class _Authorization
-    extends AuthorizationHandler<NativeIssue, NativeId, String> {
+    implements AuthorizationHandler<NativeIssue, NativeId, String> {
   NativeId? deleted;
   @override
-  Future<AuthorizationResult> authorizeCreate(
-    NativeIssue aggregate,
-    AuthenticationResult<String> authResult,
-  ) async =>
-      AuthorizationResult.allow();
-  @override
-  Future<AuthorizationResult> authorizeUpdate(
-    NativeIssue aggregate,
-    AuthenticationResult<String> authResult,
-  ) async =>
-      AuthorizationResult.allow();
-  @override
-  Future<AuthorizationResult> authorizeDelete(
-    NativeId aggregateId,
-    AuthenticationResult<String> authResult,
+  Future<AuthorizationResult> authorize(
+    AuthorizationContext<NativeIssue, NativeId, String> context,
   ) async {
-    deleted = aggregateId;
-    return AuthorizationResult.allow();
+    if (context is DeleteContext<NativeIssue, NativeId, String>) {
+      deleted = context.current.id;
+    }
+    return const AuthorizationResult.allow(scope: UnrestrictedQueryScope());
   }
-
-  @override
-  Future<AuthorizationResult> authorizeQuery(
-    Map<String, String> queryParams,
-    AuthenticationResult<String> authResult,
-  ) async =>
-      AuthorizationResult.allow();
 }
 
 void main() {
@@ -195,7 +177,10 @@ void main() {
       serializer: serializer,
       identityCodecs: codecs,
       authenticationHandler: _Auth(),
-      authorizationHandler: authorization,
+      defaultPolicy: AccessPolicy.custom(
+        authorization,
+        authentication: AuthenticationRequirement.required,
+      ),
     );
     const id = NativeId('Repo/IssueA %2F, café?x=# ');
     final issue = NativeIssue(id: id, title: 'original');

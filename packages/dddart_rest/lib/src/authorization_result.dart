@@ -1,30 +1,23 @@
-/// Result of an authorization check
-///
-/// Contains authorization status and optional error message explaining
-/// why authorization was denied.
+import 'package:dddart_rest/src/authorization_context.dart';
+
+/// An application access decision, optionally carrying a query scope.
 class AuthorizationResult {
-  /// Creates an authorization result
-  const AuthorizationResult({
-    required this.isAuthorized,
-    this.errorMessage,
-  });
+  const AuthorizationResult._(this.isAuthorized, this.scope, this.conceal);
 
-  /// Creates a successful authorization result
-  factory AuthorizationResult.allow() {
-    return const AuthorizationResult(isAuthorized: true);
-  }
+  /// Allows the operation. Collection decisions must explicitly supply [scope].
+  const AuthorizationResult.allow({QueryScope? scope})
+      : this._(true, scope, false);
 
-  /// Creates a failed authorization result with error message
-  factory AuthorizationResult.deny(String errorMessage) {
-    return AuthorizationResult(
-      isAuthorized: false,
-      errorMessage: errorMessage,
-    );
-  }
+  /// Denies access with 403, or a generic 404 to conceal resource existence.
+  const AuthorizationResult.deny({bool conceal = false})
+      : this._(false, null, conceal);
 
-  /// Whether authorization succeeded
+  /// Whether execution may proceed.
   final bool isAuthorized;
 
-  /// Error message if authorization failed
-  final String? errorMessage;
+  /// Application-owned row/count scope for an allowed collection read.
+  final QueryScope? scope;
+
+  /// Whether a denial should conceal existence.
+  final bool conceal;
 }

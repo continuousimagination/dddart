@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:dddart/dddart.dart';
+import 'package:dddart_rest/src/authorization_context.dart';
 import 'package:dddart_rest/src/crud_resource.dart';
 import 'package:dddart_rest/src/query_handler.dart';
 import 'package:shelf/shelf.dart';
@@ -69,7 +70,7 @@ Future<QueryResult<TestUser>> pagedCollectionHandler(
   Map<String, String> queryParams,
   int skip,
   int take,
-  dynamic authResult,
+  AuthorizedQuery<void> authorization,
 ) async {
   final items =
       (repository as InMemoryRepository<TestUser, UuidValue>).getAllSync();
@@ -386,7 +387,7 @@ void main() {
         Map<String, String> params,
         int skip,
         int take,
-        dynamic authResult,
+        AuthorizedQuery<void> authorization,
       ) async {
         // Return result with null totalCount
         return QueryResult<TestUser>([testUser]);
@@ -416,7 +417,7 @@ void main() {
         Map<String, String> params,
         int skip,
         int take,
-        dynamic authResult,
+        AuthorizedQuery<void> authorization,
       ) async {
         // Return empty result
         return QueryResult<TestUser>([], totalCount: 0);
