@@ -94,7 +94,14 @@ class SqliteRepositoryGenerator
 
     // Analyze interface to determine if abstract base is needed
     final interfaceMethods = _getInterfaceMethods(customInterface);
-    final baseRepositoryMethods = {'getById', 'save', 'deleteById'};
+    final baseRepositoryMethods = {
+      'getById',
+      'save',
+      'deleteById',
+      'getVersioned',
+      'saveConditional',
+      'deleteConditional',
+    };
     final objectMethods = {
       'toString',
       'hashCode',
