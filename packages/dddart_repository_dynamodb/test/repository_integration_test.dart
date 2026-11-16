@@ -391,7 +391,9 @@ void main() {
 
         try {
           final repo = _MissingTableRepository(
-              tempConnection, 'missing_${UuidValue.generate().uuid}');
+            tempConnection,
+            'missing_${UuidValue.generate().uuid}',
+          );
           final user = TestUser(
             name: 'Test',
             email: 'test@example.com',
