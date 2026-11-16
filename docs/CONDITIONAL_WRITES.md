@@ -79,3 +79,42 @@ to the database file and directory. MySQL requires InnoDB tables, `CREATE` and
 and `DELETE` for repository operations. 1.0 is the first schema
 compatibility baseline; these changes do not provide upgrades for prerelease
 root tables that lack the revision column.
+
+## Document adapters
+
+Generated MongoDB and DynamoDB repositories implement the same single-aggregate
+capability. A document/item contains domain fields plus the reserved
+`__dddart_revision` infrastructure field, which is excluded from domain JSON.
+Every ordinary save initializes/replaces that revision. Provision fresh storage;
+no conversion of prerelease documents is required.
+
+MongoDB uses the exact binary identity key plus a revision filter for replacement
+and deletion. A conditional replacement never upserts. Create-if-absent uses the
+unique `_id` index; a violation of another unique index remains a duplicate-key
+error. Revision comparisons use simple collation even when a collection has a
+case-insensitive default. Versioned reads explicitly use the primary and return
+one complete document. An absent delete is a primary-side no-op assertion (using
+`$setOnInsert` with upsert disabled), so it cannot remove a competing creation.
+Writes request majority acknowledgment and journaling with a five-second write
+concern timeout. Returned write errors are checked, including acknowledgment
+failures that the driver does not throw. A standalone MongoDB server suffices;
+no multi-document transactions or replica-set-only feature is used. A replica
+set retains its normal majority availability requirements. Repository credentials
+need find, insert, update, and remove permissions for their collections.
+
+DynamoDB uses native `PutItem`/`DeleteItem` condition expressions and replaces the
+revision in the same item write. Versioned reads (and ordinary identity reads)
+request strong consistency. Conditions work within one table in one region;
+this does not establish cross-region Global Tables conflict resolution. Tables
+use the existing string `id` partition key; no extra index is required. Runtime
+credentials need `GetItem`, `PutItem`, and `DeleteItem`; schema provisioning also
+needs `CreateTable` (plus normal deployment/readiness permissions).
+
+A confirmed condition mismatch is `RevisionConflictException`, including a
+missing record when matching a prior revision. A failed network response, server
+outcome that cannot be established, or missing write acknowledgment is treated
+conservatively as `ConditionalWriteUncertainException`. Neither adapter retries
+the write automatically or acknowledges pending events after an uncertain result.
+Applications must reload/reconcile before deciding whether to issue a new write.
+No multi-record commits, durable operation receipts, or distributed outbox are
+claimed by these adapters.

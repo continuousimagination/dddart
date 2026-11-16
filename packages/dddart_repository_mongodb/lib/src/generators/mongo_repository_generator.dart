@@ -83,7 +83,14 @@ class MongoRepositoryGenerator
 
     // Task 4.4: Analyze interface to determine if abstract base is needed
     final interfaceMethods = _getInterfaceMethods(customInterface);
-    final baseRepositoryMethods = {'getById', 'save', 'deleteById'};
+    final baseRepositoryMethods = {
+      'getById',
+      'save',
+      'deleteById',
+      'getVersioned',
+      'saveConditional',
+      'deleteConditional',
+    };
     final objectMethods = {
       'toString',
       'hashCode',
@@ -240,8 +247,8 @@ class MongoRepositoryGenerator
     InterfaceType? implements,
   }) {
     final interfaceClause = implements != null
-        ? 'implements ${implements.element.name}'
-        : 'implements Repository<$className, $identityType>';
+        ? 'implements ${implements.element.name}, ConditionalAggregateRepository<$className, $identityType>'
+        : 'implements Repository<$className, $identityType>, ConditionalAggregateRepository<$className, $identityType>';
 
     final buffer = StringBuffer();
 
@@ -289,6 +296,7 @@ class MongoRepositoryGenerator
     buffer.writeln();
 
     // Task 5.3: Generate save method
+    buffer.writeln(_generateVersionedMethod(className, identityType));
     buffer.writeln(_generateSaveMethod(className, identityType));
     buffer.writeln();
 
@@ -311,7 +319,7 @@ class MongoRepositoryGenerator
 
   /// Converts a stored document, retaining its structural identity.
   $className fromDocument(Map<String, dynamic> document) {
-    final json = Map<String, dynamic>.from(document)..remove('_id');
+    final json = Map<String, dynamic>.from(document)..remove('_id')..remove('__dddart_revision');
     return _serializer.fromJson(json);
   }
 ''';
@@ -338,6 +346,8 @@ class MongoRepositoryGenerator
       return aggregate;
     } on RepositoryException {
       rethrow;
+    } on MongoDartError catch (e) {
+      throw _mapMongoException(e, 'getById');
     } catch (e) {
       throw RepositoryException(
         'Failed to retrieve $className with ID \$id: \$e',
@@ -348,70 +358,107 @@ class MongoRepositoryGenerator
   }''';
   }
 
-  /// Generates the save method implementation.
-  String _generateSaveMethod(String className, String identityType) {
-    return '''
+  String _generateVersionedMethod(String className, String identityType) => '''
+  @override
+  Future<VersionedAggregate<$className, $identityType>> getVersioned($identityType id) async {
+    final key = encodeMongoIdentityKey<$identityType>(_identityCodecs, id);
+    try {
+      final doc = await _collection.modernFindOne(selector: where.eq('_id', key), rawOptions: const {'readPreference': {'mode': 'primary'}});
+      if (doc == null) throw RepositoryException('$className with ID \$id not found', type: RepositoryExceptionType.notFound);
+      final aggregate = fromDocument(doc);
+      if (aggregate.id != id) throw const DeserializationException('Stored identity does not match requested key');
+      return VersionedAggregate(aggregate, doc['__dddart_revision'] as String);
+    } on RepositoryException { rethrow; }
+    catch (error) { throw RepositoryException('Failed versioned read: \$error', cause: error); }
+  }
+''';
+
+  String _generateSaveMethod(String className, String identityType) => '''
   @override
   Future<void> save($className aggregate) => saveWithEvents(
     aggregate: aggregate,
-    persist: () => _saveAggregate(aggregate),
+    persist: () async { await _saveAggregate(aggregate); },
     publisher: eventPublisher,
   );
 
-  Future<void> _saveAggregate($className aggregate) async {
-    final key = encodeMongoIdentityKey<$identityType>(_identityCodecs, aggregate.id);
-    try {
-      final doc = _serializer.toJson(aggregate);
-      
-      // Preserve structural JSON identity separately from the exact binary key.
-      doc['_id'] = key;
-      
-      // Upsert operation
-      await _collection.replaceOne(
-        where.eq('_id', key),
-        doc,
-        upsert: true,
-      );
-    } on MongoDartError catch (e) {
-      throw _mapMongoException(e, 'save');
-    } catch (e) {
-      throw RepositoryException(
-        'Failed to save $className: \$e',
-        type: RepositoryExceptionType.unknown,
-        cause: e,
-      );
-    }
-  }''';
+  @override
+  Future<String> saveConditional($className aggregate, {required ExpectedRevision expected}) async {
+    validateExpectedRevision(expected);
+    late String revision;
+    await saveWithEvents(
+      aggregate: aggregate,
+      persist: () async { revision = await _saveAggregate(aggregate, expected: expected); },
+      publisher: eventPublisher,
+    );
+    return revision;
   }
 
-  /// Generates the deleteById method implementation.
-  String _generateDeleteByIdMethod(String className, String identityType) {
-    return '''
+  Future<String> _saveAggregate($className aggregate, {ExpectedRevision? expected}) async {
+    final key = encodeMongoIdentityKey<$identityType>(_identityCodecs, aggregate.id);
+    final doc = _serializer.toJson(aggregate);
+    final revision = UuidValue.generate().uuid;
+    doc['_id'] = key;
+    doc['__dddart_revision'] = revision;
+    const concern = WriteConcern(w: 'majority', wtimeout: 5000, fsync: false);
+    try {
+      if (expected?.isAbsent ?? false) {
+        final result = await _collection.insertOne(doc, writeConcern: concern);
+        validateMongoWriteResult(result, id: aggregate.id, expected: expected);
+        if (result.nInserted != 1) throw ConditionalWriteUncertainException(cause: result);
+      } else {
+        final filter = where.eq('_id', key);
+        if (expected != null) filter.eq('__dddart_revision', expected.revision);
+        final result = await _collection.replaceOne(filter, doc,
+          upsert: expected == null, writeConcern: concern, collation: CollationOptions('simple'));
+        validateMongoWriteResult(result, id: aggregate.id, expected: expected);
+        if (expected != null && result.nMatched == 0) throw RevisionConflictException(aggregate.id, expected);
+        if (result.nMatched + result.nUpserted < 1) throw ConditionalWriteUncertainException(cause: result);
+      }
+      return revision;
+    } on RepositoryException { rethrow; }
+    catch (error) { throw ConditionalWriteUncertainException(cause: error); }
+  }
+''';
+
+  String _generateDeleteByIdMethod(String className, String identityType) => '''
   @override
-  Future<void> deleteById($identityType id) async {
+  Future<void> deleteById($identityType id) => _deleteAggregate(id);
+
+  @override
+  Future<void> deleteConditional($identityType id, {required ExpectedRevision expected}) async {
+    validateExpectedRevision(expected);
+    await _deleteAggregate(id, expected: expected);
+  }
+
+  Future<void> _deleteAggregate($identityType id, {ExpectedRevision? expected}) async {
     final key = encodeMongoIdentityKey<$identityType>(_identityCodecs, id);
     try {
-      final result = await _collection.deleteOne(where.eq('_id', key));
-      
-      if (result.nRemoved == 0) {
-        throw RepositoryException(
-          '$className with ID \$id not found',
-          type: RepositoryExceptionType.notFound,
+      if (expected?.isAbsent ?? false) {
+        // A primary-side no-op asserts absence without deleting a competing record.
+        final assertion = await _collection.modernFindAndModify(
+          query: where.eq('_id', key),
+          update: {r'\$setOnInsert': {'__dddart_revision': 'unused'}},
+          upsert: false,
+          findAndModifyOptions: FindAndModifyOptions(writeConcern: const WriteConcern(w: 'majority', wtimeout: 5000, fsync: false)),
         );
+        if (!assertion.success || assertion.serverResponse.containsKey('writeConcernError')) throw ConditionalWriteUncertainException(cause: assertion);
+        if (assertion.value != null) throw RevisionConflictException(id, expected!);
+        return;
       }
-    } on RepositoryException {
-      rethrow;
-    } on MongoDartError catch (e) {
-      throw _mapMongoException(e, 'deleteById');
-    } catch (e) {
-      throw RepositoryException(
-        'Failed to delete $className with ID \$id: \$e',
-        type: RepositoryExceptionType.unknown,
-        cause: e,
-      );
-    }
-  }''';
+      final filter = where.eq('_id', key);
+      if (expected != null) filter.eq('__dddart_revision', expected.revision);
+      final result = await _collection.deleteOne(filter,
+        writeConcern: const WriteConcern(w: 'majority', wtimeout: 5000, fsync: false),
+        collation: CollationOptions('simple'));
+      validateMongoWriteResult(result, id: id, expected: expected);
+      if (result.nRemoved == 0) {
+        if (expected != null) throw RevisionConflictException(id, expected);
+        throw RepositoryException('$className with ID \$id not found', type: RepositoryExceptionType.notFound);
+      }
+    } on RepositoryException { rethrow; }
+    catch (error) { throw ConditionalWriteUncertainException(cause: error); }
   }
+''';
 
   /// Generates the MongoDB exception mapping helper method.
   String _generateMapMongoExceptionMethod() {
@@ -487,7 +534,7 @@ class MongoRepositoryGenerator
     );
     buffer.writeln('/// the repository implementation.');
     buffer.writeln(
-      'abstract class ${className}MongoRepositoryBase implements ${implements.element.name} {',
+      'abstract class ${className}MongoRepositoryBase implements ${implements.element.name}, ConditionalAggregateRepository<$className, $identityType> {',
     );
 
     // Task 6.1: Constructor
@@ -522,6 +569,7 @@ class MongoRepositoryGenerator
     buffer.writeln(_generateGetByIdMethod(className, identityType));
     buffer.writeln();
 
+    buffer.writeln(_generateVersionedMethod(className, identityType));
     buffer.writeln(_generateSaveMethod(className, identityType));
     buffer.writeln();
 
