@@ -74,8 +74,9 @@ Future<void> main() async {
     final created = await client.put(uri,
         headers: {'content-type': 'application/json', 'if-none-match': '*'},
         body: serializer.serialize(user));
-    if (created.statusCode != 201)
+    if (created.statusCode != 201) {
       throw StateError('Create failed: ${created.statusCode}');
+    }
     final snapshots = await Future.wait([client.get(uri), client.get(uri)]);
     Future<http.Response> edit(int index) {
       final changed = serializer
@@ -92,8 +93,9 @@ Future<void> main() async {
     final updates = await Future.wait([edit(0), edit(1)]);
     final statuses = updates.map((response) => response.statusCode).toList()
       ..sort();
-    if (statuses.toString() != '[200, 412]')
+    if (statuses.toString() != '[200, 412]') {
       throw StateError('Expected one winner and one stale conflict: $statuses');
+    }
     print('Concurrent edits: one committed, one returned 412.');
 
     // Reload and deliberately recompute after conflict. Never silently retry a
