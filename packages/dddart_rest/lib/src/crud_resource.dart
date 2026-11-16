@@ -244,7 +244,10 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
 
   T _policySnapshot(T value) {
     try {
-      final copy = serializer.deserialize(serializer.serialize(value));
+      // Build detached domain snapshots through the JSON value codec. The
+      // response encoder is invoked only after the access decision succeeds.
+      final copy =
+          serializer.fromJson(jsonDecode(jsonEncode(serializer.toJson(value))));
       if (identical(copy, value) || copy.id != value.id) {
         throw StateError(
           'Serializer must produce a detached identity-preserving snapshot',
@@ -336,12 +339,12 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
 
       final identity = _identityFromKey(id);
       final T aggregate;
-      String? etag;
+      String? revision;
       if (repository is VersionedRepository<T, I>) {
         final snapshot = await (repository as VersionedRepository<T, I>)
             .getVersioned(identity);
         aggregate = snapshot.aggregate;
-        etag = RevisionETag.encode(snapshot.revision);
+        revision = snapshot.revision;
       } else {
         aggregate = await repository.getById(identity);
       }
@@ -358,7 +361,7 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
       final response = _responseBuilder.ok(
         aggregate,
         serializer,
-        etag: etag,
+        etag: revision == null ? null : RevisionETag.encode(revision),
       );
       _logger.fine('GET /$path/$id - ${response.statusCode}');
       return response;
