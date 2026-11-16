@@ -390,20 +390,21 @@ void main() {
         final tempConnection = tempHelper.connect();
 
         try {
-          final repo = TestUserDynamoRepository(tempConnection);
+          final repo = _MissingTableRepository(
+              tempConnection, 'missing_${UuidValue.generate().uuid}');
           final user = TestUser(
             name: 'Test',
             email: 'test@example.com',
           );
 
           // Attempt to save to non-existent table should throw
-          expect(
-            () => repo.save(user),
+          await expectLater(
+            repo.save(user),
             throwsA(
               isA<RepositoryException>().having(
                 (e) => e.type,
                 'type',
-                RepositoryExceptionType.unknown,
+                RepositoryExceptionType.notFound,
               ),
             ),
           );
@@ -696,4 +697,10 @@ void main() {
       });
     });
   });
+}
+
+class _MissingTableRepository extends TestUserDynamoRepository {
+  _MissingTableRepository(super.connection, this.tableName);
+  @override
+  final String tableName;
 }

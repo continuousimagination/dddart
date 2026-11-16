@@ -59,9 +59,8 @@ void main() {
           );
           expect(
             mapped.message,
-            contains('Conditional check failed'),
-            reason:
-                'Iteration $i: Message should indicate conditional check failure',
+            contains('Duplicate item'),
+            reason: 'Iteration $i: Message should indicate a duplicate item',
           );
           expect(
             mapped.cause,
