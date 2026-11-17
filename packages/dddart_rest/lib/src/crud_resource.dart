@@ -220,8 +220,8 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   ///
   /// Example:
   /// ```dart
-  /// preCreate: (player, authResult) {
-  ///   return player.withOwner(authResult.claims?.sub);
+  /// preCreate: (player, caller) {
+  ///   return player.withOwner(caller.claims?.sub);
   /// }
   /// ```
   final T Function(T aggregate, Caller<TClaims> caller)? preCreate;
@@ -409,7 +409,7 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   /// Versioned repositories include a strong storage-revision ETag. Plain
   /// repositories return no validator and cannot accept conditional mutations.
   ///
-  /// If auth handler is configured, authenticates the request first.
+  /// Evaluates the selected operation's credential requirement before protected work.
   ///
   /// Parameters:
   /// - [request]: The HTTP request
@@ -425,7 +425,7 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
         return negotiationError;
       }
 
-      // Authenticate if handler is configured
+      // Resolve the selected operation's credential requirement.
       final authCheck = await _authenticate(request, CrudOperation.read);
       if (authCheck.response != null) {
         _logger.fine('GET /$path/$id - ${authCheck.response!.statusCode}');
@@ -471,8 +471,8 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   /// - One query param: looks up and invokes corresponding query handler
   /// - Multiple query params: returns 400 error
   ///
-  /// If auth handler is configured, authenticates the request first and passes
-  /// auth result to query handlers.
+  /// Evaluates the selected operation's credential requirement first and passes
+  /// the typed caller and authorized scope to query handlers.
   /// The selected collection policy runs for every request, including unfiltered reads.
   ///
   /// Parameters:
@@ -492,7 +492,7 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
         return negotiationError;
       }
 
-      // Authenticate if handler is configured
+      // Resolve the selected operation's credential requirement.
       final authCheck = await _authenticate(request, CrudOperation.query);
       if (authCheck.response != null) {
         _logger
@@ -587,7 +587,7 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   /// Versioned repositories include a strong storage-revision ETag. Plain
   /// repositories return no validator and cannot accept conditional mutations.
   ///
-  /// If auth handler is configured, authenticates the request first.
+  /// Evaluates the selected operation's credential requirement before protected work.
   /// The selected custom policy always runs, including for anonymous callers.
   ///
   /// Parameters:
@@ -610,7 +610,7 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
         return contentTypeError;
       }
 
-      // Authenticate if handler is configured
+      // Resolve the selected operation's credential requirement.
       final authCheck = await _authenticate(request, CrudOperation.create);
       if (authCheck.response != null) {
         _logger.fine('POST /$path - ${authCheck.response!.statusCode}');
@@ -675,14 +675,14 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   /// their decision to the loaded revision. Public ordinary updates return no
   /// ETag; GET a coherent snapshot before the next conditional edit.
   ///
-  /// If auth handler is configured, authenticates the request first.
+  /// Evaluates the selected operation's credential requirement before protected work.
   /// The selected custom policy always runs, including for anonymous callers.
   ///
   /// Parameters:
   /// - [request]: The HTTP request
   /// - [id]: The canonical key after one URI-decoding step (direct callers pass it decoded)
   ///
-  /// Returns: A Response with status 200 and serialized aggregate, or error response
+  /// Returns: 200 for replacement, 201 for creation, or an error response.
   Future<Response> handleUpdate(Request request, String id) async {
     _logger.info('PUT /$path/$id - Updating $T');
     try {
@@ -699,7 +699,7 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
         return contentTypeError;
       }
 
-      // Authenticate if handler is configured
+      // Resolve the selected operation's credential requirement.
       final authCheck = await _authenticate(request, CrudOperation.update);
       if (authCheck.response != null) {
         _logger.fine('PUT /$path/$id - ${authCheck.response!.statusCode}');
@@ -802,7 +802,7 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   ///
   /// Parses ID, calls repository.deleteById(), returns 204 No Content
   ///
-  /// If auth handler is configured, authenticates the request first.
+  /// Evaluates the selected operation's credential requirement before protected work.
   /// The selected custom policy always runs, including for anonymous callers.
   ///
   /// Parameters:
@@ -819,7 +819,7 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
         return negotiationError;
       }
 
-      // Authenticate if handler is configured
+      // Resolve the selected operation's credential requirement.
       final authCheck = await _authenticate(request, CrudOperation.delete);
       if (authCheck.response != null) {
         _logger.fine('DELETE /$path/$id - ${authCheck.response!.statusCode}');
