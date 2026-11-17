@@ -31,31 +31,33 @@ class DeviceCodeJsonSerializer implements JsonSerializer<DeviceCode> {
   Map<String, dynamic> toJson(DeviceCode instance,
       [SerializationConfig? config]) {
     final effectiveConfig = config ?? _defaultConfig;
-    final json = <String, dynamic>{
-      SerializationUtils.applyFieldRename('id', effectiveConfig.fieldRename):
-          const UuidIdentityCodec().toJson(instance.id),
-      SerializationUtils.applyFieldRename(
-              'createdAt', effectiveConfig.fieldRename):
-          instance.createdAt.toIso8601String(),
-      SerializationUtils.applyFieldRename(
-              'updatedAt', effectiveConfig.fieldRename):
-          instance.updatedAt.toIso8601String(),
-      SerializationUtils.applyFieldRename(
-          'clientId', effectiveConfig.fieldRename): instance.clientId,
-      SerializationUtils.applyFieldRename(
-          'deviceCode', effectiveConfig.fieldRename): instance.deviceCode,
-      SerializationUtils.applyFieldRename(
-              'expiresAt', effectiveConfig.fieldRename):
-          instance.expiresAt.toIso8601String(),
-      SerializationUtils.applyFieldRename(
-          'status', effectiveConfig.fieldRename): instance.status.name,
-      SerializationUtils.applyFieldRename(
-          'userCode', effectiveConfig.fieldRename): instance.userCode,
-      if (instance.userId != null || effectiveConfig.includeNullFields)
+    return JsonSerializer.encodeValue(() {
+      final json = <String, dynamic>{
+        SerializationUtils.applyFieldRename('id', effectiveConfig.fieldRename):
+            const UuidIdentityCodec().toJson(instance.id),
         SerializationUtils.applyFieldRename(
-            'userId', effectiveConfig.fieldRename): instance.userId,
-    };
-    return json;
+                'createdAt', effectiveConfig.fieldRename):
+            instance.createdAt.toIso8601String(),
+        SerializationUtils.applyFieldRename(
+                'updatedAt', effectiveConfig.fieldRename):
+            instance.updatedAt.toIso8601String(),
+        SerializationUtils.applyFieldRename(
+            'clientId', effectiveConfig.fieldRename): instance.clientId,
+        SerializationUtils.applyFieldRename(
+            'deviceCode', effectiveConfig.fieldRename): instance.deviceCode,
+        SerializationUtils.applyFieldRename(
+                'expiresAt', effectiveConfig.fieldRename):
+            instance.expiresAt.toIso8601String(),
+        SerializationUtils.applyFieldRename(
+            'status', effectiveConfig.fieldRename): instance.status.name,
+        SerializationUtils.applyFieldRename(
+            'userCode', effectiveConfig.fieldRename): instance.userCode,
+        if (instance.userId != null || effectiveConfig.includeNullFields)
+          SerializationUtils.applyFieldRename(
+              'userId', effectiveConfig.fieldRename): instance.userId,
+      };
+      return json;
+    }, expectedType: 'DeviceCode');
   }
 
   @override
@@ -73,72 +75,90 @@ class DeviceCodeJsonSerializer implements JsonSerializer<DeviceCode> {
         expectedType: 'DeviceCode',
       );
     }
-    try {
-      return DeviceCode(
-        clientId: json[SerializationUtils.applyFieldRename(
-            'clientId', effectiveConfig.fieldRename)] as String,
-        deviceCode: json[SerializationUtils.applyFieldRename(
-            'deviceCode', effectiveConfig.fieldRename)] as String,
-        expiresAt: DateTime.parse(json[SerializationUtils.applyFieldRename(
-            'expiresAt', effectiveConfig.fieldRename)] as String),
-        status: DeviceCodeStatus.values.byName(json[
-            SerializationUtils.applyFieldRename(
-                'status', effectiveConfig.fieldRename)] as String),
-        userCode: json[SerializationUtils.applyFieldRename(
-            'userCode', effectiveConfig.fieldRename)] as String,
-        userId: json[SerializationUtils.applyFieldRename(
-                    'userId', effectiveConfig.fieldRename)] !=
-                null
-            ? json[SerializationUtils.applyFieldRename(
-                'userId', effectiveConfig.fieldRename)] as String
-            : null,
-        id: const UuidIdentityCodec().fromJson(json[
-            SerializationUtils.applyFieldRename(
-                'id', effectiveConfig.fieldRename)]),
-        createdAt: json[SerializationUtils.applyFieldRename(
-                    'createdAt', effectiveConfig.fieldRename)] !=
-                null
-            ? DateTime.parse(json[SerializationUtils.applyFieldRename(
-                'createdAt', effectiveConfig.fieldRename)] as String)
-            : DateTime.now(),
-        updatedAt: json[SerializationUtils.applyFieldRename(
-                    'updatedAt', effectiveConfig.fieldRename)] !=
-                null
-            ? DateTime.parse(json[SerializationUtils.applyFieldRename(
-                'updatedAt', effectiveConfig.fieldRename)] as String)
-            : DateTime.now(),
-      );
-    } catch (e) {
-      throw DeserializationException(
-        'Failed to deserialize DeviceCode: $e',
-        expectedType: 'DeviceCode',
-      );
-    }
-  }
-
-  @override
-  String serialize(DeviceCode object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
-  }
-
-  @override
-  DeviceCode deserialize(String data, [dynamic config]) {
-    try {
-      final json = jsonDecode(data);
-      if (json is! Map<String, dynamic>) {
-        throw DeserializationException(
-          'Expected JSON object but got ${json.runtimeType}',
+    return DeviceCode(
+      clientId: JsonSerializer.readValue(
+          () => json[SerializationUtils.applyFieldRename(
+              'clientId', effectiveConfig.fieldRename)] as String,
           expectedType: 'DeviceCode',
-        );
-      }
-      return fromJson(json, config as SerializationConfig?);
-    } catch (e) {
-      if (e is DeserializationException) rethrow;
-      throw DeserializationException(
-        'Failed to deserialize JSON: $e',
-        expectedType: 'DeviceCode',
-      );
-    }
+          field: 'clientId',
+          message: 'Failed to deserialize DeviceCode'),
+      deviceCode: JsonSerializer.readValue(
+          () => json[SerializationUtils.applyFieldRename(
+              'deviceCode', effectiveConfig.fieldRename)] as String,
+          expectedType: 'DeviceCode',
+          field: 'deviceCode',
+          message: 'Failed to deserialize DeviceCode'),
+      expiresAt: JsonSerializer.readValue(
+          () => DateTime.parse(json[SerializationUtils.applyFieldRename(
+              'expiresAt', effectiveConfig.fieldRename)] as String),
+          expectedType: 'DeviceCode',
+          field: 'expiresAt',
+          message: 'Failed to deserialize DeviceCode'),
+      status: JsonSerializer.readValue(
+          () => JsonSerializer.readEnum(
+              DeviceCodeStatus.values,
+              json[SerializationUtils.applyFieldRename(
+                  'status', effectiveConfig.fieldRename)]),
+          expectedType: 'DeviceCode',
+          field: 'status',
+          message: 'Failed to deserialize DeviceCode'),
+      userCode: JsonSerializer.readValue(
+          () => json[SerializationUtils.applyFieldRename(
+              'userCode', effectiveConfig.fieldRename)] as String,
+          expectedType: 'DeviceCode',
+          field: 'userCode',
+          message: 'Failed to deserialize DeviceCode'),
+      userId: JsonSerializer.readValue(
+          () => json[SerializationUtils.applyFieldRename(
+                      'userId', effectiveConfig.fieldRename)] !=
+                  null
+              ? json[SerializationUtils.applyFieldRename(
+                  'userId', effectiveConfig.fieldRename)] as String
+              : null,
+          expectedType: 'DeviceCode',
+          field: 'userId',
+          message: 'Failed to deserialize DeviceCode'),
+      id: JsonSerializer.readValue(
+          () => const UuidIdentityCodec().fromJson(json[
+              SerializationUtils.applyFieldRename(
+                  'id', effectiveConfig.fieldRename)]),
+          expectedType: 'DeviceCode',
+          field: 'id',
+          message: 'Failed to deserialize DeviceCode'),
+      createdAt: JsonSerializer.readValue(
+          () => json[SerializationUtils.applyFieldRename(
+                      'createdAt', effectiveConfig.fieldRename)] !=
+                  null
+              ? DateTime.parse(json[SerializationUtils.applyFieldRename(
+                  'createdAt', effectiveConfig.fieldRename)] as String)
+              : DateTime.now(),
+          expectedType: 'DeviceCode',
+          field: 'createdAt',
+          message: 'Failed to deserialize DeviceCode'),
+      updatedAt: JsonSerializer.readValue(
+          () => json[SerializationUtils.applyFieldRename(
+                      'updatedAt', effectiveConfig.fieldRename)] !=
+                  null
+              ? DateTime.parse(json[SerializationUtils.applyFieldRename(
+                  'updatedAt', effectiveConfig.fieldRename)] as String)
+              : DateTime.now(),
+          expectedType: 'DeviceCode',
+          field: 'updatedAt',
+          message: 'Failed to deserialize DeviceCode'),
+    );
+  }
+
+  @override
+  String serialize(DeviceCode object, [SerializationConfig? config]) {
+    return JsonSerializer.encodeValue(() => jsonEncode(toJson(object, config)),
+        expectedType: 'DeviceCode');
+  }
+
+  @override
+  DeviceCode deserialize(String data, [SerializationConfig? config]) {
+    final json = JsonSerializer.readValue(() => jsonDecode(data),
+        expectedType: 'DeviceCode', message: 'Failed to deserialize JSON');
+    return fromJson(json, config);
   }
 
   /// Convenience method for static access with default configuration

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/dddart_rest.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:shelf/shelf.dart';
 
 import 'lib/json_serializer_support.dart';
@@ -83,7 +84,8 @@ Future<Response> _handleCustomEvent(Request request) async {
 Future<Response> _handleHealthCheck(Request request) async {
   return Response.ok(
     jsonEncode(
-        {'status': 'healthy', 'timestamp': DateTime.now().toIso8601String()}),
+      {'status': 'healthy', 'timestamp': DateTime.now().toIso8601String()},
+    ),
     headers: {'Content-Type': 'application/json'},
   );
 }
@@ -117,7 +119,7 @@ final class InMemoryUserRepository extends InMemoryRepository<User, UuidValue> {
 // User serializer for example
 class UserSerializer extends ExampleJsonSerializer<User> {
   @override
-  String serialize(User user, [dynamic config]) {
+  String serialize(User user, [SerializationConfig? config]) {
     return jsonEncode({
       'id': user.id.toString(),
       'name': user.name,
@@ -127,7 +129,7 @@ class UserSerializer extends ExampleJsonSerializer<User> {
   }
 
   @override
-  User deserialize(String data, [dynamic config]) {
+  User deserialize(String data, [SerializationConfig? config]) {
     final json = jsonDecode(data) as Map<String, dynamic>;
     return User(
       id: UuidValue.fromString(json['id'] as String),

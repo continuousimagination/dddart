@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/dddart_rest.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:shelf/shelf.dart';
 import 'package:test/test.dart';
 
@@ -11,7 +12,8 @@ import 'authorization_test_support.dart';
 class EncodingSpy extends DocumentSerializer {
   int responses = 0;
   @override
-  Map<String, dynamic> toJson(Document value, [dynamic config]) => {
+  Map<String, dynamic> toJson(Document value, [SerializationConfig? config]) =>
+      {
         'id': value.id.uuid,
         'owner': value.owner,
         'tenant': value.tenant,
@@ -20,7 +22,7 @@ class EncodingSpy extends DocumentSerializer {
         'content': value.content,
       };
   @override
-  Document fromJson(dynamic value, [dynamic config]) => Document(
+  Document fromJson(dynamic value, [SerializationConfig? config]) => Document(
         id: UuidValue.fromString(value['id'] as String),
         owner: value['owner'] as String,
         tenant: value['tenant'] as String,
@@ -29,7 +31,7 @@ class EncodingSpy extends DocumentSerializer {
         content: value['content'] as String,
       );
   @override
-  String serialize(Document value, [dynamic config]) {
+  String serialize(Document value, [SerializationConfig? config]) {
     responses++;
     return jsonEncode(toJson(value));
   }
@@ -39,10 +41,10 @@ class EncodingSpy extends DocumentSerializer {
 // the source of trusted permission state.
 class ProjectedSerializer extends EncodingSpy {
   @override
-  Map<String, dynamic> toJson(Document value, [dynamic config]) =>
+  Map<String, dynamic> toJson(Document value, [SerializationConfig? config]) =>
       super.toJson(value, config)..remove('owner');
   @override
-  Document fromJson(dynamic value, [dynamic config]) => super
+  Document fromJson(dynamic value, [SerializationConfig? config]) => super
       .fromJson({...value as Map<String, dynamic>, 'owner': 'bob'}, config);
 }
 

@@ -86,15 +86,9 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
   ) {
     final className = analysis.className;
 
-    // Generate the basic toJson and fromJson method bodies
-    final toJsonBody = _generateAggregateRootToJson(analysis, config);
-    final fromJsonBody = _generateAggregateRootFromJson(analysis, config);
-
     // Generate the complete JsonSerializer class
     return _generateJsonSerializerClass(
       className,
-      toJsonBody,
-      fromJsonBody,
       analysis,
       config,
     );
@@ -108,15 +102,9 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
   ) {
     final className = analysis.className;
 
-    // Generate the basic toJson and fromJson method bodies
-    final toJsonBody = _generateValueToJson(analysis, config);
-    final fromJsonBody = _generateValueFromJson(analysis, config);
-
     // Generate the complete JsonSerializer class
     return _generateJsonSerializerClass(
       className,
-      toJsonBody,
-      fromJsonBody,
       analysis,
       config,
     );
@@ -134,16 +122,9 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
   ) {
     final className = analysis.className;
 
-    // Generate the basic toJson and fromJson method bodies
-    // Entities are serialized like AggregateRoots (they have id, timestamps)
-    final toJsonBody = _generateAggregateRootToJson(analysis, config);
-    final fromJsonBody = _generateAggregateRootFromJson(analysis, config);
-
     // Generate the complete JsonSerializer class
     return _generateJsonSerializerClass(
       className,
-      toJsonBody,
-      fromJsonBody,
       analysis,
       config,
     );
@@ -374,8 +355,6 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
   /// Generates a complete JsonSerializer class with constructor + optional parameter design.
   String _generateJsonSerializerClass(
     String className,
-    String toJsonBody,
-    String fromJsonBody,
     ClassAnalysis analysis,
     SerializationConfig annotationConfig,
   ) {
@@ -406,7 +385,9 @@ class ${className}JsonSerializer implements JsonSerializer<$className> {
   @override
   Map<String, dynamic> toJson($className instance, [SerializationConfig? config]) {
     final effectiveConfig = config ?? _defaultConfig;
+    return JsonSerializer.encodeValue(() {
 $toJsonWithConfigBody
+    }, expectedType: '$className');
   }
   
   @override
@@ -416,28 +397,16 @@ $fromJsonWithConfigBody
   }
   
   @override
-  String serialize($className object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
+  String serialize($className object, [SerializationConfig? config]) {
+    return JsonSerializer.encodeValue(
+      () => jsonEncode(toJson(object, config)), expectedType: '$className');
   }
   
   @override
-  $className deserialize(String data, [dynamic config]) {
-    try {
-      final json = jsonDecode(data);
-      if (json is! Map<String, dynamic>) {
-        throw DeserializationException(
-          'Expected JSON object but got \${json.runtimeType}',
-          expectedType: '$className',
-        );
-      }
-      return fromJson(json, config as SerializationConfig?);
-    } catch (e) {
-      if (e is DeserializationException) rethrow;
-      throw DeserializationException(
-        'Failed to deserialize JSON: \$e',
-        expectedType: '$className',
-      );
-    }
+  $className deserialize(String data, [SerializationConfig? config]) {
+    final json = JsonSerializer.readValue(() => jsonDecode(data),
+      expectedType: '$className', message: 'Failed to deserialize JSON');
+    return fromJson(json, config);
   }
   
   /// Convenience method for static access with default configuration
@@ -524,7 +493,6 @@ $fromJsonWithConfigBody
     buffer.writeln("        expectedType: '$className',");
     buffer.writeln('      );');
     buffer.writeln('    }');
-    buffer.writeln('    try {');
     buffer.writeln('      return $className(');
 
     // Sort custom fields alphabetically for deterministic ordering
@@ -535,31 +503,26 @@ $fromJsonWithConfigBody
     for (final field in sortedFields) {
       final fieldName = field.name;
       final deserialization = _generateFieldDeserializationWithConfig(field);
-      buffer.writeln('        $fieldName: $deserialization,');
+      buffer.writeln(
+        "        $fieldName: JsonSerializer.readValue(() => $deserialization, expectedType: '$className', field: '$fieldName', message: 'Failed to deserialize $className'),",
+      );
     }
 
     // Add Entity base field parameters with runtime field naming
     if (analysis.type == ClassType.aggregateRoot ||
         analysis.type == ClassType.entity) {
       buffer.writeln(
-        "        id: ${_decodeValue(analysis.identityType!, "json[SerializationUtils.applyFieldRename('id', effectiveConfig.fieldRename)]")},",
+        "        id: JsonSerializer.readValue(() => ${_decodeValue(analysis.identityType!, "json[SerializationUtils.applyFieldRename('id', effectiveConfig.fieldRename)]")}, expectedType: '$className', field: 'id', message: 'Failed to deserialize $className'),",
       );
       buffer.writeln(
-        "        createdAt: json[SerializationUtils.applyFieldRename('createdAt', effectiveConfig.fieldRename)] != null ? DateTime.parse(json[SerializationUtils.applyFieldRename('createdAt', effectiveConfig.fieldRename)] as String) : DateTime.now(),",
+        "        createdAt: JsonSerializer.readValue(() => json[SerializationUtils.applyFieldRename('createdAt', effectiveConfig.fieldRename)] != null ? DateTime.parse(json[SerializationUtils.applyFieldRename('createdAt', effectiveConfig.fieldRename)] as String) : DateTime.now(), expectedType: '$className', field: 'createdAt', message: 'Failed to deserialize $className'),",
       );
       buffer.writeln(
-        "        updatedAt: json[SerializationUtils.applyFieldRename('updatedAt', effectiveConfig.fieldRename)] != null ? DateTime.parse(json[SerializationUtils.applyFieldRename('updatedAt', effectiveConfig.fieldRename)] as String) : DateTime.now(),",
+        "        updatedAt: JsonSerializer.readValue(() => json[SerializationUtils.applyFieldRename('updatedAt', effectiveConfig.fieldRename)] != null ? DateTime.parse(json[SerializationUtils.applyFieldRename('updatedAt', effectiveConfig.fieldRename)] as String) : DateTime.now(), expectedType: '$className', field: 'updatedAt', message: 'Failed to deserialize $className'),",
       );
     }
 
     buffer.writeln('      );');
-    buffer.writeln('    } catch (e) {');
-    buffer.writeln('      throw DeserializationException(');
-    buffer.writeln("        'Failed to deserialize $className: \$e',");
-    buffer.writeln("        expectedType: '$className',");
-    buffer.writeln('      );');
-    buffer.writeln('    }');
-
     return buffer.toString();
   }
 
@@ -570,207 +533,9 @@ $fromJsonWithConfigBody
     return _decodeValue(field.type, access);
   }
 
-  /// Generates the toJson method body for AggregateRoot classes.
-  String _generateAggregateRootToJson(
-    ClassAnalysis analysis,
-    SerializationConfig config,
-  ) {
-    final buffer = StringBuffer();
-    buffer.writeln('    final json = <String, dynamic>{');
-
-    // Add Entity base fields with consistent naming
-    buffer.writeln(
-      "      '${_applyFieldRename('id', config.fieldRename)}': ${_encodeValue(analysis.identityType!, 'instance.id')},",
-    );
-    buffer.writeln(
-      "      '${_applyFieldRename('createdAt', config.fieldRename)}': instance.createdAt.toIso8601String(),",
-    );
-    buffer.writeln(
-      "      '${_applyFieldRename('updatedAt', config.fieldRename)}': instance.updatedAt.toIso8601String(),",
-    );
-
-    // Sort custom fields alphabetically for deterministic ordering
-    final sortedFields = List<FieldInfo>.from(analysis.fields)
-      ..sort((a, b) => a.name.compareTo(b.name));
-
-    // Add custom fields
-    for (final field in sortedFields) {
-      final fieldName = field.name;
-      final jsonKey = _applyFieldRename(fieldName, config.fieldRename);
-
-      if (field.isNullable && !config.includeNullFields) {
-        buffer.writeln(
-          "      if (instance.$fieldName != null) '$jsonKey': ${_generateFieldSerializationNonNull(field, 'instance.')},",
-        );
-      } else {
-        buffer.writeln(
-          "      '$jsonKey': ${_generateFieldSerialization(field, 'instance.')},",
-        );
-      }
-    }
-
-    buffer.writeln('    };');
-    buffer.writeln('    return json;');
-
-    return buffer.toString();
-  }
-
-  /// Generates the fromJson method body for AggregateRoot classes.
-  String _generateAggregateRootFromJson(
-    ClassAnalysis analysis,
-    SerializationConfig config,
-  ) {
-    final className = analysis.className;
-    final buffer = StringBuffer();
-
-    buffer.writeln('    try {');
-    buffer.writeln('      return $className(');
-
-    // Sort custom fields alphabetically for deterministic ordering
-    final sortedFields = List<FieldInfo>.from(analysis.fields)
-      ..sort((a, b) => a.name.compareTo(b.name));
-
-    // Add custom field parameters
-    for (final field in sortedFields) {
-      final fieldName = field.name;
-      final jsonKey = _applyFieldRename(fieldName, config.fieldRename);
-      final deserialization = _generateFieldDeserialization(field, jsonKey);
-      buffer.writeln('        $fieldName: $deserialization,');
-    }
-
-    // Add Entity base field parameters with consistent naming
-    final idKey = _applyFieldRename('id', config.fieldRename);
-    final createdAtKey = _applyFieldRename('createdAt', config.fieldRename);
-    final updatedAtKey = _applyFieldRename('updatedAt', config.fieldRename);
-
-    buffer.writeln(
-        "        id: ${_decodeValue(analysis.identityType!, "json['$idKey']")},");
-    buffer.writeln(
-      "        createdAt: DateTime.parse(json['$createdAtKey'] as String),",
-    );
-    buffer.writeln(
-      "        updatedAt: DateTime.parse(json['$updatedAtKey'] as String),",
-    );
-
-    buffer.writeln('      );');
-    buffer.writeln('    } catch (e) {');
-    buffer.writeln('      throw DeserializationException(');
-    buffer.writeln("        'Failed to deserialize $className: \$e',");
-    buffer.writeln("        expectedType: '$className',");
-    buffer.writeln('      );');
-    buffer.writeln('    }');
-
-    return buffer.toString();
-  }
-
-  /// Generates the toJson method body for Value classes.
-  String _generateValueToJson(
-    ClassAnalysis analysis,
-    SerializationConfig config,
-  ) {
-    final buffer = StringBuffer();
-    buffer.writeln('    final json = <String, dynamic>{');
-
-    // Sort custom fields alphabetically for deterministic ordering
-    final sortedFields = List<FieldInfo>.from(analysis.fields)
-      ..sort((a, b) => a.name.compareTo(b.name));
-
-    // Add custom fields
-    for (final field in sortedFields) {
-      final fieldName = field.name;
-      final jsonKey = _applyFieldRename(fieldName, config.fieldRename);
-
-      if (field.isNullable && !config.includeNullFields) {
-        buffer.writeln(
-          "      if (instance.$fieldName != null) '$jsonKey': ${_generateFieldSerializationNonNull(field, 'instance.')},",
-        );
-      } else {
-        buffer.writeln(
-          "      '$jsonKey': ${_generateFieldSerialization(field, 'instance.')},",
-        );
-      }
-    }
-
-    buffer.writeln('    };');
-    buffer.writeln('    return json;');
-
-    return buffer.toString();
-  }
-
-  /// Generates the fromJson method body for Value classes.
-  String _generateValueFromJson(
-    ClassAnalysis analysis,
-    SerializationConfig config,
-  ) {
-    final className = analysis.className;
-    final buffer = StringBuffer();
-
-    buffer.writeln('    try {');
-    buffer.writeln('      return $className(');
-
-    // Sort custom fields alphabetically for deterministic ordering
-    final sortedFields = List<FieldInfo>.from(analysis.fields)
-      ..sort((a, b) => a.name.compareTo(b.name));
-
-    // Add custom field parameters
-    for (final field in sortedFields) {
-      final fieldName = field.name;
-      final jsonKey = _applyFieldRename(fieldName, config.fieldRename);
-      final deserialization = _generateFieldDeserialization(field, jsonKey);
-      buffer.writeln('        $fieldName: $deserialization,');
-    }
-
-    buffer.writeln('      );');
-    buffer.writeln('    } catch (e) {');
-    buffer.writeln('      throw DeserializationException(');
-    buffer.writeln("        'Failed to deserialize $className: \$e',");
-    buffer.writeln("        expectedType: '$className',");
-    buffer.writeln('      );');
-    buffer.writeln('    }');
-
-    return buffer.toString();
-  }
-
-  /// Applies field renaming based on the configuration.
-  String _applyFieldRename(String fieldName, FieldRename fieldRename) {
-    switch (fieldRename) {
-      case FieldRename.none:
-        return fieldName;
-      case FieldRename.snake:
-        return _toSnakeCase(fieldName);
-      case FieldRename.kebab:
-        return _toKebabCase(fieldName);
-    }
-  }
-
-  /// Converts a camelCase string to snake_case.
-  String _toSnakeCase(String input) {
-    return input.replaceAllMapped(
-      RegExp('[A-Z]'),
-      (match) => '_${match.group(0)!.toLowerCase()}',
-    );
-  }
-
-  /// Converts a camelCase string to kebab-case.
-  String _toKebabCase(String input) {
-    return input.replaceAllMapped(
-      RegExp('[A-Z]'),
-      (match) => '-${match.group(0)!.toLowerCase()}',
-    );
-  }
-
-  /// Generates serialization for a field selected by an enclosing null check.
-  String _generateFieldSerializationNonNull(FieldInfo field,
-          [String prefix = '']) =>
-      _encodeValue(field.type, '$prefix${field.name}');
-
   /// Generates serialization through the same recursive structural contract.
   String _generateFieldSerialization(FieldInfo field, [String prefix = '']) =>
       _encodeValue(field.type, '$prefix${field.name}');
-
-  /// Generates deserialization for an already resolved JSON key.
-  String _generateFieldDeserialization(FieldInfo field, String jsonKey) =>
-      _decodeValue(field.type, "json['$jsonKey']");
 
   bool _coreCollection(DartType type, String name) =>
       type is InterfaceType &&
@@ -840,7 +605,8 @@ $fromJsonWithConfigBody
     if (_isDDDartType(type)) {
       if (type is ParameterizedType && type.typeArguments.isNotEmpty) {
         throw InvalidGenerationSourceError(
-            'Use a concrete non-generic serializable value subtype.');
+          'Use a concrete non-generic serializable value subtype.',
+        );
       }
       return '${name}JsonSerializer.withIdentityCodecs(_identityCodecs).toJson($value, effectiveConfig)';
     }
@@ -863,7 +629,8 @@ $fromJsonWithConfigBody
       return '_identityCodecs.fromJson<$name>($value)';
     }
     if (name == 'DateTime') return 'DateTime.parse($value as String)';
-    if (_isEnumType(type)) return '$name.values.byName($value as String)';
+    if (_isEnumType(type))
+      return 'JsonSerializer.readEnum($name.values, $value)';
     if (_coreCollection(type, 'List') || _coreCollection(type, 'Set')) {
       final item = (type as InterfaceType).typeArguments.single;
       final method = _coreCollection(type, 'Set') ? 'toSet()' : 'toList()';
@@ -893,7 +660,8 @@ $fromJsonWithConfigBody
     if (_isDDDartType(type)) {
       if (type is ParameterizedType && type.typeArguments.isNotEmpty) {
         throw InvalidGenerationSourceError(
-            'Use a concrete non-generic serializable value subtype.');
+          'Use a concrete non-generic serializable value subtype.',
+        );
       }
       return '${name}JsonSerializer.withIdentityCodecs(_identityCodecs).fromJson($value as Map<String, dynamic>, effectiveConfig)';
     }
@@ -901,8 +669,9 @@ $fromJsonWithConfigBody
       return '($value is int ? ($value as int).toDouble() : $value as double)';
     }
     if (name == 'dynamic') return value;
-    if (_isPrimitiveType(name) || name == 'Object' || name == 'Null')
+    if (_isPrimitiveType(name) || name == 'Object' || name == 'Null') {
       return '$value as $name';
+    }
     throw InvalidGenerationSourceError('Unsupported JSON field type: $name');
   }
 

@@ -327,7 +327,10 @@ void main() {
         } catch (e) {
           expect(e, isA<DeserializationException>());
           final exception = e as DeserializationException;
-          expect(exception.message, contains('TestUserWithAddress'));
+          // Preserve the original nested error instead of replacing its context.
+          expect(exception.expectedType, 'TestAddress');
+          expect(exception.field, 'street');
+          expect(exception.cause, isA<TypeError>());
         }
       });
     });

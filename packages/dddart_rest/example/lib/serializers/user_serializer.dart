@@ -1,9 +1,12 @@
 import 'dart:convert';
+
 import 'package:dddart/dddart.dart';
-import '../models/user.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
+
+import '../json_serializer_support.dart';
 import '../models/address.dart';
 import '../models/profile.dart';
-import '../json_serializer_support.dart';
+import '../models/user.dart';
 
 /// JSON serializer for User aggregate root
 ///
@@ -11,19 +14,19 @@ import '../json_serializer_support.dart';
 /// for serializing User aggregates to/from JSON format
 class UserSerializer extends ExampleJsonSerializer<User> {
   @override
-  String serialize(User user, [dynamic config]) {
+  String serialize(User user, [SerializationConfig? config]) {
     return jsonEncode(toJson(user, config));
   }
 
   @override
-  User deserialize(String data, [dynamic config]) {
+  User deserialize(String data, [SerializationConfig? config]) {
     final json = jsonDecode(data);
     return fromJson(json, config);
   }
 
   /// Converts a User to a JSON map
   @override
-  Map<String, dynamic> toJson(User user, [dynamic config]) {
+  Map<String, dynamic> toJson(User user, [SerializationConfig? config]) {
     return {
       'id': user.id.toString(),
       'firstName': user.firstName,
@@ -38,7 +41,7 @@ class UserSerializer extends ExampleJsonSerializer<User> {
 
   /// Converts a JSON map to a User
   @override
-  User fromJson(dynamic json, [dynamic config]) {
+  User fromJson(dynamic json, [SerializationConfig? config]) {
     return User(
       id: UuidValue.fromString(json['id']),
       firstName: json['firstName'],

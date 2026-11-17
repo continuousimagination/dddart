@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/src/response_builder.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:test/test.dart';
 
 import 'json_serializer_test_support.dart';
@@ -23,7 +24,7 @@ class TestUser extends AggregateRoot<UuidValue> {
 // Test serializer
 class TestUserSerializer extends TestJsonSerializer<TestUser> {
   @override
-  String serialize(TestUser user, [dynamic config]) {
+  String serialize(TestUser user, [SerializationConfig? config]) {
     return jsonEncode({
       'id': user.id.toString(),
       'name': user.name,
@@ -34,7 +35,7 @@ class TestUserSerializer extends TestJsonSerializer<TestUser> {
   }
 
   @override
-  TestUser deserialize(String data, [dynamic config]) {
+  TestUser deserialize(String data, [SerializationConfig? config]) {
     final json = jsonDecode(data);
     return TestUser(
       id: UuidValue.fromString(json['id']),
