@@ -8,6 +8,10 @@ this repository; no separate website repository or hosting subscription is neede
 
 Use Node 24.15 or later in the Node 24 line:
 
+Site validation also uses Bash, jq and libxml2's `xmllint`. macOS includes
+`xmllint`; on Ubuntu install `jq libxml2-utils`. The workflow installs the HTML
+parser explicitly. No additional scripting runtime is needed.
+
 ```bash
 cd website
 npm ci
@@ -47,9 +51,12 @@ documentation gate; historical work records are explicitly marked.
 
 ## Publish
 
-`.github/workflows/pages.yml` builds and checks website pull requests. Every main-targeting PR and main push runs the fast repository-wide documentation
-gate and the website build. This includes source changes outside `website/`, since
-the homepage imports checked quickstart files directly. Main builds deploy automatically.
+`.github/workflows/pages.yml` builds and checks changes to `website/**`,
+`docs/quickstarts/**` (imported by the homepage), `tool/documentation/common.sh`,
+or the Pages workflow itself. Matching main pushes deploy automatically;
+unrelated library changes do not rebuild or redeploy the site.
+The separate `.github/workflows/documentation.yml` checks documentation across
+the repository on every main-targeting PR/main push and has no deployment job.
 The Website workflow also supports manual dispatch. Only `website/dist` is uploaded.
 Pull requests have read-only permissions and do not deploy. The deploy job alone
 receives Pages and OpenID Connect write permissions.
@@ -71,8 +78,11 @@ No live AWS or Slack resources are needed for the website build.
 
 ## Dart snippets and workflows
 
-From the repository root, run `python3 tool/documentation/validate.py check` for
+From the repository root, run `bash tool/documentation/validate.sh check` for
 published-source, surface-inventory and local-link drift, then the relevant execution lane described
-in [the documentation gate](../tool/documentation/README.md). The active Website workflow runs the fast check for library/generator changes too;
-the disabled Test workflow defines the heavier execution gates, which must be run locally. `npm run check` validates the
-built site and links; it does not replace the isolated Dart consumer gate.
+in [the documentation gate](../tool/documentation/README.md). The active
+Documentation workflow runs the fast check for library/generator changes too;
+the disabled Test workflow defines the heavier execution gates, which must be run
+locally. `npm run check` builds the site, checks its HTML metadata, links, anchors,
+source references and search index, then runs 12 failure-detection tests against
+temporary copies of that output. It does not replace the isolated Dart consumer gate.

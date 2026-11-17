@@ -2,32 +2,35 @@
 
 Run from any working directory, using the script's absolute path if necessary.
 The script locates the repository from its own file, never from the caller's cwd.
-Use the development SDK (currently Dart 3.13.7), Python 3.10+ and Node 24.15.0+.
+The fast checks require Bash 3.2+, jq 1.6+, Git and standard Unix tools. Execution
+checks also require the development SDK (currently Dart 3.13.7), Node 24.15.0+,
+tar and GNU `timeout` (`brew install coreutils` on macOS supplies it).
 Resolve repository tooling first with `dart pub get` from the workspace root.
 
 From that root:
 
 ```sh
 # Fast drift/inventory check; no services or dependency installation.
-python3 tool/documentation/validate.py check
+bash tool/documentation/validate.sh check
 # Refresh only canonical file inclusions after an intentional source edit.
-python3 tool/documentation/validate.py sync
+bash tool/documentation/validate.sh sync
 # Required local pre-publication gate for workflows without database services.
-python3 tool/documentation/validate.py all --service-kind=none
+bash tool/documentation/validate.sh all --service-kind=none
 # Database lanes; each fails when its required local service is missing.
-python3 tool/documentation/validate.py all --service-kind=mysql
-python3 tool/documentation/validate.py all --service-kind=mongo
-python3 tool/documentation/validate.py all --service-kind=dynamodb
+bash tool/documentation/validate.sh all --service-kind=mysql
+bash tool/documentation/validate.sh all --service-kind=mongo
+bash tool/documentation/validate.sh all --service-kind=dynamodb
 # Everything; all documented local services must be available.
-python3 tool/documentation/validate.py all
+bash tool/documentation/validate.sh all
 # Verify the actual published Git setup instead of local archives.
-python3 tool/documentation/validate.py run json --source=git
+bash tool/documentation/validate.sh run json --source=git
 # Fault tests: real failing generation/analysis/run cases, no external services.
-python3 tool/documentation/self_test.py
+bash tool/documentation/self_test.sh
 ```
 
-`--source=local` is the default. It reuses `stagePublishedPackage` from the shared
-package validation tool to stage Pub-selected archive contents, then replaces
+`--source=local` is the default. Bash invokes the same `dart pub publish
+--skip-validation --to-archive=...` command as the shared package gate to stage
+Pub-selected archive contents, then replaces
 only DDDart source overrides in an otherwise exact quickstart manifest. Each
 application starts in a system temporary directory with no generated artifacts
 or workspace package config. Pub resolves its dependencies, documented commands
@@ -96,8 +99,8 @@ and publish it with a `dddart-source` inclusion. `sync` never updates surface, s
 
 For new code, add a complete canonical workflow or inventoried sample first,
 then include it. Add each new guide to `surfaces.json` as current. Keep sample
-coverage tables exactly aligned with the shared inventory; `example_table` in
-`validate.py` produces their canonical Markdown. Run the relevant execution lane,
+coverage tables exactly aligned with the shared inventory; `sample_table` in
+`validate.sh` defines their canonical Markdown using jq. Run the relevant execution lane,
 not just `check`. The fault suite checks new documents, deep Dartdoc, standalone
 snippets, broken links/anchors, sample coverage drift and missing history notices,
 as well as real failing generation, analysis and execution.
@@ -109,9 +112,11 @@ path filter. It is currently disabled in this repository; run these gates locall
 until the owner re-enables it. Its documentation job checks drift, runs the fault suite, executes
 all unserviced consumers and portable JS paths. Database documentation steps reuse
 the existing MySQL, MongoDB and DynamoDB package-service jobs. Missing required
-services fail their lane. The active Website workflow runs the fast surface/source/link check and site build
-on every main-targeting PR and main push, including library-only changes.
-Its homepage imports complete checked core programs as raw source; a fault test
+services fail their lane. The separate active Documentation workflow runs the fast
+surface/source/link checks on every main-targeting PR and main push. It never deploys.
+Website builds and deploys only for changes to the site, its imported quickstarts,
+the shared checker helper or its workflow file. Its homepage imports complete
+checked core programs as raw source; a fault test
 rejects replacement with an unchecked code literal. Heavy Dart execution remains
 in the local/Test gates.
 

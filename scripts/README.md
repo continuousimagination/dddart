@@ -2,6 +2,12 @@
 
 This directory contains utility scripts for the DDDart project.
 
+Repository orchestration scripts use Bash. Standard command-line tools such as
+jq, Git, tar and `xmllint` may handle structured data and parsing; do not add
+another scripting runtime. Documentation execution also uses GNU `timeout`
+(`brew install coreutils` on macOS) to bound subprocesses. Existing Dart package
+tests and the JavaScript website/runtime remain in their application languages.
+
 ## Available Scripts
 
 ### `test-all.sh`
@@ -128,16 +134,18 @@ git push --no-verify
 
 The [documentation gate](../tool/documentation/README.md) checks every current guide and library/sample Dartdoc, canonical source
 inclusions, local links/anchors, sample coverage tables, supported exports and fresh
-outside-workspace workflows. The configured Test workflow is currently disabled;
-run these gates locally for API/generator changes as well as docs:
+outside-workspace workflows. The active Documentation workflow runs the fast
+repository-wide check without deploying the site. The heavier configured Test
+workflow is currently disabled; run its execution gates locally for API/generator
+changes as well as docs:
 
 ```sh
-python3 tool/documentation/validate.py check
-python3 tool/documentation/validate.py all --service-kind=none
-python3 tool/documentation/validate.py all --service-kind=mysql
-python3 tool/documentation/validate.py all --service-kind=mongo
-python3 tool/documentation/validate.py all --service-kind=dynamodb
-python3 tool/documentation/self_test.py
+bash tool/documentation/validate.sh check
+bash tool/documentation/validate.sh all --service-kind=none
+bash tool/documentation/validate.sh all --service-kind=mysql
+bash tool/documentation/validate.sh all --service-kind=mongo
+bash tool/documentation/validate.sh all --service-kind=dynamodb
+bash tool/documentation/self_test.sh
 ```
 
 Service setup is in the [canonical quickstarts](../docs/QUICKSTARTS.md). The local

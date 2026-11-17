@@ -3,8 +3,18 @@ name: Website
 on:
   push:
     branches: [main]
+    paths:
+      - 'website/**'
+      - 'docs/quickstarts/**'
+      - 'tool/documentation/common.sh'
+      - '.github/workflows/pages.yml'
   pull_request:
     branches: [main]
+    paths:
+      - 'website/**'
+      - 'docs/quickstarts/**'
+      - 'tool/documentation/common.sh'
+      - '.github/workflows/pages.yml'
   workflow_dispatch:
 
 permissions:
@@ -27,9 +37,8 @@ jobs:
         working-directory: website
     steps:
       - uses: actions/checkout@v6
-      - name: Check all documentation surfaces and sources
-        working-directory: .
-        run: python3 tool/documentation/validate.py check
+      - name: Install HTML validation tool
+        run: sudo apt-get update && sudo apt-get install -y libxml2-utils
       - uses: actions/setup-node@v6
         with:
           node-version: '24'

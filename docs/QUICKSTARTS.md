@@ -81,7 +81,7 @@ configuration programs, and compiles the credential-dependent Slack server.
 Configuration and Slack have [checked manifests](quickstarts/) alongside the seven
 primary workflows; Slack is compile-only and requires real application setup to run.
 
-Run `python3 tool/documentation/validate.py all --service-kind=none` for local
+Run `bash tool/documentation/validate.sh all --service-kind=none` for local
 unserviced consumers and core/JSON JavaScript execution under Node. Select
 `mysql`, `mongo`, or `dynamodb` for a required database lane. Plain `all` requires
 all services. Every published `dddart-source` block is checked, including command
