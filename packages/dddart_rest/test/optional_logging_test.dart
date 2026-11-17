@@ -1,6 +1,8 @@
 import 'dart:convert';
+
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/dddart_rest.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:shelf/shelf.dart';
 import 'package:test/test.dart';
 
@@ -22,7 +24,7 @@ class TestProduct extends AggregateRoot<UuidValue> {
 // Test serializer
 class TestProductSerializer extends TestJsonSerializer<TestProduct> {
   @override
-  String serialize(TestProduct product, [dynamic config]) {
+  String serialize(TestProduct product, [SerializationConfig? config]) {
     return jsonEncode({
       'id': product.id.toString(),
       'name': product.name,
@@ -33,7 +35,7 @@ class TestProductSerializer extends TestJsonSerializer<TestProduct> {
   }
 
   @override
-  TestProduct deserialize(String data, [dynamic config]) {
+  TestProduct deserialize(String data, [SerializationConfig? config]) {
     final json = jsonDecode(data) as Map<String, dynamic>;
     return TestProduct(
       id: UuidValue.fromString(json['id'] as String),

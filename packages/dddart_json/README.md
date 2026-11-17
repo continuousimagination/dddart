@@ -1,5 +1,9 @@
 # DDDart JSON
 
+See the [serialization configuration and error contract](../../docs/SERIALIZATION.md)
+for typed options, precedence, identity codecs, and failure behavior.
+
+
 Concrete `DomainEvent<I>` classes are also supported. Expose named `aggregateId`,
 `eventId`, `occurredAt` and `context` constructor parameters (normally through
 `super` parameters). Event serializers retain the concrete identity codec and

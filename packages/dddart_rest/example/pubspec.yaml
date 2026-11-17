@@ -16,6 +16,7 @@ dependencies:
   http: ^1.2.0
   shelf: ^1.4.0
 
+  dddart_serialization: any
 dependency_overrides:
   dddart:
     path: ../../dddart

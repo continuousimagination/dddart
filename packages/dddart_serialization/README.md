@@ -1,5 +1,9 @@
 # DDDart Serialization
 
+See the [serialization configuration and error contract](../../docs/SERIALIZATION.md)
+for typed options, precedence, identity codecs, and failure behavior.
+
+
 Framework package providing serialization annotations and configuration for DDDart objects.
 
 ## Overview

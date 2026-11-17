@@ -27,7 +27,7 @@ class TestUser extends AggregateRoot<UuidValue> {
 // Test serializer
 class TestUserSerializer extends TestJsonSerializer<TestUser> {
   @override
-  String serialize(TestUser user, [dynamic config]) {
+  String serialize(TestUser user, [SerializationConfig? config]) {
     return jsonEncode({
       'id': user.id.toString(),
       'name': user.name,
@@ -38,7 +38,7 @@ class TestUserSerializer extends TestJsonSerializer<TestUser> {
   }
 
   @override
-  TestUser deserialize(String data, [dynamic config]) {
+  TestUser deserialize(String data, [SerializationConfig? config]) {
     final json = jsonDecode(data);
     return TestUser(
       id: UuidValue.fromString(json['id']),
@@ -53,12 +53,12 @@ class TestUserSerializer extends TestJsonSerializer<TestUser> {
 // Serializer that throws exception for testing deserialization failures
 class FailingSerializer extends TestJsonSerializer<TestUser> {
   @override
-  String serialize(TestUser user, [dynamic config]) {
+  String serialize(TestUser user, [SerializationConfig? config]) {
     return jsonEncode({'id': user.id.toString()});
   }
 
   @override
-  TestUser deserialize(String data, [dynamic config]) {
+  TestUser deserialize(String data, [SerializationConfig? config]) {
     throw const FormatException('Deserialization failed');
   }
 }

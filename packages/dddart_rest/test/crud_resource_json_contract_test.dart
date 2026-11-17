@@ -9,6 +9,7 @@ import 'package:dddart_rest/src/authorization_handler.dart';
 import 'package:dddart_rest/src/authorization_result.dart';
 import 'package:dddart_rest/src/crud_resource.dart';
 import 'package:dddart_rest/src/query_handler.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:shelf/shelf.dart';
 import 'package:test/test.dart';
 
@@ -27,7 +28,7 @@ class _TestUser extends AggregateRoot<UuidValue> {
 
 class _TestUserSerializer extends TestJsonSerializer<_TestUser> {
   @override
-  String serialize(_TestUser user, [dynamic config]) {
+  String serialize(_TestUser user, [SerializationConfig? config]) {
     return jsonEncode({
       'id': user.id.toString(),
       'name': user.name,
@@ -37,7 +38,7 @@ class _TestUserSerializer extends TestJsonSerializer<_TestUser> {
   }
 
   @override
-  _TestUser deserialize(String data, [dynamic config]) {
+  _TestUser deserialize(String data, [SerializationConfig? config]) {
     final json = jsonDecode(data) as Map<String, dynamic>;
     return _TestUser(
       id: UuidValue.fromString(json['id'] as String),

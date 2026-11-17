@@ -11,8 +11,10 @@
 
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/dddart_rest.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:shelf/shelf.dart';
 
 import 'lib/json_serializer_support.dart';
@@ -108,7 +110,7 @@ class UserClaims {
 // Simple serializer for User
 class UserSerializer extends ExampleJsonSerializer<User> {
   @override
-  User deserialize(String data, [dynamic config]) {
+  User deserialize(String data, [SerializationConfig? config]) {
     final json = jsonDecode(data) as Map<String, dynamic>;
     return User(
       id: UuidValue.fromString(json['id'] as String),
@@ -120,7 +122,7 @@ class UserSerializer extends ExampleJsonSerializer<User> {
   }
 
   @override
-  String serialize(User aggregate, [dynamic config]) {
+  String serialize(User aggregate, [SerializationConfig? config]) {
     return jsonEncode({
       'id': aggregate.id.toString(),
       'username': aggregate.username,
@@ -209,7 +211,10 @@ void main() async {
   server.addRoute('POST', '/auth/logout', authEndpoints.handleLogout);
   server.addRoute('POST', '/auth/device', authEndpoints.handleDeviceCode);
   server.addRoute(
-      'GET', '/auth/device/verify', authEndpoints.handleDeviceVerify);
+    'GET',
+    '/auth/device/verify',
+    authEndpoints.handleDeviceVerify,
+  );
   server.addRoute('POST', '/auth/token', authEndpoints.handleToken);
 
   // Register protected user resource
@@ -238,7 +243,8 @@ void main() async {
   server.addRoute('GET', '/health', (Request request) async {
     return Response.ok(
       jsonEncode(
-          {'status': 'healthy', 'timestamp': DateTime.now().toIso8601String()}),
+        {'status': 'healthy', 'timestamp': DateTime.now().toIso8601String()},
+      ),
       headers: {'Content-Type': 'application/json'},
     );
   });

@@ -6,6 +6,8 @@ import 'package:dddart_serialization/src/serialization_contracts.dart';
 /// JSON values must be JSON-compatible scalars or structures. Keys must be
 /// reversible and collision-free over the identity's supported domain, including
 /// its scope. Backend size/type constraints are checked by the selected adapter.
+/// Signal invalid input with FormatException or a typed serialization exception.
+/// Unrelated application errors are not input validation.
 abstract interface class IdentityCodec<I extends Identity> {
   /// Encodes an identity without using an arbitrary toString representation.
   Object toJson(I identity);
@@ -31,14 +33,18 @@ class UuidIdentityCodec implements IdentityCodec<UuidValue> {
   @override
   UuidValue fromJson(Object? value) {
     if (value is! String) throw const FormatException('Expected UUID string');
-    return UuidValue.fromString(value);
+    try {
+      return UuidValue.fromString(value);
+    } on ArgumentError {
+      throw FormatException('Expected valid UUID string', value);
+    }
   }
 
   @override
   String toKey(UuidValue identity) => identity.uuid;
 
   @override
-  UuidValue fromKey(String value) => UuidValue.fromString(value);
+  UuidValue fromKey(String value) => fromJson(value);
 }
 
 /// Typed identity codecs with explicit stable keys for heterogeneous streams.
@@ -204,10 +210,21 @@ class IdentityCodecRegistry {
       final identity = entry.decode(value);
       _checkKind(entry, identity);
       return identity;
-    } catch (_) {
+    } on FormatException catch (error, stack) {
       throw DeserializationException(
         'Invalid identity value',
         expectedType: '${entry.type}',
+        cause: error,
+        stackTrace: stack,
+      );
+      // A codec cast checks the input shape at the decoding boundary.
+      // ignore: avoid_catching_errors
+    } on TypeError catch (error, stack) {
+      throw DeserializationException(
+        'Invalid identity value',
+        expectedType: '${entry.type}',
+        cause: error,
+        stackTrace: stack,
       );
     }
   }
