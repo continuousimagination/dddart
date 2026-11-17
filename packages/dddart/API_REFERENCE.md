@@ -211,7 +211,7 @@ AggregateRoot({
 ```
 
 **Parameters:**
-- `id` (required): The aggregate's concrete identity. Use `UuidAggregateRoot` for optional UUID generation.
+- `id` (required): The aggregate's concrete identity. UUID models use `AggregateRoot<UuidValue>` and supply an ID, for example `UuidValue.generate()`.
 - `createdAt` (optional): Creation timestamp. Defaults to current time.
 - `updatedAt` (optional): Last update timestamp. Defaults to current time.
 
@@ -234,7 +234,7 @@ void raiseEvent(DomainEvent<I> event)
 
 **Example:**
 ```dart
-class Order extends UuidAggregateRoot {
+class Order extends AggregateRoot<UuidValue> {
   void ship(String trackingNumber) {
     // Update state
     status = OrderStatus.shipped;
@@ -301,7 +301,7 @@ assert(order.getUncommittedEvents().isEmpty);
 ### Usage Example
 
 ```dart
-class Order extends UuidAggregateRoot {
+class Order extends AggregateRoot<UuidValue> {
   final String customerId;
   final List<OrderItem> items;
   OrderStatus status;
@@ -310,8 +310,8 @@ class Order extends UuidAggregateRoot {
     required this.customerId,
     required this.items,
     this.status = OrderStatus.pending,
-    super.id,
-  });
+    UuidValue? id,
+  }) : super(id: id ?? UuidValue.generate());
   
   // Factory method that raises event
   factory Order.place({
@@ -736,15 +736,15 @@ try {
 import 'package:dddart/dddart.dart';
 
 // Define your aggregate
-class User extends UuidAggregateRoot {
+class User extends AggregateRoot<UuidValue> {
   final String name;
   final String email;
   
   User({
     required this.name,
     required this.email,
-    super.id,
-  });
+    UuidValue? id,
+  }) : super(id: id ?? UuidValue.generate());
 }
 
 void main() async {
@@ -910,7 +910,7 @@ Future<void> updateUser(UuidValue userId, String newName) async {
 #### Integration with Domain Events
 
 ```dart
-class Order extends UuidAggregateRoot {
+class Order extends AggregateRoot<UuidValue> {
   final String customerId;
   final List<OrderItem> items;
   OrderStatus status;
@@ -919,8 +919,8 @@ class Order extends UuidAggregateRoot {
     required this.customerId,
     required this.items,
     this.status = OrderStatus.pending,
-    super.id,
-  });
+    UuidValue? id,
+  }) : super(id: id ?? UuidValue.generate());
   
   factory Order.place({
     required String customerId,
@@ -1521,7 +1521,7 @@ abstract class Entity<I extends Identity> {
 
 #### `id`
 - **Type:** `I extends Identity`
-- **Description:** Required native identity. Use `UuidEntity` for optional UUID generation.
+- **Description:** Required concrete identity. UUID models use `Entity<UuidValue>` and supply an ID, for example `UuidValue.generate()`.
 - **Read-only:** Yes
 
 #### `createdAt`
@@ -1563,17 +1563,17 @@ int get hashCode
 ### Usage Example
 
 ```dart
-class User extends UuidEntity {
+class User extends Entity<UuidValue> {
   final String name;
   final String email;
   
   User({
     required this.name,
     required this.email,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 }
 
 final user = User(name: 'John Doe', email: 'john@example.com');
@@ -1715,15 +1715,15 @@ class OrderPlaced extends DomainEvent<UuidValue> {
 }
 
 // 2. Define aggregate root
-class Order extends UuidAggregateRoot {
+class Order extends AggregateRoot<UuidValue> {
   final String customerId;
   final List<String> items;
   
   Order._({
     required this.customerId,
     required this.items,
-    super.id,
-  });
+    UuidValue? id,
+  }) : super(id: id ?? UuidValue.generate());
   
   factory Order.place({
     required String customerId,

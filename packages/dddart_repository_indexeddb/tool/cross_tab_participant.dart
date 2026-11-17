@@ -8,7 +8,7 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_repository_indexeddb/dddart_repository_indexeddb.dart';
 import 'package:idb_shim/idb_client_native.dart';
 
-class _Sample extends UuidAggregateRoot {
+class _Sample extends AggregateRoot<UuidValue> {
   _Sample({required super.id, required this.name});
 
   final String name;

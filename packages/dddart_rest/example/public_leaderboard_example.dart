@@ -15,13 +15,14 @@ import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'authorization_example.dart' as documents;
 import 'lib/json_serializer_support.dart';
 
-class Score extends UuidAggregateRoot {
+class Score extends AggregateRoot<UuidValue> {
   Score(
-      {super.id,
+      {UuidValue? id,
       super.createdAt,
       super.updatedAt,
       required this.player,
-      required this.points});
+      required this.points})
+      : super(id: id ?? UuidValue.generate());
   final String player;
   final int points;
 }

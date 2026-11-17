@@ -6,12 +6,12 @@ import 'package:test/test.dart';
 import 'package:uuid/uuid.dart' as uuid_pkg;
 
 // Concrete implementation of AggregateRoot for testing
-class TestAggregateRoot extends UuidAggregateRoot {
+class TestAggregateRoot extends AggregateRoot<UuidValue> {
   TestAggregateRoot({
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 }
 
 // Test domain event for testing event collection
@@ -29,7 +29,7 @@ class TestDomainEvent extends DomainEvent<UuidValue> {
 void main() {
   group('AggregateRoot', () {
     group('inheritance', () {
-      test('extends UuidEntity', () {
+      test('extends Entity<UuidValue>', () {
         final aggregateRoot = TestAggregateRoot();
 
         expect(aggregateRoot, isA<Entity<UuidValue>>());

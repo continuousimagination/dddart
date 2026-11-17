@@ -41,15 +41,15 @@ class UserRegistered extends DomainEvent<UuidValue> {
 ### Step 2: Create an Aggregate that Raises Events
 
 ```dart
-class User extends UuidAggregateRoot {
+class User extends AggregateRoot<UuidValue> {
   final String email;
   final String fullName;
   
   User._({
     required this.email,
     required this.fullName,
-    super.id,
-  });
+    UuidValue? id,
+  }) : super(id: id ?? UuidValue.generate());
   
   // Factory method that raises an event
   factory User.register({

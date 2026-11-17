@@ -38,8 +38,8 @@ import 'package:dddart_repository_mongodb/dddart_repository_mongodb.dart';
 
 @Serializable()
 @GenerateMongoRepository()
-class SimpleAggregate extends UuidAggregateRoot {
-  SimpleAggregate({required this.name}) : super();
+class SimpleAggregate extends AggregateRoot<UuidValue> {
+  SimpleAggregate({required this.name}) : super(id: UuidValue.generate());
   
   final String name;
 }
@@ -97,8 +97,8 @@ class Money extends Value {
 
 @Serializable()
 @GenerateMongoRepository()
-class Order extends UuidAggregateRoot {
-  Order({required this.total}) : super();
+class Order extends AggregateRoot<UuidValue> {
+  Order({required this.total}) : super(id: UuidValue.generate());
   
   final Money total;
 }
@@ -141,8 +141,8 @@ import 'package:dddart_repository_mongodb/dddart_repository_mongodb.dart';
 
 @Serializable()
 @GenerateMongoRepository(collectionName: 'custom_orders')
-class Order extends UuidAggregateRoot {
-  Order({required this.total}) : super();
+class Order extends AggregateRoot<UuidValue> {
+  Order({required this.total}) : super(id: UuidValue.generate());
   
   final double total;
 }
@@ -185,8 +185,8 @@ abstract class CustomOrderRepository implements Repository<Order, UuidValue> {
 
 @Serializable()
 @GenerateMongoRepository(implements: CustomOrderRepository)
-class Order extends UuidAggregateRoot {
-  Order({required this.status}) : super();
+class Order extends AggregateRoot<UuidValue> {
+  Order({required this.status}) : super(id: UuidValue.generate());
   
   final String status;
 }
@@ -233,8 +233,8 @@ import 'package:dddart_repository_mongodb/dddart_repository_mongodb.dart';
 
 @Serializable()
 @GenerateMongoRepository()
-class Order extends UuidAggregateRoot {
-  Order({required this.total}) : super();
+class Order extends AggregateRoot<UuidValue> {
+  Order({required this.total}) : super(id: UuidValue.generate());
   
   final double total;
 }
@@ -269,8 +269,8 @@ import 'package:dddart_repository_mongodb/dddart_repository_mongodb.dart';
 
 @Serializable()
 @GenerateMongoRepository()
-class Customer extends UuidAggregateRoot {
-  Customer({required this.name}) : super();
+class Customer extends AggregateRoot<UuidValue> {
+  Customer({required this.name}) : super(id: UuidValue.generate());
   
   final String name;
 }
@@ -393,8 +393,8 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_repository_mongodb/dddart_repository_mongodb.dart';
 
 @GenerateMongoRepository()
-class MissingSerializable extends UuidAggregateRoot {
-  MissingSerializable() : super();
+class MissingSerializable extends AggregateRoot<UuidValue> {
+  MissingSerializable() : super(id: UuidValue.generate());
 }
 ''',
           (resolver) async => (await resolver.findLibraryByName('test'))!,

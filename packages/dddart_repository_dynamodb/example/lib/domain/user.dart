@@ -13,16 +13,16 @@ part 'user.g.dart';
 /// User aggregate demonstrating basic DynamoDB repository usage.
 @Serializable()
 @GenerateDynamoRepository(tableName: 'users')
-class User extends UuidAggregateRoot {
+class User extends AggregateRoot<UuidValue> {
   /// Creates a user.
   User({
     required this.firstName,
     required this.lastName,
     required this.email,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   /// User's first name.
   final String firstName;

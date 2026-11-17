@@ -18,7 +18,7 @@ import 'package:shelf/shelf.dart';
 import 'lib/json_serializer_support.dart';
 
 // Domain model - Document owned by a user
-class Document extends UuidAggregateRoot {
+class Document extends AggregateRoot<UuidValue> {
   Document({
     required super.id,
     super.createdAt,

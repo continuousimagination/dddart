@@ -13,16 +13,16 @@ part 'user.g.dart';
 /// Example User aggregate demonstrating basic MongoDB repository usage.
 @Serializable()
 @GenerateMongoRepository(collectionName: 'users')
-class User extends UuidAggregateRoot {
+class User extends AggregateRoot<UuidValue> {
   /// Creates a new User.
   User({
     required this.firstName,
     required this.lastName,
     required this.email,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   /// User's first name.
   final String firstName;

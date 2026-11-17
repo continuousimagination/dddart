@@ -23,17 +23,17 @@ part 'order_with_custom_repo_impl.dart';
   tableName: 'orders',
   implements: OrderRepository,
 )
-class OrderWithCustomRepo extends UuidAggregateRoot {
+class OrderWithCustomRepo extends AggregateRoot<UuidValue> {
   /// Creates a new Order aggregate.
   OrderWithCustomRepo({
     required this.customerName,
     required this.shippingAddress,
     required this.items,
     this.billingAddress,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   /// Name of the customer placing the order.
   final String customerName;

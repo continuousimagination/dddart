@@ -56,7 +56,7 @@ class MysqlRepositoryGenerator
     _identityTypes.clear();
     _rootClassName = className;
 
-    // Validate class extends UuidAggregateRoot
+    // Validate class extends AggregateRoot
     if (!_extendsAggregateRoot(classElement)) {
       throw InvalidGenerationSourceError(
         'Class $className must extend AggregateRoot to use @GenerateMysqlRepository.',
@@ -144,7 +144,7 @@ class MysqlRepositoryGenerator
     }
   }
 
-  /// Validates that a class extends UuidAggregateRoot.
+  /// Validates that a class extends AggregateRoot.
   ///
   /// Walks the inheritance hierarchy to find AggregateRoot.
   bool _extendsAggregateRoot(ClassElement element) {

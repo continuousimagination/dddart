@@ -46,8 +46,8 @@ class OrderPlaced extends DomainEvent<UuidValue> {
   OrderPlaced({required super.aggregateId});
 }
 
-class Order extends UuidAggregateRoot {
-  Order({required this.customer});
+class Order extends AggregateRoot<UuidValue> {
+  Order({required this.customer}) : super(id: UuidValue.generate());
 
   final String customer;
   bool _placed = false;
@@ -98,14 +98,14 @@ This example deliberately uses a local bus and an in-memory repository. The repo
 
 | Piece | What it contributes |
 | --- | --- |
-| `UuidAggregateRoot` | An aggregate identity, lifecycle timestamps, and a pending event queue |
+| `AggregateRoot<UuidValue>` | An aggregate identity, lifecycle timestamps, and a pending event queue |
 | `place()` | A business action and its rule, owned by your model |
 | `Repository<Order, UuidValue>` | A typed contract for get, save, and delete |
 | `InMemoryRepository` | A simple implementation for this local example |
 | `DomainEvent<UuidValue>` | A fact tied to an aggregate, with its own occurrence ID |
 | `EventBus` | Typed local delivery to interested listeners |
 
-The general `AggregateRoot<I>` takes an explicit identity. Use `UuidAggregateRoot` when a generated UUID is appropriate; use a custom `Identity` when the domain already has an identifier or needs a composite scope.
+`AggregateRoot<I>` takes an explicit identity for every identity type. Use `AggregateRoot<UuidValue>` with `UuidValue.generate()` when a generated UUID is appropriate; use a custom `Identity` when the domain already has an identifier or needs a composite scope.
 
 ## Add JSON or other packages
 

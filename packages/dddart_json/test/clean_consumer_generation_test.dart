@@ -45,13 +45,14 @@ linter:
 import 'dart:convert';
 
 import 'package:dddart/dddart.dart';
+import 'package:dddart/dddart.dart' as dddart show UuidValue;
 import 'package:dddart_json/dddart_json.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 __GENERATED_PART_DIRECTIVE__
 
 @Serializable()
-class ConsumerAggregate extends UuidAggregateRoot {
+class ConsumerAggregate extends AggregateRoot<dddart.UuidValue> {
   ConsumerAggregate({
     required this.name,
     this.note,
@@ -59,10 +60,10 @@ class ConsumerAggregate extends UuidAggregateRoot {
     this.enabled,
     this.completedAt,
     this.notes,
-    super.id,
+    dddart.UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? dddart.UuidValue.generate());
 
   final String name;
   final String? note;
@@ -73,13 +74,13 @@ class ConsumerAggregate extends UuidAggregateRoot {
 }
 
 @Serializable()
-class ConsumerEntity extends UuidEntity {
+class ConsumerEntity extends Entity<dddart.UuidValue> {
   ConsumerEntity({
     required this.name,
-    super.id,
+    dddart.UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? dddart.UuidValue.generate());
 
   final String name;
 }

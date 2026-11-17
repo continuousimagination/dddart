@@ -1,8 +1,9 @@
 import 'package:dddart/dddart.dart';
 
 /// Domain data contains no persistence revision field.
-class Counter extends UuidAggregateRoot {
-  Counter({required this.value, super.id});
+class Counter extends AggregateRoot<UuidValue> {
+  Counter({required this.value, UuidValue? id})
+      : super(id: id ?? UuidValue.generate());
   final int value;
 }
 

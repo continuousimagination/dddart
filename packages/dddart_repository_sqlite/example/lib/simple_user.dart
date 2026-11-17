@@ -13,17 +13,17 @@ part 'simple_user.g.dart';
 /// A simple user aggregate with primitive fields.
 @Serializable()
 @GenerateSqliteRepository(tableName: 'users')
-class SimpleUser extends UuidAggregateRoot {
+class SimpleUser extends AggregateRoot<UuidValue> {
   /// Creates a simple user.
   SimpleUser({
     required this.name,
     required this.email,
     required this.age,
     required this.isActive,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   /// User's full name.
   final String name;

@@ -112,9 +112,9 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_repository_rest/dddart_repository_rest.dart';
 
 @GenerateRestRepository()
-class User extends UuidAggregateRoot {
+class User extends AggregateRoot<UuidValue> {
   final String name;
-  User({required this.name});
+  User({required this.name}) : super(id: UuidValue.generate());
 }
 ''',
         (resolver) async => (await resolver.findLibraryByName('test'))!,
@@ -159,9 +159,9 @@ import 'package:dddart_repository_rest/dddart_repository_rest.dart';
 
 @Serializable()
 @GenerateRestRepository(resourcePath: '/users')
-class User extends UuidAggregateRoot {
+class User extends AggregateRoot<UuidValue> {
   final String name;
-  User({required this.name});
+  User({required this.name}) : super(id: UuidValue.generate());
 }
 ''',
         (resolver) async => (await resolver.findLibraryByName('test'))!,
@@ -234,8 +234,8 @@ abstract interface class UserRepository implements Repository<User, UuidValue> {
 
 @Serializable()
 @GenerateRestRepository(implements: UserRepository)
-class User extends UuidAggregateRoot {
-  User({required this.name});
+class User extends AggregateRoot<UuidValue> {
+  User({required this.name}) : super(id: UuidValue.generate());
 
   final String name;
 }

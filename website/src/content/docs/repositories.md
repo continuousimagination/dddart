@@ -9,7 +9,7 @@ A repository gives application code a collection of aggregates without making it
 
 ## The contract you can share
 
-`Repository<T, I>` ties an aggregate type to its identity type. For a `Note extends UuidAggregateRoot`, use `Repository<Note, UuidValue>`.
+`Repository<T, I>` ties an aggregate type to its identity type. For a `Note extends AggregateRoot<UuidValue>`, use `Repository<Note, UuidValue>`.
 
 | Operation | Contract |
 | --- | --- |
@@ -26,8 +26,8 @@ After [installing the core package](/dddart/docs/getting-started/), this is a co
 ```dart
 import 'package:dddart/dddart.dart';
 
-class Note extends UuidAggregateRoot {
-  Note({required this.title, super.id});
+class Note extends AggregateRoot<UuidValue> {
+  Note({required this.title, UuidValue? id}) : super(id: id ?? UuidValue.generate());
 
   final String title;
 }
@@ -102,13 +102,13 @@ part 'note.g.dart';
 
 @Serializable()
 @GenerateSqliteRepository(tableName: 'notes')
-class Note extends UuidAggregateRoot {
+class Note extends AggregateRoot<UuidValue> {
   Note({
     required this.title,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   final String title;
 }

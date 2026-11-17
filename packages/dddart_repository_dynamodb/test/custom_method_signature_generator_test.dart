@@ -38,8 +38,8 @@ abstract interface class ReportRepository implements Repository<Report, UuidValu
   tableName: 'reports',
   implements: ReportRepository,
 )
-class Report extends UuidAggregateRoot {
-  Report({super.id, super.createdAt, super.updatedAt});
+class Report extends AggregateRoot<UuidValue> {
+  Report({UuidValue? id, super.createdAt, super.updatedAt}) : super(id: id ?? UuidValue.generate());
 }
 ''',
       (resolver) async =>
@@ -105,8 +105,8 @@ abstract interface class ReportRepository
   tableName: 'reports',
   implements: ReportRepository,
 )
-class Report extends UuidAggregateRoot {
-  Report({super.id, super.createdAt, super.updatedAt});
+class Report extends AggregateRoot<UuidValue> {
+  Report({UuidValue? id, super.createdAt, super.updatedAt}) : super(id: id ?? UuidValue.generate());
 }
 ''',
       (resolver) async => (await resolver.findLibraryByName('read_fixture'))!,

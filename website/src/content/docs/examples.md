@@ -109,7 +109,7 @@ These checks are a foundation for the examples. They do not claim live Slack/AWS
 
 **A generated part or class is missing:** run generation from the owning package after resolving dependencies. Import `dart:convert` and the JSON/serialization libraries when the generated JSON part needs them.
 
-**An old aggregate constructor no longer compiles:** use `UuidAggregateRoot` for generated UUIDs, or supply an identity to `AggregateRoot<I>`. Aggregate constructors are not `const`.
+**An old aggregate constructor no longer compiles:** use `AggregateRoot<UuidValue>` for UUID identities and pass an ID to the base constructor, for example `super(id: id ?? UuidValue.generate())`. All `AggregateRoot<I>` constructors require an identity. Aggregate constructors are not `const`.
 
 **A browser path reaches an unsupported operation:** check native adapter imports, filesystem token stores, process environment, and callback strategies. Use a platform-compatible implementation at the edge.
 

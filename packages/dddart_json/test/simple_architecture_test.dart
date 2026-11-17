@@ -12,14 +12,14 @@ part 'simple_architecture_test.g.dart';
 
 /// Simple test user for architecture verification.
 @Serializable()
-class SimpleUser extends UuidAggregateRoot {
+class SimpleUser extends AggregateRoot<UuidValue> {
   SimpleUser({
     required this.name,
     required this.email,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   final String name;
   final String email;

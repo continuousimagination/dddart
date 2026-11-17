@@ -54,16 +54,16 @@ class Address extends Value {
 
 /// Entity representing an order item within an order aggregate.
 @Serializable()
-class OrderItem extends UuidEntity {
+class OrderItem extends Entity<UuidValue> {
   /// Creates an order item entity.
   OrderItem({
     required this.productId,
     required this.quantity,
     required this.price,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   /// The product ID.
   final UuidValue productId;
@@ -78,17 +78,17 @@ class OrderItem extends UuidEntity {
 /// Aggregate root representing an order with nested entities and value objects.
 @Serializable()
 @GenerateSqliteRepository(tableName: 'orders')
-class Order extends UuidAggregateRoot {
+class Order extends AggregateRoot<UuidValue> {
   /// Creates an order aggregate.
   Order({
     required this.customerId,
     required this.totalAmount,
     required this.shippingAddress,
     required this.items,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   /// Customer ID (reference to another aggregate).
   final UuidValue customerId;
@@ -106,16 +106,16 @@ class Order extends UuidAggregateRoot {
 /// Simple aggregate for basic testing.
 @Serializable()
 @GenerateSqliteRepository(tableName: 'test_users')
-class TestUser extends UuidAggregateRoot {
+class TestUser extends AggregateRoot<UuidValue> {
   /// Creates a test user.
   TestUser({
     required this.name,
     required this.email,
     required this.isActive,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   /// User's name.
   final String name;
@@ -130,16 +130,16 @@ class TestUser extends UuidAggregateRoot {
 /// Aggregate with nullable value object for testing.
 @Serializable()
 @GenerateSqliteRepository(tableName: 'test_products')
-class TestProduct extends UuidAggregateRoot {
+class TestProduct extends AggregateRoot<UuidValue> {
   /// Creates a test product.
   TestProduct({
     required this.name,
     required this.price,
     this.discount,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   /// Product name.
   final String name;
@@ -154,17 +154,17 @@ class TestProduct extends UuidAggregateRoot {
 /// Aggregate with primitive collections for testing.
 @Serializable()
 @GenerateSqliteRepository(tableName: 'test_primitive_collections')
-class TestPrimitiveCollections extends UuidAggregateRoot {
+class TestPrimitiveCollections extends AggregateRoot<UuidValue> {
   /// Creates a test aggregate with primitive collections.
   TestPrimitiveCollections({
     required this.name,
     required this.favoriteNumbers,
     required this.tags,
     required this.scoresByGame,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   /// Name field.
   final String name;
@@ -182,17 +182,17 @@ class TestPrimitiveCollections extends UuidAggregateRoot {
 /// Aggregate with value object collections for testing.
 @Serializable()
 @GenerateSqliteRepository(tableName: 'test_value_collections')
-class TestValueCollections extends UuidAggregateRoot {
+class TestValueCollections extends AggregateRoot<UuidValue> {
   /// Creates a test aggregate with value object collections.
   TestValueCollections({
     required this.name,
     required this.payments,
     required this.addresses,
     required this.pricesByProduct,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   /// Name field.
   final String name;
@@ -209,15 +209,15 @@ class TestValueCollections extends UuidAggregateRoot {
 
 /// Simple entity for collection testing.
 @Serializable()
-class TestItem extends UuidEntity {
+class TestItem extends Entity<UuidValue> {
   /// Creates a test item entity.
   TestItem({
     required this.name,
     required this.quantity,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   /// Item name.
   final String name;
@@ -229,16 +229,16 @@ class TestItem extends UuidEntity {
 /// Aggregate with entity collections for testing.
 @Serializable()
 @GenerateSqliteRepository(tableName: 'test_entity_collections')
-class TestEntityCollections extends UuidAggregateRoot {
+class TestEntityCollections extends AggregateRoot<UuidValue> {
   /// Creates a test aggregate with entity collections.
   TestEntityCollections({
     required this.name,
     required this.uniqueItems,
     required this.itemsByCategory,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   /// Name field.
   final String name;
@@ -253,17 +253,17 @@ class TestEntityCollections extends UuidAggregateRoot {
 /// Aggregate with nullable collections for testing null handling.
 @Serializable()
 @GenerateSqliteRepository(tableName: 'test_nullable_collections')
-class TestNullableCollections extends UuidAggregateRoot {
+class TestNullableCollections extends AggregateRoot<UuidValue> {
   /// Creates a test aggregate with nullable collections.
   TestNullableCollections({
     required this.name,
     this.optionalNumbers,
     this.optionalTags,
     this.optionalScores,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   /// Name field.
   final String name;
@@ -281,15 +281,15 @@ class TestNullableCollections extends UuidAggregateRoot {
 /// Aggregate with collections containing nullable elements.
 @Serializable()
 @GenerateSqliteRepository(tableName: 'test_nullable_elements')
-class TestNullableElements extends UuidAggregateRoot {
+class TestNullableElements extends AggregateRoot<UuidValue> {
   /// Creates a test aggregate with nullable collection elements.
   TestNullableElements({
     required this.name,
     required this.nullableNumbers,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   /// Name field.
   final String name;

@@ -3,8 +3,10 @@
 ## Typed identity migration
 
 Generated repositories implement `Repository<T, I>` with concrete identity
-lookup/deletion. UUID consumers use `UuidAggregateRoot`/`UuidEntity`; application
-identities use `AggregateRoot<IssueId>`/`Entity<CommentId>` with required IDs.
+lookup/deletion. UUID consumers use `AggregateRoot<UuidValue>`/`Entity<UuidValue>`;
+application identities use `AggregateRoot<IssueId>`/`Entity<CommentId>`.
+All base constructors require an ID; domain constructors can generate UUIDs with
+`UuidValue.generate()`.
 
 ```dart
 final codecs = IdentityCodecRegistry()
@@ -84,13 +86,13 @@ import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
 
 @Serializable()
 @GenerateMysqlRepository(tableName: 'orders')
-class Order extends UuidAggregateRoot {
+class Order extends AggregateRoot<UuidValue> {
   Order({
     required UuidValue id,
     required this.customerId,
     required this.totalAmount,
     required this.items,
-  }) : super(id);
+  }) : super(id: id);
 
   final UuidValue customerId;
   final Money totalAmount;  // Value object (embedded)
@@ -425,13 +427,13 @@ abstract class OrderRepository implements Repository<Order, UuidValue> {
   tableName: 'orders',
   implements: OrderRepository,
 )
-class Order extends UuidAggregateRoot {
+class Order extends AggregateRoot<UuidValue> {
   Order({
     required UuidValue id,
     required this.customerId,
     required this.totalAmount,
     required this.createdAt,
-  }) : super(id);
+  }) : super(id: id);
 
   final UuidValue customerId;
   final Money totalAmount;
@@ -669,11 +671,11 @@ dependencies:
 ```dart
 // Before
 @GenerateSqliteRepository()
-class Order extends UuidAggregateRoot { /* ... */ }
+class Order extends AggregateRoot<UuidValue> { /* ... */ }
 
 // After
 @GenerateMysqlRepository(tableName: 'orders')
-class Order extends UuidAggregateRoot { /* ... */ }
+class Order extends AggregateRoot<UuidValue> { /* ... */ }
 ```
 
 ### 3. Update Connection Type
@@ -763,14 +765,14 @@ DDDart MySQL repositories provide comprehensive support for collections in your 
 ```dart
 @Serializable()
 @GenerateMysqlRepository(tableName: 'users')
-class User extends UuidAggregateRoot {
+class User extends AggregateRoot<UuidValue> {
   User({
     required UuidValue id,
     required this.name,
     required this.favoriteNumbers,
     required this.tags,
     required this.scoresByGame,
-  }) : super(id);
+  }) : super(id: id);
 
   final String name;
   final List<int> favoriteNumbers;      // Ordered list
@@ -843,13 +845,13 @@ class Address {
 
 @Serializable()
 @GenerateMysqlRepository(tableName: 'orders')
-class Order extends UuidAggregateRoot {
+class Order extends AggregateRoot<UuidValue> {
   Order({
     required UuidValue id,
     required this.payments,
     required this.deliveryLocations,
     required this.discountsByCode,
-  }) : super(id);
+  }) : super(id: id);
 
   final List<Money> payments;                    // Ordered payments
   final Set<Address> deliveryLocations;          // Unique addresses
@@ -911,24 +913,24 @@ CREATE TABLE IF NOT EXISTS orders_discountsByCode_items (
 
 ```dart
 @Serializable()
-class CartItem extends UuidEntity {
+class CartItem extends Entity<UuidValue> {
   CartItem({
     required UuidValue id,
     required this.productId,
     required this.quantity,
-  }) : super(id);
+  }) : super(id: id);
 
   final UuidValue productId;
   final int quantity;
 }
 
 @Serializable()
-class Discount extends UuidEntity {
+class Discount extends Entity<UuidValue> {
   Discount({
     required UuidValue id,
     required this.code,
     required this.percentage,
-  }) : super(id);
+  }) : super(id: id);
 
   final String code;
   final double percentage;
@@ -936,13 +938,13 @@ class Discount extends UuidEntity {
 
 @Serializable()
 @GenerateMysqlRepository(tableName: 'shopping_carts')
-class ShoppingCart extends UuidAggregateRoot {
+class ShoppingCart extends AggregateRoot<UuidValue> {
   ShoppingCart({
     required UuidValue id,
     required this.items,
     required this.appliedDiscounts,
     required this.savedItems,
-  }) : super(id);
+  }) : super(id: id);
 
   final List<CartItem> items;                    // Ordered items (existing support)
   final Set<Discount> appliedDiscounts;          // Unique discounts
@@ -1039,13 +1041,13 @@ CREATE TABLE IF NOT EXISTS saved_cart_items (
 ```dart
 @Serializable()
 @GenerateMysqlRepository(tableName: 'events')
-class Event extends UuidAggregateRoot {
+class Event extends AggregateRoot<UuidValue> {
   Event({
     required UuidValue id,
     required this.scheduledFor,
     required this.birthday,
     required this.timestamps,
-  }) : super(id);
+  }) : super(id: id);
 
   final DateTime scheduledFor;  // Stored as DATETIME (UTC)
   final DateTime birthday;      // Stored as DATETIME (UTC)
@@ -1068,12 +1070,12 @@ final rows = await connection.query('''
 ```dart
 @Serializable()
 @GenerateMysqlRepository(tableName: 'tasks')
-class Task extends UuidAggregateRoot {
+class Task extends AggregateRoot<UuidValue> {
   Task({
     required UuidValue id,
     required this.completed,
     required this.flags,
-  }) : super(id);
+  }) : super(id: id);
 
   final bool completed;        // Stored as TINYINT(1)
   final List<bool> flags;      // Each stored as TINYINT(1)
@@ -1144,7 +1146,7 @@ Collection support works identically in both SQLite and MySQL repositories:
 ```dart
 // Works with both @GenerateSqliteRepository() and @GenerateMysqlRepository()
 @Serializable()
-class Order extends UuidAggregateRoot {
+class Order extends AggregateRoot<UuidValue> {
   final List<int> itemIds;
   final Set<String> tags;
   final Map<String, double> prices;

@@ -21,12 +21,12 @@
 ///
 /// @Serializable()
 /// @GenerateDynamoRepository(tableName: 'users')
-/// class User extends UuidAggregateRoot {
+/// class User extends AggregateRoot<UuidValue> {
 ///   User({
 ///     required UuidValue id,
 ///     required this.firstName,
 ///     required this.lastName,
-///   }) : super(id);
+///   }) : super(id: id);
 ///
 ///   final String firstName;
 ///   final String lastName;
@@ -85,13 +85,13 @@
 ///   tableName: 'users',
 ///   implements: UserRepository,
 /// )
-/// class User extends UuidAggregateRoot {
+/// class User extends AggregateRoot<UuidValue> {
 ///   User({
 ///     required UuidValue id,
 ///     required this.firstName,
 ///     required this.lastName,
 ///     required this.email,
-///   }) : super(id);
+///   }) : super(id: id);
 ///
 ///   final String firstName;
 ///   final String lastName;

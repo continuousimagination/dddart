@@ -192,7 +192,7 @@ class PaymentFailed extends DomainEvent<UuidValue> {
 Create aggregates using factory methods that raise events:
 
 ```dart
-class Order extends UuidAggregateRoot {
+class Order extends AggregateRoot<UuidValue> {
   final String customerId;
   final List<OrderItem> items;
   OrderStatus status;
@@ -201,8 +201,8 @@ class Order extends UuidAggregateRoot {
     required this.customerId,
     required this.items,
     this.status = OrderStatus.pending,
-    super.id,
-  });
+    UuidValue? id,
+  }) : super(id: id ?? UuidValue.generate());
   
   // Factory method that raises event
   factory Order.place({
@@ -238,7 +238,7 @@ class Order extends UuidAggregateRoot {
 Raise events when business operations modify state:
 
 ```dart
-class Order extends UuidAggregateRoot {
+class Order extends AggregateRoot<UuidValue> {
   OrderStatus status;
   DateTime? shippedAt;
   String? trackingNumber;
@@ -535,15 +535,15 @@ class UserRegistered extends DomainEvent<UuidValue> {
 }
 
 // 2. Create aggregate that raises event
-class User extends UuidAggregateRoot {
+class User extends AggregateRoot<UuidValue> {
   final String email;
   final String fullName;
   
   User._({
     required this.email,
     required this.fullName,
-    super.id,
-  });
+    UuidValue? id,
+  }) : super(id: id ?? UuidValue.generate());
   
   factory User.register({
     required String email,

@@ -38,8 +38,8 @@ class PaymentProcessedEvent extends DomainEvent<UuidValue> {
 }
 
 // Test aggregate root
-class TestAggregate extends UuidAggregateRoot {
-  TestAggregate({super.id});
+class TestAggregate extends AggregateRoot<UuidValue> {
+  TestAggregate({UuidValue? id}) : super(id: id ?? UuidValue.generate());
 
   void doSomething(String message) {
     raiseEvent(
@@ -53,12 +53,12 @@ class TestAggregate extends UuidAggregateRoot {
 }
 
 // Test aggregate for order flow
-class TestOrder extends UuidAggregateRoot {
+class TestOrder extends AggregateRoot<UuidValue> {
   TestOrder({
     required this.customerId,
     this.itemCount = 0,
-    super.id,
-  });
+    UuidValue? id,
+  }) : super(id: id ?? UuidValue.generate());
   final String customerId;
   int itemCount;
   String status = 'pending';
@@ -113,7 +113,7 @@ void main() {
       expect(event.context, isEmpty);
     });
 
-    test('AggregateRoot extends UuidEntity correctly', () {
+    test('AggregateRoot extends Entity<UuidValue> correctly', () {
       final aggregate = TestAggregate();
 
       expect(aggregate, isA<Entity<UuidValue>>());

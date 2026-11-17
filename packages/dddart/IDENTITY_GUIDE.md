@@ -74,22 +74,31 @@ rejects another identity kind at compilation, as do typed aggregate events.
 
 ## Existing UUID consumers
 
-Migrate a UUID entity to UuidEntity and a UUID aggregate to UuidAggregateRoot:
+Use `Entity<UuidValue>` for UUID entities and `AggregateRoot<UuidValue>` for
+UUID aggregates. Both require an ID, just like any other identity type:
 
 ```dart
-class User extends UuidAggregateRoot {
-  User({super.id, super.createdAt, super.updatedAt});
+class User extends AggregateRoot<UuidValue> {
+  User({required super.id, super.createdAt, super.updatedAt});
 }
 
-final user = User(); // Generates UuidValue.
+final user = User(id: UuidValue.generate());
 final sameIdentity = User(id: user.id);
 final repository = InMemoryRepository<User, UuidValue>();
 ```
 
-Alternatively extend AggregateRoot<UuidValue> and require the caller to supply
-id. UuidValue.generate() creates a UUID and UuidValue.fromString() validates an
+If a domain model should generate UUIDs, put that policy in its constructor:
+
+```dart
+class User extends AggregateRoot<UuidValue> {
+  User({UuidValue? id, super.createdAt, super.updatedAt})
+      : super(id: id ?? UuidValue.generate());
+}
+```
+
+`UuidValue.generate()` creates a UUID and `UuidValue.fromString()` validates an
 existing UUID. The UUID representation and validation behavior remain available;
-there is no second UUID identity wrapper.
+there are no UUID-specific entity or aggregate base classes.
 
 UUID event subclasses now extend DomainEvent<UuidValue>. An event referring to a
 native identity instead extends DomainEvent<ThatIdentity>; its own eventId still
@@ -100,8 +109,8 @@ Changes to existing signatures:
 
 | Before | After for a UUID consumer |
 | --- | --- |
-| Entity with implicit UUID | UuidEntity |
-| AggregateRoot with implicit UUID | UuidAggregateRoot |
+| Entity with implicit UUID | `Entity<UuidValue>` with an explicit ID |
+| AggregateRoot with implicit UUID | `AggregateRoot<UuidValue>` with an explicit ID |
 | Repository<User> | Repository<User, UuidValue> |
 | InMemoryRepository<User> | InMemoryRepository<User, UuidValue> |
 | DomainEvent | DomainEvent<UuidValue> |

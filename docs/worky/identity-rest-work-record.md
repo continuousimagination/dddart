@@ -1,5 +1,10 @@
 # REST identity work record — issue #43
 
+Current API update (17 November 2026): UUID-specific entity and aggregate base
+classes have been removed. Use `Entity<UuidValue>` and
+`AggregateRoot<UuidValue>` with an explicit ID; domain constructors may call
+`UuidValue.generate()`. The evidence below describes the original implementation.
+
 Branch: issue/identity-rest. Target: issue/37-extensible-identity.
 Baseline e4df263 includes validated core, serialization and database adapters.
 One owner controls all REST package/example generation and combined parts.

@@ -9,8 +9,8 @@ import 'package:dddart_repository_indexeddb/src/transaction_error_guard_stub.dar
 import 'package:idb_shim/idb.dart';
 import 'package:test/test.dart';
 
-class _Sample extends UuidAggregateRoot {
-  _Sample(this.name, {super.id});
+class _Sample extends AggregateRoot<UuidValue> {
+  _Sample(this.name, {UuidValue? id}) : super(id: id ?? UuidValue.generate());
 
   final String name;
 }

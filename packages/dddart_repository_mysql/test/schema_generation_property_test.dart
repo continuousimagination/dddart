@@ -35,21 +35,21 @@ import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
 
 @Serializable()
-class OrderItem extends UuidEntity {
-  OrderItem({required this.productId}) : super();
+class OrderItem extends Entity<UuidValue> {
+  OrderItem({required this.productId}) : super(id: UuidValue.generate());
   final UuidValue productId;
 }
 
 @Serializable()
-class Payment extends UuidEntity {
-  Payment({required this.amount}) : super();
+class Payment extends Entity<UuidValue> {
+  Payment({required this.amount}) : super(id: UuidValue.generate());
   final double amount;
 }
 
 @Serializable()
 @GenerateMysqlRepository()
-class Order extends UuidAggregateRoot {
-  Order({required this.items, required this.payments}) : super();
+class Order extends AggregateRoot<UuidValue> {
+  Order({required this.items, required this.payments}) : super(id: UuidValue.generate());
   final List<OrderItem> items;
   final List<Payment> payments;
 }
@@ -93,15 +93,15 @@ import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
 
 @Serializable()
-class Item extends UuidEntity {
-  Item({required this.name}) : super();
+class Item extends Entity<UuidValue> {
+  Item({required this.name}) : super(id: UuidValue.generate());
   final String name;
 }
 
 @Serializable()
 @GenerateMysqlRepository()
-class Container extends UuidAggregateRoot {
-  Container({required this.items}) : super();
+class Container extends AggregateRoot<UuidValue> {
+  Container({required this.items}) : super(id: UuidValue.generate());
   final List<Item> items;
 }
 ''',
@@ -153,15 +153,15 @@ import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
 
 @Serializable()
-class LineItem extends UuidEntity {
-  LineItem({required this.sku}) : super();
+class LineItem extends Entity<UuidValue> {
+  LineItem({required this.sku}) : super(id: UuidValue.generate());
   final String sku;
 }
 
 @Serializable()
 @GenerateMysqlRepository()
-class Invoice extends UuidAggregateRoot {
-  Invoice({required this.lineItems}) : super();
+class Invoice extends AggregateRoot<UuidValue> {
+  Invoice({required this.lineItems}) : super(id: UuidValue.generate());
   final List<LineItem> lineItems;
 }
 ''',
@@ -212,8 +212,8 @@ class Address extends Value {
 
 @Serializable()
 @GenerateMysqlRepository()
-class Customer extends UuidAggregateRoot {
-  Customer({required this.shippingAddress}) : super();
+class Customer extends AggregateRoot<UuidValue> {
+  Customer({required this.shippingAddress}) : super(id: UuidValue.generate());
   final Address shippingAddress;
 }
 ''',
@@ -268,8 +268,8 @@ class Notes extends Value {
 
 @Serializable()
 @GenerateMysqlRepository()
-class Task extends UuidAggregateRoot {
-  Task({this.notes}) : super();
+class Task extends AggregateRoot<UuidValue> {
+  Task({this.notes}) : super(id: UuidValue.generate());
   final Notes? notes;
 }
 ''',
@@ -318,8 +318,8 @@ class Price extends Value {
 
 @Serializable()
 @GenerateMysqlRepository()
-class Product extends UuidAggregateRoot {
-  Product({required this.price}) : super();
+class Product extends AggregateRoot<UuidValue> {
+  Product({required this.price}) : super(id: UuidValue.generate());
   final Price price;
 }
 ''',
@@ -360,8 +360,8 @@ import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
 
 @Serializable()
 @GenerateMysqlRepository()
-class SimpleAggregate extends UuidAggregateRoot {
-  SimpleAggregate({required this.name}) : super();
+class SimpleAggregate extends AggregateRoot<UuidValue> {
+  SimpleAggregate({required this.name}) : super(id: UuidValue.generate());
   final String name;
 }
 ''',
@@ -401,8 +401,8 @@ import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
 
 @Serializable()
 @GenerateMysqlRepository()
-class Entity1 extends UuidAggregateRoot {
-  Entity1({required this.referenceId}) : super();
+class Entity1 extends AggregateRoot<UuidValue> {
+  Entity1({required this.referenceId}) : super(id: UuidValue.generate());
   final UuidValue referenceId;
 }
 ''',

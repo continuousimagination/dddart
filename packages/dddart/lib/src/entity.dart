@@ -1,5 +1,4 @@
 import 'package:dddart/src/identity.dart';
-import 'package:dddart/src/uuid_value.dart';
 
 /// Base class for all domain entities in the DDD framework.
 ///
@@ -9,7 +8,7 @@ import 'package:dddart/src/uuid_value.dart';
 abstract class Entity<I extends Identity> {
   /// Creates an entity with an explicitly supplied identity.
   ///
-  /// Use [UuidEntity] for automatic UUID generation.
+  /// The caller supplies the identity, including UUIDs, and owns its generation.
   /// If [createdAt] is not provided, the current time will be used.
   /// If [updatedAt] is not provided, the current time will be used.
   Entity({
@@ -51,11 +50,4 @@ abstract class Entity<I extends Identity> {
   /// String representation of the entity showing its type and ID.
   @override
   String toString() => '$runtimeType(id: $id)';
-}
-
-/// An entity whose identity is a supplied or automatically generated UUID.
-abstract class UuidEntity extends Entity<UuidValue> {
-  /// Creates a UUID entity, generating [id] when omitted.
-  UuidEntity({UuidValue? id, super.createdAt, super.updatedAt})
-      : super(id: id ?? UuidValue.generate());
 }

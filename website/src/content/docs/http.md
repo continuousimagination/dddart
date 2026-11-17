@@ -89,13 +89,13 @@ part 'order.g.dart';
 
 @Serializable()
 @GenerateRestRepository(resourcePath: '/orders')
-class Order extends UuidAggregateRoot {
+class Order extends AggregateRoot<UuidValue> {
   Order({
     required this.customer,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   final String customer;
 }

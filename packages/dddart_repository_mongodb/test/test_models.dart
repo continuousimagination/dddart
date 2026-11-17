@@ -15,15 +15,15 @@ part 'test_models_impl.dart';
 /// Simple test aggregate for basic CRUD testing.
 @Serializable()
 @GenerateMongoRepository(collectionName: 'test_users')
-class TestUser extends UuidAggregateRoot {
+class TestUser extends AggregateRoot<UuidValue> {
   /// Creates a test user.
   TestUser({
     required this.name,
     required this.email,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   /// User's name.
   final String name;
@@ -35,15 +35,15 @@ class TestUser extends UuidAggregateRoot {
 /// Test aggregate with custom collection name.
 @Serializable()
 @GenerateMongoRepository(collectionName: 'custom_products')
-class TestProduct extends UuidAggregateRoot {
+class TestProduct extends AggregateRoot<UuidValue> {
   /// Creates a test product.
   TestProduct({
     required this.name,
     required this.price,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   /// Product name.
   final String name;
@@ -68,16 +68,16 @@ abstract interface class TestOrderRepository
   collectionName: 'test_orders',
   implements: TestOrderRepository,
 )
-class TestOrder extends UuidAggregateRoot {
+class TestOrder extends AggregateRoot<UuidValue> {
   /// Creates a test order.
   TestOrder({
     required this.orderNumber,
     required this.customerId,
     required this.total,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   /// Order number.
   final String orderNumber;
@@ -92,16 +92,16 @@ class TestOrder extends UuidAggregateRoot {
 /// Test aggregate for SerializationConfig testing.
 @Serializable()
 @GenerateMongoRepository(collectionName: 'test_accounts')
-class TestAccount extends UuidAggregateRoot {
+class TestAccount extends AggregateRoot<UuidValue> {
   /// Creates a test account.
   TestAccount({
     required this.accountName,
     required this.accountType,
     required this.balance,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   /// Account name.
   final String accountName;

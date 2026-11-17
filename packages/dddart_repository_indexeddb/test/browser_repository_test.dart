@@ -8,8 +8,9 @@ import 'package:dddart_repository_indexeddb/dddart_repository_indexeddb.dart';
 import 'package:idb_shim/idb_client_native.dart';
 import 'package:test/test.dart';
 
-class _BrowserSample extends UuidAggregateRoot {
-  _BrowserSample({required this.label, super.id});
+class _BrowserSample extends AggregateRoot<UuidValue> {
+  _BrowserSample({required this.label, UuidValue? id})
+      : super(id: id ?? UuidValue.generate());
 
   final String label;
 }

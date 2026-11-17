@@ -11,8 +11,9 @@ The adapter still declares hosted internal dependencies, so use the guide's
 overrides pinned to the same immutable Git revision.
 
 Generated repositories implement `Repository<T, I>` using the aggregate's
-concrete identity type. UUID consumers use `UuidAggregateRoot`; externally
-identified consumers extend `AggregateRoot<IssueId>` with a required ID.
+concrete identity type. UUID consumers use `AggregateRoot<UuidValue>`; externally
+identified consumers extend `AggregateRoot<IssueId>`. Both require an ID;
+domain constructors can generate UUIDs with `UuidValue.generate()`.
 
 ```dart
 final codecs = IdentityCodecRegistry()
@@ -74,13 +75,13 @@ part 'user.g.dart';
 
 @Serializable()
 @GenerateDynamoRepository(tableName: 'users')
-class User extends UuidAggregateRoot {
+class User extends AggregateRoot<UuidValue> {
   User({
     required UuidValue id,
     required this.email,
     required this.firstName,
     required this.lastName,
-  }) : super(id);
+  }) : super(id: id);
 
   final String email;
   final String firstName;
@@ -186,7 +187,7 @@ abstract interface class UserRepository implements Repository<User, UuidValue> {
   tableName: 'users',
   implements: UserRepository,
 )
-class User extends UuidAggregateRoot {
+class User extends AggregateRoot<UuidValue> {
   // ... fields
 }
 ```
@@ -302,13 +303,17 @@ Marks an aggregate root for repository generation.
 **Example:**
 ```dart
 @GenerateDynamoRepository(tableName: 'users')
-class User extends UuidAggregateRoot { }
+class User extends AggregateRoot<UuidValue> {
+  User() : super(id: UuidValue.generate());
+}
 
 @GenerateDynamoRepository(
   tableName: 'orders',
   implements: OrderRepository,
 )
-class Order extends UuidAggregateRoot { }
+class Order extends AggregateRoot<UuidValue> {
+  Order() : super(id: UuidValue.generate());
+}
 ```
 
 ### Classes
@@ -508,14 +513,20 @@ The AWS SDK manages HTTP connection pooling internally. Reusing a single `Dynamo
 ```dart
 // ✅ Good: Explicit table names
 @GenerateDynamoRepository(tableName: 'prod_users')
-class User extends UuidAggregateRoot { }
+class User extends AggregateRoot<UuidValue> {
+  User() : super(id: UuidValue.generate());
+}
 
 @GenerateDynamoRepository(tableName: 'staging_users')
-class User extends UuidAggregateRoot { }
+class User extends AggregateRoot<UuidValue> {
+  User() : super(id: UuidValue.generate());
+}
 
 // ⚠️ Acceptable for development: Auto-generated names
 @GenerateDynamoRepository() // Generates 'user' table name
-class User extends UuidAggregateRoot { }
+class User extends AggregateRoot<UuidValue> {
+  User() : super(id: UuidValue.generate());
+}
 ```
 
 **Use environment-specific prefixes:**
@@ -524,7 +535,9 @@ class User extends UuidAggregateRoot { }
 final env = Platform.environment['ENV'] ?? 'dev';
 
 @GenerateDynamoRepository(tableName: '${env}_users')
-class User extends UuidAggregateRoot { }
+class User extends AggregateRoot<UuidValue> {
+  User() : super(id: UuidValue.generate());
+}
 ```
 
 ### Error Handling Patterns
@@ -782,13 +795,13 @@ abstract interface class UserRepository implements Repository<User, UuidValue> {
   tableName: 'users',
   implements: UserRepository,
 )
-class User extends UuidAggregateRoot {
+class User extends AggregateRoot<UuidValue> {
   User({
     required UuidValue id,
     required this.email,
     required this.firstName,
     required this.lastName,
-  }) : super(id);
+  }) : super(id: id);
 
   final String email;
   final String firstName;
@@ -1187,12 +1200,12 @@ dart run build_runner build
 // 5. Implement custom serialization for complex types
 
 @Serializable()
-class User extends UuidAggregateRoot {
+class User extends AggregateRoot<UuidValue> {
   User({
     required UuidValue id,
     required this.email,
     required this.createdAt, // DateTime is supported
-  }) : super(id);
+  }) : super(id: id);
 
   final String email;
   final DateTime createdAt;
@@ -1275,7 +1288,7 @@ dependencies:
 ```dart
 @Serializable()
 @GenerateMongoRepository(collectionName: 'users')
-class User extends UuidAggregateRoot {
+class User extends AggregateRoot<UuidValue> {
   // Same aggregate definition
 }
 

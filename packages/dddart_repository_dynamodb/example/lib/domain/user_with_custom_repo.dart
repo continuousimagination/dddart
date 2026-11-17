@@ -30,16 +30,16 @@ abstract interface class UserRepository
   tableName: 'users_with_custom_repo',
   implements: UserRepository,
 )
-class UserWithCustomRepo extends UuidAggregateRoot {
+class UserWithCustomRepo extends AggregateRoot<UuidValue> {
   /// Creates a user.
   UserWithCustomRepo({
     required this.firstName,
     required this.lastName,
     required this.email,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   /// User's first name.
   final String firstName;

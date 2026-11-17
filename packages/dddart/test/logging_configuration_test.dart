@@ -13,13 +13,13 @@ class ConfigTestEvent extends DomainEvent<UuidValue> {
 }
 
 // Test aggregate for Repository logging
-class ConfigTestAggregate extends UuidAggregateRoot {
+class ConfigTestAggregate extends AggregateRoot<UuidValue> {
   ConfigTestAggregate({
     required this.name,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   final String name;
 }

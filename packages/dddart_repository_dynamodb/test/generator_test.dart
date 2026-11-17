@@ -108,8 +108,8 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';
 
 @GenerateDynamoRepository()
-class MissingSerializable extends UuidAggregateRoot {
-  MissingSerializable() : super();
+class MissingSerializable extends AggregateRoot<UuidValue> {
+  MissingSerializable() : super(id: UuidValue.generate());
 }
 ''',
         (resolver) async => (await resolver.findLibraryByName('test'))!,
@@ -152,8 +152,8 @@ import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';
 
 @Serializable()
 @GenerateDynamoRepository(tableName: 'custom_products')
-class Product extends UuidAggregateRoot {
-  Product() : super();
+class Product extends AggregateRoot<UuidValue> {
+  Product() : super(id: UuidValue.generate());
 }
 ''',
         (resolver) async => (await resolver.findLibraryByName('test'))!,
@@ -189,8 +189,8 @@ import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';
 
 @Serializable()
 @GenerateDynamoRepository()
-class OrderItem extends UuidAggregateRoot {
-  OrderItem() : super();
+class OrderItem extends AggregateRoot<UuidValue> {
+  OrderItem() : super(id: UuidValue.generate());
 }
 ''',
         (resolver) async => (await resolver.findLibraryByName('test'))!,
@@ -227,8 +227,8 @@ import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';
 
 @Serializable()
 @GenerateDynamoRepository(tableName: 'users')
-class User extends UuidAggregateRoot {
-  User() : super();
+class User extends AggregateRoot<UuidValue> {
+  User() : super(id: UuidValue.generate());
 }
 ''',
         (resolver) async => (await resolver.findLibraryByName('test'))!,
@@ -294,8 +294,8 @@ abstract interface class UserRepository implements Repository<User, UuidValue> {
 
 @Serializable()
 @GenerateDynamoRepository(tableName: 'users', implements: UserRepository)
-class User extends UuidAggregateRoot {
-  User() : super();
+class User extends AggregateRoot<UuidValue> {
+  User() : super(id: UuidValue.generate());
 }
 ''',
         (resolver) async => (await resolver.findLibraryByName('test'))!,
@@ -341,8 +341,8 @@ abstract interface class UserRepository implements Repository<User, UuidValue> {
 
 @Serializable()
 @GenerateDynamoRepository(tableName: 'users', implements: UserRepository)
-class User extends UuidAggregateRoot {
-  User() : super();
+class User extends AggregateRoot<UuidValue> {
+  User() : super(id: UuidValue.generate());
 }
 ''',
         (resolver) async => (await resolver.findLibraryByName('test'))!,
@@ -400,8 +400,8 @@ import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';
 
 @Serializable()
 @GenerateDynamoRepository(tableName: 'orders')
-class Order extends UuidAggregateRoot {
-  Order() : super();
+class Order extends AggregateRoot<UuidValue> {
+  Order() : super(id: UuidValue.generate());
 }
 ''',
           (resolver) async => (await resolver.findLibraryByName('test'))!,
@@ -445,8 +445,8 @@ import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';
 
 @Serializable()
 @GenerateDynamoRepository(tableName: 'customers')
-class Customer extends UuidAggregateRoot {
-  Customer() : super();
+class Customer extends AggregateRoot<UuidValue> {
+  Customer() : super(id: UuidValue.generate());
 }
 ''',
           (resolver) async => (await resolver.findLibraryByName('test'))!,
@@ -490,8 +490,8 @@ import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';
 
 @Serializable()
 @GenerateDynamoRepository(tableName: 'inventory')
-class Inventory extends UuidAggregateRoot {
-  Inventory() : super();
+class Inventory extends AggregateRoot<UuidValue> {
+  Inventory() : super(id: UuidValue.generate());
 }
 ''',
           (resolver) async => (await resolver.findLibraryByName('test'))!,
@@ -538,8 +538,8 @@ import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';
 
 @Serializable()
 @GenerateDynamoRepository()
-class TestAggregate extends UuidAggregateRoot {
-  TestAggregate() : super();
+class TestAggregate extends AggregateRoot<UuidValue> {
+  TestAggregate() : super(id: UuidValue.generate());
 }
 ''',
           (resolver) async => (await resolver.findLibraryByName('test'))!,
@@ -578,8 +578,8 @@ import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';
 
 @Serializable()
 @GenerateDynamoRepository()
-class BillingTest extends UuidAggregateRoot {
-  BillingTest() : super();
+class BillingTest extends AggregateRoot<UuidValue> {
+  BillingTest() : super(id: UuidValue.generate());
 }
 ''',
           (resolver) async => (await resolver.findLibraryByName('test'))!,

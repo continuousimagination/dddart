@@ -30,14 +30,14 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 @Serializable()
-class User extends UuidAggregateRoot {
+class User extends AggregateRoot<UuidValue> {
   User({
     required this.name,
     required this.email,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
   
   final String name;
   final String email;

@@ -150,7 +150,7 @@ class CollectionAnalyzer {
   ///
   /// Example:
   /// ```dart
-  /// class OrderItem extends UuidEntity {
+  /// class OrderItem extends Entity<UuidValue> {
   ///   final int quantity;
   /// }
   /// analyzer.isEntity(orderItemElement); // true
@@ -371,6 +371,6 @@ enum ElementKind {
   /// Value object (extends Value).
   value,
 
-  /// Entity (extends UuidEntity).
+  /// Entity (extends Entity<UuidValue>).
   entity,
 }

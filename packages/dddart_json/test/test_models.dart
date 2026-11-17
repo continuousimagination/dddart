@@ -11,14 +11,14 @@ part 'test_models.g.dart';
 
 /// Test AggregateRoot for serialization.
 @Serializable()
-class TestUser extends UuidAggregateRoot {
+class TestUser extends AggregateRoot<UuidValue> {
   TestUser({
     required this.name,
     required this.email,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   final String name;
   final String email;
@@ -43,15 +43,15 @@ class TestAddress extends Value {
 
 /// Test AggregateRoot with nested Value.
 @Serializable()
-class TestUserWithAddress extends UuidAggregateRoot {
+class TestUserWithAddress extends AggregateRoot<UuidValue> {
   TestUserWithAddress({
     required this.name,
     required this.email,
     required this.address,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   final String name;
   final String email;
@@ -60,15 +60,15 @@ class TestUserWithAddress extends UuidAggregateRoot {
 
 /// Test AggregateRoot with snake_case field naming.
 @Serializable()
-class TestUserSnakeCase extends UuidAggregateRoot {
+class TestUserSnakeCase extends AggregateRoot<UuidValue> {
   TestUserSnakeCase({
     required this.firstName,
     required this.lastName,
     required this.emailAddress,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   final String firstName;
   final String lastName;
@@ -77,15 +77,15 @@ class TestUserSnakeCase extends UuidAggregateRoot {
 
 /// Test AggregateRoot with kebab-case field naming.
 @Serializable()
-class TestUserKebabCase extends UuidAggregateRoot {
+class TestUserKebabCase extends AggregateRoot<UuidValue> {
   TestUserKebabCase({
     required this.firstName,
     required this.lastName,
     required this.emailAddress,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   final String firstName;
   final String lastName;
@@ -127,14 +127,14 @@ class TestContactInfo extends Value {
 }
 
 /// Test Entity for nested serialization within AggregateRoots.
-class TestProfile extends UuidEntity {
+class TestProfile extends Entity<UuidValue> {
   TestProfile({
     required this.bio,
     required this.preferences,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   final String bio;
   final Map<String, String> preferences;
@@ -142,17 +142,17 @@ class TestProfile extends UuidEntity {
 
 /// Complex AggregateRoot with multiple nested entities and values.
 @Serializable()
-class TestComplexUser extends UuidAggregateRoot {
+class TestComplexUser extends AggregateRoot<UuidValue> {
   TestComplexUser({
     required this.name,
     required this.contactInfo,
     required this.addresses,
     required this.tags,
     required this.metadata,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   final String name;
   final TestContactInfo contactInfo;
@@ -163,17 +163,17 @@ class TestComplexUser extends UuidAggregateRoot {
 
 /// AggregateRoot with collections of different types.
 @Serializable()
-class TestProject extends UuidAggregateRoot {
+class TestProject extends AggregateRoot<UuidValue> {
   TestProject({
     required this.title,
     required this.description,
     required this.collaborators,
     required this.milestones,
     required this.settings,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   final String title;
   final String description;
@@ -209,13 +209,13 @@ enum GameState {
 
 /// Test AggregateRoot with enum field.
 @Serializable()
-class TestGame extends UuidAggregateRoot {
+class TestGame extends AggregateRoot<UuidValue> {
   TestGame({
     required this.state,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   final GameState state;
 }

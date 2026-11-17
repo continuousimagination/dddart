@@ -1,5 +1,10 @@
 # SQL identity work record — issue #42
 
+Current API update (17 November 2026): UUID-specific entity and aggregate base
+classes have been removed. Use `Entity<UuidValue>` and
+`AggregateRoot<UuidValue>` with an explicit ID; domain constructors may call
+`UuidValue.generate()`. The evidence below describes the original implementation.
+
 Branch: issue/identity-sql-backends. Target: issue/37-extensible-identity.
 Baseline: 3731932, after locally validated core, JSON and document adapters.
 One owner handles shared SQL metadata, dialects, generators and all build caches.

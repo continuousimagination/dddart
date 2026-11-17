@@ -34,7 +34,7 @@ enum DeviceCodeStatus {
 /// but it is an infrastructure concern, not a domain concept. The Repository
 /// pattern is used here as a general-purpose persistence abstraction.
 @Serializable()
-class DeviceCode extends UuidAggregateRoot {
+class DeviceCode extends AggregateRoot<UuidValue> {
   /// Creates a device code
   DeviceCode({
     required super.id,

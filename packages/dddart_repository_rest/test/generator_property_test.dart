@@ -47,9 +47,9 @@ import 'package:dddart_repository_rest/dddart_repository_rest.dart';
 
 @Serializable()
 @GenerateRestRepository()
-class $className extends UuidAggregateRoot {
+class $className extends AggregateRoot<UuidValue> {
 $fields
-  $className();
+  $className() : super(id: UuidValue.generate());
 }
 ''',
             (resolver) async => (await resolver.findLibraryByName('test'))!,
@@ -121,9 +121,9 @@ import 'package:dddart_repository_rest/dddart_repository_rest.dart';
 
 @Serializable()
 @GenerateRestRepository(resourcePath: '$resourcePath')
-class TestAggregate extends UuidAggregateRoot {
+class TestAggregate extends AggregateRoot<UuidValue> {
   final String name;
-  TestAggregate({required this.name});
+  TestAggregate({required this.name}) : super(id: UuidValue.generate());
 }
 ''',
             (resolver) async => (await resolver.findLibraryByName('test'))!,
@@ -197,9 +197,9 @@ import 'package:dddart_repository_rest/dddart_repository_rest.dart';
 
 @Serializable()
 @GenerateRestRepository()
-class $className extends UuidAggregateRoot {
+class $className extends AggregateRoot<UuidValue> {
   final String name;
-  $className({required this.name});
+  $className({required this.name}) : super(id: UuidValue.generate());
 }
 ''',
             (resolver) async => (await resolver.findLibraryByName('test'))!,
@@ -249,9 +249,9 @@ import 'package:dddart_repository_rest/dddart_repository_rest.dart';
 
 @Serializable()
 @GenerateRestRepository()
-class User extends UuidAggregateRoot {
+class User extends AggregateRoot<UuidValue> {
   final String name;
-  User({required this.name});
+  User({required this.name}) : super(id: UuidValue.generate());
 }
 ''',
           (resolver) async => (await resolver.findLibraryByName('test'))!,
@@ -291,9 +291,9 @@ abstract interface class ProductRepository implements Repository<Product, UuidVa
 
 @Serializable()
 @GenerateRestRepository(implements: ProductRepository)
-class Product extends UuidAggregateRoot {
+class Product extends AggregateRoot<UuidValue> {
   final String name;
-  Product({required this.name});
+  Product({required this.name}) : super(id: UuidValue.generate());
 }
 ''',
           (resolver) async => (await resolver.findLibraryByName('test'))!,
@@ -336,9 +336,9 @@ abstract interface class OrderRepository implements Repository<Order, UuidValue>
 
 @Serializable()
 @GenerateRestRepository(implements: OrderRepository)
-class Order extends UuidAggregateRoot {
+class Order extends AggregateRoot<UuidValue> {
   final String orderNumber;
-  Order({required this.orderNumber});
+  Order({required this.orderNumber}) : super(id: UuidValue.generate());
 }
 ''',
           (resolver) async => (await resolver.findLibraryByName('test'))!,
@@ -447,9 +447,9 @@ $interfaceCode
 
 @Serializable()
 @GenerateRestRepository(implements: ${className}Repository)
-class $className extends UuidAggregateRoot {
+class $className extends AggregateRoot<UuidValue> {
   final String name;
-  $className({required this.name});
+  $className({required this.name}) : super(id: UuidValue.generate());
 }
 ''',
             (resolver) async => (await resolver.findLibraryByName('test'))!,
@@ -578,9 +578,9 @@ $interfaceCode
 
 @Serializable()
 @GenerateRestRepository(implements: ${className}Repository)
-class $className extends UuidAggregateRoot {
+class $className extends AggregateRoot<UuidValue> {
   final String name;
-  $className({required this.name});
+  $className({required this.name}) : super(id: UuidValue.generate());
 }
 ''',
             (resolver) async => (await resolver.findLibraryByName('test'))!,

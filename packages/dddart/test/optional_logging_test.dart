@@ -2,13 +2,13 @@ import 'package:dddart/dddart.dart';
 import 'package:test/test.dart';
 
 // Test domain models
-class TestUser extends UuidAggregateRoot {
+class TestUser extends AggregateRoot<UuidValue> {
   TestUser({
     required this.name,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
   final String name;
 }
 

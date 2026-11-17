@@ -43,15 +43,15 @@ import 'package:dddart_serialization/dddart_serialization.dart';
 part 'reservation.g.dart';
 
 @Serializable()
-class Reservation extends UuidAggregateRoot {
+class Reservation extends AggregateRoot<UuidValue> {
   Reservation({
     required this.guestName,
     required this.seats,
     this.note,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   final String guestName;
   final SeatCount seats;

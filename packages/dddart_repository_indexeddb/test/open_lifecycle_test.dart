@@ -5,7 +5,9 @@ import 'package:dddart_repository_indexeddb/dddart_repository_indexeddb.dart';
 import 'package:idb_shim/idb.dart';
 import 'package:test/test.dart';
 
-class _Sample extends UuidAggregateRoot {}
+class _Sample extends AggregateRoot<UuidValue> {
+  _Sample() : super(id: UuidValue.generate());
+}
 
 class _BlockedEvent implements Event {}
 

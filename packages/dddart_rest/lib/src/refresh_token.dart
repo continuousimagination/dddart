@@ -15,7 +15,7 @@ part 'refresh_token.g.dart';
 /// but it is an infrastructure concern, not a domain concept. The Repository
 /// pattern is used here as a general-purpose persistence abstraction.
 @Serializable()
-class RefreshToken extends UuidAggregateRoot {
+class RefreshToken extends AggregateRoot<UuidValue> {
   /// Creates a refresh token
   RefreshToken({
     required super.id,

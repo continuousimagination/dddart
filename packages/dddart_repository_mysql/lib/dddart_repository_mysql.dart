@@ -15,7 +15,7 @@
 /// ```dart
 /// @Serializable()
 /// @GenerateMysqlRepository(tableName: 'orders')
-/// class Order extends UuidAggregateRoot {
+/// class Order extends AggregateRoot<UuidValue> {
 ///   // Your domain model
 /// }
 ///

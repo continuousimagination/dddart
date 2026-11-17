@@ -9,16 +9,16 @@ part 'order_item.g.dart';
 
 /// Entity representing an item in an order.
 @Serializable()
-class OrderItem extends UuidEntity {
+class OrderItem extends Entity<UuidValue> {
   /// Creates a new OrderItem entity.
   OrderItem({
     required this.productName,
     required this.quantity,
     required this.unitPrice,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   /// Name of the product.
   final String productName;

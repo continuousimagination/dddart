@@ -7,9 +7,9 @@ import 'package:shelf/shelf.dart';
 
 import 'json_serializer_test_support.dart';
 
-class Document extends UuidAggregateRoot {
+class Document extends AggregateRoot<UuidValue> {
   Document({
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
     this.owner = 'alice',
@@ -18,7 +18,7 @@ class Document extends UuidAggregateRoot {
     this.isPublic = false,
     this.content = 'private content',
     this.tags = const [],
-  });
+  }) : super(id: id ?? UuidValue.generate());
   final String owner;
   final String tenant;
   final String role;

@@ -49,7 +49,7 @@ class MongoRepositoryGenerator
     final classElement = element;
     final className = classElement.name;
 
-    // Task 4.2: Validate class extends UuidAggregateRoot
+    // Task 4.2: Validate class extends AggregateRoot
     if (!_extendsAggregateRoot(classElement)) {
       throw InvalidGenerationSourceError(
         'Class $className must extend AggregateRoot to use @GenerateMongoRepository.',
@@ -131,7 +131,7 @@ class MongoRepositoryGenerator
     }
   }
 
-  /// Validates that a class extends UuidAggregateRoot.
+  /// Validates that a class extends AggregateRoot.
   ///
   /// Walks the inheritance hierarchy to find AggregateRoot.
   bool _extendsAggregateRoot(ClassElement element) {

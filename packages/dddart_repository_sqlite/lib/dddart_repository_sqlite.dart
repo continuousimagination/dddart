@@ -15,8 +15,8 @@
 /// ```dart
 /// @Serializable()
 /// @GenerateSqliteRepository()
-/// class Order extends UuidAggregateRoot {
-///   Order({required UuidValue id, required this.items}) : super(id);
+/// class Order extends AggregateRoot<UuidValue> {
+///   Order({required UuidValue id, required this.items}) : super(id: id);
 ///   final List<OrderItem> items;
 /// }
 /// ```

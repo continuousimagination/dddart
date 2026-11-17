@@ -79,7 +79,9 @@ void main() {
   });
 }
 
-class _Aggregate extends UuidAggregateRoot {}
+class _Aggregate extends AggregateRoot<UuidValue> {
+  _Aggregate() : super(id: UuidValue.generate());
+}
 
 class _Event extends DomainEvent<UuidValue> {
   _Event(UuidValue id, {super.eventId}) : super(aggregateId: id);

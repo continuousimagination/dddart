@@ -1,5 +1,10 @@
 # Identity core work record — issue #39
 
+Current API update (17 November 2026): UUID-specific entity and aggregate base
+classes have been removed. Use `Entity<UuidValue>` and
+`AggregateRoot<UuidValue>` with an explicit ID; domain constructors may call
+`UuidValue.generate()`. The evidence below describes the original implementation.
+
 Branch: issue/identity-core. PR target: issue/37-extensible-identity.
 Prerequisite: owner-authorized identity API proposal and parent baseline
 734018a, which also incorporates the independently implemented configuration

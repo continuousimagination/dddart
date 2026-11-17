@@ -17,14 +17,14 @@ enum OrderStatus {
 
 /// Example aggregate with enum field
 @Serializable()
-class Order extends UuidAggregateRoot {
+class Order extends AggregateRoot<UuidValue> {
   Order({
     required this.orderNumber,
     required this.status,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   final String orderNumber;
   final OrderStatus status;

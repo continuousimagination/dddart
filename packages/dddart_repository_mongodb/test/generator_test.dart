@@ -65,8 +65,8 @@ import 'package:dddart_repository_mongodb/dddart_repository_mongodb.dart';
 
 @Serializable()
 @GenerateMongoRepository(collectionName: 'test_products')
-class Product extends UuidAggregateRoot {
-  Product() : super();
+class Product extends AggregateRoot<UuidValue> {
+  Product() : super(id: UuidValue.generate());
 }
 ''',
         (resolver) async => (await resolver.findLibraryByName('test'))!,

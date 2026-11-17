@@ -20,7 +20,7 @@ class CollectionValue extends Value {
 }
 
 @Serializable()
-class NullableElementAggregate extends UuidAggregateRoot {
+class NullableElementAggregate extends AggregateRoot<UuidValue> {
   NullableElementAggregate({
     required this.primitiveList,
     required this.dateSet,
@@ -30,10 +30,10 @@ class NullableElementAggregate extends UuidAggregateRoot {
     required this.dateMap,
     required this.enumMap,
     required this.valueMap,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   final List<String?> primitiveList;
   final Set<DateTime?> dateSet;

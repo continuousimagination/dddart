@@ -10,8 +10,9 @@ authentication, policy injection and serverless handler registration.
 
 ## Typed identities (pre-release breaking change)
 
-Use `UuidAggregateRoot` for existing UUID models and `Repository<User, UuidValue>`
-for UUID CRUD. Native models extend `AggregateRoot<IssueId>` with a required ID.
+Use `AggregateRoot<UuidValue>` for UUID models and `Repository<User, UuidValue>`
+for UUID CRUD. Native models extend `AggregateRoot<IssueId>`. Both base
+constructors require an ID; domain constructors can call `UuidValue.generate()`.
 Register explicit `IdentityCodec<IssueId>` implementations in an instance-local
 `IdentityCodecRegistry`; configure the server's `JsonSerializer` and
 `CrudResource<Issue, IssueId, void>` with the same registry. Generated REST

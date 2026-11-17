@@ -13,17 +13,17 @@ part 'product.g.dart';
 /// Product aggregate demonstrating DynamoDB repository usage.
 @Serializable()
 @GenerateDynamoRepository(tableName: 'products')
-class Product extends UuidAggregateRoot {
+class Product extends AggregateRoot<UuidValue> {
   /// Creates a product.
   Product({
     required this.name,
     required this.description,
     required this.price,
     required this.inStock,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   /// Product name.
   final String name;
