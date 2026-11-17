@@ -25,7 +25,10 @@ abstract class SqlConnection {
   /// Executes multiple statements in a transaction.
   ///
   /// If [action] throws an exception, the transaction is rolled back.
-  /// Otherwise, it is committed.
+  /// Otherwise, it is committed. Implementations serialize unrelated callers on
+  /// a shared physical connection. Nested calls join the owning execution context;
+  /// an inner failure makes the enclosing transaction rollback-only, even when
+  /// caught. Await all operations; escaped asynchronous work is unsupported.
   Future<T> transaction<T>(Future<T> Function() action);
 
   /// Whether the connection is currently open.

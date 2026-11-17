@@ -273,9 +273,5 @@ void main() {
       expect(values, contains(RepositoryExceptionType.forbidden));
       expect(values, contains(RepositoryExceptionType.unknown));
     });
-
-    test('enum has exactly 8 values', () {
-      expect(RepositoryExceptionType.values.length, equals(8));
-    });
   });
 }

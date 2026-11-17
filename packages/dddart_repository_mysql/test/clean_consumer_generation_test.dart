@@ -99,7 +99,9 @@ abstract interface class BroadConsumerReads {
 }
 
 abstract interface class ConsumerRepository
-    implements Repository<ConsumerAggregate, NativeIdentity>, BroadConsumerReads {
+    implements Repository<ConsumerAggregate, NativeIdentity>,
+        ConditionalAggregateRepository<ConsumerAggregate, NativeIdentity>,
+        BroadConsumerReads {
   @override
   Future<List<ConsumerAggregate>> getAll();
 

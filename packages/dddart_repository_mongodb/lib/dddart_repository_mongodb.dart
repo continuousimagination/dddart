@@ -123,3 +123,4 @@ export 'src/connection/mongo_connection.dart';
 // Exceptions
 export 'src/exceptions/mongo_repository_exception.dart';
 export 'src/identity_key.dart';
+export 'src/write_result.dart';

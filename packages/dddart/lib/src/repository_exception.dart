@@ -30,6 +30,15 @@ class RepositoryException implements Exception {
 
 /// Types of repository exceptions that can occur during operations.
 enum RepositoryExceptionType {
+  /// A storage-enforced expected-revision condition was confirmed false.
+  conflict,
+
+  /// A requested optional repository capability is not implemented.
+  unsupported,
+
+  /// A dispatched write may have committed; its acknowledgment is unknown.
+  uncertain,
+
   /// The requested aggregate was not found in the repository.
   notFound,
 

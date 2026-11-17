@@ -196,6 +196,12 @@ Future<void> _demonstrateProperErrorHandling() async {
           print('   ✓ Handled: Unauthorized access');
         case RepositoryExceptionType.forbidden:
           print('   ✓ Handled: Forbidden operation');
+        case RepositoryExceptionType.conflict:
+          print('Revision changed; reload before choosing a new write.');
+        case RepositoryExceptionType.unsupported:
+          print('The repository does not support this conditional operation.');
+        case RepositoryExceptionType.uncertain:
+          print('Write outcome is uncertain; reconcile before retrying.');
         case RepositoryExceptionType.unknown:
           print('   ✓ Handled: Unknown error');
       }

@@ -226,7 +226,9 @@ abstract class IssueBase<I extends Identity> extends AggregateRoot<I> {
 
 /// Additional operations retain their named parameters and overridden signature.
 abstract interface class NativeReadRepository
-    implements Repository<NativeIssue, NativeId> {
+    implements
+        Repository<NativeIssue, NativeId>,
+        ConditionalAggregateRepository<NativeIssue, NativeId> {
   /// Reads with a label.
   Future<NativeIssue> lookup(NativeId id, {String label = 'default'});
 }

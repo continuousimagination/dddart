@@ -208,7 +208,7 @@ class User extends UuidAggregateRoot {
       );
       expect(
         RegExp(r"headers: \{'Accept': 'application/json'\}").allMatches(output),
-        hasLength(2),
+        hasLength(3),
       );
     });
 

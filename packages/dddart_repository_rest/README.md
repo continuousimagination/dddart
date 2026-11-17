@@ -154,6 +154,40 @@ Future<void> main() async {
 }
 ```
 
+## Conditional snapshots and writes
+
+Generated repositories implement `ConditionalAggregateRepository<T, I>` in
+addition to ordinary CRUD. The remote resource must expose the same capability.
+Tokens belong to returned snapshots; the repository has no mutable global ETag.
+
+```dart
+final snapshot = await repository.getVersioned(id);
+final proposed = edit(snapshot.aggregate);
+try {
+  final revision = await repository.saveConditional(
+    proposed,
+    expected: ExpectedRevision.match(snapshot.revision),
+  );
+  print(revision);
+} on RevisionConflictException<MyIdentity> {
+  // Reload, decide how to recompute/merge, and deliberately issue a new write.
+}
+```
+
+`ExpectedRevision.absent()` performs create-if-absent with `If-None-Match: *`.
+`deleteConditional` uses the same expected-state contract. UUID/native/scoped
+identity types are retained in snapshots and conflicts. The client encodes opaque
+storage tokens as strong DDDart revision ETags; callers should pass the snapshot's
+`revision`, without adding quotes or interpreting its value.
+
+A versioned GET without a supported strong validator fails with
+`ConditionalCapabilityUnsupportedException`. A write with a lost response, a
+server failure, or a successful response lacking the required revision has an
+uncertain outcome; pending events are retained and the client does not retry.
+A confirmed 412 is a typed `RevisionConflictException<I>`. Ordinary `getById`,
+`save` and `deleteById` remain available, including public endpoints without an
+authentication provider.
+
 ## RestConnection Configuration
 
 ### Basic Connection (No Authentication)

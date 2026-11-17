@@ -25,10 +25,15 @@ class SqliteConnection implements SqlConnection {
 
   final String _path;
   Database? _database;
-  int _transactionDepth = 0;
+  final _coordinator = SqlConnectionCoordinator();
 
   @override
   Future<void> open() async {
+    _coordinator.requireOutsideTransaction();
+    await _coordinator.run(_open);
+  }
+
+  Future<void> _open() async {
     if (_database != null) {
       return; // Already open
     }
@@ -42,20 +47,28 @@ class SqliteConnection implements SqlConnection {
 
   @override
   Future<void> close() async {
+    _coordinator.requireOutsideTransaction();
+    await _coordinator.run(_close);
+  }
+
+  Future<void> _close() async {
     if (_database == null) {
       return; // Already closed
     }
 
-    _database!.dispose();
+    final database = _database!;
     _database = null;
-    _transactionDepth = 0;
+    database.dispose();
   }
 
   @override
   bool get isOpen => _database != null;
 
   @override
-  Future<void> execute(String sql, [List<Object?>? parameters]) async {
+  Future<void> execute(String sql, [List<Object?>? parameters]) =>
+      _coordinator.run(() => _execute(sql, parameters));
+
+  Future<void> _execute(String sql, [List<Object?>? parameters]) async {
     if (_database == null) {
       throw StateError('Connection is not open. Call open() first.');
     }
@@ -74,6 +87,12 @@ class SqliteConnection implements SqlConnection {
 
   @override
   Future<List<Map<String, Object?>>> query(
+    String sql, [
+    List<Object?>? parameters,
+  ]) =>
+      _coordinator.run(() => _query(sql, parameters));
+
+  Future<List<Map<String, Object?>>> _query(
     String sql, [
     List<Object?>? parameters,
   ]) async {
@@ -98,39 +117,36 @@ class SqliteConnection implements SqlConnection {
     }
   }
 
-  @override
-  Future<T> transaction<T>(Future<T> Function() action) async {
-    if (_database == null) {
-      throw StateError('Connection is not open. Call open() first.');
-    }
-
-    // Support nested transactions by tracking depth
-    final isOuterTransaction = _transactionDepth == 0;
-
-    if (isOuterTransaction) {
-      _database!.execute('BEGIN');
-    }
-
-    _transactionDepth++;
-
-    try {
-      final result = await action();
-
-      _transactionDepth--;
-
-      if (isOuterTransaction) {
-        _database!.execute('COMMIT');
+  Future<void> _begin() async {
+    // Never block the Dart isolate while another connection needs to commit.
+    // Only lock acquisition is retried; user work and COMMIT are never replayed.
+    final deadline = DateTime.now().add(const Duration(seconds: 5));
+    while (true) {
+      try {
+        await _execute('BEGIN IMMEDIATE');
+        return;
+      } on SqliteException catch (error) {
+        if (error.resultCode != 5 || DateTime.now().isAfter(deadline)) rethrow;
+        await Future<void>.delayed(const Duration(milliseconds: 5));
       }
-
-      return result;
-    } catch (e) {
-      _transactionDepth--;
-
-      if (isOuterTransaction) {
-        _database!.execute('ROLLBACK');
-      }
-
-      rethrow;
     }
   }
+
+  /// Runs publication after the outer commit, discarding it on rollback.
+  Future<void> afterCommit(Future<void> Function() action) =>
+      _coordinator.afterCommit(action);
+
+  /// Conditional writes must own their commit to report a confirmed revision.
+  void requireStandaloneTransaction() =>
+      _coordinator.requireOutsideTransaction();
+
+  @override
+  Future<T> transaction<T>(Future<T> Function() action) =>
+      _coordinator.transaction(
+        action: action,
+        begin: _begin,
+        commit: () => _execute('COMMIT'),
+        rollback: () => _execute('ROLLBACK'),
+        invalidate: _close,
+      );
 }
