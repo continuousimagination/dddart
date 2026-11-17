@@ -59,9 +59,9 @@ The surface inventory covers **every repository Markdown/MDX/RST document**, inc
 standalone guides, testing/how-to pages, all sample READMEs and the website. All
 library and sample Dartdoc is discovered recursively, including implementation libraries.
 New documents fail until added to `surfaces.json` after review. Historical work
-records, specs, changelogs and handoffs require a visible notice pointing to current
-usage; agent steering files are explicitly internal. Those records preserve history
-without advertising obsolete APIs as supported instructions.
+records, changelogs and handoffs require a visible notice pointing to current
+usage. Those records preserve history without advertising obsolete APIs as
+supported instructions.
 
 Every Dart fence in current documentation must be a verbatim `dddart-source`
 inclusion owned by a checked quickstart or an active example entrypoint. There

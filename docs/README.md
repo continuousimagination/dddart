@@ -23,7 +23,7 @@ Complete code inclusions are owned by executable quickstarts or inventoried samp
 Samples that require application credentials or a long-running host are explicitly compile-only.
 Local databases and protocol fixtures are not evidence of a live cloud or device test.
 
-`worky/`, `.kiro/specs/`, changelogs and the application handoff are historical records.
+`worky/`, changelogs and the application handoff are historical records.
 Their visible notices distinguish them from current how-tos. The explicit
 [surface inventory](../tool/documentation/surfaces.json) accounts for each document;
 new guides fail validation until reviewed and inventoried. Historical code is not a current API promise.

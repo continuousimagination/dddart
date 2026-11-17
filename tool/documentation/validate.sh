@@ -90,8 +90,7 @@ check_sources() {
   require(same([$files[]|select(test("\\.(md|mdx|rst)$"))]; $surfaces|keys);
           "Documentation surface inventory differs") |
   reduce ($surfaces|to_entries[]) as $entry (.;
-    require($entry.value == "current" or $entry.value == "historical" or
-            ($entry.value == "internal" and ($entry.key|startswith(".kiro/steering/")));
+    require($entry.value == "current" or $entry.value == "historical";
             $entry.key + ": invalid documentation category") |
     require($entry.value != "historical" or (content($entry.key)|contains(
       "> Historical record; it may describe retired APIs. For current usage, start at"));
