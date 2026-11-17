@@ -20,7 +20,7 @@ and repeatable regression tests. The owner explicitly proposed this approach.
   the branch. Record the actual revision used for each app test.
 - Issues #54–#64 contain the accepted scope and completed implementation
   checklists. All carry `appsync`; the shared PR closes them on merge.
-- Main API/deployment/migration guide: [DISTRIBUTED_EVENTS.md](DISTRIBUTED_EVENTS.md).
+- Main API/deployment reference: [DISTRIBUTED_EVENTS.md](DISTRIBUTED_EVENTS.md).
 
 The framework implementation passed the complete local service-backed gate.
 **No real AWS deployment or live AppSync smoke test has been performed.** Native

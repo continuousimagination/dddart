@@ -56,5 +56,36 @@ lack of outbox/exactly-once processing remain documented limits.
 
 ## Validation
 
-Validation results are recorded after the integrated lanes complete. No live AWS
-deployment or production credential use is part of this issue.
+Implementation `aa8a8d2`; HTTP example formatting/README synchronization through
+`d813dbb`; external public-contract assertion refined at `7051bfa`. The integrated
+sequence ran across these commits. Runtime implementation did not change after
+`aa8a8d2`; the later AppSync consumer and example lanes tested those refinements.
+All commands below passed using Dart 3.13.7. Commands run from the repository root
+unless otherwise stated.
+
+| Command | Result |
+| --- | --- |
+| `dart tool/validation/validate.dart check` | Inventory covers 18 public packages and 15 examples; deleted sketches have no stale exclusions. |
+| `dart tool/validation/validate.dart package dddart --mode=ci` | 231 tests; includes local delivery and safe pending-event publication/acknowledgment. |
+| `dart tool/validation/validate.dart package dddart_serialization --mode=ci` | 23 tests. |
+| `dart tool/validation/validate.dart package dddart_json --mode=ci` | 114 tests, including generated consumers and invalid generation inputs. |
+| `dart tool/validation/validate.dart package dddart_events_distributed --mode=ci` | 58 tests, including 9 new real-HTTP/lifecycle cases and the isolated generated HTTP-only consumer. |
+| `dart tool/validation/validate.dart package dddart_events_appsync --mode=ci` | 18 tests, including native/protocol fixtures and the isolated dual-transport consumer. |
+| `dart tool/validation/validate.dart package dddart_events_dynamodb --mode=ci` | 8 tests against DynamoDB Local 3.1.0. |
+| `dart tool/validation/validate.dart consumer NAME` for distributed, AppSync and DynamoDB event packages | All three isolated archive consumers resolve only their permitted local package closures, analyze and run. |
+| `dart tool/validation/validate.dart example NAME --mode=ci` for all three event example packages | HTTP/custom-JSON examples run; AppSync native invocation runs and Lambda/live smoke compile; DynamoDB example runs on an isolated local table. |
+| `npm ci` then `npm run check` from `website` | Node 24.15.0; builds 14 pages and checks 806 links/assets plus 12 searchable guides. |
+
+Package gates include generation where required, fatal-info analysis, formatting
+and the applicable publish dry-run policy. Core's dry-run has zero warnings; the
+other five packages remain explicitly non-publishable and are dry-run exempt.
+DynamoDB Local used an isolated in-memory container bound to loopback port 8000;
+tests/examples clean their own tables and the container is removed afterward.
+
+A final search found no active references to removed types in package code,
+tests, examples, current reference/handoff documents or website content.
+Intentional removal notes and historical changelog/work records retain their
+names. The README HTTP program was compared with its runnable source exactly.
+No live AWS deployment, production credential use, package publication or merge
+of this PR or its parent PRs was performed. Local protocol fixtures are not a
+claim of a live AppSync acceptance run.
