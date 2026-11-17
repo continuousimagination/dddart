@@ -1,5 +1,9 @@
 # dddart_repository_sqlite
 
+[Supported platforms and capability boundaries](../../docs/CAPABILITIES.md) ·
+[Supported imports and extension APIs](../../docs/PUBLIC_API.md)
+
+
 For complete setup, named source files, expected output and cleanup, follow the
 [canonical quickstart](../../docs/quickstarts/sqlite/README.md). Other inline Dart snippets below are
 **illustrative fragments** that assume application-specific models and surrounding
@@ -7,7 +11,7 @@ setup; they are not standalone programs. See the [quickstart inventory](../../do
 for runnable, browser, service and credential-dependent coverage.
 
 
-## Typed identity migration
+## Typed identity contracts
 
 Use `AggregateRoot<UuidValue>`/`Entity<UuidValue>` for UUID identities, or
 `AggregateRoot<IssueId>`/`Entity<CommentId>` with required application identities.
@@ -26,8 +30,9 @@ Application codecs follow the [JSON/key contract](../dddart_serialization/README
 Canonical keys are stored as UTF-8 BLOBs through root, entity and collection
 primary/foreign keys. Structured IDs and identity map keys retain scope and exact
 case; malformed key Unicode is rejected. UUID keys retain their complete string
-bytes, including case. Migrate/recreate existing 16-byte UUID schemas/data, then
-regenerate every owning combined part and update hand-written SQL parameters.
+bytes, including case. Provision fresh schemas and regenerate owning parts; 1.0
+is the first schema/API compatibility baseline. Handwritten SQL uses canonical
+key parameters.
 
 Persistence uses fixed Dart field names and includes null fields to clear optional
 identity state on updates. Explicit path/type metadata preserves codec JSON as a
@@ -51,7 +56,7 @@ SQLite repository implementation for DDDart aggregate roots with automatic code 
 - 📦 **Collection Support**: Full support for List, Set, and Map collections with primitives, value objects, and entities
 - 🔒 **Transaction Support**: Multi-table operations wrapped in transactions
 - 🎯 **Type Safety**: Compile-time code generation ensures type-safe operations
-- 📱 **Cross-Platform**: Works on iOS, Android, Windows, macOS, Linux, and Web
+- 📱 **Cross-Platform**: Native FFI adapter; requires a usable SQLite shared library
 - 🚀 **Zero Boilerplate**: Annotate your aggregate roots and generate repositories
 - 📅 **Native DateTime**: DateTime fields stored as TEXT in ISO8601 format for human readability
 
@@ -276,12 +281,12 @@ Future<List<Order>> findOrdersWithItems() async {
 
 ## Platform Support
 
-Works on all platforms via the `sqlite3` package:
-
-- 📱 iOS and Android (mobile apps)
-- 💻 Windows, macOS, Linux (desktop apps)
-- 🌐 Web (WASM-based SQLite)
-- 🧪 In-memory databases for testing
+This adapter imports the native `sqlite3` FFI implementation. It supports native
+composition where the SQLite shared library is correctly supplied; verify the
+actual Flutter/device packaging you ship. It does not include a Web/WASM backend.
+Use [IndexedDB](../dddart_repository_indexeddb/README.md) for the supplied browser
+storage adapter. Native in-memory SQLite databases are available for tests.
+See the [support matrix](../../docs/CAPABILITIES.md) for verification scope.
 
 ## Connection Management
 
@@ -805,43 +810,10 @@ class Task extends AggregateRoot<UuidValue> {
 }
 ```
 
-### Migration Guide
+### Schema baseline
 
-If you have existing databases using the old INTEGER-based DateTime storage, you can migrate to the new TEXT-based format:
-
-```dart
-Future<void> migrateDateTimeColumns(SqliteConnection connection) async {
-  // Migrate DateTime columns from INTEGER (Unix timestamp) to TEXT (ISO8601)
-  await connection.execute('''
-    UPDATE users SET 
-      birthday = datetime(birthday / 1000, 'unixepoch')
-    WHERE typeof(birthday) = 'integer'
-  ''');
-  
-  await connection.execute('''
-    UPDATE events SET 
-      scheduledFor = datetime(scheduledFor / 1000, 'unixepoch')
-    WHERE typeof(scheduledFor) = 'integer'
-  ''');
-  
-  // Repeat for other tables with DateTime columns
-}
-
-// Run migration once
-final connection = SqliteConnection.file('app.db');
-await connection.open();
-await migrateDateTimeColumns(connection);
-await connection.close();
-```
-
-**Migration Steps:**
-1. Backup your database before migration
-2. Run the migration script to convert INTEGER to TEXT
-3. Regenerate repository code with `dart run build_runner build`
-4. Test thoroughly with your application
-5. Deploy the updated application
-
-**Note:** The new format is more human-readable and works better with SQLite's datetime functions.
+Use fresh schemas with TEXT/ISO 8601 DateTime storage and regenerate models.
+Pre-1.0 schema upgrade scripts are not part of the supported contract.
 
 ## Requirements
 

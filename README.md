@@ -9,12 +9,15 @@ A collection of packages for Domain-Driven Design in Dart with automatic JSON se
 
 ## Packages
 
+The [support matrix](docs/CAPABILITIES.md) and [API inventory](docs/PUBLIC_API.md)
+record current platform, generation and extension contracts for all 18 packages.
+
 The [aggregate events and AppSync guide](docs/DISTRIBUTED_EVENTS.md) describes
 aggregate watches, HTTP polling, optional AppSync Events, DynamoDB history,
-authorization, deployment and migration.
+authorization, deployment and lifecycle.
 
 ### [dddart](packages/dddart/)
-Core DDDart framework providing base classes for entities, aggregate roots, and value objects, plus serialization interfaces.
+Core DDDart framework providing base classes for entities, aggregate roots, and value objects, plus repositories and domain events.
 
 ### [dddart_serialization](packages/dddart_serialization/)
 Serialization framework providing the `@Serializable` annotation and configuration classes for DDDart objects.
@@ -49,7 +52,7 @@ Use Dart **3.13.7**, the development SDK used for these checks. This is a verifi
 setup, not a claim about the minimum SDK on every platform (#98 tracks that).
 The DDDart dependencies below use one immutable Git revision; they do not require
 published DDDart packages. See [Git installation](https://github.com/continuousimagination/dddart/blob/main/docs/GIT_INSTALLATION.md)
-for source overrides and [the support matrix](https://continuousimagination.github.io/dddart/docs/contracts/) for platform limits.
+for source overrides and [the support matrix](https://github.com/continuousimagination/dddart/blob/main/docs/CAPABILITIES.md) for platform limits.
 
 Create an empty directory **outside this repository**, then create the named files:
 
@@ -181,7 +184,7 @@ The program finishes and closes its resources. Delete the temporary application 
 - **PODO Preservation**: Domain objects remain Plain Old Dart Objects
 - **DDD Compliance**: Enforces proper aggregate boundaries and patterns
 - **Type Safety**: Full compile-time type checking with generated code
-- **Cross-Platform**: Works on Dart server, Flutter mobile, and Flutter web
+- **Explicit platform boundaries**: See the [support matrix](docs/CAPABILITIES.md) for native, browser and service prerequisites
 - **Flexible Configuration**: Constructor defaults with method-level overrides
 - **Nested Serialization**: Handles complex object graphs automatically
 
@@ -189,13 +192,13 @@ The program finishes and closes its resources. Delete the temporary application 
 
 The DDDart serialization system uses a three-package architecture:
 
-- **dddart**: Core DDD primitives + serialization contracts
-- **dddart_serialization**: Framework with annotations and configuration
+- **dddart**: Core domain primitives, identities, repository/event contracts
+- **dddart_serialization**: Format-neutral serialization contracts, annotations, configuration and identity codecs
 - **dddart_json**: JSON-specific implementation with code generation
 
 This design allows for:
 - Clean separation of concerns
-- Multiple serialization formats (JSON, YAML, Protocol Buffers, etc.)
+- Format-specific extension contracts (JSON is supplied; YAML/Protocol Buffers serializers are not)
 - Framework-agnostic domain models
 - Extensible serialization system
 
@@ -209,8 +212,10 @@ This is a monorepo containing multiple Dart packages. Each package has its own:
 ### Running Tests
 
 ```bash
-# Test all packages
-dart test
+# Validate the workspace inventory
+dart tool/validation/validate.dart check
+# Run complete package/example gates (required services and Chrome must be available)
+dart tool/validation/validate.dart all --mode=ci
 
 # Test specific packages
 cd packages/dddart && dart test
@@ -229,7 +234,7 @@ cd packages/dddart_json && dart run build_runner build
 
 ```
 dddart (core)
-├── No external dependencies
+├── collection, logging, meta, uuid
 │
 dddart_serialization (framework)
 ├── dddart

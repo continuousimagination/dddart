@@ -1,5 +1,9 @@
 # dddart_repository_mysql
 
+[Supported platforms and capability boundaries](../../docs/CAPABILITIES.md) ·
+[Supported imports and extension APIs](../../docs/PUBLIC_API.md)
+
+
 For complete setup, named source files, expected output and cleanup, follow the
 [canonical quickstart](../../docs/quickstarts/mysql/README.md). Other inline Dart snippets below are
 **illustrative fragments** that assume application-specific models and surrounding
@@ -7,7 +11,7 @@ setup; they are not standalone programs. See the [quickstart inventory](../../do
 for runnable, browser, service and credential-dependent coverage.
 
 
-## Typed identity migration
+## Typed identity contracts
 
 Generated repositories implement `Repository<T, I>` with concrete identity
 lookup/deletion. UUID consumers use `AggregateRoot<UuidValue>`/`Entity<UuidValue>`;
@@ -28,14 +32,14 @@ trailing spaces, numeric strings and scope through primary/foreign keys. The
 1024-byte adapter budget is checked before storage, including outside strict SQL
 mode. Malformed keys fail; nested key failures roll back persisted changes.
 Declared identity column types/widths are checked before repository operations;
-an incompatible old padded schema fails with a migration error before writing.
+an incompatible padded schema is rejected before writing.
 Complete schema, index and row constraints remain service-enforced. See
 [MySQL binary comparison](https://dev.mysql.com/doc/refman/8.0/en/binary-varbinary.html)
 and [InnoDB limits](https://dev.mysql.com/doc/refman/8.0/en/innodb-limits.html).
 
-This changes former 16-byte UUID schemas/data. Migrate or recreate them explicitly,
-regenerate all owning parts, and replace manual UUID_TO_BIN/BIN_TO_UUID SQL with
-canonical key parameters and typed decoding. Stock UUID text case is retained.
+Use fresh schemas and regenerate owning parts. Handwritten SQL uses canonical
+key parameters and typed decoding. Stock UUID text case is retained; 1.0 is the
+first schema/API compatibility baseline.
 `MysqlConnection` uses column metadata for numeric conversion, preserving native
 text keys such as `12` and `0012`.
 
@@ -58,14 +62,14 @@ MySQL database repository implementation for DDDart aggregate roots with automat
 - 🔄 **Automatic Schema Generation**: Tables created with InnoDB engine and utf8mb4 charset
 - 💎 **Value Object Embedding**: Value objects flattened into parent tables with prefixed columns
 - 🔗 **Relationship Mapping**: Automatic foreign key generation with CASCADE DELETE
-- 📦 **Collection Support**: Full support for List, Set, and Map collections with primitives, value objects, and entities
+- 📦 **Collection Support**: Primitive/value List, Set and Map collections, plus List<Entity>; entity Set/Map shapes are rejected
 - 🔒 **Transaction Support**: Multi-table operations with nested transaction handling
 - 🔌 **Connection Lifecycle**: Explicit lifecycle for one MySQL connection
 - 🎯 **Type Safety**: Compile-time code generation ensures type-safe operations
 - 🚀 **Zero Boilerplate**: Annotate your aggregate roots and generate repositories
 - 🔐 **Exact identity storage**: Canonical identity keys use VARBINARY(1024)
 - 📅 **Native DateTime**: DateTime fields stored as DATETIME in UTC for database-native operations
-- 🌐 **Production Ready**: Built for MySQL 5.7+ with best practices
+- **Verified service lane**: MySQL 8; other server/version combinations require validation
 
 ## Installation
 
@@ -662,8 +666,7 @@ DDDart MySQL repositories provide comprehensive support for collections in your 
 
 **Entities:**
 - `List<Entity>` - Ordered collections of entities (existing support)
-- `Set<Entity>` - Unique collections of entities
-- `Map<primitive, Entity>` - Key-value mappings with entity values
+- `Set<Entity>` and `Map<primitive, Entity>` are rejected by the current generator
 
 ### Collection Examples
 
@@ -816,7 +819,11 @@ CREATE TABLE IF NOT EXISTS orders_discountsByCode_items (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
-#### Entity Collections
+#### Entity Collections (deferred Set/Map design sketch)
+
+The following sketch includes entity Set/Map fields and is **not runnable with
+the current generator**. Only List<Entity> is supported. It is retained as
+conceptual design context, not a supported collection mapping.
 
 ```dart
 @Serializable()
@@ -989,88 +996,15 @@ class Task extends AggregateRoot<UuidValue> {
 }
 ```
 
-### Migration Guide
+### Schema baseline
 
-If you have existing databases using the old BIGINT-based DateTime storage, you can migrate to the new DATETIME format:
-
-```dart
-Future<void> migrateDateTimeColumns(MysqlConnection connection) async {
-  // Migrate DateTime columns from BIGINT (Unix timestamp) to DATETIME
-  await connection.execute('''
-    UPDATE users SET 
-      birthday = FROM_UNIXTIME(birthday / 1000)
-    WHERE birthday > 1000000000000
-  ''');
-  
-  await connection.execute('''
-    UPDATE events SET 
-      scheduledFor = FROM_UNIXTIME(scheduledFor / 1000)
-    WHERE scheduledFor > 1000000000000
-  ''');
-  
-  // Repeat for other tables with DateTime columns
-  
-  // Optionally, alter column types (requires table lock)
-  await connection.execute('''
-    ALTER TABLE users 
-    MODIFY COLUMN birthday DATETIME NOT NULL
-  ''');
-  
-  await connection.execute('''
-    ALTER TABLE events 
-    MODIFY COLUMN scheduledFor DATETIME NOT NULL
-  ''');
-}
-
-// Run migration once
-final connection = MysqlConnection(
-  host: 'localhost',
-  port: 3306,
-  database: 'myapp',
-  user: 'migration_user',
-  password: 'secure_password',
-);
-await connection.open();
-await migrateDateTimeColumns(connection);
-await connection.close();
-```
-
-**Migration Steps:**
-1. Backup your database before migration
-2. Run the migration script to convert BIGINT to DATETIME
-3. Optionally alter column types (requires table lock - plan for downtime)
-4. Regenerate repository code with `dart run build_runner build`
-5. Test thoroughly with your application
-6. Deploy the updated application
-
-**Note:** The new format enables MySQL's powerful datetime functions and improves query performance.
-
-### Dialect Consistency
-
-Collection support works identically in both SQLite and MySQL repositories:
-
-**Same Domain Model:**
-```dart
-// Works with both @GenerateSqliteRepository() and @GenerateMysqlRepository()
-@Serializable()
-class Order extends AggregateRoot<UuidValue> {
-  final List<int> itemIds;
-  final Set<String> tags;
-  final Map<String, double> prices;
-}
-```
-
-**Database-Specific SQL:**
-- SQLite: `BLOB` for UUIDs, `TEXT` for DateTime, `INTEGER` for booleans
-- MySQL: `VARBINARY(1024)` for UUIDs, `DATETIME` for DateTime, `TINYINT(1)` for booleans
-- Junction table structure is identical
-- Save/load behavior is identical
-- No code changes needed when switching databases
+Use fresh schemas with native DATETIME fields and regenerate owning parts.
+Pre-1.0 schema upgrade scripts are not a supported contract.
 
 ## Requirements
 
 - Dart SDK >=3.5.0
-- **MySQL 5.7+ (MySQL 8.0+ recommended)**
+- **MySQL 8 is exercised by the service lane**; other versions are not established by these checks
   - Full support for MySQL 8.0+ default authentication (caching_sha2_password)
   - No legacy authentication plugins required
   - InnoDB storage engine
@@ -1078,107 +1012,11 @@ class Order extends AggregateRoot<UuidValue> {
 - Aggregate roots must have `@Serializable()` annotation
 - Run `build_runner` to generate repository code
 
-## Version 2.0 Migration Guide
+## Driver and verification
 
-### What's New in 2.0
-
-Version 2.0 migrates from the `mysql1` driver to `mysql_client`, providing:
-
-- ✅ **Native MySQL 8.0+ Support**: Full support for `caching_sha2_password` authentication
-- ✅ **Improved Stability**: Fixes connection issues and "packets out of order" errors
-- ✅ **Better Error Handling**: Enhanced error messages with more context
-- ✅ **No Workarounds Needed**: No need for `mysql_native_password` plugin
-
-### Breaking Changes
-
-**Driver Change:**
-- The underlying MySQL driver has changed from `mysql1` to `mysql_client`
-- This is a major version bump (2.0.0) to indicate the driver change
-
-**Minimum MySQL Version:**
-- MySQL 5.7+ is required (MySQL 8.0+ recommended)
-- MySQL 8.0 with default authentication is fully supported
-
-### Migration Steps
-
-For most users, upgrading is simple:
-
-**1. Update your `pubspec.yaml`:**
-```yaml
-dependencies:
-  dddart_repository_mysql: ^2.0.0  # Update from ^1.x
-```
-
-**2. Run pub get:**
-```bash
-dart pub get
-```
-
-**3. Test your application:**
-- Run your existing tests
-- Verify database operations work correctly
-- No code changes should be required
-
-**4. Remove MySQL 8.0 workarounds (if any):**
-
-If you were using MySQL 8.0 with the legacy authentication workaround, you can now remove it:
-
-```sql
--- You can remove this workaround:
--- ALTER USER 'myapp_user'@'%' IDENTIFIED WITH mysql_native_password BY 'password';
-
--- MySQL 8.0 default authentication now works:
-CREATE USER 'myapp_user'@'%' IDENTIFIED BY 'password';
-```
-
-### What Stays the Same
-
-- ✅ All public APIs remain unchanged
-- ✅ Generated repository code is compatible
-- ✅ SQL generation produces identical output
-- ✅ Transaction semantics are identical
-- ✅ Error handling patterns are the same
-- ✅ No regeneration of code required
-
-### Custom Repository Implementations
-
-If you have custom repository implementations that directly import or use `mysql1` types:
-
-**1. Check for direct mysql1 imports:**
-```dart
-// If you have this:
-import 'package:mysql1/mysql1.dart';
-
-// You may need to update to:
-import 'package:mysql_client/mysql_client.dart';
-```
-
-**2. Update mysql1-specific type references (if any)**
-
-**3. Test thoroughly:**
-- Run all custom repository tests
-- Verify custom queries work correctly
-
-### Troubleshooting
-
-**Connection Issues:**
-- Ensure MySQL 5.7+ or 8.0+ is running
-- Verify connection parameters (host, port, user, password)
-- Check that the database exists and user has proper permissions
-
-**Authentication Issues:**
-- MySQL 8.0 default authentication (caching_sha2_password) is now fully supported
-- No need to use mysql_native_password plugin
-
-**Test Failures:**
-- Run `dart test` to verify all tests pass
-- Check that MySQL server is accessible
-- Verify test database configuration
-
-**Need Help?**
-- Check the [CHANGELOG](CHANGELOG.md) for detailed changes
-- Review the [example code](./example) for updated patterns
-- Open an issue on GitHub if you encounter problems
+The current adapter uses `mysql_client` with one physical connection. MySQL 8
+is exercised by the service lane. No 1.x/2.x hosted release or generated-code
+upgrade compatibility is implied; 1.0 is the first compatibility baseline.
 
 ## Documentation
 
