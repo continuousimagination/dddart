@@ -65,8 +65,8 @@ redesign:
 
 Find the existing dddart revision, event registry/serializers, event bus wiring,
 poller/server endpoints, authentication provider, aggregate repositories and
-deployment entrypoints. Useful search terms include `EventBusClient`,
-`EventBusServer`, `EventRepository`, `raiseEvent`, `getUncommittedEvents`,
+deployment entrypoints. Useful search terms include `AggregateEventClient`,
+`AggregateEventTransport`, `AggregateEventRepository`, `raiseEvent`, `getUncommittedEvents`,
 `markEventsAsCommitted`, `eventPublisher` and `getIdToken`.
 
 Identify the actual game/match/room identity and membership rules, which events
@@ -231,9 +231,9 @@ re-publish received events. Choose one publication hook per save; do not retain
 the old auto-forwarder alongside `eventPublisher: client.publisher` for the same
 events. Explicit publication is `await client.publisher.publish(event)`.
 
-The legacy timestamp `EventBusClient` is a separate API, not the HTTP variant of
-this SDK. Old timestamp cursors cannot become new ingestion checkpoints. Define
-stable kinds and preserve actual typed IDs, occurrence UUIDs and event type keys.
+HTTP polling and AppSync both use `AggregateEventClient` and implement
+`AggregateEventTransport`. Define stable kinds and preserve actual typed IDs,
+occurrence UUIDs and event type keys; watch progress uses ingestion checkpoints.
 
 ### 4. Connect state, membership changes and lifecycle
 

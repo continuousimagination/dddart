@@ -17,6 +17,5 @@ example caches are not inputs. Package/example generation is serialized.
 
 Clean-consumer tests prove fresh generation, metadata/identity round trips,
 wrong-ID analyzer failures, erased-ID diagnostics and duplicate wire-key errors.
-Historical standalone registry-map sketches under `example/legacy` remain
-excluded and are not the current generated contract. Broader deferred event and
-AWS transport work is outside the identity change.
+The executable HTTP example uses explicit handwritten callbacks. The generated
+consumer tests exercise the combined serializer/registry part contract.

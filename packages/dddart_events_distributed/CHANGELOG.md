@@ -7,33 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-- Aggregate-scoped history contracts, explicit logical references and versioned
-  event envelopes, with committed ingestion positions and typed expiration.
-- InMemory aggregate history with configurable seven-day retention, paginated
-  recovery, fresh-head capture and idempotent retained UUID acceptance.
-- Shared bounded publication retry policy with named logging and an awaitable
-  legacy HTTP client publisher for event-enabled repository saves.
-- Remote polling delivery no longer echoes through auto-forwarding bridges.
-- AggregateEventClient with explicit reference-counted watches, batched authorized
-  HTTP resolution/catch-up, separate publish rights, pause/resume and bounded
-  deduplication. Unknown/malformed events log and skip without blocking progress.
-- Shared verified-principal policy/service and event-driven random channel rotation,
-  reused by the optional AppSync Events and DynamoDB event packages.
-- Complete setup, CloudFormation deployment and timestamp-poller migration guide.
-
-- **BREAKING:** `StoredEvent<I>` retains concrete aggregate references separately
-  from its UUID record ID. Mixed streams use explicit tagged identity JSON;
-  old bare UUID references require migration.
-- **BREAKING:** `EventRegistry` replaces implicit runtime-name/payload fallback.
-  Register stable keys and typed callbacks or JSON serializers. Generated
-  registrations share an owning combined part with concrete event serializers.
-- Decode and validate registered events before advancing the inclusive polling
-  cursor; failed identity/payload decoding stops the batch and remains retryable.
-  Valid unknown event types retain their intentional skip behavior.
-- HTTP ingestion accepts explicit identity codecs and a typed custom-record
-  factory. UUID record repositories remain `Repository<T, UuidValue>`.
-- Prove native/scoped/UUID references, generation, forwarding, filtering and
-  cursor retry behavior without expanding deferred AWS/legacy transport work.
+- Remove the legacy timestamp-based EventBusClient, EventBusServer,
+  EventHttpEndpoints, EventRepository and InMemoryEventRepository APIs, exports,
+  support code and obsolete example sketches. No compatibility aliases remain.
+- Keep HTTP polling and optional AppSync live delivery behind
+  AggregateEventTransport, AggregateEventClient and the shared EventPublisher.
+- Use aggregate-scoped history, explicit typed references, committed ingestion
+  checkpoints, bounded retrying publication and per-watch lifecycle signals.
+  Unknown/malformed payloads are logged/skipped without blocking valid progress.
+- Preserve StoredEvent/EventEnvelope, explicit event/identity codecs, generated
+  combined-part registrations, pending-event capture and local publish/deliver.
+- Add a finite HTTP-only publish/watch example and retain the custom StoredEvent
+  JSON example. Update current documentation to the shared architecture.
+- Cover real HTTP retry/denial, typed identities, cancellation and non-echo delivery;
+  verify isolated public consumers with HTTP alone and with AppSync.
 
 ## [0.1.0] - 2024-12-05
 

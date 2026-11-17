@@ -875,8 +875,8 @@
     {
       "name": "dddart_events_distributed_example",
       "path": "packages/dddart_events_distributed/example",
-      "category": "legacy",
-      "status": "wip",
+      "category": "runnable",
+      "status": "active",
       "owners": ["dddart_events_distributed", "dddart_json"],
       "allowedLocalPackages": [
         "dddart",
@@ -899,22 +899,10 @@
           "reason": "Independent JSON-004 round-trip for a StoredEvent subtype; it exercises no distributed-event transport or registry contract."
         },
         {
-          "path": "legacy/client_example.dart.skip",
-          "classification": "legacy",
-          "action": "excluded",
-          "reason": "Deferred WIP surface pending EVENT-001 through EVENT-004."
-        },
-        {
-          "path": "legacy/end_to_end_example.dart.skip",
-          "classification": "legacy",
-          "action": "excluded",
-          "reason": "Deferred WIP surface pending EVENT-001 through EVENT-004."
-        },
-        {
-          "path": "legacy/server_example.dart.skip",
-          "classification": "legacy",
-          "action": "excluded",
-          "reason": "Deferred WIP surface pending EVENT-001 through EVENT-004."
+          "path": "http_polling.dart",
+          "classification": "runnable",
+          "action": "run",
+          "reason": "Finite real HTTP publish/watch example using shared interfaces, local history and explicit fixture credentials; no AppSync or AWS dependency."
         }
       ],
       "sourceOverrides": [
@@ -922,32 +910,14 @@
           "path": "lib/custom_stored_event.dart",
           "classification": "runnable",
           "action": "analyze",
-          "reason": "Safe JSON-004 serializer input independent of deferred EVENT behavior."
-        },
-        {
-          "path": "legacy/lib/event_registry.dart.skip",
-          "classification": "legacy",
-          "action": "excluded",
-          "reason": "Handwritten registry conflicts with the deferred event-registry generator contract."
-        },
-        {
-          "path": "legacy/lib/example_events.dart.skip",
-          "classification": "legacy",
-          "action": "excluded",
-          "reason": "Event classes supported only the deferred transport and registry sketches."
-        },
-        {
-          "path": "legacy/test/time_range_query_property_test.dart.skip",
-          "classification": "legacy",
-          "action": "excluded",
-          "reason": "Bulk-range semantics remain deferred to EVENT-004."
+          "reason": "Concrete StoredEvent subtype serialization, independent of transport selection."
         }
       ],
       "externalService": {
         "kind": "none",
         "localAction": "not-required",
         "ciAction": "not-required",
-        "reason": "Only the independent JSON-004 round-trip is runnable; all EVENT integration surfaces are legacy WIP exclusions."
+        "reason": "The HTTP example owns and closes an ephemeral loopback server; the JSON example needs no service."
       }
     },
     {
