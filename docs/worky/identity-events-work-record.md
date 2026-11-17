@@ -1,3 +1,6 @@
+> Historical record; it may describe retired APIs. For current usage, start at
+> [the documentation index](../README.md).
+
 # Distributed identity work record — issue #44
 
 Branch: issue/identity-distributed-events. Target: issue/37-extensible-identity.

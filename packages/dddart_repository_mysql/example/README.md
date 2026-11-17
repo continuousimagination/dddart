@@ -1,258 +1,43 @@
-# MySQL Repository Examples
+# dddart_repository_mysql_example examples
 
-This directory contains comprehensive examples demonstrating the usage of `dddart_repository_mysql`.
+These are maintained application samples for [dddart_repository_mysql](../README.md).
+For a fresh application outside the checkout, start with the
+[standalone workflows](../../../docs/QUICKSTARTS.md). These repository examples use
+the workspace's package resolution and are not hosted-installation evidence.
 
-## Prerequisites
+## Setup and validation
 
-Before running these examples, you need:
+Use Dart 3.13.7 from the repository root. Resolve workspace tooling with
+`dart pub get`, then run the lane below. It resolves the example package,
+regenerates its declared parts when required, analyzes with fatal infos, compiles
+each program, runs eligible finite/service programs and cleans temporary outputs.
 
-1. **MySQL Server** running on `127.0.0.1:3306`
-2. **Database created**: `dddart_example`
-3. **User credentials**: `root` / `password`
-
-Override those defaults with `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_DATABASE`,
-`MYSQL_USER`, and `MYSQL_PASSWORD`.
-
-### Quick MySQL Setup with Docker
-
-```bash
-# Start MySQL container
-docker run --name mysql-examples \
-  -e MYSQL_ROOT_PASSWORD=password \
-  -e MYSQL_DATABASE=dddart_example \
-  -p 3306:3306 \
-  -d mysql:8.0
-
-# Wait for MySQL to be ready (about 30 seconds)
-docker logs -f mysql-examples
-
-# Stop when done
-docker stop mysql-examples
-docker rm mysql-examples
+```sh
+dart tool/validation/validate.dart example dddart_repository_mysql_example --mode=ci
 ```
 
-### Alternative: Local MySQL Installation
+Required local services must be available; CI mode fails when they are missing.
+The [service setup](../../../scripts/README.md) and
+[shared inventory](../../../tool/validation/inventory.json) specify host/port,
+builders and verification boundaries. Tests using local services do not verify a
+cloud deployment or application credentials.
 
-If you have MySQL installed locally:
+## Programs
 
-```sql
-CREATE DATABASE dddart_example;
-```
+| Source | Coverage / runtime context |
+| --- | --- |
+| [basic_crud_example.dart](basic_crud_example.dart) | Compiled and run against the lane's required local database service. Finite CRUD demonstration backed by the policy-provisioned MySQL database. |
+| [connection_management_example.dart](connection_management_example.dart) | Compiled and run against the lane's required local database service. Finite connection lifecycle demonstration backed by MySQL. |
+| [custom_repository_example.dart](custom_repository_example.dart) | Compiled and run against the lane's required local database service. Finite generated custom repository demonstration backed by MySQL. |
+| [error_handling_example.dart](error_handling_example.dart) | Compiled and run against the lane's required local database service. Finite repository error-mapping demonstration backed by MySQL. |
 
-## Running the Examples
+Each program contains its complete imports and application model/context. Inspect
+its constants and prerequisites before running it manually from this directory.
+Use disposable test databases and credentials. Do not treat sample users, signing
+secrets, endpoints or authorization policies as production configuration.
 
-### 1. Generate Code
-
-First, generate the repository code from the annotated domain models:
-
-```bash
-cd packages/dddart_repository_mysql/example
-dart run build_runner build --delete-conflicting-outputs
-```
-
-Run `dart run build_runner clean` first when validating from a clean state. The
-JSON and MySQL builders write their serializers and repository implementations
-into the combined `lib/domain/*.g.dart` parts declared by each domain library.
-
-### 2. Run Examples
-
-Each example can be run independently:
-
-```bash
-# Basic CRUD operations
-dart run basic_crud_example.dart
-
-# Custom repository with domain-specific queries
-dart run custom_repository_example.dart
-
-# Error handling patterns
-dart run error_handling_example.dart
-
-# Connection lifecycle management
-dart run connection_management_example.dart
-
-```
-
-## Examples Overview
-
-### basic_crud_example.dart
-
-Demonstrates fundamental repository operations:
-- Creating a MySQL connection
-- Creating database tables
-- Saving aggregates with entities and value objects
-- Retrieving aggregates by ID
-- Updating aggregates
-- Deleting aggregates (with CASCADE for entities)
-- Proper connection cleanup
-
-**Key concepts:**
-- Value object embedding (Money, Address)
-- Entity relationships (Order → OrderItems)
-- Automatic foreign key constraints
-- Transaction wrapping for save operations
-
-### custom_repository_example.dart
-
-Shows how to extend generated repositories with custom query methods:
-- Defining a custom repository interface
-- Implementing domain-specific query methods
-- Using both generated CRUD and custom queries
-- Accessing library-private members from a handwritten `part` implementation
-
-**Key concepts:**
-- Abstract base class generation
-- Custom SQL queries
-- Manual entity loading
-- Domain-specific repository methods
-
-### error_handling_example.dart
-
-Demonstrates proper exception handling:
-- Handling `RepositoryException.notFound`
-- Handling connection errors
-- Error type checking and recovery patterns
-- Graceful degradation strategies
-
-**Key concepts:**
-- Exception types (notFound, connection, timeout, etc.)
-- Try-catch patterns
-- Error recovery
-- Logging and continuing
-
-### connection_management_example.dart
-
-Covers connection lifecycle and advanced features:
-- Connection creation with custom parameters
-- Opening and closing connections
-- Connection state checking
-- Reusing one connection for multiple operations
-- Transaction management (commit/rollback)
-- Concurrent operations
-
-**Key concepts:**
-- Single-connection lifecycle
-- Transaction boundaries
-- Sequential connection reuse
-- Resource cleanup
-
-### Legacy collection sketch
-
-The former collection example is retained under `legacy/` as a labeled design
-sketch. It is not part of the supported runnable inventory because it depends
-on collection behavior that the current generator does not provide.
-
-## Domain Models
-
-The examples use a simple e-commerce domain:
-
-### Aggregate Root
-- **Order**: Customer order with items and addresses
-
-### Entities
-- **OrderItem**: Line item in an order (quantity, product, price)
-
-### Value Objects
-- **Money**: Monetary amount with currency
-- **Address**: Physical address with street, city, state, postal code, country
-
-### Schema Generated
-
-```sql
--- Aggregate root table
-CREATE TABLE orders (
-  id VARBINARY(1024) PRIMARY KEY NOT NULL,
-  createdAt TIMESTAMP NOT NULL,
-  updatedAt TIMESTAMP NOT NULL,
-  customerName VARCHAR(255) NOT NULL,
-  -- Embedded value object: shippingAddress
-  shippingAddress_street VARCHAR(255) NOT NULL,
-  shippingAddress_city VARCHAR(255) NOT NULL,
-  shippingAddress_state VARCHAR(255) NOT NULL,
-  shippingAddress_postalCode VARCHAR(255) NOT NULL,
-  shippingAddress_country VARCHAR(255) NOT NULL,
-  -- Embedded nullable value object: billingAddress
-  billingAddress_street VARCHAR(255),
-  billingAddress_city VARCHAR(255),
-  billingAddress_state VARCHAR(255),
-  billingAddress_postalCode VARCHAR(255),
-  billingAddress_country VARCHAR(255)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- Entity table with foreign key
-CREATE TABLE order_items (
-  id VARBINARY(1024) PRIMARY KEY NOT NULL,
-  order_id VARBINARY(1024) NOT NULL,
-  productName VARCHAR(255) NOT NULL,
-  quantity BIGINT NOT NULL,
-  -- Embedded value object: unitPrice
-  unitPrice_amount DOUBLE NOT NULL,
-  unitPrice_currency VARCHAR(255) NOT NULL,
-  FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-```
-
-## Customizing Connection Parameters
-
-All examples use these default connection parameters through
-`lib/mysql_example_connection.dart`:
-
-```dart
-final connection = MysqlConnection(
-  host: Platform.environment['MYSQL_HOST'] ?? '127.0.0.1',
-  port: 3306,
-  database: 'dddart_example',
-  user: 'root',
-  password: 'password',
-);
-```
-
-Use the documented `MYSQL_*` environment variables to change them without
-editing the examples.
-
-## Troubleshooting
-
-### Connection Refused
-
-If you see "Connection refused" errors:
-1. Verify MySQL is running: `docker ps` or `mysql -u root -p`
-2. Check the port: MySQL default is 3306
-3. Verify the database exists: `SHOW DATABASES;`
-
-### Authentication Failed
-
-If you see "Access denied" errors:
-1. Check username and password
-2. Verify user has permissions: `GRANT ALL ON dddart_example.* TO 'root'@'%';`
-
-### Code Generation Errors
-
-If you see "part of" errors:
-1. Run `dart run build_runner clean`
-2. Run `dart run build_runner build --delete-conflicting-outputs`
-3. Check that all domain models have `@Serializable()` annotation
-
-### Table Already Exists
-
-The examples call `createTables()` which uses `CREATE TABLE IF NOT EXISTS`, so running examples multiple times is safe. To start fresh:
-
-```sql
-DROP DATABASE dddart_example;
-CREATE DATABASE dddart_example;
-```
-
-## Next Steps
-
-After exploring these examples:
-
-1. Review the [main package README](../README.md) for detailed documentation
-2. Check the [test suite](../test/) for more usage patterns
-3. Explore the [generated code](lib/domain/*.g.dart) to understand the implementation
-4. Try creating your own domain models and repositories
-
-## Support
-
-For issues or questions:
-- Check the [package documentation](../README.md)
-- Review the [design document](../.kiro/specs/mysql-repository/design.md)
-- Open an issue on GitHub
+Generated `.g.dart` parts belong to their handwritten model library. Run the
+example lane after changing models; do not reuse old generated parts. Custom
+repository implementation parts must share that library so generated private
+helpers remain accessible. Follow the [supported contracts](../../../docs/CAPABILITIES.md)
+for identity, persistence, conditional writes, optional auth and event publication.

@@ -19,13 +19,7 @@ class SecurityUtils {
   ///
   /// Returns: true if strings are equal, false otherwise
   ///
-  /// Example:
-  /// ```dart
-  /// final isValid = SecurityUtils.constantTimeCompare(
-  ///   providedSignature,
-  ///   expectedSignature,
-  /// );
-  /// ```
+  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md).
   static bool constantTimeCompare(String a, String b) {
     // Convert strings to bytes for comparison
     final bytesA = utf8.encode(a);
@@ -60,13 +54,7 @@ class SecurityUtils {
   ///
   /// Returns: true if timestamp is valid, false otherwise
   ///
-  /// Example:
-  /// ```dart
-  /// final isValid = SecurityUtils.validateTimestampAge(
-  ///   deviceCode.createdAt,
-  ///   maxAge: Duration(minutes: 10),
-  /// );
-  /// ```
+  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md).
   static bool validateTimestampAge(
     DateTime timestamp, {
     Duration maxAge = const Duration(minutes: 10),
@@ -101,13 +89,7 @@ class SecurityUtils {
   ///
   /// Returns: true if device code is valid, false otherwise
   ///
-  /// Example:
-  /// ```dart
-  /// final isValid = SecurityUtils.validateDeviceCodeAge(
-  ///   deviceCode.createdAt,
-  ///   deviceCode.expiresAt,
-  /// );
-  /// ```
+  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md).
   static bool validateDeviceCodeAge(
     DateTime createdAt,
     DateTime expiresAt, {
@@ -135,10 +117,7 @@ class SecurityUtils {
   ///
   /// Returns: Base64-encoded random string
   ///
-  /// Example:
-  /// ```dart
-  /// final token = SecurityUtils.generateSecureRandom(32);
-  /// ```
+  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md).
   static String generateSecureRandom([int length = 32]) {
     final random = Random.secure();
     final bytes = List<int>.generate(

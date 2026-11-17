@@ -47,25 +47,25 @@ This is a broader check and may take time. Local compilation of a service exampl
 
 ## Explore the example directories
 
-Links point to the documented source revision; the HTTP polling example links to the maintained main branch.
+Example links point to the maintained main branch, whose README tables describe the current validation lanes.
 
 | Example | What it demonstrates | Runtime expectations |
 | --- | --- | --- |
-| [Core](https://github.com/continuousimagination/dddart/tree/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart/example) | Domain concepts, values, events, logging, and repository use | Finite native examples; file logging is native-specific |
-| [JSON](https://github.com/continuousimagination/dddart/tree/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_json/example) | Nested domain serialization, enums, naming, and configuration | Generation followed by local execution |
-| [SQLite](https://github.com/continuousimagination/dddart/tree/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_repository_sqlite/example) | Basic CRUD, connection lifecycle, custom repositories | Native in-memory SQLite; no database server |
-| [MySQL](https://github.com/continuousimagination/dddart/tree/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_repository_mysql/example) | CRUD, connection management, custom repositories | A configured MySQL service |
-| [MongoDB](https://github.com/continuousimagination/dddart/tree/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_repository_mongodb/example) | Document repositories, swapping, configuration, custom queries | A configured MongoDB service |
-| [DynamoDB](https://github.com/continuousimagination/dddart/tree/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_repository_dynamodb/example) | Tables, CRUD, errors, and custom interfaces | DynamoDB Local or explicitly configured AWS access |
-| [REST server](https://github.com/continuousimagination/dddart/tree/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_rest/example) | CRUD resources, auth, queries, pagination, and errors | Long-running server programs |
-| [REST repository](https://github.com/continuousimagination/dddart/tree/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_repository_rest/example) | Generated remote CRUD and custom interfaces | Matching local API; see that example's harness |
-| [REST client](https://github.com/continuousimagination/dddart/tree/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_rest_client/example) | Client auth composition and device-flow usage | Auth provider and platform-specific setup |
-| [Configuration](https://github.com/continuousimagination/dddart/tree/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_config/example) | Providers, precedence, defaults, and validation | Native local files/process environment |
-| [Webhooks](https://github.com/continuousimagination/dddart/tree/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_webhooks/example) | JSON/form payloads and custom verifiers | Long-running HTTP endpoints |
-| [Slack](https://github.com/continuousimagination/dddart/tree/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_webhooks_slack/example) | Slash commands and interactive messages | Slack credentials and public HTTPS ingress |
+| [Core](https://github.com/continuousimagination/dddart/tree/main/packages/dddart/example) | Domain concepts, values, events, logging, and repository use | Finite native examples; file logging is native-specific |
+| [JSON](https://github.com/continuousimagination/dddart/tree/main/packages/dddart_json/example) | Nested domain serialization, enums, naming, and configuration | Generation followed by local execution |
+| [SQLite](https://github.com/continuousimagination/dddart/tree/main/packages/dddart_repository_sqlite/example) | Basic CRUD, connection lifecycle, custom repositories | Native in-memory SQLite; no database server |
+| [MySQL](https://github.com/continuousimagination/dddart/tree/main/packages/dddart_repository_mysql/example) | CRUD, connection management, custom repositories | A configured MySQL service |
+| [MongoDB](https://github.com/continuousimagination/dddart/tree/main/packages/dddart_repository_mongodb/example) | Document repositories, swapping, configuration, custom queries | A configured MongoDB service |
+| [DynamoDB](https://github.com/continuousimagination/dddart/tree/main/packages/dddart_repository_dynamodb/example) | Tables, CRUD, errors, and custom interfaces | DynamoDB Local or explicitly configured AWS access |
+| [REST server](https://github.com/continuousimagination/dddart/tree/main/packages/dddart_rest/example) | CRUD resources, auth, queries, pagination, and errors | Long-running server programs |
+| [REST repository](https://github.com/continuousimagination/dddart/tree/main/packages/dddart_repository_rest/example) | Generated remote CRUD and custom interfaces | Matching local API; see that example's harness |
+| [REST client](https://github.com/continuousimagination/dddart/tree/main/packages/dddart_rest_client/example) | Client auth composition and device-flow usage | Auth provider and platform-specific setup |
+| [Configuration](https://github.com/continuousimagination/dddart/tree/main/packages/dddart_config/example) | Providers, precedence, defaults, and validation | Native local files/process environment |
+| [Webhooks](https://github.com/continuousimagination/dddart/tree/main/packages/dddart_webhooks/example) | JSON/form payloads and custom verifiers | Long-running HTTP endpoints |
+| [Slack](https://github.com/continuousimagination/dddart/tree/main/packages/dddart_webhooks_slack/example) | Slash commands and interactive messages | Slack credentials and public HTTPS ingress |
 | [HTTP polling](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_events_distributed/example/http_polling.dart) | Shared client/publisher with local history and real HTTP | Finite loopback server; no AppSync or AWS dependency |
-| [DynamoDB event history](https://github.com/continuousimagination/dddart/tree/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_events_dynamodb/example) | Durable ingestion history and channel rotation | Isolated DynamoDB Local table |
-| [AppSync/native handlers](https://github.com/continuousimagination/dddart/tree/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_events_appsync/example) | Native invocation, Lambda composition, opt-in live smoke | Local invocation is finite; live AWS is separate |
+| [DynamoDB event history](https://github.com/continuousimagination/dddart/tree/main/packages/dddart_events_dynamodb/example) | Durable ingestion history and channel rotation | Isolated DynamoDB Local table |
+| [AppSync/native handlers](https://github.com/continuousimagination/dddart/tree/main/packages/dddart_events_appsync/example) | Native invocation, Lambda composition, opt-in live smoke | Local invocation is finite; live AWS is separate |
 
 The [distributed-events reference](https://github.com/continuousimagination/dddart/blob/main/docs/DISTRIBUTED_EVENTS.md) describes the shared aggregate-watch flow for HTTP polling and AppSync. Both use the same client and publisher interfaces.
 
@@ -91,17 +91,24 @@ It exercises the native authorizer and subscription contracts with explicit loca
 
 For an actual AWS deployment, follow the [integration guide](/dddart/docs/integrations/#run-locally-deploy-deliberately). Its account, region, image, policy, credentials, and cleanup steps are separate from running a local example.
 
-## What was checked for these guides
+## Validation scope
 
-The documentation examples were checked against revision `56607ac8d3913b8e896ac03f8ecff58473d62ce2` using Dart 3.13.7:
+The [documentation gate](https://github.com/continuousimagination/dddart/blob/main/tool/documentation/README.md)
+checks all current guides, library/sample Dartdoc, homepage code, links and sample
+coverage. Nine isolated quickstart workflows supply exact manifests, generated
+parts, commands and expected output. The homepage imports three of those complete
+programs directly; its tabs do not contain separately maintained code fragments.
 
-- Complete core/domain, configuration, and generated JSON examples were analyzed and run.
-- All 17 packages resolved in a separate application from the pinned Git revision using the downloadable override fragment; the getting-started program ran there.
-- The SQLite guide's generated model passed create, identity-preserving load, upsert, delete, and missing-record checks.
-- Representative core, generated JSON, configuration, HTTP/auth, and aggregate/AppSync client compositions compiled to JavaScript. Selected domain, JSON, and configuration programs also ran under Node.
-- The HTTP server helper and Slack server compiled; local event delivery/metadata checks and the native invocation example ran.
+All 18 packages and 15 example projects are inventoried. The sample gate compiles
+every program and runs finite/service programs as declared in each current
+`example/README.md`. Required CI-mode database lanes fail when their service is
+missing. Long-running or credential-dependent programs are explicitly compile-only.
+The capability matrix records browser/native limits and separate browser gates.
 
-These checks are a foundation for the examples. They do not claim live Slack/AWS verification, testing on every Flutter device, or a browser login round trip. Test the endpoints, permissions, native plugins, and lifecycle behavior of your own application.
+These checks do not claim live Slack/AWS verification, every Flutter device, or a
+browser login round trip. Test the endpoints, permissions, native plugins and
+lifecycle behavior of your own application. The Git manifests retain one tested
+code revision; hosted release installation is a separate release gate.
 
 ## When a copied example fails
 

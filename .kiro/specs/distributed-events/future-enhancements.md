@@ -1,3 +1,6 @@
+> Historical record; it may describe retired APIs. For current usage, start at
+> [the documentation index](../../../docs/README.md).
+
 # Future Enhancements for Distributed Events
 
 ## Automatic Time-Range Query Generation for Repositories

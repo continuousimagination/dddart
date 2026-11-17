@@ -16,30 +16,7 @@
 /// When used without a custom interface, generates a concrete repository class
 /// that can be instantiated directly:
 ///
-/// ```dart
-/// @Serializable()
-/// @GenerateMongoRepository(collectionName: 'users')
-/// class User extends AggregateRoot<UuidValue> {
-///   final String firstName;
-///   final String lastName;
-///
-///   User({required this.firstName, required this.lastName}) : super(id: UuidValue.generate());
-/// }
-///
-/// part 'user.g.dart';
-///
-/// // Usage:
-/// final connection = MongoConnection(
-///   host: 'localhost',
-///   port: 27017,
-///   databaseName: 'myapp',
-/// );
-/// await connection.open();
-///
-/// final userRepo = UserMongoRepository(connection.database);
-/// await userRepo.save(user);
-/// final retrieved = await userRepo.getById(user.id);
-/// ```
+/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_mongodb/README.md).
 ///
 /// ## Custom Interface (Abstract Base Repository)
 ///
@@ -47,58 +24,7 @@
 /// `Repository<T, UuidValue>` interface, an abstract base class is generated. The
 /// developer must extend this base class and implement the custom methods:
 ///
-/// ```dart
-/// // Define custom repository interface
-/// abstract interface class UserRepository implements Repository<User, UuidValue> {
-///   Future<User?> findByEmail(String email);
-///   Future<List<User>> findByLastName(String lastName);
-/// }
-///
-/// @Serializable()
-/// @GenerateMongoRepository(
-///   collectionName: 'users',
-///   implements: UserRepository,
-/// )
-/// class User extends AggregateRoot<UuidValue> {
-///   final String firstName;
-///   final String lastName;
-///   final String email;
-///
-///   User({
-///     required this.firstName,
-///     required this.lastName,
-///     required this.email,
-///   }) : super(id: UuidValue.generate());
-/// }
-///
-/// part 'user.g.dart';
-///
-/// // Extend generated base class and implement custom methods
-/// class UserMongoRepository extends UserMongoRepositoryBase {
-///   UserMongoRepository(super.database);
-///
-///   @override
-///   Future<User?> findByEmail(String email) async {
-///     final doc = await _collection.findOne(where.eq('email', email));
-///     if (doc == null) return null;
-///
-///     doc.remove('_id');
-///     return _serializer.fromJson(doc);
-///   }
-///
-///   @override
-///   Future<List<User>> findByLastName(String lastName) async {
-///     final docs = await _collection
-///         .find(where.eq('lastName', lastName))
-///         .toList();
-///
-///     return docs.map((doc) {
-///       doc.remove('_id');
-///       return _serializer.fromJson(doc);
-///     }).toList();
-///   }
-/// }
-/// ```
+/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_mongodb/README.md).
 ///
 /// ## Collection Naming
 ///
@@ -113,16 +39,7 @@
 /// By defining a custom interface, you can swap repository implementations
 /// for different environments:
 ///
-/// ```dart
-/// // Production: MongoDB implementation
-/// UserRepository repo = UserMongoRepository(database);
-///
-/// // Testing: In-memory implementation
-/// UserRepository repo = InMemoryRepository<User, UuidValue>();
-///
-/// // Client-side: REST API implementation (future package)
-/// UserRepository repo = UserRestRepository(apiClient);
-/// ```
+/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_mongodb/README.md).
 class GenerateMongoRepository {
   /// Creates a GenerateMongoRepository annotation.
   ///

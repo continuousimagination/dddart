@@ -1,3 +1,6 @@
+> Historical record; it may describe retired APIs. For current usage, start at
+> [the documentation index](../README.md).
+
 # IndexedDB cancellation work record — issue #74
 
 The initial implementation evidence below is historical. The revision section

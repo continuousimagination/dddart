@@ -1,3 +1,6 @@
+> Historical record; it may describe retired APIs. For current usage, start at
+> [the documentation index](../../../docs/README.md).
+
 # Implementation Plan
 
 - [x] 1. Create domain event base class and infrastructure

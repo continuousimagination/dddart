@@ -1,3 +1,6 @@
+> Historical record; it may describe retired APIs. For current usage, start at
+> [the documentation index](README.md).
+
 # Silly Sentence Game: AppSync Events migration handoff
 
 Prepared 6 November 2026 for the Codex project already working on Silly Sentence

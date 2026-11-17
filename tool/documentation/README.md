@@ -52,15 +52,30 @@ secret and sender. Every canonical Dart input must appear verbatim in scoped
 published documentation. `commands.sh` and expected-output inclusions are checked
 against the same files used by execution, preventing silent command/output drift.
 
-The scopes are the root README, public package READMEs, public library entrypoint
-comments, all website guides and canonical workflow READMEs. Every Dart fence in
-those scopes must be either a canonical inclusion or explicitly classified in
-`snippets.json`. The latter records a content digest, kind and contextual reason.
-A new/changed fragment fails until a maintainer chooses a checked workflow/harness
-or supplies an honest non-runnable classification. This is not a claim that
-illustrative fragments compile. Deferred designs are negative examples, and the
-full distributed HTTP example is matched byte-for-byte to the existing shared
-example lane. Existing package/archive/browser/example gates remain required.
+The surface inventory covers **every repository Markdown/MDX/RST document**, including
+standalone guides, testing/how-to pages, all sample READMEs and the website. All
+library and sample Dartdoc is discovered recursively, including implementation libraries.
+New documents fail until added to `surfaces.json` after review. Historical work
+records, specs, changelogs and handoffs require a visible notice pointing to current
+usage; agent steering files are explicitly internal. Those records preserve history
+without advertising obsolete APIs as supported instructions.
+
+Every Dart fence in current documentation must be a verbatim `dddart-source`
+inclusion owned by a checked quickstart or an active example entrypoint. There
+is no illustrative-fragment exemption. Incomplete duplicates have been replaced
+with links to complete programs, source contracts or executable tests. All 15
+sample README program tables and exact validation commands are checked against
+`tool/validation/inventory.json`, so a changed execution boundary cannot retain an
+old claim that a program runs. The shared example gate separately discovers new
+entrypoints and verifies each program's declared generation/analysis/compile/run lane.
+
+Relative links, Markdown heading anchors, and GitHub links into `main` or the
+canonical code revision are resolved against this checkout. Other immutable
+revision links may intentionally preserve historical evidence and are not mapped
+to current files. External URL availability is not checked by this deterministic
+local gate. The website checker additionally validates site routes/assets/anchors.
+Links to code are not a claim that arbitrary prose is mechanically verified:
+API behavior still needs review against the implementation and its contract tests.
 
 The gate also checks every public export/entrypoint against `PUBLIC_API.md` and
 all 18 package rows against `CAPABILITIES.md`. It does not infer semantic API
@@ -77,20 +92,28 @@ Edit the canonical file first, then run `sync` and `check`. Keep imports in the
 complete pubspec and update the workflow's expected output when behavior changes
 intentionally. A missing builder, part or constructor must be fixed, not worked
 around by retaining generated files. Add a new executable program to its workflow
-and publish it with a `dddart-source` inclusion. `sync` never updates fragment
-classification or API inventories automatically.
+and publish it with a `dddart-source` inclusion. `sync` never updates surface, sample or API inventories automatically.
 
-For a deliberate fragment change, `check` reports its document/fence identifier
-and new digest. Review its context, kind and reason before updating the matching
-record. Run the relevant execution lane, not just `check`.
+For new code, add a complete canonical workflow or inventoried sample first,
+then include it. Add each new guide to `surfaces.json` as current. Keep sample
+coverage tables exactly aligned with the shared inventory; `example_table` in
+`validate.py` produces their canonical Markdown. Run the relevant execution lane,
+not just `check`. The fault suite checks new documents, deep Dartdoc, standalone
+snippets, broken links/anchors, sample coverage drift and missing history notices,
+as well as real failing generation, analysis and execution.
 
 ## CI and release use
 
-The Test workflow runs on every main-targeting PR and main push, with no docs-only
-path filter. Its documentation job checks drift, runs the fault suite, executes
+The Test workflow defines gates for every main-targeting PR and main push, with no docs-only
+path filter. It is currently disabled in this repository; run these gates locally
+until the owner re-enables it. Its documentation job checks drift, runs the fault suite, executes
 all unserviced consumers and portable JS paths. Database documentation steps reuse
 the existing MySQL, MongoDB and DynamoDB package-service jobs. Missing required
-services fail their lane. The Pages build/link checker remains a separate check.
+services fail their lane. The active Website workflow runs the fast surface/source/link check and site build
+on every main-targeting PR and main push, including library-only changes.
+Its homepage imports complete checked core programs as raw source; a fault test
+rejects replacement with an unchecked code literal. Heavy Dart execution remains
+in the local/Test gates.
 
 For #101's release runbook, run `check`, the fault suite and `all` against the
 release candidate with its required services, then retain the separate hosted

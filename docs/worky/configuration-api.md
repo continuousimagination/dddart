@@ -1,3 +1,6 @@
+> Historical record; it may describe retired APIs. For current usage, start at
+> [the documentation index](../README.md).
+
 # Structured configuration: API and implementation proposal
 
 Status: implemented and locally validated on 28 October 2026; final integrated

@@ -23,14 +23,7 @@ class ResponseBuilder<T extends AggregateRoot<Identity>> {
   ///
   /// Returns: A [Response] with status 200 and serialized body
   ///
-  /// Example:
-  /// ```dart
-  /// final response = responseBuilder.ok(
-  ///   user,
-  ///   jsonSerializer,
-  ///   etag: '"2024-01-15T10:30:00.000Z"',
-  /// );
-  /// ```
+  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md).
   Response ok(
     T aggregate,
     JsonSerializer<T> serializer, {
@@ -57,14 +50,7 @@ class ResponseBuilder<T extends AggregateRoot<Identity>> {
   ///
   /// Returns: A [Response] with status 201 and serialized body
   ///
-  /// Example:
-  /// ```dart
-  /// final response = responseBuilder.created(
-  ///   newUser,
-  ///   jsonSerializer,
-  ///   etag: '"2024-01-15T10:30:00.000Z"',
-  /// );
-  /// ```
+  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md).
   Response created(
     T aggregate,
     JsonSerializer<T> serializer, {
@@ -94,14 +80,7 @@ class ResponseBuilder<T extends AggregateRoot<Identity>> {
   ///
   /// Returns: A [Response] with status 200, JSON array body, and optional X-Total-Count header
   ///
-  /// Example:
-  /// ```dart
-  /// final response = responseBuilder.okList(
-  ///   users,
-  ///   jsonSerializer,
-  ///   totalCount: 150,
-  /// );
-  /// ```
+  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md).
   Response okList(
     List<T> aggregates,
     JsonSerializer<T> serializer, {
@@ -127,10 +106,7 @@ class ResponseBuilder<T extends AggregateRoot<Identity>> {
   ///
   /// Returns: A [Response] with status 204 and no body
   ///
-  /// Example:
-  /// ```dart
-  /// final response = responseBuilder.noContent();
-  /// ```
+  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md).
   Response noContent() {
     return Response(204);
   }
@@ -145,12 +121,7 @@ class ResponseBuilder<T extends AggregateRoot<Identity>> {
   ///
   /// Returns: A [Response] with status 400 and RFC 7807 formatted JSON body
   ///
-  /// Example:
-  /// ```dart
-  /// final response = responseBuilder.badRequest(
-  ///   'Cannot combine multiple query parameters',
-  /// );
-  /// ```
+  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md).
   Response badRequest(String message) {
     return Response(
       400,
@@ -202,12 +173,7 @@ class ResponseBuilder<T extends AggregateRoot<Identity>> {
   ///
   /// Returns: A [Response] with status 404 and RFC 7807 formatted JSON body
   ///
-  /// Example:
-  /// ```dart
-  /// final response = responseBuilder.notFound(
-  ///   'User with ID 123e4567-... not found',
-  /// );
-  /// ```
+  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md).
   Response notFound(String message) {
     return Response(
       404,
@@ -235,12 +201,7 @@ class ResponseBuilder<T extends AggregateRoot<Identity>> {
   ///
   /// Returns: A [Response] with status 401 and RFC 7807 formatted JSON body
   ///
-  /// Example:
-  /// ```dart
-  /// final response = responseBuilder.unauthorized(
-  ///   'Token has expired',
-  /// );
-  /// ```
+  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md).
   Response unauthorized(String message) {
     return Response(
       401,

@@ -32,11 +32,7 @@ class ConfigException implements Exception {
 /// This exception indicates that the application attempted to access
 /// a required configuration value that does not exist.
 ///
-/// Example:
-/// ```dart
-/// throw MissingConfigException('database.host');
-/// // Output: Required configuration key not found (key: database.host)
-/// ```
+/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_config/README.md).
 class MissingConfigException extends ConfigException {
   /// Creates an exception for a missing required configuration key.
   ///
@@ -50,11 +46,7 @@ class MissingConfigException extends ConfigException {
 /// This exception occurs when type conversion fails, such as attempting
 /// to parse a non-numeric string as an integer.
 ///
-/// Example:
-/// ```dart
-/// throw TypeConversionException('database.port', 'int', 'abc');
-/// // Output describes the path and types, without including the value.
-/// ```
+/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_config/README.md).
 class TypeConversionException extends ConfigException {
   /// Creates an exception for a type conversion failure.
   ///
@@ -80,13 +72,7 @@ class TypeConversionException extends ConfigException {
 /// configuration validation, allowing the application to report all
 /// issues at once rather than failing on the first error.
 ///
-/// Example:
-/// ```dart
-/// throw ValidationException([
-///   'database.host is required',
-///   'logging.level must be one of [debug, info, warn, error]',
-/// ]);
-/// ```
+/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_config/README.md).
 class ValidationException extends ConfigException {
   /// Creates an exception with a list of validation failures.
   ///
@@ -104,15 +90,7 @@ class ValidationException extends ConfigException {
 /// This exception indicates file system errors (file not found, permission
 /// denied) or parsing errors (invalid YAML syntax).
 ///
-/// Example:
-/// ```dart
-/// throw FileAccessException(
-///   'config.yaml',
-///   FileSystemException('No such file or directory'),
-/// );
-/// // Output: Cannot access configuration file: config.yaml
-/// //         (FileSystemException: No such file or directory)
-/// ```
+/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_config/README.md).
 class FileAccessException extends ConfigException {
   /// Creates an exception for file access or parsing errors.
   ///

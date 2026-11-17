@@ -11,15 +11,7 @@ import 'package:dddart_repository_sql/src/schema/type_mapper.dart';
 /// This class is responsible for converting [TableDefinition] objects
 /// into SQL CREATE TABLE statements using a specific [SqlDialect].
 ///
-/// Example:
-/// ```dart
-/// final generator = SchemaGenerator(SqliteDialect());
-/// final sql = generator.generateCreateTable(tableDefinition);
-/// // CREATE TABLE IF NOT EXISTS orders (
-/// //   id BLOB PRIMARY KEY NOT NULL,
-/// //   ...
-/// // )
-/// ```
+/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
 class SchemaGenerator {
   /// Creates a schema generator with the specified dialect.
   ///
@@ -38,11 +30,7 @@ class SchemaGenerator {
   /// - Foreign key constraints with cascade actions
   /// - Uses CREATE TABLE IF NOT EXISTS for idempotency
   ///
-  /// Example:
-  /// ```dart
-  /// final sql = generator.generateCreateTable(orderTable);
-  /// await connection.execute(sql);
-  /// ```
+  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   String generateCreateTable(TableDefinition table) {
     return dialect.createTableIfNotExists(table);
   }
@@ -83,7 +71,7 @@ class SchemaGenerator {
   /// - `int` → INTEGER
   /// - `double` → REAL
   /// - `bool` → INTEGER (0/1)
-  /// - `DateTime` → INTEGER (milliseconds)
+  /// - `DateTime` → the dialect timestamp type (SQLite TEXT, MySQL DATETIME)
   /// - `UuidValue` → BLOB
   ///
   /// Non-primitive types (custom classes) require foreign keys
@@ -119,22 +107,7 @@ class SchemaGenerator {
   /// - Includes map_key column
   /// - UNIQUE constraint on (parent_id, map_key)
   ///
-  /// Example:
-  /// ```dart
-  /// // For List<int> favoriteNumbers
-  /// final table = generator.generatePrimitiveCollectionTable(
-  ///   parentTable: 'users',
-  ///   fieldName: 'favoriteNumbers',
-  ///   collectionInfo: listOfIntInfo,
-  /// );
-  /// // Creates: users_favoriteNumbers_items (
-  /// //   users_id BLOB NOT NULL,
-  /// //   position INTEGER NOT NULL,
-  /// //   value INTEGER NOT NULL,
-  /// //   FOREIGN KEY (users_id) REFERENCES users(id) ON DELETE CASCADE,
-  /// //   UNIQUE (users_id, position)
-  /// // )
-  /// ```
+  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   TableDefinition generatePrimitiveCollectionTable({
     required String parentTable,
     required String fieldName,
@@ -249,24 +222,7 @@ class SchemaGenerator {
   /// - UNIQUE constraint on (parent_id, map_key)
   /// - Flattens all value object fields
   ///
-  /// Example:
-  /// ```dart
-  /// // For List<Money> where Money has amount and currency fields
-  /// final table = generator.generateValueObjectCollectionTable(
-  ///   parentTable: 'orders',
-  ///   fieldName: 'payments',
-  ///   collectionInfo: listOfMoneyInfo,
-  ///   valueObjectClass: moneyClass,
-  /// );
-  /// // Creates: orders_payments_items (
-  /// //   orders_id BLOB NOT NULL,
-  /// //   position INTEGER NOT NULL,
-  /// //   amount REAL NOT NULL,
-  /// //   currency TEXT NOT NULL,
-  /// //   FOREIGN KEY (orders_id) REFERENCES orders(id) ON DELETE CASCADE,
-  /// //   UNIQUE (orders_id, position)
-  /// // )
-  /// ```
+  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   TableDefinition generateValueObjectCollectionTable({
     required String parentTable,
     required String fieldName,
@@ -358,14 +314,7 @@ class SchemaGenerator {
   /// column definitions for each field. This is used when embedding
   /// value objects into junction tables.
   ///
-  /// Example:
-  /// ```dart
-  /// // For Money class with amount (double) and currency (String)
-  /// final columns = _flattenValueObjectFields(moneyClass, typeMapper);
-  /// // Returns:
-  /// // - ColumnDefinition(name: 'amount', sqlType: 'REAL', ...)
-  /// // - ColumnDefinition(name: 'currency', sqlType: 'TEXT', ...)
-  /// ```
+  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   List<ColumnDefinition> _flattenValueObjectFields(
     ClassElement valueObjectClass,
     TypeMapper typeMapper,
@@ -417,22 +366,7 @@ class SchemaGenerator {
   /// Note: This method generates the table structure. The actual entity
   /// fields are added by the repository generator based on the entity class.
   ///
-  /// Example:
-  /// ```dart
-  /// // For Set<OrderItem> items
-  /// final table = generator.generateEntityCollectionTable(
-  ///   parentTable: 'orders',
-  ///   fieldName: 'items',
-  ///   collectionInfo: setOfOrderItemInfo,
-  ///   entityClass: orderItemClass,
-  /// );
-  /// // Creates: order_items (
-  /// //   id BLOB PRIMARY KEY NOT NULL,
-  /// //   orders_id BLOB NOT NULL,
-  /// //   ... entity fields ...,
-  /// //   FOREIGN KEY (orders_id) REFERENCES orders(id) ON DELETE CASCADE
-  /// // )
-  /// ```
+  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   TableDefinition generateEntityCollectionTable({
     required String parentTable,
     required String fieldName,
@@ -516,11 +450,7 @@ class SchemaGenerator {
 
   /// Converts a camelCase string to snake_case.
   ///
-  /// Example:
-  /// ```dart
-  /// _toSnakeCase('favoriteNumbers'); // 'favorite_numbers'
-  /// _toSnakeCase('orderItems'); // 'order_items'
-  /// ```
+  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   String _toSnakeCase(String camelCase) {
     return camelCase.replaceAllMapped(
       RegExp('[A-Z]'),

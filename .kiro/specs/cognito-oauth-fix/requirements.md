@@ -1,3 +1,6 @@
+> Historical record; it may describe retired APIs. For current usage, start at
+> [the documentation index](../../../docs/README.md).
+
 # Requirements Document: Fix AWS Cognito OAuth Support
 
 ## Introduction

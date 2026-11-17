@@ -12,15 +12,7 @@ class ObjectMapper {
   /// Takes a JSON map and flattens any nested maps (representing value objects)
   /// by prefixing their keys with the parent field name.
   ///
-  /// Example:
-  /// ```dart
-  /// final json = {
-  ///   'id': '123',
-  ///   'totalAmount': {'amount': 100.0, 'currency': 'USD'},
-  /// };
-  /// final flattened = mapper.flattenValueObject('totalAmount', json['totalAmount']);
-  /// // Returns: {'totalAmount_amount': 100.0, 'totalAmount_currency': 'USD'}
-  /// ```
+  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   Map<String, Object?> flattenValueObject(
     String prefix,
     Map<String, dynamic> valueObjectJson,
@@ -51,16 +43,7 @@ class ObjectMapper {
   /// Extracts all columns that start with the given prefix and reconstructs
   /// the original nested JSON structure.
   ///
-  /// Example:
-  /// ```dart
-  /// final row = {
-  ///   'id': '123',
-  ///   'totalAmount_amount': 100.0,
-  ///   'totalAmount_currency': 'USD',
-  /// };
-  /// final valueObject = mapper.reconstructValueObject('totalAmount', row);
-  /// // Returns: {'amount': 100.0, 'currency': 'USD'}
-  /// ```
+  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   Map<String, dynamic> reconstructValueObject(
     String prefix,
     Map<String, Object?> row,

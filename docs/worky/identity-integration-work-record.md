@@ -1,3 +1,6 @@
+> Historical record; it may describe retired APIs. For current usage, start at
+> [the documentation index](../README.md).
+
 # Identity/configuration integration work record
 
 Tracking: #37 and #38. Integration target: feat/worky-changes.

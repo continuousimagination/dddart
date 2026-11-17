@@ -50,10 +50,7 @@ class RestClient extends http.BaseClient {
   ///
   /// Automatically includes access token in Authorization header.
   ///
-  /// Example:
-  /// ```dart
-  /// final response = await client.getPath('/users/123');
-  /// ```
+  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest_client/README.md).
   Future<http.Response> getPath(
     String path, {
     Map<String, String>? headers,
@@ -66,13 +63,7 @@ class RestClient extends http.BaseClient {
   /// Automatically includes access token in Authorization header.
   /// If [body] is provided, it will be JSON-encoded.
   ///
-  /// Example:
-  /// ```dart
-  /// final response = await client.postPath(
-  ///   '/users',
-  ///   body: {'name': 'Alice', 'email': 'alice@example.com'},
-  /// );
-  /// ```
+  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest_client/README.md).
   Future<http.Response> postPath(
     String path, {
     Object? body,
@@ -94,13 +85,7 @@ class RestClient extends http.BaseClient {
   /// Automatically includes access token in Authorization header.
   /// If [body] is provided, it will be JSON-encoded.
   ///
-  /// Example:
-  /// ```dart
-  /// final response = await client.putPath(
-  ///   '/users/123',
-  ///   body: {'name': 'Alice Updated'},
-  /// );
-  /// ```
+  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest_client/README.md).
   Future<http.Response> putPath(
     String path, {
     Object? body,
@@ -121,10 +106,7 @@ class RestClient extends http.BaseClient {
   ///
   /// Automatically includes access token in Authorization header.
   ///
-  /// Example:
-  /// ```dart
-  /// final response = await client.deletePath('/users/123');
-  /// ```
+  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest_client/README.md).
   Future<http.Response> deletePath(
     String path, {
     Map<String, String>? headers,
@@ -137,13 +119,7 @@ class RestClient extends http.BaseClient {
   /// Automatically includes access token in Authorization header.
   /// If [body] is provided, it will be JSON-encoded.
   ///
-  /// Example:
-  /// ```dart
-  /// final response = await client.patchPath(
-  ///   '/users/123',
-  ///   body: {'email': 'newemail@example.com'},
-  /// );
-  /// ```
+  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest_client/README.md).
   Future<http.Response> patchPath(
     String path, {
     Object? body,

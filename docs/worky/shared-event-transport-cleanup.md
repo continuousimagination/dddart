@@ -1,3 +1,6 @@
+> Historical record; it may describe retired APIs. For current usage, start at
+> [the documentation index](../README.md).
+
 # Shared event transport cleanup — issue #108
 
 Base: authorization integration `1d339a0` (PR #111), which includes concurrency

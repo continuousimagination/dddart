@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -14,15 +13,22 @@ import socket
 import subprocess
 import sys
 import tempfile
+import unicodedata
+from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[2]
 INCLUSION = re.compile(
     r'<!-- dddart-source: ([^>\n]+) -->\n```(\w+)\n(.*?)\n```\n<!-- /dddart-source -->',
     re.S,
 )
-FENCE = re.compile(r'^```(\w+)[^\n]*\n(.*?)^```', re.M | re.S)
-SCOPES = ['README.md', 'packages/*/README.md', 'packages/*/lib/*.dart',
-          'website/src/content/docs/*.md', 'docs/quickstarts/*/README.md']
+FENCE = re.compile(
+    r'^(?P<fence>`{3,}|~{3,})(?P<language>[\w-]*)[^\n]*\n'
+    r'(?P<body>.*?)^(?P=fence)[ \t]*$', re.M | re.S,
+)
+IGNORED = {'.git', '.dart_tool', 'node_modules', 'build', 'dist', '.astro',
+           '.pub-cache', 'coverage', '__pycache__'}
+DOCUMENT_SUFFIXES = {'.md', '.mdx', '.rst'}
+HISTORICAL_NOTICE = '> Historical record; it may describe retired APIs. For current usage, start at'
 
 
 class Failure(RuntimeError):
@@ -40,26 +46,138 @@ def safe_path(root, relative):
     return path
 
 
+def repository_files(root):
+    # Include new untracked documentation while respecting repository ignores.
+    if (root / '.git').exists():
+        result = subprocess.run(['git', '-C', str(root), 'ls-files', '-z',
+                                 '--cached', '--others', '--exclude-standard'],
+                                check=True, capture_output=True, text=True)
+        return sorted({root / name for name in result.stdout.split('\0')
+                       if name and (root / name).is_file()})
+    # Fault-test source snapshots deliberately have no Git checkout.
+    return sorted(p for p in root.rglob('*') if p.is_file()
+                  and not IGNORED.intersection(p.relative_to(root).parts))
+
+
 def document_paths(root=ROOT):
-    return sorted({p for pattern in SCOPES for p in root.glob(pattern)})
+    return [p for p in repository_files(root)
+            if p.suffix in DOCUMENT_SUFFIXES or
+            (p.suffix == '.dart' and any(part in ('lib', 'example') for part in p.relative_to(root).parts)
+             and p.relative_to(root).parts[0] == 'packages'
+             and not p.name.endswith('.g.dart'))]
 
 
 def document_text(path):
     text = path.read_text()
     if path.suffix == '.dart':
-        text = re.sub(r'^\s*/// ?', '', text, flags=re.M)
+        # Only documentation, not strings or executable code in the same file.
+        lines = [m[1] for m in re.finditer(r'^\s*/// ?(.*)$', text, re.M)]
+        lines += [re.sub(r'^\s*\* ?', '', m[1], flags=re.M)
+                  for m in re.finditer(r'/\*\*(.*?)\*/', text, re.S)]
+        text = '\n'.join(lines)
     return text
 
 
-def digest(text):
-    return hashlib.sha256(text.encode()).hexdigest()
+def example_table(example):
+    rows = ['| Source | Coverage / runtime context |', '| --- | --- |']
+    descriptions = {
+        'run': 'Compiled and run; finite local demonstration.',
+        'compile': 'Compiled only; running requires application configuration or a long-running server.',
+        'service': "Compiled and run against the lane's required local database service.",
+    }
+    for entry in example['entrypoints']:
+        if entry['action'] not in descriptions:
+            raise Failure(f"{example['name']}: retired/unvalidated sample is still inventoried")
+        reason = entry['reason'].replace('|', r'\|').replace('\n', ' ')
+        rows.append(f"| [{entry['path']}]({entry['path']}) | {descriptions[entry['action']]} {reason} |")
+    return '\n'.join(rows)
+
+
+def current_documents(root):
+    surfaces = read_json(root / 'tool/documentation/surfaces.json')['documents']
+    paths = document_paths(root)
+    discovered = {str(p.relative_to(root)) for p in paths if p.suffix in DOCUMENT_SUFFIXES}
+    if discovered != set(surfaces):
+        raise Failure(f'Documentation surface inventory differs: {sorted(discovered ^ set(surfaces))}')
+    current = []
+    for path in paths:
+        label = str(path.relative_to(root))
+        kind = surfaces.get(label, 'current')
+        if kind == 'historical':
+            if HISTORICAL_NOTICE not in path.read_text():
+                raise Failure(f'{label}: historical document lacks a visible current-guide notice')
+        elif kind == 'internal':
+            if not label.startswith('.kiro/steering/'):
+                raise Failure(f'{label}: internal exemption is only for agent steering files')
+        elif kind == 'current':
+            current.append(path)
+        else:
+            raise Failure(f'{label}: unknown documentation category {kind}')
+    return current
+
+
+def markdown_anchors(text):
+    # GitHub-style heading IDs, including duplicate suffixes.
+    anchors = set()
+    counts = {}
+    for match in re.finditer(r'^#{1,6}\s+(.+?)\s*#*$', FENCE.sub('', text), re.M):
+        heading = re.sub(r'\[([^]]+)\]\([^)]*\)', r'\1', match[1])
+        heading = re.sub(r'<[^>]+>', '', heading).lower().strip()
+        slug = ''.join(c for c in heading if c in '-_ ' or
+                       unicodedata.category(c)[0] in 'LN').replace(' ', '-')
+        count = counts.get(slug, 0)
+        counts[slug] = count + 1
+        anchors.add(slug + (f'-{count}' if count else ''))
+    anchors.update(re.findall(r'(?:id|name)=["\']([^"\']+)', text))
+    return anchors
+
+
+def check_links(root, path, text):
+    text = FENCE.sub('', text)
+    targets = re.findall(r'\[[^]\n]*\]\((<[^>]+>|[^\s)]+)(?:\s+["\'][^\n]*?["\'])?\)', text)
+    targets += re.findall(r'^\s*\[[^]]+\]:\s*(\S+)', text, re.M)
+    targets += re.findall(r'(?:href|src)=["\']([^"\']+)', text)
+    for raw in targets:
+        raw = raw.strip('<>')
+        url = urlsplit(raw)
+        if url.scheme or url.netloc:
+            own = re.fullmatch(r'/continuousimagination/dddart/(?:blob|tree)/([^/]+)/(.*)', url.path)
+            if url.netloc != 'github.com' or not own:
+                continue  # External availability is not a deterministic local gate.
+            # Other immutable revisions can intentionally link historical evidence.
+            revision = read_json(root / 'docs/quickstarts/workflows.json')['revision']
+            if own[1] not in ('main', revision):
+                continue
+            target = safe_path(root, unquote(own[2]))
+        elif url.path.startswith('/'):
+            continue  # Site routes/assets/anchors are verified by the website checker.
+        else:
+            target = safe_path(root, str(path.parent.relative_to(root) / unquote(url.path))) if url.path else path
+        if not target.exists():
+            raise Failure(f'{path.relative_to(root)}: broken local link {raw}')
+        if url.fragment and target.suffix in DOCUMENT_SUFFIXES:
+            if unquote(url.fragment) not in markdown_anchors(target.read_text()):
+                raise Failure(f'{path.relative_to(root)}: broken local anchor {raw}')
+
+
+def check_homepage(root, owners):
+    path = root / 'website/src/pages/index.astro'
+    text = path.read_text()
+    imports = dict(re.findall(r"import (\w+) from '([^']+\.dart)\?raw';", text))
+    used = re.findall(r'\bcode:\s*([^,}\n]+)', text)
+    if not used or any(name.strip() not in imports for name in used):
+        raise Failure('Homepage Dart code must use canonical raw source imports')
+    for name in used:
+        source = (path.parent / imports[name.strip()]).resolve()
+        if not source.is_relative_to(root.resolve()) or str(source.relative_to(root)) not in owners:
+            raise Failure('Homepage Dart import lacks a checked workflow/sample owner')
 
 
 def check(root=ROOT):
     root = root.resolve()
     metadata = read_json(root / 'docs/quickstarts/workflows.json')
     inventory = read_json(root / 'tool/validation/inventory.json')
-    policy = read_json(root / 'tool/documentation/snippets.json')
+    documents = current_documents(root)
     packages = {p['name']: p for p in inventory['packages']}
     owners = {}
     names = set()
@@ -118,11 +236,24 @@ def check(root=ROOT):
             raise Failure(f'{name}: compile commands and coverage inventory disagree')
     if names != {p.name for p in (root / 'docs/quickstarts').iterdir() if p.is_dir()}:
         raise Failure('Unclassified quickstart directory')
-    seen_fragments = set()
+    for example in inventory['examples']:
+        readme = root / example['path'] / 'README.md'
+        if not readme.is_file() or example_table(example) not in readme.read_text():
+            raise Failure(f"{example['path']}/README.md: sample coverage table differs from shared inventory")
+        command = f"dart tool/validation/validate.dart example {example['name']} --mode=ci"
+        if command not in readme.read_text():
+            raise Failure(f'{readme.relative_to(root)}: missing exact sample validation command')
+        for entry in example['entrypoints']:
+            source = f"{example['path']}/{entry['path']}"
+            if not safe_path(root, source).is_file():
+                raise Failure(f'Missing inventoried example: {source}')
+            owners[source] = example['name']
+    check_homepage(root, owners)
     seen_sources = set()
     inclusions = 0
-    for path in document_paths(root):
+    for path in documents:
         text = document_text(path)
+        check_links(root, path, text)
         label = str(path.relative_to(root))
         spans = []
         for match in INCLUSION.finditer(text):
@@ -134,35 +265,18 @@ def check(root=ROOT):
             spans.append((match.start(), match.end()))
             seen_sources.add(source)
             inclusions += 1
-        if text.count('<!-- dddart-source:') != len(spans):
+        if len(re.findall(r'^<!-- dddart-source:', text, re.M)) != len(spans):
             raise Failure(f'{label}: malformed or unclosed source inclusion')
         dart_index = 0
         for match in FENCE.finditer(text):
-            if match[1] != 'dart':
+            if match['language'].lower() != 'dart':
                 continue
             dart_index += 1
             if any(start <= match.start() < end for start, end in spans):
                 continue
             key = f'{label}#dart-{dart_index}'
-            record = policy['fragments'].get(key)
-            sha = digest(match[2].rstrip())
-            if record is None or record.get('sha256') != sha:
-                raise Failure(f'{key}: new/changed unclassified snippet (sha256 {sha}); '
-                              'choose a checked workflow/harness or an explicit non-runnable reason')
-            if record['kind'] not in ('illustrative', 'negative', 'external-example') or not record['reason'].strip():
-                raise Failure(f'{key}: missing honest snippet classification/reason')
-            if record['kind'] == 'external-example':
-                example = next((e for e in inventory['examples'] if e['name'] == record['example']), None)
-                if example is None:
-                    raise Failure(f'{key}: unknown shared example lane')
-                source = root / example['path'] / record['entrypoint']
-                if source.read_text().rstrip() != match[2].rstrip():
-                    raise Failure(f'{key}: published code differs from checked example {source}')
-                if not any(e['path'] == record['entrypoint'] for e in example['entrypoints']):
-                    raise Failure(f'{key}: example entrypoint is not classified by shared inventory')
-            seen_fragments.add(key)
-    if seen_fragments != set(policy['fragments']):
-        raise Failure(f'Stale snippet classifications: {set(policy["fragments"]) - seen_fragments}')
+            raise Failure(f'{key}: unchecked Dart snippet; use a canonical source inclusion '
+                          'owned by an executable workflow or shared sample lane')
     for workflow in metadata['workflows']:
         for item in workflow['files']:
             if item['source'].endswith('.dart'):
@@ -172,8 +286,9 @@ def check(root=ROOT):
     if inclusions < 1:
         raise Failure('No canonical source inclusions found')
     check_exports(root, packages)
-    print(f'Checked {inclusions} canonical inclusions, {len(seen_fragments)} classified '
-          f'fragments, {len(names)} workflows and public exports.', flush=True)
+    print(f'Checked {len(documents)} current documentation/API surfaces, {inclusions} canonical '
+          f'inclusions, {len(names)} workflows, {len(inventory["examples"])} sample guides, '
+          'local links and public exports.', flush=True)
     return metadata, inventory
 
 

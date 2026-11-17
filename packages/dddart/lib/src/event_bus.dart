@@ -11,20 +11,7 @@ import 'package:logging/logging.dart';
 /// efficient, type-safe event distribution.
 ///
 /// Example usage:
-/// ```dart
-/// final eventBus = EventBus();
-///
-/// // Subscribe to specific event types
-/// eventBus.on<UserRegistered>().listen((event) {
-///   print('User registered: ${event.userId}');
-/// });
-///
-/// // Publish events
-/// eventBus.publish(UserRegistered(userId: '123'));
-///
-/// // Clean up when done
-/// eventBus.close();
-/// ```
+/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart/README.md).
 class EventBus {
   /// Creates a local bus with an optional application-provided logger.
   EventBus({Logger? logger}) : logger = logger ?? Logger('dddart.eventbus');
@@ -71,12 +58,7 @@ class EventBus {
   ///
   /// Type parameter [T] must extend [DomainEvent].
   ///
-  /// Example:
-  /// ```dart
-  /// eventBus.on<UserRegistered>().listen((event) {
-  ///   // Handle UserRegistered events
-  /// });
-  /// ```
+  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart/README.md).
   Stream<T> on<T extends DomainEvent<Identity>>() {
     return _events<T>(originatedOnly: false);
   }

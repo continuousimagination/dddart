@@ -3,53 +3,13 @@ import { Code } from 'astro:components';
 import Base from '../layouts/Base.astro';
 import { doc, repo } from '../lib/site';
 import '../styles/home.css';
+import modelExample from '../../../docs/quickstarts/core/bin/identity.dart?raw';
+import repositoryExample from '../../../docs/quickstarts/core/bin/repository.dart?raw';
+import eventExample from '../../../docs/quickstarts/core/bin/main.dart?raw';
 const examples = [
-  { id: 'model', title: '01 / Model', file: 'order.dart', note: 'Your language. Your rules. Ordinary Dart.', code: `import 'package:dddart/dddart.dart';
-
-class Order extends AggregateRoot<UuidValue> {
-  Order({required this.customer}) : super(id: UuidValue.generate());
-
-  final String customer;
-  bool _placed = false;
-
-  bool get isPlaced => _placed;
-
-  void place() {
-    if (_placed) return;
-    _placed = true;
-    touch();
-  }
-}` },
-  { id: 'repository', title: '02 / Persist', file: 'place_order.dart', note: 'One contract. Choose the implementation at the edge.', code: `// Uses the Order model in the first tab.
-Future<void> placeOrder(
-  Repository<Order, UuidValue> orders,
-  UuidValue orderId,
-) async {
-  final order = await orders.getById(orderId);
-  order.place();
-  await orders.save(order);
-}
-
-// Start in memory. Add an adapter as you grow.
-final orders =
-    InMemoryRepository<Order, UuidValue>();` },
-  { id: 'events', title: '03 / React', file: 'order_placed.dart', note: 'Name what happened in the language of your business.', code: `import 'package:dddart/dddart.dart';
-
-class OrderPlaced extends DomainEvent<UuidValue> {
-  OrderPlaced({required UuidValue orderId})
-      : super(aggregateId: orderId);
-}
-
-Future<void> main() async {
-  final bus = EventBus();
-  bus.on<OrderPlaced>().listen((event) {
-    print('Order placed: ' + event.aggregateId.toString());
-  });
-  bus.publish(OrderPlaced(
-    orderId: UuidValue.generate(),
-  ));
-  await bus.close();
-}` },
+  { id: 'model', title: '01 / Model', file: 'identity.dart', note: 'Complete program: a scoped identity and its aggregate.', code: modelExample },
+  { id: 'repository', title: '02 / Persist', file: 'repository.dart', note: 'Complete program: one contract, an in-memory implementation.', code: repositoryExample },
+  { id: 'events', title: '03 / React', file: 'main.dart', note: 'Complete program: save, publish, await delivery, and close.', code: eventExample },
 ];
 const groups = [
   { number: '01', title: 'Model & serialize', text: 'Entities, values, typed identity, and generated JSON.', link: 'modeling', packages: ['dddart', 'dddart_serialization', 'dddart_json'] },

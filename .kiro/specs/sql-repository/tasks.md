@@ -1,3 +1,6 @@
+> Historical record; it may describe retired APIs. For current usage, start at
+> [the documentation index](../../../docs/README.md).
+
 # Implementation Plan
 
 - [x] 1. Set up base package structure (dddart_repository_sql)

@@ -8,29 +8,7 @@ import 'package:dddart_serialization/src/serialization_config.dart';
 /// Configuration can be provided at the annotation level as defaults,
 /// and overridden at serialization time for flexibility.
 ///
-/// Example:
-/// ```dart
-/// import 'package:dddart/dddart.dart';
-/// import 'package:dddart_serialization/dddart_serialization.dart';
-///
-/// @Serializable()
-/// class User extends AggregateRoot<UuidValue> {
-///   final String firstName;
-///   final String lastName;
-/// }
-///
-/// // Use different configurations at serialization time
-/// final serializer = UserJsonSerializer();
-///
-/// // Default camelCase
-/// final camelJson = serializer.toJson(user);
-/// // {"firstName": "John", "lastName": "Doe"}
-///
-/// // Snake case for API
-/// final snakeConfig = SerializationConfig(fieldRename: FieldRename.snake);
-/// final snakeJson = serializer.toJson(user, snakeConfig);
-/// // {"first_name": "John", "last_name": "Doe"}
-/// ```
+/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_serialization/README.md).
 class Serializable {
   /// Creates a Serializable annotation.
   const Serializable({

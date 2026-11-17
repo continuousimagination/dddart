@@ -13,7 +13,7 @@ import 'package:shelf_router/shelf_router.dart';
 /// - Creating a custom verification result class
 /// - Implementing a custom webhook verifier with HMAC-SHA256 signature
 /// - Extracting metadata from headers
-/// - Validating timestamps to prevent replay attacks
+/// - Validating past and future timestamps (duplicates inside the window remain possible)
 /// - Using constant-time comparison to prevent timing attacks
 /// - Using WebhookResource directly with Shelf Router
 
@@ -66,7 +66,7 @@ Future<Response> _handleWebhook(
   print('Received webhook:');
   print('  Event: ${payload.event}');
   print('  User ID: ${payload.userId}');
-  print('  Verified User: ${verification.userId}');
+  print('  Unsigned user hint: ${verification.userId}');
   print('  Timestamp: ${verification.timestamp}');
 
   return Response.ok(
@@ -88,7 +88,8 @@ class MyVerificationResult extends WebhookVerificationResult {
     this.timestamp,
   });
 
-  /// The user ID extracted from the X-User-Id header.
+  /// Untrusted metadata from X-User-Id; this header is not signed.
+  /// Never use it to authorize the caller.
   final String? userId;
 
   /// The request timestamp from the X-Webhook-Timestamp header.
@@ -104,7 +105,7 @@ class MyVerificationResult extends WebhookVerificationResult {
 /// This verifier demonstrates:
 /// - Extracting and validating required headers
 /// - Computing HMAC-SHA256 signatures
-/// - Validating timestamps to prevent replay attacks
+/// - Validating past and future timestamps (duplicates inside the window remain possible)
 /// - Using constant-time comparison to prevent timing attacks
 /// - Extracting metadata from headers
 class MyWebhookVerifier extends WebhookVerifier<MyVerificationResult> {
@@ -116,7 +117,7 @@ class MyWebhookVerifier extends WebhookVerifier<MyVerificationResult> {
   /// The secret key used to compute signatures.
   final String secret;
 
-  /// Maximum age of request timestamp to prevent replay attacks.
+  /// Maximum clock difference in either direction; not request deduplication.
   final Duration maxTimestampAge;
 
   @override
@@ -143,7 +144,9 @@ class MyWebhookVerifier extends WebhookVerifier<MyVerificationResult> {
 
     // Parse and validate timestamp
     final timestamp = int.tryParse(timestampStr);
-    if (timestamp == null) {
+    if (timestamp == null ||
+        timestamp < -8640000000000 ||
+        timestamp > 8640000000000) {
       return const MyVerificationResult(
         isValid: false,
         errorMessage: 'Invalid timestamp format',
@@ -153,11 +156,11 @@ class MyWebhookVerifier extends WebhookVerifier<MyVerificationResult> {
     final requestTime = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
     final now = DateTime.now();
 
-    // Check timestamp age (prevent replay attacks)
-    if (now.difference(requestTime) > maxTimestampAge) {
+    // Bound clock skew in both directions.
+    if (now.difference(requestTime).abs() > maxTimestampAge) {
       return MyVerificationResult(
         isValid: false,
-        errorMessage: 'Request timestamp too old (replay attack prevention)',
+        errorMessage: 'Request timestamp outside the allowed window',
         timestamp: requestTime,
       );
     }

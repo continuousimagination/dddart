@@ -1,3 +1,6 @@
+> Historical record; it may describe retired APIs. For current usage, start at
+> [the documentation index](../../../docs/README.md).
+
 # Spec Update Summary
 
 This document summarizes the updates made to the HTTP CRUD API spec to address loose ends identified during implementation.

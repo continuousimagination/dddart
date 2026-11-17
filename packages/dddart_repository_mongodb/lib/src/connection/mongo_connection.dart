@@ -6,42 +6,7 @@ import 'package:mongo_dart/mongo_dart.dart';
 /// Provides connection lifecycle management and database instance access.
 /// Does not manage connection pooling (handled by mongo_dart internally).
 ///
-/// Example with individual parameters:
-/// ```dart
-/// final connection = MongoConnection(
-///   host: 'localhost',
-///   port: 27017,
-///   databaseName: 'myapp',
-///   username: 'user',
-///   password: 'pass',
-/// );
-/// await connection.open();
-/// final db = connection.database;
-/// // Use database...
-/// await connection.close();
-/// ```
-///
-/// Example with URI:
-/// ```dart
-/// final connection = MongoConnection.fromUri(
-///   'mongodb://user:pass@localhost:27017/myapp',
-/// );
-/// await connection.open();
-/// ```
-///
-/// Example with AWS DocumentDB:
-/// ```dart
-/// final connection = MongoConnection(
-///   host: 'docdb-cluster.cluster-xxx.us-east-1.docdb.amazonaws.com',
-///   port: 27017,
-///   databaseName: 'myapp',
-///   username: 'myuser',
-///   password: 'mypassword',
-///   tls: true,
-///   tlsAllowInvalidCertificates: true,
-///   authSource: 'admin',
-/// );
-/// ```
+/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_mongodb/README.md).
 class MongoConnection {
   /// Creates a connection from individual parameters.
   ///
@@ -66,16 +31,11 @@ class MongoConnection {
 
   /// Creates a connection from a MongoDB connection string URI.
   ///
-  /// Supports standard MongoDB URIs and AWS DocumentDB connection strings.
+  /// Accepts MongoDB-format URIs. DocumentDB deployment compatibility is not verified.
   ///
   /// Format: `mongodb://[username:password@]host[:port]/database[?options]`
   ///
-  /// Example:
-  /// ```dart
-  /// final connection = MongoConnection.fromUri(
-  ///   'mongodb://user:pass@localhost:27017/myapp?tls=true',
-  /// );
-  /// ```
+  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_mongodb/README.md).
   factory MongoConnection.fromUri(String uri) {
     final parsedUri = Uri.parse(uri);
 
@@ -140,7 +100,7 @@ class MongoConnection {
   /// Enable TLS/SSL connection.
   final bool tls;
 
-  /// Allow self-signed certificates (useful for AWS DocumentDB).
+  /// Disable certificate validation. Keep false for verified TLS connections.
   final bool tlsAllowInvalidCertificates;
 
   Db? _db;
@@ -193,7 +153,7 @@ class MongoConnection {
 
   /// Builds a MongoDB connection string from the connection parameters.
   ///
-  /// Supports standard MongoDB format and AWS DocumentDB requirements.
+  /// Constructs a MongoDB-format URI from the configured options.
   ///
   /// Format: `mongodb://[username:password@]host:port/database[?options]`
   String _buildConnectionString() {

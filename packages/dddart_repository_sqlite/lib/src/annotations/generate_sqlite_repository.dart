@@ -3,14 +3,7 @@
 /// This annotation is used to mark aggregate root classes for which
 /// a SQLite repository implementation should be generated.
 ///
-/// Example:
-/// ```dart
-/// @Serializable()
-/// @GenerateSqliteRepository()
-/// class Order extends AggregateRoot<UuidValue> {
-///   // ...
-/// }
-/// ```
+/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sqlite/README.md).
 library;
 
 /// Annotation to generate a SQLite repository for an aggregate root.

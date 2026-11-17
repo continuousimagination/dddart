@@ -1,3 +1,6 @@
+> Historical record; it may describe retired APIs. For current usage, start at
+> [the documentation index](../README.md).
+
 # IndexedDB parent integration — issue #79
 
 ## Prepared candidate and scope

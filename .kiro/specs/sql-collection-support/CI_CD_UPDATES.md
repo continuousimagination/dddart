@@ -1,3 +1,6 @@
+> Historical record; it may describe retired APIs. For current usage, start at
+> [the documentation index](../../../docs/README.md).
+
 # CI/CD Configuration Updates for Collection Support
 
 This document summarizes the CI/CD configuration updates made to support collection testing in both SQLite and MySQL repositories.

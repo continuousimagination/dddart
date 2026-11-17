@@ -19,12 +19,7 @@ import 'package:dddart_repository_sql/src/schema/identity_type.dart';
 /// | DateTime  | TEXT              | DATETIME         |
 /// | UuidValue | BLOB (UTF-8 key)  | VARBINARY(1024)  |
 ///
-/// Example:
-/// ```dart
-/// final mapper = TypeMapper();
-/// final sqlType = mapper.getSqlType('String', sqliteDialect); // 'TEXT'
-/// final isNullable = mapper.isNullable('String?'); // true
-/// ```
+/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
 class TypeMapper {
   /// Creates a type mapper.
   const TypeMapper();
@@ -51,12 +46,7 @@ class TypeMapper {
   /// - Value objects are embedded with prefixed columns
   /// - Entities get foreign key columns
   ///
-  /// Example:
-  /// ```dart
-  /// mapper.getSqlType('String', sqliteDialect); // 'TEXT'
-  /// mapper.getSqlType('DateTime', mysqlDialect); // 'DATETIME'
-  /// mapper.getSqlType('Order', dialect); // null (not primitive)
-  /// ```
+  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   String? getSqlType(String dartType, SqlDialect dialect) {
     switch (dartType) {
       case 'String':
@@ -81,12 +71,7 @@ class TypeMapper {
   /// In Dart, nullable types are denoted with a `?` suffix.
   /// This method detects that suffix to determine nullability.
   ///
-  /// Example:
-  /// ```dart
-  /// mapper.isNullable('String'); // false
-  /// mapper.isNullable('String?'); // true
-  /// mapper.isNullable('int?'); // true
-  /// ```
+  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   ///
   /// Returns `true` if [dartType] ends with `?`.
   bool isNullable(String dartType) {
@@ -98,12 +83,7 @@ class TypeMapper {
   /// Strips the `?` suffix from nullable type names to get
   /// the base type name.
   ///
-  /// Example:
-  /// ```dart
-  /// mapper.removeNullable('String?'); // 'String'
-  /// mapper.removeNullable('int?'); // 'int'
-  /// mapper.removeNullable('String'); // 'String' (unchanged)
-  /// ```
+  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   ///
   /// Returns the type name without the `?` suffix.
   String removeNullable(String dartType) {

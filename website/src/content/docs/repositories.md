@@ -5,11 +5,6 @@ section: Connect the pieces
 order: 10
 ---
 
-Code outside an explicitly named complete workflow is an **illustrative fragment**
-that assumes the surrounding application models and setup. Use the
-[complete quickstarts](https://github.com/continuousimagination/dddart/blob/main/docs/QUICKSTARTS.md)
-for copyable manifests, named files, generation commands, expected output and cleanup.
-
 
 A repository gives application code a collection of aggregates without making it speak SQL, BSON, or HTTP. The useful abstraction is small: retrieve an aggregate, save it, and delete it. Start with that contract, then choose the implementation where the application is assembled.
 
@@ -222,12 +217,7 @@ The program finishes and closes its resources. Delete the temporary application 
 
 Add a domain-specific interface when the application needs more than identity lookup. Using the `Note` model above:
 
-```dart
-abstract interface class NoteRepository
-    implements Repository<Note, UuidValue> {
-  Future<List<Note>> findByTitle(String title);
-}
-```
+See the [complete custom repository](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sqlite/example/custom_repository_example.dart), including its model, interface and handwritten implementation.
 
 Pass `implements: NoteRepository` in `@GenerateSqliteRepository(...)` and regenerate. Because the interface has an additional method, the builder emits an abstract `NoteSqliteRepositoryBase`. Your concrete implementation extends it and implements `findByTitle`; the generator does not invent a query or infer what the business term means.
 

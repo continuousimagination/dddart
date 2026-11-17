@@ -12,44 +12,18 @@ import 'package:http/http.dart' as http;
 ///
 /// ## Basic Usage (No Authentication)
 ///
-/// ```dart
-/// final connection = RestConnection(
-///   baseUrl: 'https://api.example.com',
-/// );
-///
-/// final userRepo = UserRestRepository(connection);
-/// // Use repository...
-///
-/// connection.dispose(); // Clean up when done
-/// ```
+/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_rest/README.md).
 ///
 /// ## With Authentication
 ///
-/// ```dart
-/// final authProvider = DeviceFlowAuthProvider(
-///   clientId: 'your-client-id',
-///   authorizationEndpoint: 'https://auth.example.com/authorize',
-///   tokenEndpoint: 'https://auth.example.com/token',
-/// );
-///
-/// final connection = RestConnection(
-///   baseUrl: 'https://api.example.com',
-///   authProvider: authProvider,
-/// );
-/// ```
+/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_rest/README.md).
 ///
 /// ## Connection Sharing
 ///
 /// Multiple repositories can share the same connection to reuse the
 /// HTTP client and authentication state:
 ///
-/// ```dart
-/// final connection = RestConnection(baseUrl: 'https://api.example.com');
-///
-/// final userRepo = UserRestRepository(connection);
-/// final orderRepo = OrderRestRepository(connection);
-/// // Both repositories share the same HTTP client
-/// ```
+/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_rest/README.md).
 class RestConnection {
   /// Creates a REST connection.
   ///

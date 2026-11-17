@@ -10,16 +10,7 @@ import 'package:jose/jose.dart';
 ///
 /// Generic over [TClaims] to support strongly-typed custom claims.
 ///
-/// Example:
-/// ```dart
-/// final authHandler = OAuthJwtAuthHandler<UserClaims>(
-///   jwksUri: 'https://cognito-idp.us-east-1.amazonaws.com/us-east-1_xxxxx/.well-known/jwks.json',
-///   parseClaimsFromJson: (json) => UserClaims.fromJson(json),
-///   issuer: 'https://cognito-idp.us-east-1.amazonaws.com/us-east-1_xxxxx',
-///   audience: 'my-client-id',
-///   clockSkewTolerance: const Duration(seconds: 30),
-/// );
-/// ```
+/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md).
 class OAuthJwtAuthHandler<TClaims> extends TokenAuthenticationHandler<TClaims> {
   /// Creates an OAuth JWT authentication handler
   OAuthJwtAuthHandler({

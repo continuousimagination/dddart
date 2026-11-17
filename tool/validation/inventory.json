@@ -6,7 +6,9 @@
       "path": "packages/dddart_repository_indexeddb",
       "generation": "none",
       "allowedLocalPackages": [
-        "dddart", "dddart_serialization", "dddart_repository_indexeddb"
+        "dddart",
+        "dddart_serialization",
+        "dddart_repository_indexeddb"
       ]
     },
     {
@@ -232,6 +234,12 @@
           "classification": "runnable",
           "action": "run",
           "reason": "Finite hierarchical logging demonstration."
+        },
+        {
+          "path": "event_publication.dart",
+          "classification": "runnable",
+          "action": "run",
+          "reason": "Finite assertions for captured pending events, rejection and accepted retry."
         }
       ],
       "sourceOverrides": [],
@@ -441,12 +449,6 @@
           "classification": "runnable",
           "action": "compile",
           "reason": "Long-running authenticated HTTP server; compile validation avoids binding a shared port."
-        },
-        {
-          "path": "legacy/self_hosted_auth_mongodb_example.dart.skip",
-          "classification": "legacy",
-          "action": "excluded",
-          "reason": "Conceptual MongoDB authentication sketch uses obsolete constructors and never represented a runnable generated boundary."
         }
       ],
       "sourceOverrides": [],
@@ -563,12 +565,6 @@
           "classification": "runnable",
           "action": "run",
           "reason": "Finite in-memory SQLite custom repository demonstration."
-        },
-        {
-          "path": "legacy/collection_examples.dart.skip",
-          "classification": "legacy",
-          "action": "excluded",
-          "reason": "Obsolete collection-mapping sketch uses removed entity and connection APIs and is retained only for historical context."
         }
       ],
       "sourceOverrides": [],
@@ -632,12 +628,6 @@
           "classification": "runnable",
           "action": "service",
           "reason": "Finite repository error-mapping demonstration backed by MySQL."
-        },
-        {
-          "path": "legacy/collection_examples.dart.skip",
-          "classification": "legacy",
-          "action": "excluded",
-          "reason": "Obsolete collection sketch is retained for historical context and is not supported by the current generator."
         }
       ],
       "sourceOverrides": [],
@@ -799,12 +789,6 @@
         "outputs": []
       },
       "entrypoints": [
-        {
-          "path": "combined_with_rest_example.dart",
-          "classification": "illustrative",
-          "action": "compile",
-          "reason": "Print-only composition sketch; retained as an illustrative integration pattern."
-        },
         {
           "path": "custom_verifier_example.dart",
           "classification": "runnable",

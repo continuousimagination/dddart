@@ -44,7 +44,7 @@ See [Repositories](/dddart/docs/repositories/) for a complete SQLite walkthrough
 | Package | Responsibility | Guide |
 | --- | --- | --- |
 | [dddart_rest](https://github.com/continuousimagination/dddart/tree/main/packages/dddart_rest) | CRUD resources, Shelf HTTP composition, queries, JWT/OIDC verification, and authorization hooks | [HTTP](/dddart/docs/http/) |
-| [dddart_rest_client](https://github.com/continuousimagination/dddart/tree/main/packages/dddart_rest_client) | HTTP client, auth-provider contract, device flow, and Cognito/OIDC login composition | [HTTP and platform authentication](/dddart/docs/http/#browser-and-mobile-composition) |
+| [dddart_rest_client](https://github.com/continuousimagination/dddart/tree/main/packages/dddart_rest_client) | HTTP client, auth-provider contract, device flow, and Cognito/OIDC login composition | [HTTP and platform authentication](/dddart/docs/http/#authentication-providers-and-platforms) |
 
 Server authorization and client token acquisition are different responsibilities. Platform-specific credential stores and redirect handling belong at the application's edge.
 

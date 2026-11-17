@@ -30,27 +30,7 @@ enum ConfigType {
 /// A requirement specifies a configuration key, its expected type,
 /// whether it is required, and an optional custom validator function.
 ///
-/// Example:
-/// ```dart
-/// final requirement = ConfigRequirement(
-///   key: 'database.host',
-///   type: ConfigType.string,
-///   required: true,
-/// );
-///
-/// // With custom validator
-/// final portRequirement = ConfigRequirement(
-///   key: 'database.port',
-///   type: ConfigType.integer,
-///   required: true,
-///   validator: (value) {
-///     if (value < 1 || value > 65535) {
-///       throw ArgumentError('Port must be between 1 and 65535');
-///     }
-///     return value;
-///   },
-/// );
-/// ```
+/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_config/README.md).
 class ConfigRequirement {
   /// Creates a configuration requirement.
   ///
@@ -87,14 +67,6 @@ class ConfigRequirement {
   /// should throw an exception if validation fails. The exception message
   /// will be included in the validation failure report.
   ///
-  /// Example:
-  /// ```dart
-  /// validator: (value) {
-  ///   if (value < 0) {
-  ///     throw ArgumentError('Value must be non-negative');
-  ///   }
-  ///   return value;
-  /// }
-  /// ```
+  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_config/README.md).
   final dynamic Function(dynamic)? validator;
 }

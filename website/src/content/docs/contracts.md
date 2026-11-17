@@ -5,11 +5,6 @@ section: Build your domain
 order: 30
 ---
 
-Code outside an explicitly named complete workflow is an **illustrative fragment**
-that assumes the surrounding application models and setup. Use the
-[complete quickstarts](https://github.com/continuousimagination/dddart/blob/main/docs/QUICKSTARTS.md)
-for copyable manifests, named files, generation commands, expected output and cleanup.
-
 
 ## Put the dependency in the constructor
 
@@ -66,11 +61,7 @@ The server must also validate authorization and enforce domain rules against aut
 
 `Repository<T, I>` promises three operations:
 
-```dart
-Future<T> getById(I id);
-Future<void> save(T aggregate);
-Future<void> deleteById(I id);
-```
+The [Repository declaration](https://github.com/continuousimagination/dddart/blob/main/packages/dddart/lib/src/repository.dart) defines typed `getById`, `save` and `deleteById` operations.
 
 `T` is an aggregate root and `I` is its concrete identity type. A repository for `IssueId` does not silently accept an unrelated `CustomerId`. `save` is an upsert, while missing lookup and deletion are errors represented by `RepositoryException`.
 
@@ -134,7 +125,7 @@ A JavaScript compilation or Node run checks a representative portable program;
 it does not certify every browser or Flutter device. Native Chrome contracts are
 separate from VM memory IndexedDB tests. Local AppSync/DynamoDB protocol tests do
 not prove a live AWS deployment. The [quickstart inventory](https://github.com/continuousimagination/dddart/blob/main/docs/QUICKSTARTS.md)
-and package/example lanes state exactly what is run, compiled or illustrative.
+and package/example lanes state exactly what is run or compiled.
 
 ## Let the shared language lead the abstraction
 

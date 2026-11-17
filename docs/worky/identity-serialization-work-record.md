@@ -1,3 +1,6 @@
+> Historical record; it may describe retired APIs. For current usage, start at
+> [the documentation index](../README.md).
+
 # Identity serialization work record — issue #40
 
 Branch: issue/identity-serialization. Target: issue/37-extensible-identity.

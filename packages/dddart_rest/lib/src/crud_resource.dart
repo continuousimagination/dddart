@@ -24,23 +24,7 @@ import 'package:shelf/shelf.dart';
 /// remain anonymous even when a verifier protects other operations.
 ///
 /// Example without authentication:
-/// ```dart
-/// final userResource = CrudResource<User, UuidValue, void>(
-///   path: '/users',
-///   repository: userRepository,
-///   serializer: jsonSerializer,
-/// );
-/// ```
-///
-/// Example with authentication:
-/// ```dart
-/// final userResource = CrudResource<User, UuidValue, UserClaims>(
-///   path: '/users',
-///   repository: userRepository,
-///   serializer: jsonSerializer,
-///   authenticationHandler: jwtAuthHandler,
-/// );
-/// ```
+/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md).
 class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   /// Creates a CrudResource with the specified configuration
   ///
@@ -218,12 +202,7 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   /// - Adding audit fields (e.g., createdBy)
   /// - Applying default values based on user context
   ///
-  /// Example:
-  /// ```dart
-  /// preCreate: (player, caller) {
-  ///   return player.withOwner(caller.claims?.sub);
-  /// }
-  /// ```
+  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md).
   final T Function(T aggregate, Caller<TClaims> caller)? preCreate;
 
   /// ResponseBuilder instance for creating HTTP responses

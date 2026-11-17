@@ -1,3 +1,6 @@
+> Historical record; it may describe retired APIs. For current usage, start at
+> [the documentation index](../README.md).
+
 # Identity core work record — issue #39
 
 Current API update (17 November 2026): UUID-specific entity and aggregate base

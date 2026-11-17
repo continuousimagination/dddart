@@ -59,15 +59,7 @@ class DocumentationFailures(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory(prefix='dddart_doc_fault_sources_')
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        shutil.copytree(gate.ROOT / 'docs/quickstarts', self.root / 'docs/quickstarts')
-        paths = gate.document_paths() + [gate.ROOT / name for name in (
-            'tool/documentation/snippets.json', 'tool/validation/inventory.json',
-            'docs/PUBLIC_API.md', 'docs/CAPABILITIES.md')]
-        examples = {example['name']: example for example in self.inventory['examples']}
-        for record in gate.read_json(gate.ROOT / 'tool/documentation/snippets.json')['fragments'].values():
-            if record['kind'] == 'external-example':
-                paths.append(gate.ROOT / examples[record['example']]['path'] / record['entrypoint'])
-        for source in paths:
+        for source in gate.repository_files(gate.ROOT):
             target = self.root / source.relative_to(gate.ROOT)
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(source, target)
@@ -82,11 +74,64 @@ class DocumentationFailures(unittest.TestCase):
         with contextlib.redirect_stdout(io.StringIO()):
             gate.sync(self.root)
 
-    def test_new_primary_snippet_requires_classification(self):
+    def test_new_primary_snippet_requires_checked_source(self):
         path = self.root / 'README.md'
         path.write_text(path.read_text() + '\n```dart\nvoid unclassified() {}\n```\n')
-        with self.assertRaisesRegex(gate.Failure, 'README.md#dart-.*unclassified'):
+        with self.assertRaisesRegex(gate.Failure, 'README.md#dart-.*unchecked'):
             gate.check(self.root)
+
+    def test_new_standalone_guide_requires_inventory_review(self):
+        (self.root / 'docs/NEW_GUIDE.md').write_text('# New guide\n')
+        with self.assertRaisesRegex(gate.Failure, 'surface inventory.*NEW_GUIDE'):
+            gate.check(self.root)
+
+    def test_standalone_guide_snippets_are_checked(self):
+        path = self.root / 'packages/dddart/GETTING_STARTED.md'
+        path.write_text(path.read_text() + '\n```dart\nMissingType sample;\n```\n')
+        with self.assertRaisesRegex(gate.Failure, 'GETTING_STARTED.md.*unchecked'):
+            gate.check(self.root)
+
+    def test_deep_api_comment_snippets_are_checked(self):
+        path = self.root / 'packages/dddart/lib/src/entity.dart'
+        path.write_text(path.read_text() + '\n/// ```dart\n/// MissingType sample;\n/// ```\n')
+        with self.assertRaisesRegex(gate.Failure, 'entity.dart.*unchecked'):
+            gate.check(self.root)
+
+    def test_broken_relative_link_is_rejected(self):
+        path = self.root / 'packages/dddart/GETTING_STARTED.md'
+        path.write_text(path.read_text() + '\n[Missing](missing.md)\n')
+        with self.assertRaisesRegex(gate.Failure, 'GETTING_STARTED.md: broken local link'):
+            gate.check(self.root)
+
+    def test_broken_repository_url_anchor_is_rejected(self):
+        path = self.root / 'README.md'
+        path.write_text(path.read_text() + '\n[Missing](https://github.com/continuousimagination/dddart/blob/main/docs/README.md#gone)\n')
+        with self.assertRaisesRegex(gate.Failure, 'broken local anchor'):
+            gate.check(self.root)
+
+    def test_changed_sample_coverage_cannot_keep_old_readme(self):
+        self.change('tool/validation/inventory.json',
+                    'Finite detached revision-read', 'Changed detached revision-read')
+        with self.assertRaisesRegex(gate.Failure, 'sample coverage table differs'):
+            gate.check(self.root)
+
+    def test_historical_exemption_requires_visible_notice(self):
+        self.change('packages/dddart/CHANGELOG.md', gate.HISTORICAL_NOTICE, 'Removed notice')
+        with self.assertRaisesRegex(gate.Failure, 'historical document lacks'):
+            gate.check(self.root)
+
+    def test_homepage_cannot_reintroduce_unchecked_code(self):
+        self.change('website/src/pages/index.astro', 'code: modelExample', 'code: `MissingType value;`')
+        with self.assertRaisesRegex(gate.Failure, 'Homepage Dart code'):
+            gate.check(self.root)
+
+    def test_tilde_and_long_fences_cannot_bypass_source_checks(self):
+        path = self.root / 'README.md'
+        original = path.read_text()
+        for fence in ('~~~', '````'):
+            path.write_text(original + f'\n{fence}Dart\nMissingType value;\n{fence}\n')
+            with self.assertRaisesRegex(gate.Failure, 'unchecked Dart snippet'):
+                gate.check(self.root)
 
     def test_stale_published_code_fails_with_its_document_path(self):
         self.change('README.md', "guestName: 'Sam'", "guestName: 'Stale'")

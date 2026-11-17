@@ -30,15 +30,7 @@ String defaultFormatter(LogRecord record) {
 /// A log handler that writes log records to a file.
 ///
 /// Example usage:
-/// ```dart
-/// final handler = FileLogHandler('app.log');
-/// Logger.root.level = Level.ALL;
-/// Logger.root.onRecord.listen(handler);
-///
-/// // Use logging...
-///
-/// await handler.close();
-/// ```
+/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart/README.md).
 class FileLogHandler {
   /// Creates a FileLogHandler that writes to the specified file path.
   ///
@@ -58,9 +50,7 @@ class FileLogHandler {
   /// Writes a log record to the file.
   ///
   /// This method is designed to be used as a listener for Logger.onRecord:
-  /// ```dart
-  /// Logger.root.onRecord.listen(handler);
-  /// ```
+  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart/README.md).
   ///
   /// If an error occurs during writing, it will be printed to stderr
   /// but will not crash the application.

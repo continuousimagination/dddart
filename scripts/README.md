@@ -45,7 +45,7 @@ lists must not be duplicated in this script or in the workflow.
   local path overrides to that fixture, and proves its resolved dddart
   dependency graph contains exactly the smallest allowed closure;
 - discovers every `packages/*/example` directory and matches it against the
-  shared runnable/illustrative/legacy inventory;
+  shared runnable/service/compile-only inventory;
 - resolves each example from its declared workspace or standalone context,
   proves its smallest local dependency closure, regenerates declared outputs
   from clean state, analyzes its source with a local analysis configuration,
@@ -126,9 +126,10 @@ git push --no-verify
 
 ## Documentation consumers
 
-The [documentation gate](../tool/documentation/README.md) verifies primary code
-inclusions, explicit snippet coverage, supported export inventories and fresh
-outside-workspace workflows. It runs on API/generator changes as well as docs:
+The [documentation gate](../tool/documentation/README.md) checks every current guide and library/sample Dartdoc, canonical source
+inclusions, local links/anchors, sample coverage tables, supported exports and fresh
+outside-workspace workflows. The configured Test workflow is currently disabled;
+run these gates locally for API/generator changes as well as docs:
 
 ```sh
 python3 tool/documentation/validate.py check

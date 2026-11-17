@@ -9,13 +9,7 @@ import 'package:sqlite3/sqlite3.dart';
 /// Manages the lifecycle of a SQLite database connection and provides
 /// methods for executing queries and transactions.
 ///
-/// Example:
-/// ```dart
-/// final connection = SqliteConnection.file('database.db');
-/// await connection.open();
-/// // Use connection
-/// await connection.close();
-/// ```
+/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sqlite/README.md).
 class SqliteConnection implements SqlConnection {
   /// Creates a file-based SQLite connection.
   SqliteConnection.file(String path) : _path = path;

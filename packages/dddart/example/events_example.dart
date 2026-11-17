@@ -53,7 +53,8 @@ class EventsExample {
     print('Created user: ${user.email}');
 
     // Retrieve uncommitted events
-    final events = user.getUncommittedEvents();
+    final userBatch = user.captureUncommittedEvents();
+    final events = userBatch.events;
     print('Uncommitted events: ${events.length}');
 
     for (final event in events) {
@@ -65,7 +66,7 @@ class EventsExample {
     }
 
     // Mark events as committed (typically done after publishing)
-    user.markEventsAsCommitted();
+    user.markEventsAsCommitted(batch: userBatch);
     print('Events marked as committed');
     print(
         'Remaining uncommitted events: ${user.getUncommittedEvents().length}');
@@ -245,7 +246,8 @@ class EventsExample {
     );
 
     print('2️⃣  Checking uncommitted events...');
-    final events = user.getUncommittedEvents();
+    final userBatch = user.captureUncommittedEvents();
+    final events = userBatch.events;
     print('   Found ${events.length} uncommitted event(s)');
 
     print('3️⃣  Publishing events to EventBus...');
@@ -257,7 +259,7 @@ class EventsExample {
     await Future.delayed(Duration(milliseconds: 100));
 
     print('4️⃣  Marking events as committed...');
-    user.markEventsAsCommitted();
+    user.markEventsAsCommitted(batch: userBatch);
     print('   Remaining uncommitted: ${user.getUncommittedEvents().length}');
 
     print('5️⃣  Lifecycle complete!');
@@ -340,10 +342,11 @@ class EventsExample {
       organizationId: 'org-retail',
     );
 
-    for (final event in user.getUncommittedEvents()) {
+    final userBatch = user.captureUncommittedEvents();
+    for (final event in userBatch.events) {
       eventBus.publish(event);
     }
-    user.markEventsAsCommitted();
+    user.markEventsAsCommitted(batch: userBatch);
     await Future.delayed(Duration(milliseconds: 100));
 
     print('\nStep 2: Order Placement');

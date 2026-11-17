@@ -204,7 +204,7 @@ void main() async {
   print('No login endpoints - users authenticate through Cognito.\n');
   print('To test:');
   print(
-    '1. Get a JWT from Cognito (use AWS Amplify, Cognito SDK, or device flow)',
+    '1. Get a JWT from Cognito (use the configured Cognito authorization-code login flow)',
   );
   print('2. Make requests with the JWT:\n');
   print('curl http://localhost:8080/users?me \\');

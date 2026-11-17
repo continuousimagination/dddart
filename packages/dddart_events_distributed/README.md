@@ -4,11 +4,6 @@
 [Supported imports and extension APIs](../../docs/PUBLIC_API.md)
 
 
-For complete setup, named source files, expected output and cleanup, follow the
-[canonical quickstart](../../docs/QUICKSTARTS.md#browser-and-external-integrations). Other inline Dart snippets below are
-**illustrative fragments** that assume application-specific models and surrounding
-setup; they are not standalone programs. See the [quickstart inventory](../../docs/QUICKSTARTS.md)
-for runnable, browser, service and credential-dependent coverage.
 
 
 Aggregate-scoped domain events with one `AggregateEventClient` and one
@@ -42,6 +37,7 @@ is below. Its fixed token and single-aggregate policy are local fixtures;
 applications inject their existing verifier and authoritative membership rules.
 Event-route policy remains separate from optional/public CRUD resource policies.
 
+<!-- dddart-source: packages/dddart_events_distributed/example/http_polling.dart -->
 ```dart
 import 'dart:io';
 
@@ -172,49 +168,18 @@ class CounterChanged extends DomainEvent<UuidValue> {
       );
 }
 ```
+<!-- /dddart-source -->
 
 ## Configure AppSync with the same client
 
 For an existing AppSync deployment, add `dddart_events_appsync` and replace the
-transport construction. This factory uses your deployed endpoints and current
+transport construction. The client uses your deployed endpoints and current
 token provider; `AggregateEventClient`, `client.watch(reference)` and
 `client.publisher` stay the same. A token provider can delegate to your existing
 `AuthProvider.getIdToken`. The control endpoint is still required for access
 resolution and retained-history recovery.
 
-```dart
-import 'package:dddart_events_appsync/dddart_events_appsync.dart';
-import 'package:dddart_events_distributed/dddart_events_distributed.dart';
-
-AggregateEventTransport appSyncTransport({
-  required Uri controlUrl,
-  required Uri eventHttpUrl,
-  required Uri eventRealtimeUrl,
-  required String namespace,
-  required EventRegistry registry,
-  required Future<String?> Function() tokenProvider,
-}) {
-  final wire = AggregateEventWire(registry.identityCodecs);
-  return AppSyncEventTransport(
-    httpEndpoint: eventHttpUrl,
-    realtimeEndpoint: eventRealtimeUrl,
-    namespace: namespace,
-    wire: wire,
-    control: HttpAggregateEventTransport(
-      baseUrl: controlUrl,
-      wire: wire,
-      tokenProvider: tokenProvider,
-    ),
-    authorization: () async {
-      final token = await tokenProvider();
-      if (token == null || token.isEmpty) {
-        throw const EventPublicationException('Authentication required');
-      }
-      return {'Authorization': token};
-    },
-  );
-}
-```
+See the complete [AWS smoke client](../dddart_events_appsync/example/aws_smoke.dart) for the transport construction, token callback, registry and cleanup.
 
 Reuse the existing [AppSync native invocation example](../dddart_events_appsync/example/native_invocation.dart)
 for local server-handler validation and the opt-in
@@ -263,45 +228,20 @@ Add `dddart`, `dddart_json`, `dddart_serialization`, this package and
 `build_runner` using the repository's documented Git installation approach.
 One library owns both generated outputs:
 
-```dart
-import 'dart:convert';
-import 'package:dddart/dddart.dart';
-import 'package:dddart_json/dddart_json.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
-import 'package:dddart_events_distributed/dddart_events_distributed.dart';
+The [clean consumer generation test](test/clean_consumer_generation_test.dart) creates a complete isolated package, including the manifest, owning event library, part directive and executable assertions. Use its generated consumer as the reference for imports and constructor metadata.
 
-part 'issue_events.g.dart';
-
-@Serializable()
-@DistributedEvent('issue.opened.v1')
-class IssueOpened extends DomainEvent<IssueId> {
-  IssueOpened({
-    required super.aggregateId,
-    required this.title,
-    super.eventId,
-    super.occurredAt,
-    super.context,
-  });
-  final String title;
-}
-```
-
-`IssueId` is the application's immutable `Identity`; its codec defines JSON and
+An application-defined ID implements immutable `Identity`; its codec defines JSON and
 canonical key representations. See the core identity guide for native/scoped ID
 examples. `DomainEvent<UuidValue>` uses the stock UUID codec. Every event must
-expose the four named base metadata parameters shown above for reconstruction.
+expose the four named base metadata parameters `aggregateId`, `eventId`, `occurredAt` and `context` for reconstruction.
 
 Run `dart run build_runner build --delete-conflicting-outputs` from the owning
 package. `dddart_json:json_serializable` and
-`dddart_events_distributed:event_registry` combine into `issue_events.g.dart`.
+`dddart_events_distributed:event_registry` combine into the owning `.g.dart` part.
 The registry builder uses generated serializer classes, not static fromJson
 methods on event classes. It returns a fresh instance:
 
-```dart
-final identities = IdentityCodecRegistry()
-  ..register<IssueId>('github.issue.node', IssueIdCodec());
-final events = createGeneratedEventRegistry(identityCodecs: identities);
-```
+Create the registry with `createGeneratedEventRegistry(identityCodecs: identities)`, passing the same explicitly configured identity registry to every serializer.
 
 The identity registry is shared with every generated serializer. `@DistributedEvent`
 freezes a wire key independently of a Dart rename. Without it, the declared class

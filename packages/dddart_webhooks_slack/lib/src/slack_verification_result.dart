@@ -5,19 +5,7 @@ import 'package:dddart_webhooks/dddart_webhooks.dart';
 /// Contains Slack-specific metadata extracted from headers and payload,
 /// including team ID, request timestamp, and request type.
 ///
-/// Example:
-/// ```dart
-/// final result = SlackVerificationResult(
-///   isValid: true,
-///   teamId: 'T1234567890',
-///   timestamp: DateTime.now(),
-///   requestType: 'slash_command',
-/// );
-///
-/// if (result.isValid) {
-///   print('Verified request from team: ${result.teamId}');
-/// }
-/// ```
+/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_webhooks_slack/README.md).
 class SlackVerificationResult extends WebhookVerificationResult {
   /// Creates a Slack verification result.
   const SlackVerificationResult({

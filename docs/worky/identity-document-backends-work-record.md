@@ -1,3 +1,6 @@
+> Historical record; it may describe retired APIs. For current usage, start at
+> [the documentation index](../README.md).
+
 # Document identity work record — issue #41
 
 Branch: issue/identity-document-backends. Target: issue/37-extensible-identity.

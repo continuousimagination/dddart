@@ -169,16 +169,18 @@ Future<void> _performOperations(String scenario) async {
     organizationId: 'org-hierarchical',
   );
 
+  final userBatch = user.captureUncommittedEvents();
+  await repository.save(user);
+
   // Publish event
-  for (final event in user.getUncommittedEvents()) {
+  for (final event in userBatch.events) {
     eventBus.publish(event);
   }
-  user.markEventsAsCommitted();
+  user.markEventsAsCommitted(batch: userBatch);
 
   await Future.delayed(Duration(milliseconds: 50));
 
   // Repository operations
-  await repository.save(user);
   await repository.getById(user.id);
 
   // Try to trigger an error (SEVERE level)

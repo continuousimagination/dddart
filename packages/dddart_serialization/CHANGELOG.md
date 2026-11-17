@@ -1,3 +1,6 @@
+> Historical record; it may describe retired APIs. For current usage, start at
+> [the documentation index](../../docs/README.md).
+
 # Changelog
 
 All notable changes to `dddart_serialization` will be documented in this file.

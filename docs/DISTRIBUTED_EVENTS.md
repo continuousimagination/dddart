@@ -31,15 +31,8 @@ repository captures the pending batch before awaiting persistence, saves the
 aggregate, then awaits attempts to publish that batch. Failed CRUD propagates
 without publishing or acknowledging any captured events.
 
-```dart
-final orders = OrderRestRepository(
-  restConnection,
-  eventPublisher: eventClient.publisher,
-);
-await orders.save(order);
-```
+The [repository publication example](../packages/dddart/example/event_publication.dart) exercises persistence, acceptance and retained pending events. Generated repository constructors accept `eventPublisher: eventClient.publisher`.
 
-`OrderRestRepository` represents an application-generated repository.
 `eventClient` is an `AggregateEventClient`; its `publisher` sends a separate
 publication and returns only after acceptance or bounded failure. A
 database repository accepts the same optional `eventPublisher` constructor
@@ -84,13 +77,7 @@ local notifications and do not provide that serverless lifecycle guarantee.
 `getUncommittedEvents()` returns a read-only snapshot. Infrastructure doing
 asynchronous work should capture a `PendingEventBatch` before the first await:
 
-```dart
-final batch = order.captureUncommittedEvents();
-await persistOrder(order);
-for (final event in batch.events) {
-  if (await publisher.publish(event)) batch.acknowledge(event);
-}
-```
+The [core event guide](../packages/dddart/DOMAIN_EVENTS_GUIDE.md) explains capture and acknowledgment. The [publication example](../packages/dddart/example/event_publication.dart) and [helper implementation](../packages/dddart/lib/src/save_with_events.dart) show the complete behavior.
 
 Prefer `saveWithEvents` in repository implementations; it also catches and logs
 unexpected publisher exceptions after persistence. Acknowledgment removes only
@@ -100,7 +87,7 @@ captures may publish duplicates, so infrastructure must still deduplicate by
 occurrence ID. Acknowledgment does not mutate event payloads.
 
 `markEventsAsCommitted(batch: batch)` acknowledges a complete captured batch.
-The legacy no-argument form immediately clears the current queue; do not use it
+The no-argument form immediately clears the current queue; do not use it
 after an await, where it could erase newly raised events.
 
 ## Local delivery and logging
@@ -171,29 +158,9 @@ shows generated serializers/registrations; the
 [example wire contract](../packages/dddart_events_appsync/example/lib/example_domain.dart)
 shows equivalent manual registration.
 
-```dart
-final control = HttpAggregateEventTransport(
-  baseUrl: Uri.parse('https://api.example.com/events'),
-  wire: AggregateEventWire(registry.identityCodecs),
-  tokenProvider: authProvider.getIdToken,
-);
-final client = AggregateEventClient(
-  transport: control, // HTTP-only; replace with AppSync transport below for push.
-  registry: registry,
-  aggregateKind: (event) => kindForEvent(event), // Explicit application mapping.
-);
-final game = AggregateReference(kind: 'game', id: gameId);
-final watch = client.watch(game);
-final subscription = watch.events.listen(applyDomainEvent);
-watch.signals.listen((status) {
-  // revoked: stop using this watch; resyncRequired: explicitly reload state.
-});
-await watch.ready;
-final opaqueCheckpoint = watch.checkpoint;
-```
+The [complete HTTP client/server program](../packages/dddart_events_distributed/example/http_polling.dart) builds the registry, transport, watch and publication and checks the delivered event.
 
-These composition snippets use application-owned `registry`, `authProvider`,
-identities, policies and handlers. The package examples below are complete programs.
+Applications own the registry, credential callback, identities, policies and handlers.
 `ready` means the initial bounded synchronization finished; inspect `status` for
 denial/expiration and use later checkpoints if a long backlog needs more pages.
 Keep a checkpoint **per logical reference**, store it with the application's
@@ -211,13 +178,7 @@ is rejected. `revoked` and `resyncRequired` stop that watch independently; close
 its lease before establishing a new watch. Dispose application stream listeners
 as well as watch leases:
 
-```dart
-await client.pause(); // Hook into backgrounding; stops timer/requests/sockets.
-await client.resume(); // Fresh credentials, resolution, reauthorization, recovery.
-await subscription.cancel();
-await watch.close();
-await client.close();
-```
+Await `client.pause()` on backgrounding and `client.resume()` on return. Cancel each stream subscription, await `watch.close()` for a lease, and finally await `client.close()`.
 
 There is one single-flight batched HTTP operation for active references, rather
 than one timer per aggregate. HTTP-only clients poll every five seconds by
@@ -227,16 +188,7 @@ lifecycle hooks. Foreground push does not imply APNs/FCM background notification
 
 Examples of interest versus access:
 
-```dart
-// Each game client watches its own match. Membership policy permits two players.
-final matchWatch = client.watch(AggregateReference(kind: 'game', id: matchId));
-// A user may access 100 documents but watches just the two currently open.
-final documentWatches = openDocumentIds.map((id) => client.watch(
-  AggregateReference(kind: 'document', id: id),
-)).toList();
-// All 1,000 authorized players resolve the same logical puzzle/current channel.
-final puzzleWatch = client.watch(AggregateReference(kind: 'puzzle', id: todayId));
-```
+For a two-player game, watch that match reference; for a document editor, watch only the currently open documents; for a daily puzzle, many authorized players may watch the same puzzle reference.
 
 The server policy checks game participants, document ACLs or puzzle availability
 using authoritative domain repositories. A shared channel's payload must be
@@ -255,20 +207,7 @@ subscription and publication. Never authorize from a client-supplied user ID.
 HTTP authentication and issuance/refresh APIs. A native handler can use the
 standalone `JwtCredentialVerifier` without creating a refresh-token repository:
 
-```dart
-final verifier = JwtCredentialVerifier<Map<String, dynamic>>(
-  secret: signingSecret,
-  issuer: issuer,
-  audience: audience,
-  parseClaimsFromJson: (json) => json,
-);
-Future<EventPrincipal<Map<String, dynamic>>?> authenticate(String token) async {
-  final result = await verifier.verifyCredential(token);
-  return result.isAuthenticated && result.userId != null && result.claims != null
-      ? EventPrincipal(userId: result.userId!, claims: result.claims!)
-      : null;
-}
-```
+The [native reference bootstrap](../packages/dddart_events_appsync/example/lambda.dart) configures the credential verifier and converts verified authentication results into event principals.
 
 Use `OAuthJwtAuthHandler` with the existing provider's issuer, audience and JWKS
 URI for Cognito/OIDC. Signature, issuer, audience, expiry and subject validation
@@ -291,18 +230,7 @@ principal and policy; do not bypass authorization through client-provided claims
 
 For an existing application-owned server:
 
-```dart
-final endpoints = AggregateEventHttpEndpoints(
-  service: service,
-  authenticate: authenticate,
-);
-final server = HttpServer()
-  ..addRoute('POST', '/events/resolve', endpoints.resolve)
-  ..addRoute('POST', '/events/read', endpoints.read)
-  ..addRoute('POST', '/events/target', endpoints.target)
-  ..addRoute('POST', '/events/publish', endpoints.publish);
-final handler = server.buildHandler(); // Adapt to Lambda; does not bind a port.
-```
+The [finite HTTP program](../packages/dddart_events_distributed/example/http_polling.dart) registers all four handlers. In a DDDart `HttpServer`, use `addRoute` for each POST path and `buildHandler()` to let an existing host own the listener.
 
 Resolve/read batch references and checkpoints; publish accepts the separate
 versioned envelope; target checks publish rights before giving a current physical
@@ -316,19 +244,7 @@ fit backend/request budgets; no identity is silently truncated.
 
 ## AppSync transport and native handlers
 
-```dart
-final live = AppSyncEventTransport(
-  httpEndpoint: Uri.parse(eventHttpEndpoint),
-  realtimeEndpoint: Uri.parse(eventRealtimeEndpoint),
-  namespace: 'aggregates',
-  control: control,
-  wire: AggregateEventWire(registry.identityCodecs),
-  authorization: () async => {'Authorization': (await authProvider.getIdToken())!},
-);
-final client = AggregateEventClient(
-  transport: live, registry: registry, aggregateKind: kindForEvent,
-);
-```
+The [complete AppSync smoke client](../packages/dddart_events_appsync/example/aws_smoke.dart) constructs the live transport and HTTP control transport with one registry and current-token callback. Its run requires the explicit deployment setup below.
 
 One `aws-appsync-event-ws` connection multiplexes watches, waits for connection
 and subscription acknowledgments, monitors keepalive deadlines and reconnects

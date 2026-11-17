@@ -1,168 +1,41 @@
-# DDDart JSON Serialization Example
+# dddart_json_example examples
 
-This example demonstrates the complete DDDart JSON serialization system with a realistic e-commerce domain model.
+These are maintained application samples for [dddart_json](../README.md).
+For a fresh application outside the checkout, start with the
+[standalone workflows](../../../docs/QUICKSTARTS.md). These repository examples use
+the workspace's package resolution and are not hosted-installation evidence.
 
-## Domain Model
+## Setup and validation
 
-The example includes:
-- **Order** (AggregateRoot) - The main aggregate containing order information
-- **OrderItem** (Value) - Individual items within an order
-- **Customer** (AggregateRoot) - Customer information
-- **Address** (Value) - Shipping and billing addresses
-- **Money** (Value) - Price and total amounts
-- **ProductInfo** (Value) - Product details
+Use Dart 3.13.7 from the repository root. Resolve workspace tooling with
+`dart pub get`, then run the lane below. It resolves the example package,
+regenerates its declared parts when required, analyzes with fatal infos, compiles
+each program, runs eligible finite/service programs and cleans temporary outputs.
 
-## Features Demonstrated
-
-- ✅ AggregateRoot serialization with nested entities
-- ✅ Value object serialization
-- ✅ Collections of entities and values
-- ✅ Complex nested object graphs
-- ✅ Field naming strategies (camelCase, snake_case, kebab-case)
-- ✅ Constructor configuration with method overrides
-- ✅ Error handling and validation
-- ✅ Round-trip serialization integrity
-
-## Running the Example
-
-1. **Install dependencies**:
-```bash
-dart pub get
+```sh
+dart tool/validation/validate.dart example dddart_json_example --mode=ci
 ```
 
-2. **Regenerate serialization code from a clean state**:
-```bash
-dart run build_runner clean
-dart run build_runner build --delete-conflicting-outputs
-```
+Required local services must be available; CI mode fails when they are missing.
+The [service setup](../../../scripts/README.md) and
+[shared inventory](../../../tool/validation/inventory.json) specify host/port,
+builders and verification boundaries. Tests using local services do not verify a
+cloud deployment or application credentials.
 
-This produces the combined `lib/domain/*.g.dart` parts declared by the domain
-libraries.
+## Programs
 
-3. **Run the examples**:
-```bash
-dart run serialization_example.dart
-dart run enum_example_runner.dart
-```
+| Source | Coverage / runtime context |
+| --- | --- |
+| [enum_example_runner.dart](enum_example_runner.dart) | Compiled and run; finite local demonstration. Finite generated enum round-trip demonstration. |
+| [serialization_example.dart](serialization_example.dart) | Compiled and run; finite local demonstration. Finite generated aggregate serialization demonstration. |
 
-## Code Structure
+Each program contains its complete imports and application model/context. Inspect
+its constants and prerequisites before running it manually from this directory.
+Use disposable test databases and credentials. Do not treat sample users, signing
+secrets, endpoints or authorization policies as production configuration.
 
-```
-example/
-├── lib/
-│   ├── domain/
-│   │   ├── order.dart          # Order aggregate root
-│   │   ├── customer.dart       # Customer aggregate root
-│   │   ├── order_item.dart     # OrderItem value object
-│   │   ├── address.dart        # Address value object
-│   │   ├── money.dart          # Money value object
-│   │   └── product_info.dart   # ProductInfo value object
-│   └── example.dart            # Main example code
-├── serialization_example.dart  # Aggregate/value round-trip entry point
-├── enum_example_runner.dart     # Enum round-trip entry point
-├── pubspec.yaml
-├── build.yaml
-└── README.md
-```
-
-## Key Concepts
-
-### 1. Domain Model Design
-
-The example follows proper DDD patterns:
-- Aggregates maintain consistency boundaries
-- Values are immutable and safely shareable
-- Business logic is encapsulated in domain objects
-
-### 2. Serialization Configuration
-
-Different serialization strategies for different contexts:
-```dart
-// API uses snake_case
-final apiSerializer = OrderJsonSerializer(
-  SerializationConfig(fieldRename: FieldRename.snake)
-);
-
-// Database uses camelCase
-final dbSerializer = OrderJsonSerializer(
-  SerializationConfig(fieldRename: FieldRename.none)
-);
-
-// Cache uses kebab-case
-final cacheConfig = SerializationConfig(fieldRename: FieldRename.kebab);
-final cacheJson = apiSerializer.toJson(order, cacheConfig);
-```
-
-### 3. Error Handling
-
-Comprehensive error handling with descriptive messages:
-```dart
-try {
-  final order = serializer.fromJson(invalidJson);
-} on DeserializationException catch (e) {
-  print('Deserialization failed: ${e.message}');
-  print('Expected type: ${e.expectedType}');
-  print('Field: ${e.field}');
-}
-```
-
-### 4. Performance Considerations
-
-- Code generation eliminates runtime reflection
-- Type-safe operations with compile-time checking
-- Efficient JSON handling with direct Map operations
-- Optimized for tree shaking in production builds
-
-## Sample Output
-
-The example generates JSON like:
-
-```json
-{
-  "id": "550e8400-e29b-41d4-a716-446655440000",
-  "created_at": "2024-01-01T12:00:00.000Z",
-  "updated_at": "2024-01-01T12:00:00.000Z",
-  "customer_id": "550e8400-e29b-41d4-a716-446655440001",
-  "items": [
-    {
-      "product": {
-        "name": "Laptop",
-        "sku": "LAP-001",
-        "category": "Electronics"
-      },
-      "quantity": 1,
-      "unit_price": {
-        "amount": 999.99,
-        "currency": "USD"
-      }
-    }
-  ],
-  "shipping_address": {
-    "street": "123 Main St",
-    "city": "Anytown",
-    "state": "CA",
-    "zip_code": "12345",
-    "country": "USA"
-  },
-  "status": "pending"
-}
-```
-
-## Best Practices
-
-1. **Keep aggregates focused** - Each aggregate should have a single responsibility
-2. **Use values for shared concepts** - Address, Money, etc. can be reused across aggregates
-3. **Configure serializers at construction** - Set up different serializers for different contexts
-4. **Handle errors gracefully** - Always catch DeserializationException for external data
-5. **Test round-trip integrity** - Ensure serialize/deserialize maintains object equality
-6. **Use static methods for convenience** - `OrderJsonSerializer.encode()` for simple cases
-
-## Integration Examples
-
-The example shows integration with:
-- REST APIs (different field naming conventions)
-- Database storage (optimized for queries)
-- Caching systems (compact representations)
-- Message queues (reliable serialization)
-
-This demonstrates how DDDart serialization adapts to different infrastructure requirements while maintaining domain model integrity.
+Generated `.g.dart` parts belong to their handwritten model library. Run the
+example lane after changing models; do not reuse old generated parts. Custom
+repository implementation parts must share that library so generated private
+helpers remain accessible. Follow the [supported contracts](../../../docs/CAPABILITIES.md)
+for identity, persistence, conditional writes, optional auth and event publication.

@@ -96,17 +96,24 @@ Future<void> _performOperations() async {
     organizationId: 'org-002',
   );
 
+  // Capture before awaiting persistence; later events stay pending.
+  final user1Batch = user1.captureUncommittedEvents();
+  final user2Batch = user2.captureUncommittedEvents();
+  // Persist before notifying local listeners.
+  await repository.save(user1);
+  await repository.save(user2);
+
   // Publish events
   print('3. Publishing domain events...');
-  for (final event in user1.getUncommittedEvents()) {
+  for (final event in user1Batch.events) {
     eventBus.publish(event);
   }
-  user1.markEventsAsCommitted();
+  user1.markEventsAsCommitted(batch: user1Batch);
 
-  for (final event in user2.getUncommittedEvents()) {
+  for (final event in user2Batch.events) {
     eventBus.publish(event);
   }
-  user2.markEventsAsCommitted();
+  user2.markEventsAsCommitted(batch: user2Batch);
 
   // Publish an order event
   final orderId = UuidValue.generate();
@@ -120,10 +127,7 @@ Future<void> _performOperations() async {
 
   await Future.delayed(Duration(milliseconds: 50));
 
-  // Save to repository
-  print('4. Saving aggregates to repository...');
-  await repository.save(user1);
-  await repository.save(user2);
+  print('4. Aggregates already persisted before local notification.');
 
   // Retrieve from repository
   print('5. Retrieving aggregates from repository...');

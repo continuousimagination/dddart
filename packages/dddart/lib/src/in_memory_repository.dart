@@ -28,52 +28,13 @@ import 'package:logging/logging.dart';
 ///
 /// ## Usage Example
 ///
-/// ```dart
-/// // Create a repository for User aggregates
-/// final userRepository = InMemoryRepository<User, UuidValue>();
-///
-/// // Save a user
-/// final user = User(name: 'John Doe', email: 'john@example.com');
-/// await userRepository.save(user);
-///
-/// // Retrieve the user
-/// final retrieved = await userRepository.getById(user.id);
-/// print('Found: ${retrieved.name}');
-///
-/// // Update the user
-/// retrieved.updateEmail('newemail@example.com');
-/// await userRepository.save(retrieved);
-///
-/// // Delete the user
-/// await userRepository.deleteById(user.id);
-///
-/// // Clean up for next test
-/// userRepository.clear();
-/// ```
+/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart/README.md).
 ///
 /// ## Testing Utilities
 ///
 /// The [InMemoryRepository] includes additional utility methods for testing:
 ///
-/// ```dart
-/// test('repository operations', () async {
-///   final repository = InMemoryRepository<User, UuidValue>();
-///
-///   // Add test data
-///   final user1 = User(name: 'Alice');
-///   final user2 = User(name: 'Bob');
-///   await repository.save(user1);
-///   await repository.save(user2);
-///
-///   // Verify all users are stored
-///   final allUsers = await repository.getAll();
-///   expect(allUsers, hasLength(2));
-///
-///   // Clean up after test
-///   repository.clear();
-///   expect(await repository.getAll(), isEmpty);
-/// });
-/// ```
+/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart/README.md).
 ///
 /// ## Thread Safety
 ///
@@ -86,16 +47,7 @@ import 'package:logging/logging.dart';
 /// Each instance of [InMemoryRepository] maintains its own independent storage.
 /// Different instances do not share data, even for the same aggregate type:
 ///
-/// ```dart
-/// final repo1 = InMemoryRepository<User, UuidValue>();
-/// final repo2 = InMemoryRepository<User, UuidValue>();
-///
-/// final user = User(name: 'Alice');
-/// await repo1.save(user);
-///
-/// // repo2 does not have access to user
-/// expect(() => repo2.getById(user.id), throwsA(isA<RepositoryException>()));
-/// ```
+/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart/README.md).
 ///
 /// See also:
 /// * [Repository] - The base repository interface
@@ -177,19 +129,7 @@ class InMemoryRepository<T extends AggregateRoot<I>, I extends Identity>
   /// to an empty state. It is particularly useful for test cleanup to
   /// ensure tests start with a clean slate.
   ///
-  /// Example:
-  /// ```dart
-  /// test('user operations', () async {
-  ///   final repository = InMemoryRepository<User, UuidValue>();
-  ///
-  ///   // Perform test operations
-  ///   await repository.save(User(name: 'Test User'));
-  ///
-  ///   // Clean up
-  ///   repository.clear();
-  ///   expect(await repository.getAll(), isEmpty);
-  /// });
-  /// ```
+  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart/README.md).
   void clear() {
     _storage.clear();
   }
@@ -208,18 +148,7 @@ class InMemoryRepository<T extends AggregateRoot<I>, I extends Identity>
   /// Note: The returned list is unmodifiable. Attempting to modify it will
   /// throw an [UnsupportedError].
   ///
-  /// Example:
-  /// ```dart
-  /// final repository = InMemoryRepository<User, UuidValue>();
-  /// await repository.save(User(name: 'Alice'));
-  /// await repository.save(User(name: 'Bob'));
-  ///
-  /// final allUsers = await repository.getAll();
-  /// print('Total users: ${allUsers.length}');
-  /// for (final user in allUsers) {
-  ///   print('User: ${user.name}');
-  /// }
-  /// ```
+  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart/README.md).
   Future<List<T>> getAll() async {
     return List.unmodifiable(_storage.values);
   }

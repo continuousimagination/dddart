@@ -8,7 +8,7 @@ import 'package:shelf/shelf.dart';
 /// Webhook verifier for Slack webhooks.
 ///
 /// Implements Slack's HMAC-SHA256 signature verification algorithm and
-/// timestamp validation to prevent replay attacks. The verifier extracts
+/// timestamp validation to bound replay age. The verifier extracts
 /// Slack-specific metadata from the request and returns a strongly-typed
 /// [SlackVerificationResult].
 ///
@@ -18,31 +18,13 @@ import 'package:shelf/shelf.dart';
 /// HMAC-SHA256(signing_secret, "v0:{timestamp}:{body}")
 /// ```
 ///
-/// Example:
-/// ```dart
-/// final verifier = SlackWebhookVerifier(
-///   signingSecret: 'your-slack-signing-secret',
-///   maxTimestampAge: Duration(minutes: 5), // Optional, defaults to 5 minutes
-/// );
-///
-/// final webhook = WebhookResource<SlackSlashCommand, SlackVerificationResult>(
-///   path: '/slack/commands',
-///   verifier: verifier,
-///   deserializer: (body) => WebhookDeserializers.form(
-///     body,
-///     SlackSlashCommand.fromForm,
-///   ),
-///   handler: (command, verification) async {
-///     print('Team ID: ${verification.teamId}');
-///     return Response.ok('Command received!');
-///   },
-/// );
-/// ```
+/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_webhooks_slack/README.md).
 ///
 /// Security considerations:
 /// - Always use HTTPS in production to protect the signing secret
 /// - Store the signing secret securely (environment variables, secret manager)
-/// - The default 5-minute timestamp window prevents replay attacks
+/// - The default 5-minute timestamp window rejects stale/future requests;
+///   application deduplication is still needed for repeats within the window
 /// - Constant-time signature comparison prevents timing attacks
 class SlackWebhookVerifier extends WebhookVerifier<SlackVerificationResult> {
   /// Creates a Slack webhook verifier.
@@ -64,7 +46,7 @@ class SlackWebhookVerifier extends WebhookVerifier<SlackVerificationResult> {
   /// for incoming webhook requests.
   final String signingSecret;
 
-  /// Maximum age of request timestamp to prevent replay attacks.
+  /// Maximum past/future clock difference; requests inside the window can repeat.
   ///
   /// Requests outside this past-or-future window are rejected.
   /// Defaults to 5 minutes, which is Slack's recommended value.

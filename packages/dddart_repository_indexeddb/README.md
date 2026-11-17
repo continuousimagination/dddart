@@ -4,11 +4,6 @@
 [Supported imports and extension APIs](../../docs/PUBLIC_API.md)
 
 
-For complete setup, named source files, expected output and cleanup, follow the
-[canonical quickstart](../../docs/QUICKSTARTS.md#browser-and-external-integrations). Other inline Dart snippets below are
-**illustrative fragments** that assume application-specific models and surrounding
-setup; they are not standalone programs. See the [quickstart inventory](../../docs/QUICKSTARTS.md)
-for runnable, browser, service and credential-dependent coverage.
 
 
 A small IndexedDB implementation of dddart's `Repository<T, I>` CRUD contract for
@@ -16,53 +11,15 @@ browser applications. It stores one detached, encoded aggregate snapshot per
 concrete identity. Aggregate encoding, decoding, naming, and other domain rules stay with the
 consumer.
 
-The package is Git-only. Pin both `dddart` and this package to the same tested
-repository commit:
-
-```yaml
-dependencies:
-  idb_shim: 2.10.1+1
-  dddart:
-    git:
-      url: https://github.com/continuousimagination/dddart.git
-      ref: <tested-commit-sha>
-      path: packages/dddart
-  dddart_repository_indexeddb:
-    git:
-      url: https://github.com/continuousimagination/dddart.git
-      ref: <tested-commit-sha>
-      path: packages/dddart_repository_indexeddb
-```
+Install using the [Git dependency guide](../../docs/GIT_INSTALLATION.md) and its
+shared immutable revision. The [isolated browser consumer](../../tool/validation/verify_indexeddb_git_consumer.dart)
+constructs a complete application manifest and verifies the real dependency closure.
 
 Pass `idbFactoryNative` from `package:idb_shim/idb_client_native.dart` when
 browser storage is required. `idbFactoryBrowser` may fall back to volatile
 memory storage if native IndexedDB is unavailable.
 
-```dart
-import 'package:dddart_serialization/dddart_serialization.dart';
-import 'package:idb_shim/idb_client_native.dart';
-
-// Register the application's concrete MyId codec. UUID is registered by default.
-final identityCodecs = IdentityCodecRegistry()
-  ..register<MyId>('my-id', myIdCodec);
-
-final repository = IndexedDbRepository<MyAggregate, MyId>(
-  factory: idbFactoryNative,
-  databaseName: 'my-app-aggregates',
-  storeName: 'aggregates',
-  identityCodecs: identityCodecs,
-  encode: encodeMyAggregate,
-  decode: decodeMyAggregate,
-);
-
-try {
-  await repository.save(aggregate);
-  final restored = await repository.getById(aggregate.id);
-  await repository.deleteById(restored.id);
-} finally {
-  await repository.close();
-}
-```
+See the [complete repository tests](test/browser_repository_test.dart) for the complete model, setup, operations and assertions.
 
 Use a dedicated database name for each object store. The adapter opens database
 version 2 and writes a schema/codec marker in the same version-change
@@ -85,14 +42,7 @@ unique claims or receipts are changed. This is an explicit failure, not a timeou
 or an `uncertain` conditional-commit result. `resolveOperation` retains its
 existing contract: connection failures yield `uncertain`, not rollback proof.
 
-```dart
-try {
-  await repository.save(aggregate);
-} on IndexedDbOpenBlockedException catch (error) {
-  // Ask the user to close/reload older contexts using error.databaseName.
-  // After those connections are released, retry this operation.
-}
-```
+See the [native blocked-upgrade tests](test/blocked_upgrade_browser_test.dart) for the complete model, setup, operations and assertions.
 
 IndexedDB cannot cancel a queued open request. The adapter abandons that request,
 observes its eventual completion/error, aborts its eventual upgrade **before any
@@ -132,27 +82,7 @@ Every put receives a fresh opaque revision, including after a delete and
 recreation of the same aggregate ID. Two browser contexts writing from one
 revision cannot both succeed.
 
-```dart
-final request = ConditionalCommit<MyAggregate, MyId>(
-  operationId: UuidValue.generate(),
-  mutations: [
-    ConditionalMutation.put(
-      edited,
-      expected: ExpectedRevision.match(previous.revision),
-      uniqueValues: [UniqueValue('name', normalizedName)],
-    ),
-  ],
-);
-final digest = repository.digestFor(request);
-final result = await repository.commitConditional(request);
-if (result.decision == CommitDecision.uncertain) {
-  final reconciled = await repository.resolveOperation(
-    request.operationId,
-    digest,
-  );
-  // If still uncertain, retain the exact request and retry with its same ID.
-}
-```
+See the [conditional examples exercised in tests](test/conditional_browser_test.dart) for the complete model, setup, operations and assertions.
 
 The caller supplies already-normalized unique values; name policy belongs to
 the application. Each put supplies its *complete* desired unique-value set, so
@@ -208,30 +138,7 @@ The concrete adapter adds an optional `IndexedDbCancellation` signal to
 `commitConditional`; the portable core interface remains unchanged. Use one
 signal per call and keep an immutable, detached request:
 
-```dart
-final cancellation = IndexedDbCancellation();
-final digest = repository.digestFor(request); // retain before dispatch
-final pending = repository.commitConditional(
-  request,
-  cancellation: cancellation,
-);
-// A caller-owned UI/lifecycle/deadline handler may call cancellation.cancel().
-try {
-  final result = await pending;
-  if (result.decision == CommitDecision.uncertain) {
-    final resolved = await repository.resolveOperation(
-      result.operationId,
-      result.payloadDigest,
-    );
-    // If still uncertain, retry the exact request with the same operation ID.
-    // Do not mutate/re-encode it or use a new ID to guess that it rolled back.
-  }
-} on IndexedDbOperationCancelled catch (cancelled) {
-  // This call never dispatched a transaction or wrote a receipt.
-  // cancelled.operationId and cancelled.payloadDigest identify its request.
-  // An earlier attempt with this same ID may still need reconciliation.
-}
-```
+See the [shared cancellation contract](test/cancellation_contract.dart) for the complete model, setup, operations and assertions.
 
 - **Before dispatch** (creation of the operation's IndexedDB transaction), a
   signalled cancellation throws `IndexedDbOperationCancelled`. The adapter still

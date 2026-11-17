@@ -1,3 +1,6 @@
+> Historical record; it may describe retired APIs. For current usage, start at
+> [the documentation index](../README.md).
+
 # PR #53 review fixes
 
 Reviewed baseline: d2092423261afdaaea72bf73b5c192595549d1d6.

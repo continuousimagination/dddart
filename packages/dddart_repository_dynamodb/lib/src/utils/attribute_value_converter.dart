@@ -19,12 +19,7 @@ class AttributeValueConverter {
   /// Takes a standard Dart/JSON value and converts it to DynamoDB's
   /// AttributeValue object.
   ///
-  /// Example:
-  /// ```dart
-  /// jsonToAttributeValue('hello') // Returns: AttributeValue(s: 'hello')
-  /// jsonToAttributeValue(42) // Returns: AttributeValue(n: '42')
-  /// jsonToAttributeValue(null) // Returns: AttributeValue(nul: true)
-  /// ```
+  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_dynamodb/README.md).
   static AttributeValue jsonToAttributeValue(dynamic value) {
     if (value == null) {
       return AttributeValue(nullValue: true);
@@ -52,12 +47,7 @@ class AttributeValueConverter {
   /// Takes a DynamoDB AttributeValue and converts
   /// it back to a standard Dart/JSON value.
   ///
-  /// Example:
-  /// ```dart
-  /// attributeValueToJson(AttributeValue(s: 'hello')) // Returns: 'hello'
-  /// attributeValueToJson(AttributeValue(n: '42')) // Returns: 42
-  /// attributeValueToJson(AttributeValue(nul: true)) // Returns: null
-  /// ```
+  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_dynamodb/README.md).
   static dynamic attributeValueToJson(AttributeValue attr) {
     if (attr.nullValue ?? false) {
       return null;
@@ -89,11 +79,7 @@ class AttributeValueConverter {
   /// Takes a map of JSON values and converts each value to DynamoDB's
   /// AttributeValue.
   ///
-  /// Example:
-  /// ```dart
-  /// jsonMapToAttributeMap({'name': 'John', 'age': 30})
-  /// // Returns: {'name': AttributeValue(s: 'John'), 'age': AttributeValue(n: '30')}
-  /// ```
+  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_dynamodb/README.md).
   static Map<String, AttributeValue> jsonMapToAttributeMap(
     Map<String, dynamic> json,
   ) {
@@ -107,11 +93,7 @@ class AttributeValueConverter {
   /// Takes a map of DynamoDB AttributeValues and converts each value
   /// back to standard JSON format.
   ///
-  /// Example:
-  /// ```dart
-  /// attributeMapToJsonMap({'name': AttributeValue(s: 'John'), 'age': AttributeValue(n: '30')})
-  /// // Returns: {'name': 'John', 'age': 30}
-  /// ```
+  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_dynamodb/README.md).
   static Map<String, dynamic> attributeMapToJsonMap(
     Map<String, AttributeValue> attrs,
   ) {

@@ -1,3 +1,6 @@
+> Historical record; it may describe retired APIs. For current usage, start at
+> [the documentation index](../README.md).
+
 # Extensible identity: accepted API and migration
 
 Status: owner-approved API implemented across #39–#44; final integration evidence

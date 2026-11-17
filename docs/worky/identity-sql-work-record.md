@@ -1,3 +1,6 @@
+> Historical record; it may describe retired APIs. For current usage, start at
+> [the documentation index](../README.md).
+
 # SQL identity work record — issue #42
 
 Current API update (17 November 2026): UUID-specific entity and aggregate base

@@ -35,20 +35,21 @@ and numeric order in frontmatter. Navigation, on-page headings, search data, and
 the sitemap derive from these pages. The top-level order is in `src/lib/site.ts`.
 
 Use absolute site links such as `/dddart/docs/events/` and descriptive link labels.
-The layout supplies the page's h1; start content headings at h2. Mark incomplete
-composition fragments clearly and state their prerequisites. Do not present a
+The layout supplies the page's h1; start content headings at h2. Publish Dart code through checked source inclusions; link to complete examples
+instead of copying incomplete fragments. Do not present a
 source-only or external-service example as a verified standalone program.
 
 The initial guides target library revision
 `56607ac8d3913b8e896ac03f8ecff58473d62ce2`. Update source references, the installation
 revision, `public/downloads/git-dependencies.yaml`, and the relevant example checks
-together when the library changes. The repository's legacy package README examples
-are not always current; use implementation and active example fixtures to verify APIs.
+together when the library changes. All current repository documentation and library Dartdoc participate in the
+documentation gate; historical work records are explicitly marked.
 
 ## Publish
 
-`.github/workflows/pages.yml` builds and checks website pull requests. Changes under
-`website/` or the Pages workflow deploy automatically after reaching `main`.
+`.github/workflows/pages.yml` builds and checks website pull requests. Every main-targeting PR and main push runs the fast repository-wide documentation
+gate and the website build. This includes source changes outside `website/`, since
+the homepage imports checked quickstart files directly. Main builds deploy automatically.
 The Website workflow also supports manual dispatch. Only `website/dist` is uploaded.
 Pull requests have read-only permissions and do not deploy. The deploy job alone
 receives Pages and OpenID Connect write permissions.
@@ -71,7 +72,7 @@ No live AWS or Slack resources are needed for the website build.
 ## Dart snippets and workflows
 
 From the repository root, run `python3 tool/documentation/validate.py check` for
-published-source/classification drift, then the relevant execution lane described
-in [the documentation gate](../tool/documentation/README.md). The Test workflow
-runs those checks for library/generator changes too. `npm run check` validates the
+published-source, surface-inventory and local-link drift, then the relevant execution lane described
+in [the documentation gate](../tool/documentation/README.md). The active Website workflow runs the fast check for library/generator changes too;
+the disabled Test workflow defines the heavier execution gates, which must be run locally. `npm run check` validates the
 built site and links; it does not replace the isolated Dart consumer gate.

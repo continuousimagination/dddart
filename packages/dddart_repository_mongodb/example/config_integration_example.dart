@@ -79,27 +79,19 @@ Future<void> main() async {
 
 /// Loads configuration from file or creates default configuration.
 Future<Configuration> _loadConfiguration() async {
-  try {
-    // Try to load from config.yaml file
-    final provider = YamlConfigProvider('config.yaml');
-    return Configuration([provider]);
-  } catch (e) {
-    // If file doesn't exist, use default configuration
-    print('   Note: config.yaml not found, using default configuration');
-    print('   Create config.yaml for custom configuration\n');
-
-    // Create configuration with environment variables
-    // Falls back to defaults if env vars not set
-    return Configuration([
-      EnvironmentConfigProvider(
-        environment: Map<String, String>.fromEntries(
-          Platform.environment.entries.where(
-            (entry) => entry.key.startsWith('MONGODB_'),
-          ),
+  // Environment wins over file configuration. Invalid existing YAML fails;
+  // only an absent file falls back to the connection defaults below.
+  final providers = <ConfigProvider>[
+    EnvironmentConfigProvider(
+      environment: Map<String, String>.fromEntries(
+        Platform.environment.entries.where(
+          (entry) => entry.key.startsWith('MONGODB_'),
         ),
       ),
-    ]);
-  }
+    ),
+    if (File('config.yaml').existsSync()) YamlConfigProvider('config.yaml'),
+  ];
+  return Configuration(providers);
 }
 
 /// Creates a MongoDB connection from configuration.
@@ -152,9 +144,9 @@ mongodb:
   # password: mypassword
   # authSource: admin
   
-  # Optional TLS settings (required for AWS DocumentDB)
+  # Optional verified TLS settings; DocumentDB compatibility is not tested
   # tls: true
-  # tlsAllowInvalidCertificates: true
+  # tlsAllowInvalidCertificates: false
 
 # AWS DocumentDB Example:
 # mongodb:
@@ -165,14 +157,10 @@ mongodb:
 #   password: mypassword
 #   authSource: admin
 #   tls: true
-#   tlsAllowInvalidCertificates: true
+#   tlsAllowInvalidCertificates: false
 
 # Environment Variables Example:
-# You can also use environment variables for sensitive data:
-# mongodb:
-#   host: ${MONGO_HOST}
-#   port: ${MONGO_PORT}
-#   database: ${MONGO_DATABASE}
-#   username: ${MONGO_USERNAME}
-#   password: ${MONGO_PASSWORD}
+# YAML values are literal; ${...} is not interpolated by the provider.
+# Set MONGODB_HOST, MONGODB_PORT, MONGODB_DATABASE, MONGODB_USERNAME and
+# MONGODB_PASSWORD in the process environment to override this file.
 */

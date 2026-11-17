@@ -20,17 +20,7 @@ import 'package:meta/meta.dart';
 ///
 /// ## Example
 ///
-/// ```dart
-/// class Money extends Value {
-///   const Money(this.amount, this.currency);
-///
-///   final double amount;
-///   final String currency;
-///
-///   @override
-///   List<Object?> get props => [amount, currency];
-/// }
-/// ```
+/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart/README.md).
 ///
 /// ## Benefits
 ///

@@ -4,11 +4,6 @@
 [Supported imports and extension APIs](../../docs/PUBLIC_API.md)
 
 
-For complete setup, named source files, expected output and cleanup, follow the
-[canonical quickstart](../../docs/QUICKSTARTS.md#browser-and-external-integrations). Other inline Dart snippets below are
-**illustrative fragments** that assume application-specific models and surrounding
-setup; they are not standalone programs. See the [quickstart inventory](../../docs/QUICKSTARTS.md)
-for runnable, browser, service and credential-dependent coverage.
 
 
 Optional AWS AppSync Events transport and native Lambda adapters for DDDart's

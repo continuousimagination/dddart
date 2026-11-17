@@ -29,23 +29,22 @@ queries. Installation never makes authentication mandatory.
 | Root README | Canonical JSON manifest, model and main program; links core and this inventory |
 | Website getting-started | Canonical core manifest/program |
 | Website serialization | Canonical JSON manifest/model/main/config/identity programs |
-| Website repositories | Canonical SQLite manifest/model/program; surrounding query/model snippets are conceptual fragments |
-| Core/serialization/JSON package READMEs | Link core/JSON; remaining inline snippets are explicitly illustrative fragments |
+| Website repositories | Canonical SQLite manifest/model/program; links complete custom query examples |
+| Core/serialization/JSON package READMEs | Link core/JSON; source-backed API descriptions and links to complete examples |
 | SQL/SQLite/MySQL/MongoDB/DynamoDB READMEs | Link the corresponding complete adapter workflow; SQL extension contract is in [PUBLIC_API.md](PUBLIC_API.md) |
 | REST/REST client/REST repository READMEs | Link the finite anonymous server/client workflow; policy examples link the tested public/protected example |
 | Main public library comments | Link the same complete workflow and API inventory instead of duplicating incomplete installation/model snippets |
-| Other website and package examples | Conceptual, browser, service or credential-specific context as described below; not advertised as independent console programs |
+| Other website and package examples | Browser, service or credential-specific context as described below; not advertised as independent console programs |
 
 ## Browser and external integrations
 
-These examples have additional context. Inline fragments remain illustrative;
-the repository example gate resolves/generates/analyzes the named example project
+These examples have additional context. The repository example gate resolves/generates/analyzes the named example project
 and runs finite programs or compiles long-running/configured demonstrations.
 Run the commands from a clone of the same revision after `dart pub get`.
 
 | Packages | Complete context / verification command | Honest boundary |
 | --- | --- | --- |
-| dddart_repository_indexeddb | [Git consumer instructions](GIT_INSTALLATION.md#core-and-indexeddb); `dart tool/validation/verify_indexeddb_git_consumer.dart 56607ac8d3913b8e896ac03f8ecff58473d62ce2` | Tool creates an outside-workspace consumer and runs native Chrome; Chrome is required. This is browser persistence, not SQLite-on-Web. The README adapter snippets require application encode/decode callbacks |
+| dddart_repository_indexeddb | [Git consumer instructions](GIT_INSTALLATION.md#core-and-indexeddb); `dart tool/validation/verify_indexeddb_git_consumer.dart 56607ac8d3913b8e896ac03f8ecff58473d62ce2` | Tool creates an outside-workspace consumer and runs native Chrome; Chrome is required. This is browser persistence, not SQLite-on-Web. The adapter requires application encode/decode callbacks |
 | dddart_config | [Example files and YAML](../packages/dddart_config/example); `dart tool/validation/validate.dart example dddart_config_example --mode=ci` | Finite VM examples; file/environment providers need native IO |
 | dddart_events_distributed | [HTTP polling example](../packages/dddart_events_distributed/README.md#run-an-http-only-publishwatch-example); `dart tool/validation/validate.dart example dddart_events_distributed_example --mode=ci` | Finite local HTTP publication/watch; no AppSync dependency or AWS credentials |
 | dddart_events_appsync | [Native invocation example](../packages/dddart_events_appsync/example/native_invocation.dart); `dart tool/validation/validate.dart example dddart_events_appsync_example --mode=ci` | Local protocol/handler demonstration. Live AppSync endpoint/token examples require application deployment and credentials; this is not cloud deployment proof |
@@ -86,6 +85,6 @@ Run `python3 tool/documentation/validate.py all --service-kind=none` for local
 unserviced consumers and core/JSON JavaScript execution under Node. Select
 `mysql`, `mongo`, or `dynamodb` for a required database lane. Plain `all` requires
 all services. Every published `dddart-source` block is checked, including command
-and expected-output files. Other scoped Dart fences are explicitly classified
-and a newly unclassified snippet fails the gate. See the gate documentation for
+and expected-output files. All current guides, sample READMEs and library/sample Dartdoc are checked.
+Unchecked Dart fences fail; new documents require explicit inventory review. See the gate documentation for
 fault tests, Git mode, CI wiring and the separate hosted release responsibility.

@@ -5,11 +5,6 @@ section: Build your domain
 order: 10
 ---
 
-Code outside an explicitly named complete workflow is an **illustrative fragment**
-that assumes the surrounding application models and setup. Use the
-[complete quickstarts](https://github.com/continuousimagination/dddart/blob/main/docs/QUICKSTARTS.md)
-for copyable manifests, named files, generation commands, expected output and cleanup.
-
 
 ## Start with the conversation
 

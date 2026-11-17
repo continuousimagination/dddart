@@ -9,14 +9,7 @@ import 'package:shelf/shelf.dart';
 /// All error messages are sanitized to prevent leakage of sensitive information
 /// such as signing secrets, expected signatures, or internal system details.
 ///
-/// Example:
-/// ```dart
-/// try {
-///   // Authentication logic
-/// } catch (e) {
-///   return AuthErrorMapper.mapToResponse(e);
-/// }
-/// ```
+/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md).
 class AuthErrorMapper {
   /// Maps an exception to an appropriate HTTP response
   ///

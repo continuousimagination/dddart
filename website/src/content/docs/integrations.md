@@ -9,11 +9,6 @@ The checked [outside-workspace manifest and commands](https://github.com/continu
 provide the surrounding compilation context for the complete program below.
 
 
-Code outside an explicitly named complete workflow is an **illustrative fragment**
-that assumes the surrounding application models and setup. Use the
-[complete quickstarts](https://github.com/continuousimagination/dddart/blob/main/docs/QUICKSTARTS.md)
-for copyable manifests, named files, generation commands, expected output and cleanup.
-
 
 External systems have their own protocols. An adapter translates those protocols into your application's language. It should not make a Slack request, an AWS channel, or a database connection part of a domain object's identity.
 
@@ -80,61 +75,17 @@ See the [webhook resource](https://github.com/continuousimagination/dddart/blob/
 
 `dddart_events_appsync` implements an optional transport for the [aggregate-watch contract](/dddart/docs/events/). It uses AppSync Events directly. There is no GraphQL schema to maintain, and clients do not need Amplify, Flutter, or AWS access keys merely to watch aggregates.
 
-HTTP control routes still resolve membership, authorize publication targets, and recover retained history. The live transport multiplexes watches over one WebSocket. The following helper is complete; provide endpoints from an existing deployment and the current application-token callback:
+HTTP control routes still resolve membership, authorize publication targets, and recover retained history. The live transport multiplexes watches over one WebSocket. Supply endpoints from an existing deployment and the current application-token callback.
 
-```dart
-import 'package:dddart/dddart.dart';
-import 'package:dddart_events_appsync/dddart_events_appsync.dart';
-import 'package:dddart_events_distributed/dddart_events_distributed.dart';
-
-AggregateEventClient liveEvents({
-  required Uri controlUrl,
-  required Uri eventHttpUrl,
-  required Uri eventRealtimeUrl,
-  required EventRegistry registry,
-  required Future<String> Function() currentToken,
-  required String Function(DomainEvent<Identity>) aggregateKind,
-}) {
-  final wire = AggregateEventWire(registry.identityCodecs);
-  final control = HttpAggregateEventTransport(
-    baseUrl: controlUrl,
-    wire: wire,
-    tokenProvider: currentToken,
-  );
-  final live = AppSyncEventTransport(
-    httpEndpoint: eventHttpUrl,
-    realtimeEndpoint: eventRealtimeUrl,
-    namespace: 'aggregates',
-    control: control,
-    wire: wire,
-    authorization: () async => {'Authorization': await currentToken()},
-  );
-  return AggregateEventClient(
-    transport: live,
-    registry: registry,
-    aggregateKind: aggregateKind,
-  );
-}
-```
+The [complete AppSync examples](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_events_appsync/example/README.md) supply the concrete registry, policy and lifecycle. The native invocation program runs locally; the live smoke client is compile-checked and requires an existing deployment to run.
 
 The namespace must match the deployment. Connections, subscriptions, and publications obtain current credentials. The client uses portable HTTP and WebSocket abstractions for browser and native applications. Pause, resume, disposal, history expiration, and duplicate handling remain the responsibilities described in the event guide; this foreground transport does not supply background mobile notifications.
 
 ## Keep durable event infrastructure on the server
 
-For multiple server processes or Lambda invocations, use shared event history and channel mappings. With a configured `DynamoConnection` and an existing event table:
+For multiple server processes or Lambda invocations, use shared event history and channel mappings. Configure `DynamoConnection` and an existing event table.
 
-```dart
-final history = DynamoAggregateEventRepository(
-  client: connection.client,
-  tableName: eventTableName,
-  identityCodecs: registry.identityCodecs,
-);
-final channels = DynamoEventChannelRepository(
-  client: connection.client,
-  tableName: eventTableName,
-  identityCodecs: registry.identityCodecs,
-);
-```
+The [complete DynamoDB history example](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_events_dynamodb/example/README.md) runs against DynamoDB Local and shows the repository imports, table lifecycle and cleanup.
 
 These classes come from `dddart_events_dynamodb`; `DynamoConnection` comes from `dddart_repository_dynamodb`. Pass the repositories into `AggregateEventService` alongside the registry and application policy. Clients do not need this database package or their own event database.
 

@@ -24,26 +24,7 @@ library dddart;
 /// Logging is completely optional. To enable it, configure handlers on the
 /// root logger or specific component loggers:
 ///
-/// ```dart
-/// import 'package:logging/logging.dart';
-/// import 'package:dddart/dddart.dart';
-///
-/// void main() {
-///   // Enable console logging for all DDDart components
-///   Logger.root.level = Level.ALL;
-///   Logger.root.onRecord.listen((record) {
-///     print('${record.level.name}: ${record.time}: ${record.message}');
-///   });
-///
-///   // Or enable file logging
-///   final fileHandler = FileLogHandler('app.log');
-///   Logger.root.onRecord.listen(fileHandler);
-///
-///   // Or configure specific components
-///   Logger('dddart.eventbus').level = Level.FINE;
-///   Logger('dddart.repository').level = Level.OFF;
-/// }
-/// ```
+/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart/README.md).
 ///
 /// ### Log Levels
 ///

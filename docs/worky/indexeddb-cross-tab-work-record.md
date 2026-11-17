@@ -1,3 +1,6 @@
+> Historical record; it may describe retired APIs. For current usage, start at
+> [the documentation index](../README.md).
+
 # IndexedDB separate-tab verification — issue #75
 
 Initial results below are historical. For the current parent-integrated R1

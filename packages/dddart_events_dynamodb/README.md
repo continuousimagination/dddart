@@ -4,11 +4,6 @@
 [Supported imports and extension APIs](../../docs/PUBLIC_API.md)
 
 
-For complete setup, named source files, expected output and cleanup, follow the
-[canonical quickstart](../../docs/QUICKSTARTS.md#browser-and-external-integrations). Other inline Dart snippets below are
-**illustrative fragments** that assume application-specific models and surrounding
-setup; they are not standalone programs. See the [quickstart inventory](../../docs/QUICKSTARTS.md)
-for runnable, browser, service and credential-dependent coverage.
 
 
 Durable server-side aggregate event history and random channel mappings for
@@ -16,18 +11,9 @@ short-lived or concurrent serverless invocations. Clients need neither this
 package nor their own event database. See the
 [distributed events guide](../../docs/DISTRIBUTED_EVENTS.md).
 
-```dart
-final history = DynamoAggregateEventRepository(
-  client: connection.client,
-  tableName: eventTableName,
-  identityCodecs: identities,
-);
-final channels = DynamoEventChannelRepository(
-  client: connection.client,
-  tableName: eventTableName,
-  identityCodecs: identities,
-);
-```
+Use the [complete history example](example/history.dart) for table creation,
+`DynamoAggregateEventRepository`, `DynamoEventChannelRepository`, identity codecs
+and cleanup. Its [example guide](example/README.md) lists the service prerequisites.
 
 `connection` is the existing `DynamoConnection` from
 `dddart_repository_dynamodb`. Injected SDK clients are also supported. Constructors
