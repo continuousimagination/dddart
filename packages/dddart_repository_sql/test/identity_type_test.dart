@@ -1,6 +1,6 @@
 import 'package:analyzer/dart/element/element.dart';
 import 'package:build_test/build_test.dart';
-import 'package:dddart_repository_sql/dddart_repository_sql.dart';
+import 'package:dddart_repository_sql/generator.dart';
 import 'package:test/test.dart';
 
 void main() {

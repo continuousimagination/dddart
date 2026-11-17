@@ -8,7 +8,7 @@ import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:build/build.dart';
 import 'package:dddart/dddart.dart' show Identity;
-import 'package:dddart_repository_sql/dddart_repository_sql.dart';
+import 'package:dddart_repository_sql/generator.dart';
 import 'package:dddart_repository_sqlite/src/annotations/generate_sqlite_repository.dart';
 import 'package:dddart_repository_sqlite/src/dialect/sqlite_dialect.dart';
 import 'package:source_gen/source_gen.dart';

@@ -1,5 +1,5 @@
 import 'package:dddart/dddart.dart';
-import 'package:dddart_repository_sql/dddart_repository_sql.dart';
+import 'package:dddart_repository_sql/generator.dart';
 import 'package:test/test.dart';
 
 /// Mock SQL dialect for testing.

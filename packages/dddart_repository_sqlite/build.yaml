@@ -12,7 +12,7 @@ targets:
 
 builders:
   sqlite_repository:
-    import: "package:dddart_repository_sqlite/src/generators/sqlite_repository_generator.dart"
+    import: "package:dddart_repository_sqlite/builder.dart"
     builder_factories: ["sqliteRepositoryBuilder"]
     build_extensions: {".dart": [".sqlite_repository.g.part"]}
     auto_apply: dependents

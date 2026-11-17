@@ -10,7 +10,7 @@ import 'package:build/build.dart';
 import 'package:dddart/dddart.dart' show Identity;
 import 'package:dddart_repository_mysql/src/annotations/generate_mysql_repository.dart';
 import 'package:dddart_repository_mysql/src/dialect/mysql_dialect.dart';
-import 'package:dddart_repository_sql/dddart_repository_sql.dart';
+import 'package:dddart_repository_sql/generator.dart';
 import 'package:source_gen/source_gen.dart';
 
 /// Builder factory function for the MySQL repository generator.
