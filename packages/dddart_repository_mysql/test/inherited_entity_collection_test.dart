@@ -12,7 +12,7 @@ void main() {
   late NativeIssueMysqlRepositoryImpl repository;
   const dialect = MysqlDialect();
   const childTable = 'native_comment';
-  const parentColumn = 'workynativeissues_id';
+  const parentColumn = 'fixturenativeissues_id';
   const positionColumn = '_list_position';
   const firstId = NativeId('generic/IssueA %, café');
   const secondId = NativeId('generic/issuea %, café');

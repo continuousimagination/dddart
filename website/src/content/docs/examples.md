@@ -1,123 +1,38 @@
 ---
-title: Learn from working examples
-description: Run a small local example first, then explore serialization, persistence, HTTP, and event integrations with their prerequisites made explicit.
+title: Find an example
+description: Choose a complete application or a package sample and see what you need to run it.
 section: Reference
 order: 20
 ---
 
-## Begin with a complete guide example
+## Start with a complete application
 
-The shortest path is [Getting started](/dddart/docs/getting-started/): one dependency, one Dart file, no database. The other guides include complete examples or explicitly identify the objects your application must supply.
+[Getting started](/dddart/docs/getting-started/) needs only Dart and the core
+dependency. The
+[standalone example catalog](https://github.com/continuousimagination/dddart/blob/main/docs/QUICKSTARTS.md)
+has setup recipes for generated JSON, configuration, native and server
+databases, public HTTP, and Slack. Each example links its own pubspec and
+describes the expected result.
 
-| What to learn | Start here | Required setup |
-| --- | --- | --- |
-| Domain behavior, identity, and values | [Modeling](/dddart/docs/modeling/) | Core package |
-| Dependency injection through a repository | [Shared contracts](/dddart/docs/contracts/) | Core package |
-| JSON and nested values | [Serialization](/dddart/docs/serialization/) | JSON packages and code generation |
-| Durable local CRUD | [Repositories](/dddart/docs/repositories/) | Native SQLite and code generation |
-| A server resource and matching client | [HTTP](/dddart/docs/http/) | REST packages; a running endpoint for network calls |
-| Local delivery and aggregate watches | [Events](/dddart/docs/events/) | Core locally; an authenticated event endpoint for remote watches |
-| Layered settings | [Configuration](/dddart/docs/configuration/) | Configuration package and a local YAML file |
-| Verified Slack input or optional AppSync | [Integrations](/dddart/docs/integrations/) | Provider-specific credentials and deployment for live integration |
+## Explore a package sample
 
-## Use the repository's example runner
+Use the [package guide](/dddart/docs/packages/) to find the right adapter.
+Its README links to examples and their runtime requirements. For a first
+integration that needs no cloud credentials, try the
+[public leaderboard](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/example/README.md)
+or [HTTP event watch](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_events_distributed/example/README.md).
 
-Clone and resolve the pinned workspace shown in [Getting started](/dddart/docs/getting-started/). Run these commands from the repository root:
+A finite sample shuts itself down. A local database sample needs the
+disposable service shown in its guide. Some programs are compiled as examples
+of a server or external provider integration: run those only after supplying
+the named environment, service, and credentials. For development checks, see
+[testing from the repository](https://github.com/continuousimagination/dddart/blob/main/scripts/README.md).
 
-```bash
-# Check the declared package/example inventory.
-dart tool/validation/validate.dart check
+## Troubleshoot a run
 
-# Resolve, generate, analyze, compile, and run the local JSON example lane.
-dart tool/validation/validate.dart example dddart_json_example --mode=local
-
-# Exercise the supported SQLite example lane.
-dart tool/validation/validate.dart example dddart_repository_sqlite_example --mode=local
-```
-
-The validator uses each example's declared dependency closure and generation requirements. It runs finite local programs, compiles long-running servers, and does not assume a local external database or cloud account. It is more reliable than running an arbitrary file before its generated parts exist.
-
-To validate all declared examples in local mode:
-
-```bash
-dart tool/validation/validate.dart examples --mode=local
-```
-
-This is a broader check and may take time. Local compilation of a service example is not evidence that it has connected to that service.
-
-## Explore the example directories
-
-Example links point to the maintained main branch, whose README tables describe the current validation lanes.
-
-| Example | What it demonstrates | Runtime expectations |
-| --- | --- | --- |
-| [Core](https://github.com/continuousimagination/dddart/tree/main/packages/dddart/example) | Domain concepts, values, events, logging, and repository use | Finite native examples; file logging is native-specific |
-| [JSON](https://github.com/continuousimagination/dddart/tree/main/packages/dddart_json/example) | Nested domain serialization, enums, naming, and configuration | Generation followed by local execution |
-| [SQLite](https://github.com/continuousimagination/dddart/tree/main/packages/dddart_repository_sqlite/example) | Basic CRUD, connection lifecycle, custom repositories | Native in-memory SQLite; no database server |
-| [MySQL](https://github.com/continuousimagination/dddart/tree/main/packages/dddart_repository_mysql/example) | CRUD, connection management, custom repositories | A configured MySQL service |
-| [MongoDB](https://github.com/continuousimagination/dddart/tree/main/packages/dddart_repository_mongodb/example) | Document repositories, swapping, configuration, custom queries | A configured MongoDB service |
-| [DynamoDB](https://github.com/continuousimagination/dddart/tree/main/packages/dddart_repository_dynamodb/example) | Tables, CRUD, errors, and custom interfaces | DynamoDB Local or explicitly configured AWS access |
-| [REST server](https://github.com/continuousimagination/dddart/tree/main/packages/dddart_rest/example) | CRUD resources, auth, queries, pagination, and errors | Long-running server programs |
-| [REST repository](https://github.com/continuousimagination/dddart/tree/main/packages/dddart_repository_rest/example) | Generated remote CRUD and custom interfaces | Matching local API; see that example's harness |
-| [REST client](https://github.com/continuousimagination/dddart/tree/main/packages/dddart_rest_client/example) | Client auth composition and device-flow usage | Auth provider and platform-specific setup |
-| [Configuration](https://github.com/continuousimagination/dddart/tree/main/packages/dddart_config/example) | Providers, precedence, defaults, and validation | Native local files/process environment |
-| [Webhooks](https://github.com/continuousimagination/dddart/tree/main/packages/dddart_webhooks/example) | JSON/form payloads and custom verifiers | Long-running HTTP endpoints |
-| [Slack](https://github.com/continuousimagination/dddart/tree/main/packages/dddart_webhooks_slack/example) | Slash commands and interactive messages | Slack credentials and public HTTPS ingress |
-| [HTTP polling](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_events_distributed/example/http_polling.dart) | Shared client/publisher with local history and real HTTP | Finite loopback server; no AppSync or AWS dependency |
-| [DynamoDB event history](https://github.com/continuousimagination/dddart/tree/main/packages/dddart_events_dynamodb/example) | Durable ingestion history and channel rotation | Isolated DynamoDB Local table |
-| [AppSync/native handlers](https://github.com/continuousimagination/dddart/tree/main/packages/dddart_events_appsync/example) | Native invocation, Lambda composition, opt-in live smoke | Local invocation is finite; live AWS is separate |
-
-The [distributed-events reference](https://github.com/continuousimagination/dddart/blob/main/docs/DISTRIBUTED_EVENTS.md) describes the shared aggregate-watch flow for HTTP polling and AppSync. Both use the same client and publisher interfaces.
-
-## Run HTTP polling without AWS
-
-```bash
-dart run packages/dddart_events_distributed/example/http_polling.dart
-```
-
-It starts an ephemeral local HTTP server, publishes and receives one counter event,
-then closes its resources. Expected output: `HTTP polling accepted and delivered counter value 1.`
-The fixed token and single-aggregate policy are local fixtures; applications supply their own verifier and membership policy.
-
-## Run native event composition without AWS
-
-With the workspace resolved, run:
-
-```bash
-dart run packages/dddart_events_appsync/example/native_invocation.dart
-```
-
-It exercises the native authorizer and subscription contracts with explicit local test authentication. It does not deploy infrastructure or use that test identity as production authentication.
-
-For an actual AWS deployment, follow the [integration guide](/dddart/docs/integrations/#run-locally-deploy-deliberately). Its account, region, image, policy, credentials, and cleanup steps are separate from running a local example.
-
-## Validation scope
-
-The [documentation gate](https://github.com/continuousimagination/dddart/blob/main/tool/documentation/README.md)
-checks all current guides, library/sample Dartdoc, homepage code, links and sample
-coverage. Nine isolated quickstart workflows supply exact manifests, generated
-parts, commands and expected output. The homepage imports three of those complete
-programs directly; its tabs do not contain separately maintained code fragments.
-
-All 18 packages and 15 example projects are inventoried. The sample gate compiles
-every program and runs finite/service programs as declared in each current
-`example/README.md`. Required CI-mode database lanes fail when their service is
-missing. Long-running or credential-dependent programs are explicitly compile-only.
-The capability matrix records browser/native limits and separate browser gates.
-
-These checks do not claim live Slack/AWS verification, every Flutter device, or a
-browser login round trip. Test the endpoints, permissions, native plugins and
-lifecycle behavior of your own application. The Git manifests retain one tested
-code revision; hosted release installation is a separate release gate.
-
-## When a copied example fails
-
-**Pub cannot find a dddart package:** use Git dependencies and same-revision overrides, not unpublished hosted versions.
-
-**A generated part or class is missing:** run generation from the owning package after resolving dependencies. Import `dart:convert` and the JSON/serialization libraries when the generated JSON part needs them.
-
-**An old aggregate constructor no longer compiles:** use `AggregateRoot<UuidValue>` for UUID identities and pass an ID to the base constructor, for example `super(id: id ?? UuidValue.generate())`. All `AggregateRoot<I>` constructors require an identity. Aggregate constructors are not `const`.
-
-**A browser path reaches an unsupported operation:** check native adapter imports, filesystem token stores, process environment, and callback strategies. Use a platform-compatible implementation at the edge.
-
-**An external example cannot connect:** confirm its declared service requirement. Local compile validation does not start a database, create AWS resources, or supply Slack credentials.
+| Symptom | Check |
+| --- | --- |
+| Pub cannot find a DDDart package | Use the linked example pubspec or follow [Git installation](https://github.com/continuousimagination/dddart/blob/main/docs/GIT_INSTALLATION.md) |
+| A generated library or type is missing | Run the quickstart's build step from the package owning the model |
+| A browser build includes native IO | Move the native adapter to the server or choose a [browser-compatible composition](/dddart/docs/contracts/) |
+| An external sample cannot connect | Review its service, address, credentials, and provider setup |

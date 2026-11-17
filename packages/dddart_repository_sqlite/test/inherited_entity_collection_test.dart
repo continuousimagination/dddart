@@ -8,8 +8,8 @@ void main() {
   late SqliteConnection connection;
   late NativeIssueSqliteRepositoryImpl repository;
   const dialect = SqliteDialect();
-  const childTable = 'worky_native_issues_comments';
-  const parentColumn = 'worky_native_issues_id';
+  const childTable = 'fixture_native_issues_comments';
+  const parentColumn = 'fixture_native_issues_id';
   const positionColumn = 'position';
   const firstId = NativeId('generic/IssueA %, café');
   const secondId = NativeId('generic/issuea %, café');

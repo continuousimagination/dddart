@@ -39,7 +39,7 @@ write guarantees. IndexedDB's prohibition on ordinary CRUD overwriting
 conditionally managed records remains intact. Its conditional delete requires a
 matching token. Use its full commit/receipt workflow for that stronger contract.
 
-The executable example is `packages/dddart/example/conditional_writes.dart`.
+Start with the [runnable conditional writes example](../packages/dddart/example/conditional_writes.dart).
 `InMemoryConditionalRepository` is a single-isolate reference implementation. Supply
 an explicit deep-copy/codec function; a map of shared mutable domain objects is
 not a detached-snapshot implementation. Multiple repository handles can share an
@@ -73,20 +73,17 @@ its locks are released, and is discarded on rollback. A failed COMMIT is reporte
 as `ConditionalWriteUncertainException`, never as a stale revision. Lock acquisition
 and storage errors also remain distinct from confirmed revision conflicts.
 
-Provision fresh schemas using the updated generators. SQLite needs write access
+Provision schemas with the repository generators. SQLite needs write access
 to the database file and directory. MySQL requires InnoDB tables, `CREATE` and
 `REFERENCES` permissions for schema creation, and `SELECT`, `INSERT`, `UPDATE`,
-and `DELETE` for repository operations. 1.0 is the first schema
-compatibility baseline; these changes do not provide upgrades for prerelease
-root tables that lack the revision column.
+and `DELETE` for repository operations.
 
 ## Document adapters
 
 Generated MongoDB and DynamoDB repositories implement the same single-aggregate
 capability. A document/item contains domain fields plus the reserved
 `__dddart_revision` infrastructure field, which is excluded from domain JSON.
-Every ordinary save initializes/replaces that revision. Provision fresh storage;
-no conversion of prerelease documents is required.
+Every ordinary save initializes or replaces that revision.
 
 MongoDB uses the exact binary identity key plus a revision filter for replacement
 and deletion. A conditional replacement never upserts. Create-if-absent uses the

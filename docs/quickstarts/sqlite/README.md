@@ -1,12 +1,12 @@
 # SQLite persistence
 
-The example manifest uses one immutable Git revision; it does not require
-published DDDart packages. See [Git installation](https://github.com/continuousimagination/dddart/blob/main/docs/GIT_INSTALLATION.md)
-for source overrides and [the support matrix](https://github.com/continuousimagination/dddart/blob/main/docs/CAPABILITIES.md) for platform limits.
+Generate a note repository and store it in an in-memory SQLite database.
 
 This supplied SQLite adapter uses native FFI. Run on a native Dart VM with the
 SQLite shared library available (macOS includes it; on Ubuntu install `libsqlite3-0`).
 It does not run in a browser. The in-memory database is discarded when closed.
+
+## Set up the application
 
 Create an empty directory **outside this repository**, then create the named files:
 
@@ -17,7 +17,8 @@ mkdir -p bin lib
 ```
 
 Copy the [example pubspec](pubspec.yaml.txt) into the application as `pubspec.yaml`.
-It declares the SDK requirement and all dependency constraints.
+
+## Add the application files
 
 Save as `bin/main.dart`:
 
@@ -71,7 +72,7 @@ class Note extends AggregateRoot<UuidValue> {
 ```
 <!-- /dddart-source -->
 
-Resolve dependencies, generate from clean build state, analyze, and run:
+## Run the example
 
 <!-- dddart-source: docs/quickstarts/sqlite/commands.sh -->
 ```sh

@@ -1,44 +1,24 @@
-# dddart_repository_rest_example examples
+# dddart_repository_rest examples
 
-These are maintained application samples for [dddart_repository_rest](../README.md).
-For a fresh application outside the checkout, start with the
-[standalone workflows](../../../docs/QUICKSTARTS.md). These repository examples use
-the workspace's package resolution and are not hosted-installation evidence.
+These client programs need a running REST API with the matching resources and query handlers. For a server and a client together, use the [HTTP quickstart](../../../docs/quickstarts/rest/README.md). See the [package guide](../README.md) for its API.
 
-## Setup and validation
+## Run from a checkout
 
-SDK and dependency constraints are declared in the [example pubspec](pubspec.yaml).
-From the repository root, resolve workspace tooling with
-`dart pub get`, then run the lane below. It resolves the example package,
-regenerates its declared parts when required, analyzes with fatal infos, compiles
-each program, runs eligible finite/service programs and cleans temporary outputs.
+Resolve the workspace, then run this lane from the repository root. It uses
+the [example pubspec](pubspec.yaml) for dependencies and generation.
 
 ```sh
+dart pub get
 dart tool/validation/validate.dart example dddart_repository_rest_example --mode=ci
 ```
 
-Required local services must be available; CI mode fails when they are missing.
-The [service setup](../../../scripts/README.md) and
-[shared inventory](../../../tool/validation/inventory.json) specify host/port,
-builders and verification boundaries. Tests using local services do not verify a
-cloud deployment or application credentials.
-
 ## Programs
 
-| Source | Coverage / runtime context |
-| --- | --- |
-| [authentication_example.dart](authentication_example.dart) | Compiled only; running requires application configuration or a long-running server. Requires a separately running authenticated REST server. |
-| [basic_crud_example.dart](basic_crud_example.dart) | Compiled only; running requires application configuration or a long-running server. Requires the documented REST server fixture on localhost. |
-| [custom_repository_example.dart](custom_repository_example.dart) | Compiled only; running requires application configuration or a long-running server. Requires custom query routes on a separately running REST server. |
-| [error_handling_example.dart](error_handling_example.dart) | Compiled only; running requires application configuration or a long-running server. Requires a separately running REST server to exercise transport failures. |
+| Program | How it runs | What it shows |
+| --- | --- | --- |
+| [authentication_example.dart](authentication_example.dart) | Compile only | Requires a separately running authenticated REST server. |
+| [basic_crud_example.dart](basic_crud_example.dart) | Compile only | Requires the documented REST server fixture on localhost. |
+| [custom_repository_example.dart](custom_repository_example.dart) | Compile only | Requires custom query routes on a separately running REST server. |
+| [error_handling_example.dart](error_handling_example.dart) | Compile only | Requires a separately running REST server to exercise transport failures. |
 
-Each program contains its complete imports and application model/context. Inspect
-its constants and prerequisites before running it manually from this directory.
-Use disposable test databases and credentials. Do not treat sample users, signing
-secrets, endpoints or authorization policies as production configuration.
-
-Generated `.g.dart` parts belong to their handwritten model library. Run the
-example lane after changing models; do not reuse old generated parts. Custom
-repository implementation parts must share that library so generated private
-helpers remain accessible. Follow the [supported contracts](../../../docs/CAPABILITIES.md)
-for identity, persistence, conditional writes, optional auth and event publication.
+Compile-only programs need the configuration or running server indicated above.

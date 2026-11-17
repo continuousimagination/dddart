@@ -368,12 +368,6 @@
       },
       "entrypoints": [
         {
-          "path": "basic_usage.dart",
-          "classification": "illustrative",
-          "action": "compile",
-          "reason": "Targets placeholder API and authentication endpoints and must not make network requests in validation."
-        },
-        {
           "path": "cli_tool_example.dart",
           "classification": "runnable",
           "action": "compile",
@@ -556,9 +550,9 @@
         },
         {
           "path": "complex_aggregate_example.dart",
-          "classification": "illustrative",
-          "action": "compile",
-          "reason": "Illustrates the intended nested aggregate design; the current generator does not yet persist nested entity collections."
+          "classification": "runnable",
+          "action": "run",
+          "reason": "Round-trips an order with entity items and embedded values in memory."
         },
         {
           "path": "custom_repository_example.dart",
@@ -880,7 +874,7 @@
           "path": "custom_stored_event_json_example.dart",
           "classification": "runnable",
           "action": "run",
-          "reason": "Independent JSON-004 round-trip for a StoredEvent subtype; it exercises no distributed-event transport or registry contract."
+          "reason": "Round-trips a custom StoredEvent subtype with generated JSON."
         },
         {
           "path": "http_polling.dart",

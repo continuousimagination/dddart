@@ -1,101 +1,56 @@
-# Install dddart from Git
+# Install DDDart from Git
 
-The dddart packages are Git-only for now; core is not on pub.dev.
-The Git-only manifests for `dddart_serialization` and
-`dddart_json` use sibling path dependencies, which Pub resolves from the same
-Git checkout.
+Use the [quickstarts](QUICKSTARTS.md) for a new application. Their example
+pubspecs contain the SDK constraint, dependency sources, and any overrides
+needed by the sample.
 
-Choose one full commit SHA from this repository for all direct dddart
-dependencies in your application. Commit the application's `pubspec.lock` so
-its dependency graph stays reproducible. Replace `<same-full-commit-sha>` in
-the examples below with an actual 40-character commit SHA.
+## Add DDDart to an existing application
 
-## Core only
-
-```yaml
-dependencies:
-  dddart:
-    git:
-      url: https://github.com/continuousimagination/dddart.git
-      ref: <same-full-commit-sha>
-      path: packages/dddart
-```
-
-## Core and serialization
+Choose a full commit SHA. Use it for every DDDart Git dependency in your app.
+The [core example pubspec](quickstarts/core/pubspec.yaml.txt) shows a tested
+revision. For each DDDart package you import, add a direct Git dependency under
+`dependencies` in your application's `pubspec.yaml`:
 
 ```yaml
 dependencies:
   dddart:
     git:
       url: https://github.com/continuousimagination/dddart.git
-      ref: <same-full-commit-sha>
+      ref: <full-commit-sha>
       path: packages/dddart
-  dddart_serialization:
-    git:
-      url: https://github.com/continuousimagination/dddart.git
-      ref: <same-full-commit-sha>
-      path: packages/dddart_serialization
 ```
 
-For `dddart_json`, add another direct Git dependency at the same SHA with
-`path: packages/dddart_json`. The three packages resolve without root
-`dependency_overrides`. Other sibling packages still using hosted internal
-dependencies may need overrides until their manifests are converted or they
-are published.
+Replace the placeholder with the chosen SHA. For another package, use its
+package name as the dependency key and its directory under `packages/` as the
+path. Use an adapter's example pubspec to see its complete dependency graph:
+for instance, [JSON](quickstarts/json/pubspec.yaml.txt) pulls in the serializer
+and generator, and [SQLite](quickstarts/sqlite/pubspec.yaml.txt) also shows the
+overrides needed for that adapter.
 
-Run `dart pub get` (or `flutter pub get` in a Flutter app) after editing the
-pubspec. The serialization and JSON packages are marked `publish_to: none`
-while they contain sibling path dependencies. If the project later publishes
-them, it must first publish their internal dependencies, then restore hosted
-constraints and remove `publish_to: none`. [Issue #30](https://github.com/continuousimagination/dddart/issues/30)
-tracks that release path.
+## Resolve sibling dependencies
+
+Some packages already resolve their sibling packages from the Git checkout.
+Others still declare hosted DDDart dependencies. When Pub tries to resolve such
+a sibling from the hosted registry, add its Git entry under
+`dependency_overrides` in your application's root pubspec, with the same SHA.
+Keep direct dependencies for packages your code imports. Use the adapter
+quickstart to find its override entries. For packages without a standalone
+quickstart, check their pubspecs for hosted DDDart siblings and follow their
+dependencies until every DDDart package resolves from the chosen checkout.
+
+Run `dart pub get` (or `flutter pub get` in a Flutter project) and commit the
+application's `pubspec.lock` to record the resolved dependency graph.
 
 ## Core and IndexedDB
 
-The IndexedDB adapter is Git-only and uses sibling path dependencies on core and
-serialization. A clean browser consumer can pin both direct packages to one full
-SHA without `dependency_overrides`:
+To use native browser persistence, add `dddart` and
+`dddart_repository_indexeddb` from the same Git SHA. The adapter resolves core
+and serialization from that checkout, so this combination needs no overrides.
+If your code imports `dddart_serialization` or the native `idb_shim` factory,
+declare those dependencies directly as well. The
+[adapter pubspec](../packages/dddart_repository_indexeddb/pubspec.yaml)
+declares the adapter's dependency constraints.
 
-```yaml
-dependencies:
-  dddart:
-    git:
-      url: https://github.com/continuousimagination/dddart.git
-      ref: <same-full-commit-sha>
-      path: packages/dddart
-  dddart_repository_indexeddb:
-    git:
-      url: https://github.com/continuousimagination/dddart.git
-      ref: <same-full-commit-sha>
-      path: packages/dddart_repository_indexeddb
-```
-
-Add direct serialization and `idb_shim` dependencies when importing their
-registry and native factory APIs; the [adapter pubspec](../packages/dddart_repository_indexeddb/pubspec.yaml)
-declares the supported constraints. See the [adapter guide](../packages/dddart_repository_indexeddb/README.md)
-for typed identity composition, schema compatibility and browser limits. Use the
-final accepted integration SHA after review/merge, not the old UUID-only browser
-branch SHA. Record the resolved Git SHAs from the clean consumer's lockfile.
-
-After the candidate is published, verify it from outside the workspace with:
-
-```sh
-dart tool/validation/verify_indexeddb_git_consumer.dart <same-full-commit-sha>
-```
-
-The helper creates a fresh temporary consumer with no dependency overrides,
-checks that all three dddart lockfile entries have that exact Git revision,
-analyzes the consumer, and runs typed persistence contracts on VM and native
-Chrome. It fails if Chrome is unavailable. An optional second argument is an
-unauthenticated HTTPS or local file Git URL for an isolated test fixture; fixture
-SHAs are not accepted upstream revisions. Run again on the final accepted main
-SHA and retain its output as acceptance evidence.
-
-## Complete applications
-
-The [canonical quickstarts](QUICKSTARTS.md) provide complete, tested manifests,
-models, generated parts, executable entrypoints, expected output and teardown.
-Their example pubspec files declare the SDK requirement and dependency constraints,
-including the Git revision and any required adapter overrides. The
-primary JSON workflow declares build_runner and all packages its model imports;
-it can run outside this monorepo without workspace dependency resolution.
+Follow the [IndexedDB guide](../packages/dddart_repository_indexeddb/README.md)
+to supply an identity codec where needed, an aggregate encoder/decoder, and the
+native browser factory.

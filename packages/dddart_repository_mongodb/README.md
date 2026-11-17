@@ -4,12 +4,9 @@ Generated MongoDB repositories with explicit typed identities and application qu
 
 [Capability boundaries](../../docs/CAPABILITIES.md) · [Supported imports](../../docs/PUBLIC_API.md)
 
-## Installation and runnable setup
+## Get started
 
-Follow the [complete mongodb workflow](../../docs/quickstarts/mongodb/README.md)
-for the current Git manifest, named files, clean generation where required,
-expected output and cleanup. Hosted release installation remains separate under
-#30. The workflow links its example pubspec. 1.0 is the first compatibility baseline.
+Run the [MongoDB quickstart](../../docs/quickstarts/mongodb/README.md) for a complete application.
 
 ## Models and identity
 
@@ -57,13 +54,6 @@ uncertain writes blindly. Provision fresh pre-release collections.
 The service tests run MongoDB. A DocumentDB-style URI is not proof of DocumentDB
 feature, TLS or topology compatibility. Verify the actual deployment and trusted
 certificate configuration; do not disable certificate checking as a default.
-Use [testing instructions](TESTING.md) for the required local service lane.
+Use [development checks](../../scripts/README.md#package-and-example-checks) for the required local service lane.
 
-## API and validation
-
-The [public library](lib/dddart_repository_mongodb.dart) links the current API declarations. Detailed
-contracts live with those declarations instead of duplicated signatures here.
-[Repository examples](example/README.md) list their runtime/service requirements.
-From the repository root, run the package and example commands in
-[validation](../../scripts/README.md). Required service/browser lanes must be
-available; compiling a configured sample does not prove a live deployment.
+See the [public library](lib/dddart_repository_mongodb.dart) and [example programs](example/README.md).

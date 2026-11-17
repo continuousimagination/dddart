@@ -56,19 +56,11 @@ republishing received events can create an echo loop.
 ## Serialization and remote delivery
 
 Use the [JSON workflow](../../docs/quickstarts/json/README.md) for generated
-serialization and the [distributed registry guide](../dddart_events_distributed/GENERATOR_USAGE.md)
+serialization and the [distributed registry guide](../dddart_events_distributed/README.md#generate-event-serializers-and-registrations)
 for generated event factories and stable wire keys. Identity codecs preserve
 kind and scope; do not replace a typed ID with `toString()` at a storage boundary.
 
 [Distributed events](../../docs/DISTRIBUTED_EVENTS.md) documents acceptance,
 checkpoint catch-up, retention, authorization and bounded retries. Polling and
-AppSync implement the shared transport interfaces. Neither successful saving nor
-event acceptance proves durable consumer processing or an atomic outbox.
-
-## Verification
-
-From the repository root, use the commands in [validation](../../scripts/README.md).
-The core package tests cover captured batches, events raised during awaits,
-publication failures and repository contracts. The maintained core example lane
-compiles and runs every finite sample. Use fresh fixtures; 1.0 is the first
-compatibility baseline.
+AppSync implement the shared transport interfaces. Persistence, event acceptance,
+and durable consumer processing are separate steps.

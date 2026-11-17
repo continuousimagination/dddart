@@ -30,16 +30,18 @@ check_sources() {
   def content($path): $db[$path] // error("Missing canonical input: " + $path);
   def same($a;$b): ($a|sort) == ($b|sort);
   def relative: test("^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\\\]+$");
+  def git_refs: [scan("(?m)^ +ref: (.+)$")|.[0]]|unique;
   def sample_table:
-    ["| Source | Coverage / runtime context |", "| --- | --- |"] +
+    ["| Program | How it runs | What it shows |", "| --- | --- | --- |"] +
     [.entrypoints[] |
-      ({run:"Compiled and run; finite local demonstration.",
-        compile:"Compiled only; running requires application configuration or a long-running server.",
-        service:"Compiled and run against the lane\u0027s required local database service."}[.action] //
+      ({run:"Local run", compile:"Compile only", service:"Local database"}[.action] //
         error("Retired/unvalidated sample is still inventoried")) as $description |
-      "| [" + .path + "](" + .path + ") | " + $description + " " +
+      "| [" + .path + "](" + .path + ") | " + $description + " | " +
       (.reason|gsub("\\|";"\\|")|gsub("\n";" ")) + " |"] | join("\n");
-  require(($meta.revision|test("^[0-9a-f]{40}$")); "Expected a full Git revision") |
+  (content("docs/quickstarts/core/pubspec.yaml.txt")|git_refs) as $refs |
+  require(($refs|length) == 1 and ($refs[0]|test("^[0-9a-f]{40}$"));
+          "The core example pubspec must pin one full Git revision") |
+  $refs[0] as $revision |
   require(($meta.workflows|map(.name)|length) == ($meta.workflows|map(.name)|unique|length); "Duplicate workflow") |
   require(same([$files[]|select(startswith("docs/quickstarts/"))|split("/")|select(length>3)|.[2]]|unique;
                [$meta.workflows[].name]); "Unclassified quickstart directory") |
@@ -56,8 +58,8 @@ check_sources() {
     (content($base + "pubspec.yaml.txt")) as $pubspec |
     require(any(content($base + "README.md")|links[]; . == "pubspec.yaml.txt");
             $w.name + ": quickstart must link its example pubspec") |
-    require(([$pubspec|scan("(?m)^ +ref: (.+)$")|.[0]]|unique) == [$meta.revision];
-            $w.name + ": Git setup must use the shared immutable code revision") |
+    require(($pubspec|git_refs) == [$revision];
+            $w.name + ": Git dependencies must match the core example pubspec's revision") |
     ([$w.commandsFiles[] as $f | content($base+$f)|split("\n")[]|command_args]) as $commands |
     require(any($commands[]; . == ["dart","pub","get"]); $w.name + ": missing documented command dart pub get") |
     require(any($commands[]; . == ["dart","analyze","--fatal-infos"]); $w.name + ": missing documented analysis") |
@@ -137,7 +139,7 @@ check_sources() {
     require($recorded == (content($path)|dart_exports); $label+": public exports differ from docs/PUBLIC_API.md")) |
   require(same([content("docs/CAPABILITIES.md")|scan("(?m)^\\| (dddart\\w*) \\|")|.[0]];
                $packages|keys); "Capability matrix differs from shared inventory") |
-  . + {workflows:($meta.workflows|length),examples:($inventory.examples|length),revision:$meta.revision}
+  . + {workflows:($meta.workflows|length),examples:($inventory.examples|length),revision:$revision}
 JQ
   jq -n --slurpfile sources "$WORK/sources.json" --slurpfile files "$WORK/files.json" \
     --slurpfile metadata "$METADATA" --slurpfile inventory "$INVENTORY" \
@@ -149,7 +151,7 @@ JQ
 
 check_links() {
   local document reference target fragment relative revision
-  revision=$(jq -r .revision "$METADATA")
+  revision=$(jq -r .revision "$WORK/checked.json")
   jq -r '.links[] | [.document,.url] | @tsv' "$WORK/checked.json" > "$WORK/links.tsv"
   while IFS=$'\t' read -r document reference; do
     case "$reference" in
@@ -282,7 +284,7 @@ run_workflow() (
     fail "$label: resolved DDDart closure differs"
   if [[ "$source_mode" == git ]]; then
     refs=$(jq -Rc 'scan("resolved-ref: [\"\u0027]?([0-9a-f]{40})")|.[0]' "$app/pubspec.lock" | jq -s 'unique')
-    jq -en --argjson refs "$refs" --arg revision "$(jq -r .revision "$METADATA")" '$refs == [$revision]' >/dev/null || fail "$label: lockfile revision differs"
+    jq -en --argjson refs "$refs" --slurpfile checked "$WORK/checked.json" '$refs == [$checked[0].revision]' >/dev/null || fail "$label: lockfile revision differs"
   fi
   while IFS= read -r entrypoint; do
     mkdir -p "$app/build"

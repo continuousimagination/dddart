@@ -10,17 +10,17 @@ import 'test_models.dart';
 void main() {
   late Db database;
   setUpAll(() async {
-    database = Db('mongodb://127.0.0.1:27017/worky_identity_roundtrip');
+    database = Db('mongodb://127.0.0.1:27017/fixture_identity_roundtrip');
     await database.open();
-    await database.collection('worky_native_identities').drop();
+    await database.collection('fixture_native_identities').drop();
     await database.runCommand({
-      'create': 'worky_native_identities',
+      'create': 'fixture_native_identities',
       'collation': {'locale': 'en', 'strength': 2},
     });
   });
   tearDownAll(() async {
-    await database.collection('worky_native_identities').drop();
-    await database.collection('worky_scoped_identities').drop();
+    await database.collection('fixture_native_identities').drop();
+    await database.collection('fixture_scoped_identities').drop();
     await database.close();
   });
 

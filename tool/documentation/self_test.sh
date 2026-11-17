@@ -74,13 +74,13 @@ fresh
 printf '# New guide\n' > "$CASE/docs/NEW_GUIDE.md"
 check_failure 'surface inventory differs' 'new standalone guide requires inventory review'
 fresh
-printf '\n```dart\nMissingType sample;\n```\n' >> "$CASE/packages/dddart/GETTING_STARTED.md"
-check_failure 'GETTING_STARTED.md: unchecked' 'standalone guide snippets are checked'
+printf '\n```dart\nMissingType sample;\n```\n' >> "$CASE/packages/dddart/IDENTITY_GUIDE.md"
+check_failure 'IDENTITY_GUIDE.md: unchecked' 'standalone guide snippets are checked'
 fresh
 printf '\n/// ```dart\n/// MissingType sample;\n/// ```\n' >> "$CASE/packages/dddart/lib/src/entity.dart"
 check_failure 'entity.dart: unchecked' 'deep API comments are checked'
 fresh
-printf '\n[Missing](missing.md)\n' >> "$CASE/packages/dddart/GETTING_STARTED.md"
+printf '\n[Missing](missing.md)\n' >> "$CASE/packages/dddart/IDENTITY_GUIDE.md"
 check_failure 'broken local link' 'broken relative links fail'
 fresh
 printf '\nUse Dart **9.9.9** for this example.\n' >> "$CASE/README.md"
@@ -93,6 +93,10 @@ check_failure 'link the example pubspec' 'dependency constraints cannot be copie
 fresh
 replace docs/quickstarts/json/README.md '[example pubspec](pubspec.yaml.txt)' 'example pubspec'
 check_failure 'quickstart must link its example pubspec' 'quickstarts must retain their installation manifest link'
+fresh
+core_git_ref=$(sed -n 's/^ *ref: //p' "$CASE/docs/quickstarts/core/pubspec.yaml.txt")
+replace docs/quickstarts/json/pubspec.yaml.txt "ref: $core_git_ref" 'ref: 0000000000000000000000000000000000000000'
+check_failure "must match the core example pubspec's revision" 'quickstarts reject a different dependency revision'
 fresh
 printf '\n[Missing](https://github.com/continuousimagination/dddart/blob/main/docs/README.md#gone)\n' >> "$CASE/README.md"
 check_failure 'broken local anchor' 'broken repository URL anchors fail'
@@ -112,11 +116,11 @@ for fence in '~~~' '````'; do
 done
 pass 'tilde and longer fences cannot bypass source checking'
 fresh
-replace README.md "guestName: 'Sam'" "guestName: 'Stale'"
-check_failure 'README.md: stale inclusion' 'changed published code fails'
+replace docs/quickstarts/json/README.md "guestName: 'Sam'" "guestName: 'Stale'"
+check_failure 'json/README.md: stale inclusion' 'changed published code fails'
 fresh
-replace README.md 'dart pub get' 'dart pub missing'
-check_failure 'README.md: stale inclusion' 'changed published commands fail'
+replace docs/quickstarts/core/README.md 'dart pub get' 'dart pub missing'
+check_failure 'core/README.md: stale inclusion' 'changed published commands fail'
 fresh
 printf "\nexport 'src/unreviewed.dart';\n" >> "$CASE/packages/dddart_json/lib/dddart_json.dart"
 check_failure 'public exports differ' 'new public exports require review'

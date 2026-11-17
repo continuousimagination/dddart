@@ -58,17 +58,5 @@ Errors normalized by these boundaries expose `cause` and `stackTrace`; deliberat
 validation errors need not have an underlying cause. These diagnostics are for
 application logging. HTTP responses still apply their own error/redaction policy.
 
-## Verification
-
-From the repository root, after resolving dependencies from the pubspecs:
-
-```sh
-dart tool/validation/validate.dart package dddart_serialization --mode=ci
-dart tool/validation/validate.dart package dddart_json --mode=ci
-```
-
-The JSON gate regenerates fixtures before testing. The parity suite exercises
-handwritten and generated serializers, and the isolated consumer rejects wrong
-configuration on both generated and generic interfaces. Existing annotation,
-constructor/per-call, nullable-field and typed-identity suites cover composition.
-Fresh generation is the supported path; 1.0 is the first compatibility baseline.
+Try the [JSON quickstart](quickstarts/json/README.md) to round-trip a model
+with a generated serializer.

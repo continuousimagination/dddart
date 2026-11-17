@@ -1,147 +1,53 @@
 ---
-title: HTTP without a second domain model
-description: Expose a repository through a JSON API, then use the same repository contract from a Dart or Flutter client.
+title: Build an HTTP API
+description: Serve a Dart repository over HTTP and choose public or protected access for each operation.
 section: Connect the pieces
 order: 20
 ---
 
-A server exposes a typed repository through Shelf handlers; a generated HTTP
-repository calls those handlers from a client. Both share domain identities and
-JSON contracts. Authentication stays optional: a public leaderboard can be read
-without logging in while writes require explicit permissions.
+Expose a repository with a `CrudResource<T, I, TClaims>` and a serializer on
+the server. The generated REST repository implements the same typed CRUD
+contract on the client. Use concrete identities and the same canonical
+identity codec on both sides.
 
 ## Run a public server and client
 
-The [complete HTTP workflow](https://github.com/continuousimagination/dddart/blob/main/docs/quickstarts/rest/README.md)
-supplies the Git manifest, model, part directive, builders and expected output.
-After creating those named files, its `bin/main.dart` runs a finite local server
-and an anonymous generated client, then closes both:
-
-<!-- dddart-source: docs/quickstarts/rest/bin/main.dart -->
-```dart
-import 'dart:io' as io;
-
-import 'package:dddart/dddart.dart';
-import 'package:dddart_rest/dddart_rest.dart';
-import 'package:dddart_repository_rest/dddart_repository_rest.dart';
-import 'package:http/http.dart' as http;
-import 'package:shelf/shelf_io.dart' as shelf_io;
-
-import '../lib/note.dart';
-
-Future<void> main() async {
-  final serializer = NoteJsonSerializer();
-  final repository = InMemoryRepository<Note, UuidValue>();
-  final note = Note(text: 'public hello');
-  await repository.save(note);
-  final app = HttpServer()
-    ..registerResource(
-      CrudResource<Note, UuidValue, Object>(
-        path: '/notes', repository: repository, serializer: serializer,
-        // No authentication handler: this resource is public by default.
-      ),
-    );
-  final server = await shelf_io.serve(
-      app.buildHandler(), io.InternetAddress.loopbackIPv4, 0);
-  final client = http.Client();
-  final connection = RestConnection(baseUrl: 'http://127.0.0.1:${server.port}');
-  try {
-    final response = await client.get(
-        Uri.parse('http://127.0.0.1:${server.port}/notes/${note.id.uuid}'));
-    if (response.statusCode != 200 ||
-        serializer.deserialize(response.body).text != note.text) {
-      throw StateError(
-          'Public read failed: ${response.statusCode} ${response.body}');
-    }
-    final remote = NoteRestRepository(connection);
-    if ((await remote.getById(note.id)).text != note.text) {
-      throw StateError('Generated REST repository read failed');
-    }
-    print('200: public hello');
-  } finally {
-    connection.dispose();
-    client.close();
-    await server.close(force: true);
-  }
-}
-```
-<!-- /dddart-source -->
-
-This workflow needs no token or auth provider. Use `HttpServer.buildHandler()`
-instead of `start()` when the application's host already owns the HTTP listener.
-Register additional Shelf handlers with `addRoute`; custom handlers own their
-explicit auth and request validation.
+The [HTTP quickstart](https://github.com/continuousimagination/dddart/blob/main/docs/quickstarts/rest/README.md)
+starts a local server, saves and reads a note through a generated client, and
+closes both. Follow it to get the exact files and commands. It needs no login
+or token. If an existing host owns the listener, compose
+`HttpServer.buildHandler()` into that host.
 
 ## Public and protected operations
 
-An unconfigured `CrudResource` is public. Supplying an authentication handler
-makes its default policy authenticated, while explicit public operation policies
-still permit anonymous access. Item and collection reads both resolve policy.
+A resource can be public. Supplying an authentication handler requires a verified
+caller by default unless an operation has its own policy. For example, allow
+anonymous reads of a leaderboard and require permission to write scores. Run
+the [public leaderboard example](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/example/README.md)
+for that pattern and for private records with scoped collection reads.
 
-The [public/protected example](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/example/public_leaderboard_example.dart)
-executes public leaderboard reads with protected writes, private records with
-public objects, and ordinary unconfigured public CRUD. The
-[REST policy guide](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md)
-describes `ResourceAccessPolicy`, typed callers, stored/current/proposed snapshots
-and query scopes. Authorization uses authoritative domain snapshots, not a lossy
-public JSON projection or client-submitted ownership fields.
+Define a handler for each collection query your application supports. Apply the
+authorized scope to both rows and total count before paging. A client filter
+can narrow the authorized set. It cannot make more rows visible. For custom
+mutation policies, use authoritative snapshots and a repository that can bind
+the authorization decision to the revision it checks. See the
+[REST policy guide](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md#optional-access-policies)
+for the policy contexts and failure behavior.
 
-Custom mutations require a suitable atomic conditional repository, binding the
-permission decision to the stored revision. They fail closed on an unsupported
-backend. Plain public CRUD retains its explicitly documented creation-race limit.
+## Prevent lost updates
 
-## Make collection reads explicit
-
-Provide `collectionHandler` for unfiltered/pagination-only requests and named
-`queryHandlers` for application filters. A basic repository has no implicit scan.
-Handlers receive `AuthorizedQuery<TClaims>` and must apply its scope to both rows
-and total count before paging; client filters may narrow that scope, never widen it.
-
-Unsupported or combined filters, and unfiltered requests without a collection
-handler, return a client error. The default page is skip 0/take 50, with maximum
-100. Apply selection, ordering and bounds in the datastore query. Return
-`QueryResult(items, totalCount: count)`; items form the JSON response array and the
-optional count uses `X-Total-Count`.
-
-## Identity and conditional writes
-
-Use a concrete identity and one shared `IdentityCodecRegistry` through the model
-serializer, resource and generated repository. Canonical identity keys are escaped
-as one URI segment. Do not split composite IDs or guess a lossy URL encoding.
-The route identity must agree with the submitted aggregate identity.
-
-Generated ordinary `save` uses PUT. Strong ETags represent coherent persisted
-revisions. Versioned reads and explicit conditional client methods carry the
-server's atomic conditions; ordinary save does not silently become compare-and-swap.
-`requirePrecondition` can make conditions mandatory for configured resources.
-An incapable backend cannot emulate this with a read followed by an ordinary save.
-
-A stale condition yields a conflict response without private current content.
-Storage failure or uncertain commit is distinct from a conflict. Reload and
-recompute deliberately; the libraries do not retry with a fresh revision.
-The [two-writer example](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/example/etag_concurrency_example.dart)
-and [conditional-write contract](https://github.com/continuousimagination/dddart/blob/main/docs/CONDITIONAL_WRITES.md)
-show the actual transaction and uncertainty boundaries.
+Use versioned reads and explicit conditional calls when one writer must
+detect another's change. A strong ETag carries the stored revision. A stale
+condition needs a reload and an application decision about whether to reapply
+the update. Ordinary `save` uses unconditional PUT where the resource allows
+it. The [conditional writes guide](https://github.com/continuousimagination/dddart/blob/main/docs/CONDITIONAL_WRITES.md)
+describes the required storage capability and how to handle an unknown result.
 
 ## Authentication providers and platforms
 
-`AuthenticationHandler<TClaims>` verifies HTTP requests. `CredentialVerifier<TClaims>`
-allows native handlers to reuse token verification. Self-hosted JwtAuthHandler
-owns issuance/refresh with explicit claim and storage callbacks; OAuthJwtAuthHandler
-uses configured JWKS, issuer, audience and claim validation. Authentication does
-not substitute for resource authorization.
-
-Client auth providers are optional. RestClient obtains the provider's ID-token
-method before sending; a non-OIDC implementation returns its suitable token.
-Cognito uses authorization code with PKCE, while the self-hosted provider uses
-device flow. See the [client guide](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest_client/README.md).
-Built-in file credentials are not encrypted/keychain storage. Browser/mobile
-callback, navigation and storage integrations remain application-owned.
-
-The server is native IO. Browser clients additionally need appropriate CORS
-allow/expose headers, including conditional headers and ETags when used. Consult
-the [server source](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/lib/src/http_server.dart)
-for the built-in helper's exact behavior.
-
-Aggregate JSON carries public state, not pending events. Repository publication
-uses the separate [event contract](/dddart/docs/events/).
+On the server, choose a credential verifier and resource policies. On the
+client, supply a token provider only for calls that need authentication. The
+[REST client guide](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest_client/README.md)
+describes device flow, Cognito/OIDC callbacks, and credential storage. Supply
+storage and callback handling appropriate to your browser or mobile
+application.

@@ -9,8 +9,8 @@ void main() {
   late NativeIssueSqliteRepositoryImpl native;
   late ScopedIssueSqliteRepository scoped;
   const dialect = SqliteDialect();
-  const childTable = 'worky_native_issues_comments';
-  const parentColumn = 'worky_native_issues_id';
+  const childTable = 'fixture_native_issues_comments';
+  const parentColumn = 'fixture_native_issues_id';
   setUpAll(() async {
     connection = SqliteConnection.memory();
     await connection.open();

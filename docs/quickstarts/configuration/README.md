@@ -1,11 +1,12 @@
 # Layered configuration
 
-Create an empty application directory outside the repository
-and copy the following named files. The manifest pins Git dependencies to the
-same revision as the primary quickstarts.
+## Set up the application
+
+Create a directory outside the repository and save the files below.
 
 Copy the [example pubspec](pubspec.yaml.txt) into the application as `pubspec.yaml`.
-It declares the SDK requirement and all dependency constraints.
+
+## Add the application files
 
 Save as `bin/configuration.dart`:
 
@@ -92,7 +93,7 @@ allowed_origins:
 ```
 <!-- /dddart-source -->
 
-Run these commands:
+## Run the example
 
 <!-- dddart-source: docs/quickstarts/configuration/commands.sh -->
 ```sh

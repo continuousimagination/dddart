@@ -4,12 +4,9 @@ HTTP client helpers with optional authentication and explicit token-provider lif
 
 [Capability boundaries](../../docs/CAPABILITIES.md) · [Supported imports](../../docs/PUBLIC_API.md)
 
-## Installation and runnable setup
+## Get started
 
-Follow the [complete rest workflow](../../docs/quickstarts/rest/README.md)
-for the current Git manifest, named files, clean generation where required,
-expected output and cleanup. Hosted release installation remains separate under
-#30. The workflow links its example pubspec. 1.0 is the first compatibility baseline.
+Run the [HTTP quickstart](../../docs/quickstarts/rest/README.md) for a complete application.
 
 ## Public and authenticated requests
 
@@ -44,16 +41,8 @@ secrets handling, storage lifecycle and platform-appropriate alternatives. Built
 file storage and localhost/manual callback strategies use native IO; browser and
 mobile callback/storage integrations need their own implementation and tests.
 
-The [example programs](example/README.md) include basic requests and a CLI tool.
-They are compile-checked because running them requires a configured auth/server
-and user interaction. The [public HTTP workflow](../../docs/quickstarts/rest/README.md)
-provides a finite anonymous server/client check without those prerequisites.
+The [CLI example](example/README.md) needs a configured server and interactive
+login. Use the [public HTTP quickstart](../../docs/quickstarts/rest/README.md)
+for a complete anonymous server/client exercise.
 
-## API and validation
-
-The [public library](lib/dddart_rest_client.dart) links the current API declarations. Detailed
-contracts live with those declarations instead of duplicated signatures here.
-[Repository examples](example/README.md) list their runtime/service requirements.
-From the repository root, run the package and example commands in
-[validation](../../scripts/README.md). Required service/browser lanes must be
-available; compiling a configured sample does not prove a live deployment.
+See the [public library](lib/dddart_rest_client.dart) and [example programs](example/README.md).

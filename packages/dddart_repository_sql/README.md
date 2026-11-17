@@ -29,8 +29,7 @@ Import `package:dddart_repository_sql/dddart_repository_sql.dart` for:
   classes through reflection. Field names containing underscores need an
   application-defined mapping if the prefix convention would be ambiguous.
 
-Generated adapters own aggregate graph persistence/reconstruction. There is no
-public GraphTraverser, serializeGraph or deserializeGraph placeholder.
+Generated adapters own aggregate graph persistence and reconstruction.
 
 ## Build-time extension API
 
@@ -60,9 +59,7 @@ when their codec JSON is structured. The registry is shared with generated JSON.
 SQLite stores canonical UTF-8 identity keys in BLOB columns; MySQL uses
 VARBINARY(1024) and validates the adapter byte budget. Stock UUIDs retain their
 complete string bytes and case. SQL field mapping is fixed to Dart names and
-includes nullable values when replacing stored state. Fresh schemas and fresh
-generated parts are the pre-release workflow; 1.0 is the first compatibility
-baseline.
+includes nullable values when replacing stored state.
 
 | Value | SQLite | MySQL |
 | --- | --- | --- |

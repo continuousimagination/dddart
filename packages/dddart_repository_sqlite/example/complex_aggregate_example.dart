@@ -81,6 +81,11 @@ Future<void> main() async {
     // Retrieve the order (with JOINs)
     print('\n--- Retrieving Order ---');
     final retrievedOrder = await repository.getById(order.id);
+    if (retrievedOrder.items.length != order.items.length ||
+        retrievedOrder.shippingAddress != order.shippingAddress ||
+        retrievedOrder.totalAmount != order.totalAmount) {
+      throw StateError('The order graph did not round-trip.');
+    }
     print('Order ID: ${retrievedOrder.id}');
     print('Customer: ${retrievedOrder.customerName}');
     print('Status: ${retrievedOrder.status}');
@@ -112,7 +117,10 @@ Future<void> main() async {
       id: retrievedOrder.id,
       customerId: retrievedOrder.customerId,
       customerName: retrievedOrder.customerName,
-      totalAmount: retrievedOrder.totalAmount,
+      totalAmount: Money(
+        amount: retrievedOrder.totalAmount.amount + 79.99,
+        currency: retrievedOrder.totalAmount.currency,
+      ),
       shippingAddress: retrievedOrder.shippingAddress,
       billingAddress: retrievedOrder.billingAddress,
       items: [
@@ -132,6 +140,10 @@ Future<void> main() async {
     print('✓ Order updated (added item, changed status)');
 
     final verifyOrder = await repository.getById(order.id);
+    if (verifyOrder.items.length != updatedOrder.items.length ||
+        verifyOrder.status != updatedOrder.status) {
+      throw StateError('The updated graph was not saved.');
+    }
     print('Items after update: ${verifyOrder.items.length}');
     print('Status after update: ${verifyOrder.status}');
 
@@ -139,7 +151,7 @@ Future<void> main() async {
     print('\n--- Cascade Delete ---');
     print('Deleting order will cascade to order items...');
     await repository.deleteById(order.id);
-    print('✓ Order deleted (cascade deleted ${order.items.length} items)');
+    print('✓ Order deleted');
 
     // Verify deletion
     try {

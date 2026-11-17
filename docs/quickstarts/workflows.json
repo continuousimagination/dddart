@@ -1,6 +1,5 @@
 {
   "schemaVersion": 1,
-  "revision": "56607ac8d3913b8e896ac03f8ecff58473d62ce2",
   "workflows": [
     {
       "name": "core",

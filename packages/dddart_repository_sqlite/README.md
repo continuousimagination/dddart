@@ -4,19 +4,16 @@ Generated native SQLite repositories for typed DDDart aggregates.
 
 [Capability boundaries](../../docs/CAPABILITIES.md) · [Supported imports](../../docs/PUBLIC_API.md)
 
-## Installation and runnable setup
+## Get started
 
-Follow the [complete sqlite workflow](../../docs/quickstarts/sqlite/README.md)
-for the current Git manifest, named files, clean generation where required,
-expected output and cleanup. Hosted release installation remains separate under
-#30. The workflow links its example pubspec. 1.0 is the first compatibility baseline.
+Run the [SQLite quickstart](../../docs/quickstarts/sqlite/README.md) for a complete application.
 
 ## Model and generation
 
 Use `@GenerateSqliteRepository`, `@Serializable`, a complete aggregate constructor
 and the model's owning `.g.dart` part. JSON and repository builders run together.
-The [generation guide](GENERATOR_IMPLEMENTATION.md) describes the supported
-runtime/build-time imports; concrete generator classes are internal.
+Use the package's runtime library in your model. Its builder factory is a
+separate [build-time entrypoint](../../docs/PUBLIC_API.md).
 
 Supported aggregate graphs, nested entities and collections are persisted by
 generated code. Value objects use prefixed columns; DateTime uses ISO 8601 TEXT,
@@ -48,14 +45,7 @@ An optional `eventPublisher` publishes the captured pending batch after confirme
 commit, including an outer transaction's commit. Rollback retains pending events.
 This does not implement a transactional outbox.
 
-[Testing](TESTING.md) and [examples](example/README.md) cover persistence,
+[Development checks](../../scripts/README.md#package-and-example-checks) and [examples](example/README.md) cover persistence,
 generation, custom bases, collection limits and independent-connection races.
 
-## API and validation
-
-The [public library](lib/dddart_repository_sqlite.dart) links the current API declarations. Detailed
-contracts live with those declarations instead of duplicated signatures here.
-[Repository examples](example/README.md) list their runtime/service requirements.
-From the repository root, run the package and example commands in
-[validation](../../scripts/README.md). Required service/browser lanes must be
-available; compiling a configured sample does not prove a live deployment.
+See the [public library](lib/dddart_repository_sqlite.dart) and [example programs](example/README.md).

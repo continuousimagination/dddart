@@ -134,7 +134,6 @@ Future<void> main(List<String> arguments) async {
       'sourceHashes': sourceHashes,
       'rounds': rounds,
       ...results,
-      'independentReview': 'Worky-owned; not asserted by this test',
     });
   } catch (_) {
     verificationFailed = true;

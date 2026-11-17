@@ -1,36 +1,25 @@
 ---
 title: Getting started
-description: Install from Git, give a business concept a home, and run a complete domain-and-repository example.
+description: Model an order, save it in memory, and react to a domain event in one application.
 section: Start here
-order: 20
+order: 10
 ---
 
-## Install the current pre-release
+Start with an order that can be placed once. You'll save it through a repository
+and listen for the event that the order was placed. This example uses the core
+package, a local event bus, and no external services.
 
-The dddart packages are currently installed from Git. The example pubspec pins an immutable revision so the application does not silently change when the repository advances. Flutter applications use their bundled Dart SDK.
+## Set up the application
 
-Create a small Dart application:
+Create an empty directory with a `bin` subdirectory. Copy the
+[core example pubspec](https://github.com/continuousimagination/dddart/blob/main/docs/quickstarts/core/pubspec.yaml.txt)
+into the application as `pubspec.yaml`. Run `dart pub get` in that directory.
+For an existing app, see the
+[Git installation guide](https://github.com/continuousimagination/dddart/blob/main/docs/GIT_INSTALLATION.md).
 
-```bash
-mkdir dddart_core_quickstart
-cd dddart_core_quickstart
-mkdir bin
-```
+## Model and run an order
 
-Copy the [example pubspec](https://github.com/continuousimagination/dddart/blob/main/docs/quickstarts/core/pubspec.yaml.txt) into the application as `pubspec.yaml`.
-It declares the SDK requirement and all dependency constraints.
-
-Then resolve the dependency:
-
-```bash
-dart pub get
-```
-
-Use `flutter pub get` in a Flutter project. Commit your application's `pubspec.lock` so its resolved dependency graph is reproducible. Hosted installation will be available after package publication.
-
-## Model one useful action
-
-Save the following complete program as `bin/main.dart`. It defines an order, records the fact that it was placed, and stores the order through a repository interface.
+Save this code as `bin/main.dart`:
 
 <!-- dddart-source: docs/quickstarts/core/bin/main.dart -->
 ```dart
@@ -79,53 +68,23 @@ Future<void> main() async {
 ```
 <!-- /dddart-source -->
 
-Run it:
+Run `dart run bin/main.dart` from the application directory:
 
-```bash
-dart run bin/main.dart
+<!-- dddart-source: docs/quickstarts/core/expected/main.txt -->
+```text
+Sam: order placed = true
 ```
+<!-- /dddart-source -->
 
-The program prints `Sam: order placed = true`. Calling `place()` twice fails the domain rule. The event has the same typed aggregate identity used by the repository.
-
-This example deliberately uses a local bus and an in-memory repository. The repository keeps object references; it is not durable storage. A local `publish()` enqueues delivery; it does not wait for every listener's business operation. The explicit `received` future waits for the event used in this example. See [Events](/dddart/docs/events/) for asynchronous publication, retries, and durable acceptance.
-
-## Understand the pieces you just used
-
-| Piece | What it contributes |
-| --- | --- |
-| `AggregateRoot<UuidValue>` | An aggregate identity, lifecycle timestamps, and a pending event queue |
-| `place()` | A business action and its rule, owned by your model |
-| `Repository<Order, UuidValue>` | A typed contract for get, save, and delete |
-| `InMemoryRepository` | A simple implementation for this local example |
-| `DomainEvent<UuidValue>` | A fact tied to an aggregate, with its own occurrence ID |
-| `EventBus` | Typed local delivery to interested listeners |
-
-`AggregateRoot<I>` takes an explicit identity for every identity type. Use `AggregateRoot<UuidValue>` with `UuidValue.generate()` when a generated UUID is appropriate; use a custom `Identity` when the domain already has an identifier or needs a composite scope.
-
-## Add JSON or other packages
-
-For JSON generation, add direct Git entries for `dddart_serialization` and `dddart_json` with the same `url` and `ref`, changing `path` to the corresponding `packages/<name>` directory. Add `build_runner` as a development dependency, then follow the complete [serialization how-to](/dddart/docs/serialization/).
-
-Some adapters still declare sibling dddart dependencies as hosted packages. Until publication, those need same-revision Git `dependency_overrides` in the **consuming application's root pubspec**. Adding a direct Git dependency alone does not change a transitive hosted dependency's source.
-
-The [complete override fragment](/dddart/downloads/git-dependencies.yaml) lists all 18 dddart packages pinned to the revision used here. Copy its `dependency_overrides` section into your root pubspec, and add the packages your own code imports under `dependencies` as shown in the fragment. The fragment is configuration to merge into your existing pubspec, not a complete application manifest. Keep all dddart refs aligned when updating.
-
-For working inside this repository instead, use the root Dart workspace:
-
-```bash
-git clone https://github.com/continuousimagination/dddart.git
-cd dddart
-git checkout 56607ac8d3913b8e896ac03f8ecff58473d62ce2
-dart pub get
-```
-
-The [examples guide](/dddart/docs/examples/) identifies the commands, generation steps, and external services each example needs.
+`Order.place()` owns the business rule and records a pending event. The
+program captures that event before awaiting the save. It publishes the
+captured batch once the save succeeds, acknowledges it, awaits a listener,
+and closes the bus. The in-memory repository keeps object references and
+loses its data when the process ends.
 
 ## Choose your next step
 
-- [Modeling](/dddart/docs/modeling/): values, aggregate boundaries, identities, and business rules.
-- [Shared contracts](/dddart/docs/contracts/): organize the code you want to reuse on server, web, and mobile.
-- [JSON serialization](/dddart/docs/serialization/): generate a representation that preserves the domain's types.
-- [Repositories](/dddart/docs/repositories/): move from in-memory storage to SQLite or another adapter.
-- [HTTP](/dddart/docs/http/): expose a repository on the server and consume it from a client.
-- [Events](/dddart/docs/events/): connect local behavior to aggregate watches and retained history.
+- [Model a domain](/dddart/docs/modeling/) with values, aggregate rules, and
+  typed IDs.
+- [Generate JSON](/dddart/docs/serialization/) when a model needs a wire format.
+- [Choose a repository](/dddart/docs/repositories/) when you need persistence.

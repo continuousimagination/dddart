@@ -1,120 +1,50 @@
 ---
-title: Add adapters at the edges
-description: Connect Slack webhooks, optional AppSync live events, and serverless handlers while keeping the domain contracts shared.
+title: Connect external services
+description: Receive verified webhooks and add optional live publication to the shared event client.
 section: Connect the pieces
 order: 50
 ---
 
-The checked [outside-workspace manifest and commands](https://github.com/continuousimagination/dddart/tree/main/docs/quickstarts/slack_server)
-provide the surrounding compilation context for the complete program below.
-
-
-
-External systems have their own protocols. An adapter translates those protocols into your application's language. It should not make a Slack request, an AWS channel, or a database connection part of a domain object's identity.
-
-These integrations are optional. You can use the core package without a server, use HTTP events without AWS, or expose a webhook without adopting distributed events.
+Keep credentials, transport setup, and provider-specific payloads at the
+application's edge. Convert accepted inputs into domain actions through your
+application service.
 
 ## Receive a verified Slack command
 
-`WebhookResource<TPayload, TVerification>` reads the body once, verifies that exact body, deserializes the payload, and then invokes your handler. A failed verification returns 401; a malformed payload returns 400. The handler receives both a typed payload and the verifier's typed result.
+Use the
+[Slack server example](https://github.com/continuousimagination/dddart/blob/main/docs/quickstarts/slack_server/README.md)
+to assemble a Shelf route, `SlackWebhookVerifier`, a form deserializer, and a
+typed handler. Compile locally first. To run it with Slack, supply your
+signing secret and configure Slack to send to your callback URL.
 
-This complete server program uses the supplied Slack verifier and form decoder:
-
-<!-- dddart-source: docs/quickstarts/slack_server/bin/main.dart -->
-```dart
-import 'dart:io' as io;
-
-import 'package:dddart_rest/dddart_rest.dart';
-import 'package:dddart_webhooks/dddart_webhooks.dart';
-import 'package:dddart_webhooks_slack/dddart_webhooks_slack.dart';
-import 'package:shelf/shelf.dart';
-
-Future<void> main() async {
-  final secret = io.Platform.environment['SLACK_SIGNING_SECRET'];
-  if (secret == null || secret.isEmpty) {
-    throw StateError('Set SLACK_SIGNING_SECRET before starting the server.');
-  }
-
-  final webhook = WebhookResource<SlackSlashCommand, SlackVerificationResult>(
-    path: '/webhooks/slack',
-    verifier: SlackWebhookVerifier(signingSecret: secret),
-    deserializer: (body) => WebhookDeserializers.form(
-      body,
-      SlackSlashCommand.fromForm,
-    ),
-    handler: (command, verification) async {
-      // Translate the command into an application use case here.
-      return Response.ok('Received ${command.command} from ${command.userId}');
-    },
-  );
-
-  final server = HttpServer(port: 8080)
-    ..addRoute('POST', webhook.path, webhook.handleRequest);
-  await server.start();
-}
-```
-<!-- /dddart-source -->
-
-Install `dddart_rest`, `dddart_webhooks`, `dddart_webhooks_slack`, and `shelf` through your application's dependency setup. Use the [Git installation guide](/dddart/docs/getting-started/) for the dddart packages. Configure Slack's command request URL to reach this route through your deployment's HTTPS endpoint.
-
-The verifier checks Slack's HMAC-SHA256 signature and rejects timestamps outside a five-minute past-or-future window by default. A timestamp window is not a permanent duplicate-request ledger. If a command causes a non-repeatable action, give the application use case its own idempotency strategy.
-
-Use `command.teamId` for a slash command's workspace: the verifier's optional `teamId` metadata is extracted from JSON, while slash commands are form encoded. Use `userId` as the stable user identity; `userName` is optional.
-
-The handler above only acknowledges the input. Authorization to perform an application action still belongs to that action. A valid Slack signature proves the request came through Slack; it does not by itself give a user permission to approve an order.
+The signature check uses the original request body before decoding. Keep the
+secret on the server. A timestamp window limits stale replays; handlers must
+account for retries within that window. The
+[Slack package guide](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_webhooks_slack/README.md)
+shows the payload types and error behavior.
 
 ## Add another webhook provider
 
-Implement `WebhookVerifier<YourVerificationResult>` for the provider's exact signature format, and choose a decoder with `WebhookDeserializers.json` or `.form`. Signature verification happens before deserialization. A raw `String` payload can omit a deserializer.
-
-Register the handler with `HttpServer.addRoute('POST', path, resource.handleRequest)`, or mount it in your existing Shelf router. There is no `registerWebhook` method on `HttpServer`.
-
-See the [webhook resource](https://github.com/continuousimagination/dddart/blob/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_webhooks/lib/src/webhook_resource.dart), [Slack verifier](https://github.com/continuousimagination/dddart/blob/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_webhooks_slack/lib/src/slack_webhook_verifier.dart), and [Slack examples](https://github.com/continuousimagination/dddart/tree/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_webhooks_slack/example).
+Use `WebhookResource` with a verifier and deserializer for that provider.
+Verify what the provider actually signs before trusting any claimed sender
+identity. See the
+[webhook examples](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_webhooks/example/README.md)
+for JSON, forms, and custom verification.
 
 ## Add live events with AppSync
 
-`dddart_events_appsync` implements an optional transport for the [aggregate-watch contract](/dddart/docs/events/). It uses AppSync Events directly. There is no GraphQL schema to maintain, and clients do not need Amplify, Flutter, or AWS access keys merely to watch aggregates.
-
-HTTP control routes still resolve membership, authorize publication targets, and recover retained history. The live transport multiplexes watches over one WebSocket. Supply endpoints from an existing deployment and the current application-token callback.
-
-The [complete AppSync examples](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_events_appsync/example/README.md) supply the concrete registry, policy and lifecycle. The native invocation program runs locally; the live smoke client is compile-checked and requires an existing deployment to run.
-
-The namespace must match the deployment. Connections, subscriptions, and publications obtain current credentials. The client uses portable HTTP and WebSocket abstractions for browser and native applications. Pause, resume, disposal, history expiration, and duplicate handling remain the responsibilities described in the event guide; this foreground transport does not supply background mobile notifications.
+Keep the [same event client and watch contract](/dddart/docs/events/). Use an
+`AppSyncEventTransport` for live delivery and give its HTTP control transport
+and AppSync connection access to the current token. The
+[native handler example](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_events_appsync/example/README.md)
+runs without deploying anything. To connect a real app, follow the
+[AppSync deployment guide](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_events_appsync/DEPLOY.md)
+for resource configuration, authorization, smoke testing, and cleanup.
 
 ## Keep durable event infrastructure on the server
 
-For multiple server processes or Lambda invocations, use shared event history and channel mappings. Configure `DynamoConnection` and an existing event table.
-
-The [complete DynamoDB history example](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_events_dynamodb/example/README.md) runs against DynamoDB Local and shows the repository imports, table lifecycle and cleanup.
-
-These classes come from `dddart_events_dynamodb`; `DynamoConnection` comes from `dddart_repository_dynamodb`. Pass the repositories into `AggregateEventService` alongside the registry and application policy. Clients do not need this database package or their own event database.
-
-The table uses string `pk` / `sk` keys and an `expiresAt` TTL attribute. An append transaction commits the history record, occurrence lookup, and ingestion head together. Retention defaults to seven days; reads enforce expiration even when physical TTL deletion has not happened yet. Current heads and channel mappings do not expire. Adapter construction does not create the table.
-
-## Reuse authentication in native handlers
-
-`CredentialVerifier<C>.verifyCredential(token)` is independent of an HTTP request. `JwtAuthHandler` and `OAuthJwtAuthHandler` expose that contract, so an application can reuse its verified claims for HTTP and native event handlers. `JwtCredentialVerifier` is available without token-issuance or refresh-token repositories.
-
-`AppSyncEventHandlers<C>` receives an `AggregateEventService<C>` plus authentication and claims callbacks. Its operations have distinct native contracts:
-
-| Operation | Responsibility |
-| --- | --- |
-| `authorize` | Validate the token and operation; return verified handler context. |
-| `onSubscribe` | Check the current channel and current aggregate membership. |
-| `onPublish` | Validate each envelope, await durable acceptance, and return accepted payloads or item errors. |
-
-The supplied custom runtime awaits invocation work. Your Lambda handler should likewise await `repository.save` or `publisher.publish` before returning. A fire-and-forget local bus listener is not a durable serverless publication boundary.
-
-AppSync physical channels use random IDs, separate from logical aggregate identities. When application access changes, update authoritative membership and publish a registered access-changing event. The service can rotate the channel and prompt subscribers to reauthorize. Revocation is best effort: membership changes, rotation, and in-flight delivery are not one atomic operation.
-
-## Run locally, deploy deliberately
-
-From a checkout with workspace dependencies resolved, this finite example exercises native invocation composition without provisioning AWS:
-
-```bash
-dart run packages/dddart_events_appsync/example/native_invocation.dart
-```
-
-The repository also includes a [CloudFormation template](https://github.com/continuousimagination/dddart/blob/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_events_appsync/deploy/cloudformation.yaml), [container definition](https://github.com/continuousimagination/dddart/blob/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_events_appsync/deploy/Dockerfile), and [Lambda entrypoint](https://github.com/continuousimagination/dddart/blob/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_events_appsync/example/lambda.dart). The template supports custom JWTs or an existing Cognito/OIDC provider; it does not create a user pool. Its reference ACL policy is example application code that you replace with your own authoritative policy.
-
-Follow the [deployment and cleanup guide](https://github.com/continuousimagination/dddart/blob/56607ac8d3913b8e896ac03f8ecff58473d62ce2/docs/DISTRIBUTED_EVENTS.md#build-and-deploy-the-reference-application) for account, region, image, table, and authentication configuration. That workflow creates billable AWS resources and is separate from this documentation site's free GitHub Pages hosting. The opt-in smoke program requires an existing configured deployment; local protocol fixtures are not a live AWS test.
+Multiple processes need a shared history and channel mapping. Use the
+[DynamoDB event store](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_events_dynamodb/README.md)
+on the server. Clients use the event API and keep their own watch checkpoints.
+The history example runs against DynamoDB Local; deploy and verify application
+permissions separately.

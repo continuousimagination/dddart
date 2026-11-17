@@ -1,15 +1,16 @@
-# Slack server compilation context
+# Set up a Slack webhook server
 
-Create an empty application directory outside the repository
-and copy the following named files. The manifest pins Git dependencies to the
-same revision as the primary quickstarts.
+## Set up the application
+
+Create a directory outside the repository and save the files below.
 
 This is a **compile-only** integration example. Running the server requires an
 application-owned `SLACK_SIGNING_SECRET`, a configured Slack sender and deployment.
 The check never starts the server, reads a secret or contacts Slack.
 
 Copy the [example pubspec](pubspec.yaml.txt) into the application as `pubspec.yaml`.
-It declares the SDK requirement and all dependency constraints.
+
+## Add the application files
 
 Save as `bin/main.dart`:
 
@@ -48,7 +49,7 @@ Future<void> main() async {
 ```
 <!-- /dddart-source -->
 
-Run these commands:
+## Compile the server
 
 <!-- dddart-source: docs/quickstarts/slack_server/commands.sh -->
 ```sh

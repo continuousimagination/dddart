@@ -4,12 +4,9 @@ Generated DynamoDB repositories for trusted services and disposable local develo
 
 [Capability boundaries](../../docs/CAPABILITIES.md) · [Supported imports](../../docs/PUBLIC_API.md)
 
-## Installation and runnable setup
+## Get started
 
-Follow the [complete dynamodb workflow](../../docs/quickstarts/dynamodb/README.md)
-for the current Git manifest, named files, clean generation where required,
-expected output and cleanup. Hosted release installation remains separate under
-#30. The workflow links its example pubspec. 1.0 is the first compatibility baseline.
+Run the [DynamoDB quickstart](../../docs/quickstarts/dynamodb/README.md) for a complete application.
 
 ## Models, keys and generation
 
@@ -65,11 +62,4 @@ IAM, Global Tables, LocalStack or a deployed service. DocumentDB is a different
 protocol; the [MongoDB adapter](../dddart_repository_mongodb/README.md) has its
 own explicit verification boundary.
 
-## API and validation
-
-The [public library](lib/dddart_repository_dynamodb.dart) links the current API declarations. Detailed
-contracts live with those declarations instead of duplicated signatures here.
-[Repository examples](example/README.md) list their runtime/service requirements.
-From the repository root, run the package and example commands in
-[validation](../../scripts/README.md). Required service/browser lanes must be
-available; compiling a configured sample does not prove a live deployment.
+See the [public library](lib/dddart_repository_dynamodb.dart) and [example programs](example/README.md).

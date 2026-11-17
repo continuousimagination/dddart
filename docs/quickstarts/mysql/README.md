@@ -1,18 +1,18 @@
 # MySQL persistence
 
-The example manifest uses one immutable Git revision; it does not require
-published DDDart packages. See [Git installation](https://github.com/continuousimagination/dddart/blob/main/docs/GIT_INSTALLATION.md)
-for source overrides and [the support matrix](https://github.com/continuousimagination/dddart/blob/main/docs/CAPABILITIES.md) for platform limits.
+Generate MySQL persistence for a note and exercise it against a disposable database.
 
-MySQL 8 on localhost:3307, database `test_db`, root password `test_password`. Docker must be installed and running.
-Use these commands in another terminal; wait until the readiness command succeeds
-(or DynamoDB Local reports it has started) before running Dart. A required service
-being unavailable is a failure, not a skipped quickstart.
+## Start MySQL
+
+Start Docker and run the commands below. They create a disposable database on
+localhost:3307. Wait for the readiness command to succeed before running Dart.
 
 ```sh
 docker run --rm -d --name dddart-quickstart-mysql -p 127.0.0.1:3307:3306 -e MYSQL_ROOT_PASSWORD=test_password -e MYSQL_DATABASE=test_db mysql:8.0
 docker exec dddart-quickstart-mysql mysqladmin ping -h 127.0.0.1 -ptest_password
 ```
+
+## Set up the application
 
 Create an empty directory **outside this repository**, then create the named files:
 
@@ -23,7 +23,8 @@ mkdir -p bin lib
 ```
 
 Copy the [example pubspec](pubspec.yaml.txt) into the application as `pubspec.yaml`.
-It declares the SDK requirement and all dependency constraints.
+
+## Add the application files
 
 Save as `bin/main.dart`:
 
@@ -82,7 +83,7 @@ class Note extends AggregateRoot<UuidValue> {
 ```
 <!-- /dddart-source -->
 
-Resolve dependencies, generate from clean build state, analyze, and run:
+## Run the example
 
 <!-- dddart-source: docs/quickstarts/mysql/commands.sh -->
 ```sh

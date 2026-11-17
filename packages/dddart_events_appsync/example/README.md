@@ -1,43 +1,23 @@
-# dddart_events_appsync_example examples
+# dddart_events_appsync examples
 
-These are maintained application samples for [dddart_events_appsync](../README.md).
-For a fresh application outside the checkout, start with the
-[standalone workflows](../../../docs/QUICKSTARTS.md). These repository examples use
-the workspace's package resolution and are not hosted-installation evidence.
+Start with the finite native invocation example. Follow the [deployment guide](../DEPLOY.md) for the optional Lambda and live smoke programs. See the [package guide](../README.md) for its API.
 
-## Setup and validation
+## Run from a checkout
 
-SDK and dependency constraints are declared in the [example pubspec](pubspec.yaml).
-From the repository root, resolve workspace tooling with
-`dart pub get`, then run the lane below. It resolves the example package,
-regenerates its declared parts when required, analyzes with fatal infos, compiles
-each program, runs eligible finite/service programs and cleans temporary outputs.
+Resolve the workspace, then run this lane from the repository root. It uses
+the [example pubspec](pubspec.yaml) for dependencies and generation.
 
 ```sh
+dart pub get
 dart tool/validation/validate.dart example dddart_events_appsync_example --mode=ci
 ```
 
-Required local services must be available; CI mode fails when they are missing.
-The [service setup](../../../scripts/README.md) and
-[shared inventory](../../../tool/validation/inventory.json) specify host/port,
-builders and verification boundaries. Tests using local services do not verify a
-cloud deployment or application credentials.
-
 ## Programs
 
-| Source | Coverage / runtime context |
-| --- | --- |
-| [native_invocation.dart](native_invocation.dart) | Compiled and run; finite local demonstration. Finite native invocation with explicit local test authentication. |
-| [lambda.dart](lambda.dart) | Compiled only; running requires application configuration or a long-running server. Complete custom runtime, requiring explicit AWS deployment. |
-| [aws_smoke.dart](aws_smoke.dart) | Compiled only; running requires application configuration or a long-running server. Explicit opt-in smoke against existing AWS resources. |
+| Program | How it runs | What it shows |
+| --- | --- | --- |
+| [native_invocation.dart](native_invocation.dart) | Local run | Finite native invocation with explicit local test authentication. |
+| [lambda.dart](lambda.dart) | Compile only | Complete custom runtime, requiring explicit AWS deployment. |
+| [aws_smoke.dart](aws_smoke.dart) | Compile only | Explicit opt-in smoke against existing AWS resources. |
 
-Each program contains its complete imports and application model/context. Inspect
-its constants and prerequisites before running it manually from this directory.
-Use disposable test databases and credentials. Do not treat sample users, signing
-secrets, endpoints or authorization policies as production configuration.
-
-Generated `.g.dart` parts belong to their handwritten model library. Run the
-example lane after changing models; do not reuse old generated parts. Custom
-repository implementation parts must share that library so generated private
-helpers remain accessible. Follow the [supported contracts](../../../docs/CAPABILITIES.md)
-for identity, persistence, conditional writes, optional auth and event publication.
+Compile-only programs need the configuration or running server indicated above.

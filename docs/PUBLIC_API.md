@@ -2,12 +2,10 @@
 
 See the [support matrix](CAPABILITIES.md) for runtime prerequisites and capability limits.
 
-This is the intended API surface for the first compatibility baseline, 1.0.
-Package release inclusion, versions and SDK bounds are tracked separately in
-#97–#99. `lib/src` files are implementation details even when a public library
-exports selected declarations from them. Import the entrypoints below, never
-another package's `src`. All public declarations in the listed exported modules
-are supported at that entrypoint; private declarations remain internal.
+This is the supported API surface for DDDart's first compatibility baseline,
+1.0. Import the listed public libraries. A `lib/src` path is an implementation
+detail even when a public library exports some of its declarations. The
+exported declarations are supported at the public entrypoint.
 
 ## Application and extension contracts
 
@@ -38,8 +36,7 @@ IdentityTypeAnalysis resolves concrete inherited identities, TypeMapper maps
 resolved types and SchemaGenerator emits DDL using a SqlDialect. It re-exports
 the runtime SQL contracts so sibling builders need one import. These APIs are
 coupled to the analyzer dependency range; do not import them into applications.
-They do not reflect over arbitrary runtime object fields. The unused, incomplete
-GraphTraverser has been removed.
+They do not reflect over arbitrary runtime object fields.
 
 `dddart_rest/credentials.dart` exposes verification without generated token
 issuance models. `dddart_rest/http.dart` exposes routing and CRUD without those

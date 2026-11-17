@@ -11,11 +11,9 @@ concrete identity. Both entity and aggregate constructors require `id:`.
 A domain constructor may explicitly choose `UuidValue.generate()`.
 Event occurrence IDs remain UUIDs independently of their aggregate's identity.
 
-The [complete native-identity program](../../docs/quickstarts/core/bin/identity.dart)
-is published in the [modeling guide](https://continuousimagination.github.io/dddart/docs/modeling/)
-and runs through the core documentation workflow. The
-[JSON identity workflow](../../docs/quickstarts/json/README.md) adds an explicit
-codec and generated serialization, with all imports, parts and commands.
+Use the [modeling guide](https://continuousimagination.github.io/dddart/docs/modeling/)
+to run a scoped identity example. The [JSON quickstart](../../docs/quickstarts/json/README.md)
+adds an explicit codec and generated serialization.
 
 ## Boundary contracts
 
@@ -29,8 +27,4 @@ registries. Each adapter owns its key-size, comparison and URI-escaping rules.
 See [serialization](../../docs/SERIALIZATION.md),
 [capabilities](../../docs/CAPABILITIES.md) and the relevant
 [adapter workflow](../../docs/QUICKSTARTS.md). Annotated open/erased identities
-fail generation; there are no UUID-specific entity/aggregate base classes.
-
-1.0 is the first compatibility baseline. Regenerate repository-owned models and
-use fresh pre-release fixtures; no pre-1.0 schema or generated-code upgrade is
-promised.
+fail generation; supply a concrete identity type.

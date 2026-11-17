@@ -1,13 +1,13 @@
 # Public HTTP endpoint
 
-The example manifest uses one immutable Git revision; it does not require
-published DDDart packages. See [Git installation](https://github.com/continuousimagination/dddart/blob/main/docs/GIT_INSTALLATION.md)
-for source overrides and [the support matrix](https://github.com/continuousimagination/dddart/blob/main/docs/CAPABILITIES.md) for platform limits.
+Run a public Shelf API and fetch an aggregate with a generated HTTP repository.
 
 This server demo runs on the Dart VM. It binds an ephemeral loopback port and
 makes one anonymous request. No authentication provider is installed: the route
 is deliberately public. See the [public/protected example](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/example/public_leaderboard_example.dart)
 for per-operation policy overrides.
+
+## Set up the application
 
 Create an empty directory **outside this repository**, then create the named files:
 
@@ -18,7 +18,8 @@ mkdir -p bin lib
 ```
 
 Copy the [example pubspec](pubspec.yaml.txt) into the application as `pubspec.yaml`.
-It declares the SDK requirement and all dependency constraints.
+
+## Add the application files
 
 Save as `bin/main.dart`:
 
@@ -95,7 +96,7 @@ class Note extends AggregateRoot<UuidValue> {
 ```
 <!-- /dddart-source -->
 
-Resolve dependencies, generate from clean build state, analyze, and run:
+## Run the example
 
 <!-- dddart-source: docs/quickstarts/rest/commands.sh -->
 ```sh

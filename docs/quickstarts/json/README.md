@@ -1,10 +1,12 @@
 # JSON generation and round trip
 
-The example manifest uses one immutable Git revision; it does not require
-published DDDart packages. See [Git installation](https://github.com/continuousimagination/dddart/blob/main/docs/GIT_INSTALLATION.md)
-for source overrides and [the support matrix](https://github.com/continuousimagination/dddart/blob/main/docs/CAPABILITIES.md) for platform limits.
+Generate a serializer for a reservation, then round-trip it as a map and as
+JSON text. The model stays responsible for its domain data; the serializer
+owns the representation.
 
-Create an empty directory **outside this repository**, then create the named files:
+## Set up the application
+
+Create an empty application outside the DDDart repository:
 
 ```sh
 mkdir dddart_json_quickstart
@@ -13,9 +15,106 @@ mkdir -p bin lib
 ```
 
 Copy the [example pubspec](pubspec.yaml.txt) into the application as `pubspec.yaml`.
-It declares the SDK requirement and all dependency constraints.
 
-Save as `bin/configuration.dart`:
+## Add the model
+
+Save this file as `lib/reservation.dart`. The `.g.dart` part is generated in the
+next step.
+
+<!-- dddart-source: docs/quickstarts/json/lib/reservation.dart -->
+```dart
+import 'dart:convert';
+
+import 'package:dddart/dddart.dart';
+import 'package:dddart_json/dddart_json.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
+
+part 'reservation.g.dart';
+
+@Serializable()
+class Reservation extends AggregateRoot<UuidValue> {
+  Reservation({
+    required this.guestName,
+    required this.seats,
+    this.note,
+    UuidValue? id,
+    super.createdAt,
+    super.updatedAt,
+  }) : super(id: id ?? UuidValue.generate());
+
+  final String guestName;
+  final SeatCount seats;
+  final String? note;
+}
+
+@Serializable()
+class SeatCount extends Value {
+  factory SeatCount({required int value}) {
+    if (value < 1) throw ArgumentError('At least one seat is required');
+    return SeatCount._(value);
+  }
+
+  const SeatCount._(this.value);
+  final int value;
+
+  @override
+  List<Object?> get props => [value];
+}
+```
+<!-- /dddart-source -->
+
+## Generate and run
+
+Save this file as `bin/main.dart`:
+
+<!-- dddart-source: docs/quickstarts/json/bin/main.dart -->
+```dart
+import '../lib/reservation.dart';
+
+void main() {
+  final serializer = ReservationJsonSerializer();
+  final original = Reservation(
+    guestName: 'Sam',
+    seats: SeatCount(value: 2),
+  );
+
+  final json = serializer.toJson(original);
+  final text = serializer.serialize(original);
+  final restored = serializer.deserialize(text);
+
+  print(json['guestName']); // Sam
+  print(restored.id == original.id); // true
+  print(restored.seats == original.seats); // true
+}
+```
+<!-- /dddart-source -->
+
+Run these commands in the application directory:
+
+<!-- dddart-source: docs/quickstarts/json/commands.sh -->
+```sh
+dart pub get
+dart run build_runner clean
+dart run build_runner build --delete-conflicting-outputs
+dart analyze --fatal-infos
+dart run bin/main.dart
+```
+<!-- /dddart-source -->
+
+The program prints the restored guest name and verifies the ID and seat count:
+
+<!-- dddart-source: docs/quickstarts/json/expected/main.txt -->
+```text
+Sam
+true
+true
+```
+<!-- /dddart-source -->
+
+## Try naming and null options
+
+Save this file as `bin/configuration.dart`. It uses the generated reservation
+serializer above to show naming and null behavior:
 
 <!-- dddart-source: docs/quickstarts/json/bin/configuration.dart -->
 ```dart
@@ -47,7 +146,10 @@ void main() {
 ```
 <!-- /dddart-source -->
 
-Save as `bin/identity.dart`:
+## Try a custom identity
+
+Save this file as `bin/identity.dart`. It registers a scoped ID codec,
+round-trips the canonical key, and shows the tagged JSON type:
 
 <!-- dddart-source: docs/quickstarts/json/bin/identity.dart -->
 ```dart
@@ -112,87 +214,7 @@ void main() {
 ```
 <!-- /dddart-source -->
 
-Save as `bin/main.dart`:
-
-<!-- dddart-source: docs/quickstarts/json/bin/main.dart -->
-```dart
-import '../lib/reservation.dart';
-
-void main() {
-  final serializer = ReservationJsonSerializer();
-  final original = Reservation(
-    guestName: 'Sam',
-    seats: SeatCount(value: 2),
-  );
-
-  final json = serializer.toJson(original);
-  final text = serializer.serialize(original);
-  final restored = serializer.deserialize(text);
-
-  print(json['guestName']); // Sam
-  print(restored.id == original.id); // true
-  print(restored.seats == original.seats); // true
-}
-```
-<!-- /dddart-source -->
-
-Save as `lib/reservation.dart`:
-
-<!-- dddart-source: docs/quickstarts/json/lib/reservation.dart -->
-```dart
-import 'dart:convert';
-
-import 'package:dddart/dddart.dart';
-import 'package:dddart_json/dddart_json.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
-
-part 'reservation.g.dart';
-
-@Serializable()
-class Reservation extends AggregateRoot<UuidValue> {
-  Reservation({
-    required this.guestName,
-    required this.seats,
-    this.note,
-    UuidValue? id,
-    super.createdAt,
-    super.updatedAt,
-  }) : super(id: id ?? UuidValue.generate());
-
-  final String guestName;
-  final SeatCount seats;
-  final String? note;
-}
-
-@Serializable()
-class SeatCount extends Value {
-  factory SeatCount({required int value}) {
-    if (value < 1) throw ArgumentError('At least one seat is required');
-    return SeatCount._(value);
-  }
-
-  const SeatCount._(this.value);
-  final int value;
-
-  @override
-  List<Object?> get props => [value];
-}
-```
-<!-- /dddart-source -->
-
-Resolve dependencies, generate from clean build state, analyze, and run:
-
-<!-- dddart-source: docs/quickstarts/json/commands.sh -->
-```sh
-dart pub get
-dart run build_runner clean
-dart run build_runner build --delete-conflicting-outputs
-dart analyze --fatal-infos
-dart run bin/main.dart
-```
-<!-- /dddart-source -->
-
-Optional additional guide programs:
+Run both programs from the application directory:
 
 <!-- dddart-source: docs/quickstarts/json/guide_commands.sh -->
 ```sh
@@ -201,17 +223,7 @@ dart run bin/identity.dart
 ```
 <!-- /dddart-source -->
 
-Expected output for `bin/main.dart`:
-
-<!-- dddart-source: docs/quickstarts/json/expected/main.txt -->
-```text
-Sam
-true
-true
-```
-<!-- /dddart-source -->
-
-`bin/configuration.dart` prints:
+Expected configuration output:
 
 <!-- dddart-source: docs/quickstarts/json/expected/configuration.txt -->
 ```text
@@ -222,7 +234,7 @@ Sam
 ```
 <!-- /dddart-source -->
 
-`bin/identity.dart` prints:
+Expected identity output:
 
 <!-- dddart-source: docs/quickstarts/json/expected/identity.txt -->
 ```text
@@ -231,4 +243,6 @@ issue.v1
 ```
 <!-- /dddart-source -->
 
-The program finishes and closes its resources. Delete the temporary application directory when finished.
+Delete the temporary application directory when finished. See the
+[serialization contract](../../SERIALIZATION.md) for precedence and error
+behavior.

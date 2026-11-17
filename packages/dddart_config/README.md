@@ -62,8 +62,5 @@ Await `Configuration.reload()` to reload its providers. The
 [reload example](example/reload_example.dart) exercises this lifecycle. Implement
 `ConfigProvider.lookup` and `reload` for custom providers; `lookup('')` must expose
 the whole root tree so merging and ancestor masking are consistent. The base
-provides scalar convenience access. The [standalone provider program](../../docs/quickstarts/configuration/bin/provider.dart)
-is included verbatim in its checked guide.
-
-Use the [package and example gates](../../scripts/README.md) for validation.
-1.0 is the first compatibility baseline; there is no pre-1.0 upgrade procedure.
+provides scalar convenience access. See the
+[standalone provider example](../../docs/quickstarts/configuration/bin/provider.dart).

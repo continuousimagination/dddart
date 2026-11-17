@@ -4,12 +4,9 @@ Generated MySQL repositories for typed aggregates on trusted native servers.
 
 [Capability boundaries](../../docs/CAPABILITIES.md) · [Supported imports](../../docs/PUBLIC_API.md)
 
-## Installation and runnable setup
+## Get started
 
-Follow the [complete mysql workflow](../../docs/quickstarts/mysql/README.md)
-for the current Git manifest, named files, clean generation where required,
-expected output and cleanup. Hosted release installation remains separate under
-#30. The workflow links its example pubspec. 1.0 is the first compatibility baseline.
+Run the [MySQL quickstart](../../docs/quickstarts/mysql/README.md) for a complete application.
 
 ## Models and storage
 
@@ -29,9 +26,8 @@ does not upgrade an existing schema.
 
 [MysqlConnection](lib/src/connection/mysql_connection.dart) uses `mysql_client`
 and owns one physical connection. Configure host, port, database, user, password
-and timeout; call `open()`/`close()`. `maxConnections` is an ignored legacy option,
-not a pool. Do not infer TLS options from another driver's API: this wrapper's
-constructor is the supported configuration boundary.
+and timeout; call `open()`/`close()`. Setting `maxConnections` has no effect.
+Use the wrapper's constructor as the connection configuration reference.
 
 A shared connection serializes concurrent operations and coordinates nested
 ordinary transactions. Each independent connection has its own coordinator.
@@ -53,15 +49,7 @@ The optional publisher runs only after confirmed outer commit and lock release.
 uncertain results, permissions and retry boundaries. Storage errors are mapped
 to `RepositoryException`; inspect its type and cause rather than message text.
 
-The [service test guide](TESTING.md) links the tested MySQL setup. Other server
-configurations and cloud deployments require their own evidence. The [driver reference](MYSQL_DRIVER_MIGRATION.md)
-replaces the obsolete mysql1 migration plan. No pre-1.0 upgrade bridge is required.
+Use the [development checks](../../scripts/README.md#package-and-example-checks)
+to exercise this adapter against a disposable MySQL service.
 
-## API and validation
-
-The [public library](lib/dddart_repository_mysql.dart) links the current API declarations. Detailed
-contracts live with those declarations instead of duplicated signatures here.
-[Repository examples](example/README.md) list their runtime/service requirements.
-From the repository root, run the package and example commands in
-[validation](../../scripts/README.md). Required service/browser lanes must be
-available; compiling a configured sample does not prove a live deployment.
+See the [public library](lib/dddart_repository_mysql.dart) and [example programs](example/README.md).

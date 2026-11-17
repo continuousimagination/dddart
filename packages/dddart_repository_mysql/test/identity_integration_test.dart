@@ -13,7 +13,7 @@ void main() {
   late ScopedIssueMysqlRepository scoped;
   const dialect = MysqlDialect();
   const childTable = 'native_comment';
-  const parentColumn = 'workynativeissues_id';
+  const parentColumn = 'fixturenativeissues_id';
   setUpAll(() async {
     connection = MysqlConnection(
       host: '127.0.0.1',
@@ -36,7 +36,7 @@ void main() {
     await scoped.createTables();
   });
   tearDownAll(() async {
-    for (final table in ['worky_native_issues', 'worky_scoped_issues']) {
+    for (final table in ['fixture_native_issues', 'fixture_scoped_issues']) {
       await connection.execute('DELETE FROM $table');
     }
     await connection.close();
@@ -44,7 +44,7 @@ void main() {
 
   test('legacy padded identity columns fail before writes in non-strict mode',
       () async {
-    await connection.execute('CREATE TABLE worky_legacy_identity ( '
+    await connection.execute('CREATE TABLE fixture_incompatible_identity ( '
         'id BINARY(16) PRIMARY KEY NOT NULL, createdAt DATETIME NOT NULL, updatedAt DATETIME NOT NULL)');
     try {
       final repository = LegacyIdentityMysqlRepository(connection);
@@ -59,10 +59,10 @@ void main() {
         ),
       );
       final rows = await connection
-          .query('SELECT COUNT(*) AS count FROM worky_legacy_identity');
+          .query('SELECT COUNT(*) AS count FROM fixture_incompatible_identity');
       expect(rows.single['count'], 0);
     } finally {
-      await connection.execute('DROP TABLE worky_legacy_identity');
+      await connection.execute('DROP TABLE fixture_incompatible_identity');
     }
   });
 

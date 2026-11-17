@@ -1,10 +1,11 @@
 # Core model and local events
 
-The example manifest uses one immutable Git revision; it does not require
-published DDDart packages. See [Git installation](https://github.com/continuousimagination/dddart/blob/main/docs/GIT_INSTALLATION.md)
-for source overrides and [the support matrix](https://github.com/continuousimagination/dddart/blob/main/docs/CAPABILITIES.md) for platform limits.
+Save an order and react to its domain event in one Dart process. This example
+needs no database or generator.
 
-Create an empty directory **outside this repository**, then create the named files:
+## Set up the application
+
+Create an empty application outside the DDDart repository:
 
 ```sh
 mkdir dddart_core_quickstart
@@ -13,9 +14,10 @@ mkdir -p bin
 ```
 
 Copy the [example pubspec](pubspec.yaml.txt) into the application as `pubspec.yaml`.
-It declares the SDK requirement and all dependency constraints.
 
-Save as `bin/main.dart`:
+## Model and publish an order
+
+Save this file as `bin/main.dart`:
 
 <!-- dddart-source: docs/quickstarts/core/bin/main.dart -->
 ```dart
@@ -64,7 +66,7 @@ Future<void> main() async {
 ```
 <!-- /dddart-source -->
 
-Resolve dependencies, analyze, and run:
+## Run it
 
 <!-- dddart-source: docs/quickstarts/core/commands.sh -->
 ```sh
@@ -74,11 +76,26 @@ dart run bin/main.dart
 ```
 <!-- /dddart-source -->
 
-Optional additional guide programs: copy their named files from the
+Expected output:
+
+<!-- dddart-source: docs/quickstarts/core/expected/main.txt -->
+```text
+Sam: order placed = true
+```
+<!-- /dddart-source -->
+
+The order records an event before saving. The program publishes it after the
+save, acknowledges the captured batch, and waits for the listener before
+closing its bus. The in-memory repository keeps object references and loses
+its data when the process ends.
+
+## Try the other core programs
+
+Copy the named files from the
 [modeling](https://continuousimagination.github.io/dddart/docs/modeling/),
-[contracts](https://continuousimagination.github.io/dddart/docs/contracts/) and
-[repository](https://continuousimagination.github.io/dddart/docs/repositories/) guides
-into `bin` before running these commands.
+[shared contracts](https://continuousimagination.github.io/dddart/docs/contracts/),
+and [repositories](https://continuousimagination.github.io/dddart/docs/repositories/)
+guides into `bin`, then run:
 
 <!-- dddart-source: docs/quickstarts/core/guide_commands.sh -->
 ```sh
@@ -89,14 +106,6 @@ dart run bin/identity.dart
 ```
 <!-- /dddart-source -->
 
-Expected output from `bin/main.dart`:
-
-<!-- dddart-source: docs/quickstarts/core/expected/main.txt -->
-```text
-Sam: order placed = true
-```
-<!-- /dddart-source -->
-
-The program finishes and closes its resources. Delete the temporary application directory when finished.
-The repository holds object references and the event bus is local. This example
-does not promise durable storage, listener completion, or an atomic outbox.
+Delete the temporary application directory when finished. Use the
+[example index](../../QUICKSTARTS.md) to choose a serializer, persistent
+repository, or integration.

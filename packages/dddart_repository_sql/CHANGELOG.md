@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Breaking SQL storage migration: UUID identity keys retain exact text bytes,
   including case, rather than normalize into 16-byte values.
 
-## [0.9.0] - 2025-01-XX
+## [0.9.0]
 
 ### Added
 

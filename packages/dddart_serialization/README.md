@@ -28,8 +28,10 @@ serialization or enforce domain encapsulation at runtime.
 stock codec; each application identity needs an explicit JSON and canonical-key
 codec registered under a stable type key. Share the registry with generated
 serializers and repositories. The complete
-[native identity example](../../docs/quickstarts/json/bin/identity.dart) defines
-the ID, codec, aggregate and generated-JSON round trip.
+[native identity example](../../docs/quickstarts/json/bin/identity.dart) shows
+the ID, codec, and canonical key round trip. The
+[generated event test](../dddart_json/test/domain_event_roundtrip_test.dart)
+shows a registry supplied to a generated serializer.
 
 JSON encoding can use native scalars or scoped structures. Key encoding must be
 reversible and collision-free; decoding rejects noncanonical aliases. Do not use
@@ -37,9 +39,5 @@ reversible and collision-free; decoding rejects noncanonical aliases. Do not use
 URI escaping and database size/comparison rules belong to the adapter.
 
 `toTaggedJson`/`fromTaggedJson` add an explicit type key for heterogeneous streams.
-Duplicate kinds/keys, unknown kinds and malformed values fail. Wire keys become
-compatibility contracts at 1.0; no pre-1.0 migration bridge is required.
-
-The [capability matrix](../../docs/CAPABILITIES.md) and
-[validation commands](../../scripts/README.md) describe the supported compositions
-and generated/handwritten parity checks.
+Duplicate kinds/keys, unknown kinds, and malformed values fail. Choose stable
+keys so consumers can decode values after a Dart class is renamed.
