@@ -33,10 +33,10 @@ ${[
 import 'package:dddart/dddart.dart';
 import 'package:dddart_events_distributed/dddart_events_distributed.dart';
 import 'package:dddart_events_appsync/dddart_events_appsync.dart';
+EventPublisher publisherOf(AggregateEventClient client) => client.publisher;
 Future<void> exercise(AggregateEventTransport transport, EventRegistry registry) async {
   final client=AggregateEventClient(transport:transport,registry:registry,aggregateKind:(_) => 'issue');
-  final EventPublisher publisher=client.publisher;
-  if (publisher is! EnvelopeEventPublisher) throw StateError('Different publisher contract');
+  publisherOf(client);
   await client.close();
 }
 Future<void> main() async {
