@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:test/test.dart';
@@ -70,16 +71,29 @@ class RemoteIssueOpened extends DomainEvent<RemoteId> {
 import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:dddart_events_distributed/dddart_events_distributed.dart';
 import 'package:clean_event_consumer/events.dart';
-void main() {
+Future<void> main() async {
   final identities=IdentityCodecRegistry()..register<RemoteId>('remote',RemoteCodec());
   final registry=createGeneratedEventRegistry(identityCodecs:identities);
   final event=RemoteIssueOpened(aggregateId:const RemoteId('Repo/IssueA %2F, café'),title:'created',context:{'tenantId':'one'});
   final stored=StoredEvent<RemoteId>.fromDomainEvent(event,registry:registry);
   final restored=StoredEvent<RemoteId>.fromJson(stored.toJson(),identityCodecs:identities).restore(registry) as RemoteIssueOpened;
   if(restored.aggregateId!=event.aggregateId || restored.eventId!=event.eventId || restored.title!=event.title || restored.context['tenantId']!='one' || stored.eventType!='remote.issue.opened.v1') throw StateError('Lost event data');
+  final AggregateEventTransport transport=HttpAggregateEventTransport(
+    baseUrl:Uri.parse('http://127.0.0.1:1/events'),wire:AggregateEventWire(identities),tokenProvider:() async => null);
+  final client=AggregateEventClient(transport:transport,registry:registry,aggregateKind:(_) => 'issue');
+  await client.close();
 }
 ''');
       await _success(fixture, ['pub', 'get', '--offline']);
+      final config = jsonDecode(
+        File('${fixture.path}/.dart_tool/package_config.json')
+            .readAsStringSync(),
+      ) as Map<String, dynamic>;
+      expect(
+        (config['packages'] as List)
+            .map((dynamic item) => (item as Map)['name']),
+        isNot(contains('dddart_events_appsync')),
+      );
       await _success(
         fixture,
         ['run', 'build_runner', 'build', '--delete-conflicting-outputs'],
