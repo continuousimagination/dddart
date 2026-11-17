@@ -48,7 +48,7 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   /// - [path]: The base path for this resource (e.g., '/users')
   /// - [repository]: Repository instance for persistence operations
   /// - [serializer]: JSON serializer for request and response bodies
-  /// - [authenticationHandler]: Optional authentication handler. When provided, all CRUD operations require authentication
+  /// - [authenticationHandler]: Optional verifier; defaults operations to authenticated access unless a policy overrides it
   /// - [authorizationSnapshot]: Complete detached domain copier for custom aggregate policies
   /// - [defaultPolicy]: Resource access policy; operation overrides replace it
   /// - [operationPolicies]: Explicit access policy for each selected operation
@@ -62,7 +62,10 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   /// - [preCreate]: Optional callback to modify aggregate before creation (e.g., set fields from auth context)
   ///
   /// Throws [ArgumentError] if:
-  /// - [path] is null or empty
+  /// - [path] is empty
+  /// - A required policy has no authentication verifier
+  /// - A custom aggregate policy has no [authorizationSnapshot]
+  /// - The identity codec or required conditional repository is unavailable
   CrudResource({
     required this.path,
     required this.repository,
@@ -177,7 +180,7 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   ///
   /// The handler owns datastore-side selection, ordering, pagination, and the
   /// accurate total count. It receives an empty query-parameter map, normalized
-  /// pagination values, and the current authentication result.
+  /// pagination values, and an [AuthorizedQuery] with the typed caller and scope.
   final QueryHandler<T, I, TClaims>? collectionHandler;
 
   /// Map of query parameter names to handler functions
