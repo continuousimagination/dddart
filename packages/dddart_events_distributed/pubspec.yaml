@@ -1,5 +1,5 @@
 name: dddart_events_distributed
-description: Distributed event system for DDDart that extends EventBus to enable domain events across network boundaries using HTTP polling.
+description: Aggregate-scoped domain events with HTTP polling, retained history, and shared client and publisher interfaces for optional live transports.
 version: 0.1.0
 publish_to: none
 
@@ -15,7 +15,6 @@ dependencies:
   http: ^1.5.0
   logging: ^1.2.0
   shelf: ^1.4.0
-  uuid: ^4.0.0
 
 dev_dependencies:
   fake_async: ^1.3.0

@@ -57,35 +57,17 @@ class _Auth implements AuthenticationHandler<String> {
 }
 
 class _Authorization
-    extends AuthorizationHandler<NativeIssue, NativeId, String> {
+    implements AuthorizationHandler<NativeIssue, NativeId, String> {
   NativeId? deleted;
   @override
-  Future<AuthorizationResult> authorizeCreate(
-    NativeIssue aggregate,
-    AuthenticationResult<String> authResult,
-  ) async =>
-      AuthorizationResult.allow();
-  @override
-  Future<AuthorizationResult> authorizeUpdate(
-    NativeIssue aggregate,
-    AuthenticationResult<String> authResult,
-  ) async =>
-      AuthorizationResult.allow();
-  @override
-  Future<AuthorizationResult> authorizeDelete(
-    NativeId aggregateId,
-    AuthenticationResult<String> authResult,
+  Future<AuthorizationResult> authorize(
+    AuthorizationContext<NativeIssue, NativeId, String> context,
   ) async {
-    deleted = aggregateId;
-    return AuthorizationResult.allow();
+    if (context is DeleteContext<NativeIssue, NativeId, String>) {
+      deleted = context.current.id;
+    }
+    return const AuthorizationResult.allow(scope: UnrestrictedQueryScope());
   }
-
-  @override
-  Future<AuthorizationResult> authorizeQuery(
-    Map<String, String> queryParams,
-    AuthenticationResult<String> authResult,
-  ) async =>
-      AuthorizationResult.allow();
 }
 
 void main() {
@@ -97,6 +79,12 @@ void main() {
       path: '/issues',
       repository: repository,
       serializer: serializer,
+      authorizationSnapshot: (value) => NativeIssue(
+        id: value.id,
+        title: value.title,
+        createdAt: value.createdAt,
+        updatedAt: value.updatedAt,
+      ),
       identityCodecs: codecs,
     );
     for (final key in ['.', '..', String.fromCharCode(0xd800)]) {
@@ -126,6 +114,12 @@ void main() {
         path: '/issues',
         repository: repository,
         serializer: serializer,
+        authorizationSnapshot: (value) => NativeIssue(
+          id: value.id,
+          title: value.title,
+          createdAt: value.createdAt,
+          updatedAt: value.updatedAt,
+        ),
         identityCodecs: codecs,
         preCreate: (issue, auth) =>
             NativeIssue(id: NativeId(key), title: issue.title),
@@ -157,6 +151,12 @@ void main() {
       path: '/issues',
       repository: repository,
       serializer: serializer,
+      authorizationSnapshot: (value) => NativeIssue(
+        id: value.id,
+        title: value.title,
+        createdAt: value.createdAt,
+        updatedAt: value.updatedAt,
+      ),
       identityCodecs: codecs,
       preCreate: (issue, auth) => NativeIssue(id: id, title: issue.title),
     );
@@ -187,15 +187,26 @@ void main() {
       () async {
     final codecs = issueIdentityCodecs();
     final serializer = _Serializer(codecs);
-    final repository = _Repository();
+    final repository = InMemoryConditionalRepository<NativeIssue, NativeId>(
+      clone: (value) => serializer.deserialize(serializer.serialize(value)),
+    );
     final authorization = _Authorization();
     final resource = CrudResource<NativeIssue, NativeId, String>(
       path: '/issues',
       repository: repository,
       serializer: serializer,
+      authorizationSnapshot: (value) => NativeIssue(
+        id: value.id,
+        title: value.title,
+        createdAt: value.createdAt,
+        updatedAt: value.updatedAt,
+      ),
       identityCodecs: codecs,
       authenticationHandler: _Auth(),
-      authorizationHandler: authorization,
+      defaultPolicy: AccessPolicy.custom(
+        authorization,
+        authentication: AuthenticationRequirement.required,
+      ),
     );
     const id = NativeId('Repo/IssueA %2F, café?x=# ');
     final issue = NativeIssue(id: id, title: 'original');
@@ -205,7 +216,6 @@ void main() {
       id.value,
     );
     expect(found.statusCode, 200);
-    expect(repository.reads, [id]);
     expect(serializer.deserialize(await found.readAsString()).id, id);
     final update = await resource.handleUpdate(
       Request(
@@ -235,7 +245,16 @@ void main() {
       id.value,
     );
     expect(deleted.statusCode, 204);
-    expect(repository.deletes, [id]);
+    await expectLater(
+      repository.getById(id),
+      throwsA(
+        isA<RepositoryException>().having(
+          (error) => error.type,
+          'type',
+          RepositoryExceptionType.notFound,
+        ),
+      ),
+    );
     expect(authorization.deleted, id);
   });
 

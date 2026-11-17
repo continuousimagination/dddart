@@ -222,11 +222,11 @@ void main() async {
       queryHandlers: {
         'me': (repo, params, skip, take, authResult) async {
           // Return current user's data
-          if (authResult == null) {
+          if (!authResult.caller.isAuthenticated) {
             throw Exception('Unauthorized');
           }
           final user = await repo.getById(
-            UuidValue.fromString(authResult.claims!.userId),
+            UuidValue.fromString(authResult.caller.claims!.userId),
           );
           return QueryResult([user], totalCount: 1);
         },

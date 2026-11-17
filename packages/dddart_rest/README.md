@@ -18,8 +18,9 @@ Register explicit `IdentityCodec<IssueId>` implementations in an instance-local
 repositories accept `identityCodecs: registry` and share it with body serialization.
 
 `CrudResource<T, I, TClaims>`, `AuthorizationHandler<T, I, TClaims>` and
-`QueryHandler<T, I>` retain concrete identity types. Delete authorization receives
-I. Query selection, pagination and authentication semantics are unchanged.
+`QueryHandler<T, I, TClaims>` retain concrete identity and claim types. Read and
+delete policies receive persisted aggregates; update policies receive separate
+current and proposed snapshots. Query handlers receive typed caller and scope.
 
 Client paths URI-encode canonical codec keys once. `HttpServer` decodes one
 segment once; direct `CrudResource.handleGetById/handleUpdate/handleDelete`
@@ -34,7 +35,146 @@ response with a different typed identity is rejected.
 
 RESTful CRUD API framework for DDDart - Provides REST endpoints for aggregate roots with minimal boilerplate.
 
-> **Note:** This package was previously named `dddart_http`. See the [Migration Guide](#migration-from-dddart_http) below.
+## Optional access policies
+
+No verifier or security policy means public CRUD. Installing an
+`authenticationHandler` defaults the resource to `AccessPolicy.authenticated()`.
+An explicit `defaultPolicy` replaces that default, and `operationPolicies`
+replaces it for each selected `CrudOperation`: `read`, `query`, `create`, `update`,
+`delete`. A public read override works without credentials on the same resource
+whose writes require authentication. No duplicate registration or dummy identity
+is needed.
+
+- `AccessPolicy.public()` permits anonymous requests.
+- `AccessPolicy.authenticated()` requires the configured verifier; this establishes
+  identity, not application ownership or tenant permissions.
+- `AccessPolicy.custom(handler, authentication: AuthenticationRequirement.optional)`
+  always calls the handler, including with `AnonymousCaller<TClaims>`. Select
+  `AuthenticationRequirement.required` when anonymous evaluation is inappropriate.
+
+Required authentication without a verifier is rejected at construction. Optional
+operations skip verification when credentials are missing. If a verifier is
+installed, supplied invalid credentials return 401 even on public operations;
+they never become anonymous after failure. The default detector checks for an
+Authorization header, including an empty one. Set `credentialsPresent` for a
+cookie or other credential transport. Without a verifier, public requests remain
+anonymous and request claims are never trusted.
+
+`AuthorizationHandler<T, I, TClaims>.authorize(context)` receives one of:
+
+| Context | Policy input supplied by the framework |
+| --- | --- |
+| `ReadContext` | Current persisted aggregate |
+| `QueryContext` | Typed caller and untrusted filter parameters |
+| `CreateContext` | Final proposed aggregate after `preCreate` |
+| `UpdateContext` | Separate current and proposed aggregate snapshots |
+| `DeleteContext` | Current persisted aggregate |
+
+Custom aggregate policies require an explicit `authorizationSnapshot` function
+that deep-copies the complete domain state, including permission fields omitted
+from public JSON. It must preserve identity and metadata, detach mutable values,
+and omit transient pending events. Use a domain copy function or a complete
+persistence codec, never a lossy public projection. The framework deliberately
+has no response-serializer fallback: public serialization must not rewrite the
+stored owner seen by policy. Query-only policies do not need aggregate snapshots.
+Public and authentication-only resources need no snapshot configuration.
+
+For example, the ownership sample supplies `authorizationSnapshot: snapshotDocument`
+alongside its custom policy. Changing a policy context object cannot modify storage
+or normalize the eventual proposal. Use `preCreate` for normalization. `Caller<TClaims>` is either `AnonymousCaller` (no claims) or
+`VerifiedCaller` (successful verifier result). Claims can be absent if the
+application's verifier intentionally returns none.
+
+Return `AuthorizationResult.allow()` or `AuthorizationResult.deny()`.
+An allowed custom collection decision must explicitly provide a `QueryScope`;
+`UnrestrictedQueryScope()` deliberately exposes all rows selected by that handler.
+The framework does not infer a tenant predicate. Denied/thrown collection policies
+never invoke query code, including unfiltered and pagination-only requests.
+
+Requests negotiate JSON first, then verify credentials, deserialize/validate
+identities, apply `preCreate` for creation, load any current state required by policy,
+evaluate access, and only then return protected data or perform mutations.
+Missing/invalid required credentials return 401; verified or custom anonymous
+denial returns 403. `AuthorizationResult.deny(conceal: true)` returns the same
+generic 404 as a missing record. Policy/verifier exceptions return generic 500,
+without their private exception text, body, ETag or query counts. Access failures
+cannot be overridden through `customExceptionHandlers`.
+
+See [the ownership example](example/authorization_example.dart) for an exhaustive
+policy using stored ownership, explicit owner transfer, public objects and scoped
+queries. Treat proposed ownership/tenant fields as untrusted unless server-owned
+normalization has assigned them. Policies must check the stored state first.
+
+### Run the public/protected example
+
+From `packages/dddart_rest/example`, run:
+
+```bash
+dart pub get
+dart run public_leaderboard_example.dart
+```
+
+The example starts an ephemeral local HTTP server, exercises anonymous leaderboard
+reads, authenticated submissions and moderator corrections/deletions, then checks
+public/private document scope and an unconfigured public CRUD resource. It closes
+the server and exits. Its credential verifier uses deterministic local fixtures;
+replace that verifier with JWT/OAuth verification in an application. The policies
+and optional/public operation configuration remain the same. This entrypoint is
+registered in the normal validation inventory and is executed, not just compiled.
+
+### Read authorization and query scope
+
+Item policy evaluates a detached view of persisted state before the HTTP response
+encoder or ETag builder runs. The explicit domain snapshot function is independent
+of public serialization; a denied read produces no aggregate response. A concealed denial
+and a missing item share the generic 404 body.
+
+Filtered, unfiltered and pagination-only reads all pass through the same selected
+collection policy. Scope is application-owned: constrain both the datastore query
+and its count with the verified tenant/owner, then apply request filters and
+pagination. A request such as `?tenant=someone-else` must never replace that verified
+scope. An empty page can still carry the authorized total count, but never a global
+count. The ownership example applies its scope before filtering and pagination;
+production repositories should perform the equivalent selection in their datastore.
+
+### Mutation authorization and atomic persistence
+
+Custom mutation policies require `ConditionalAggregateRepository<T, I>`. An
+incapable repository returns 501 before mutation; it never falls back to a
+read/check/ordinary save. Generated SQLite, MySQL, MongoDB and DynamoDB repositories
+and `InMemoryConditionalRepository` provide this capability.
+
+For an existing PUT or DELETE, the policy receives the persisted aggregate and
+caller (plus the separate PUT proposal). Its decision is bound to that loaded
+revision even when the client omits If-Match. If another writer changes ownership
+before commit, the CAS rejects the operation: 409 for an implicit policy condition,
+or 412 for a client-supplied condition. Reload and make a new authorization decision;
+the framework never retries with old permission and a new token. Ownership and
+tenant transfer are application policy, not framework-defined roles or immutable
+fields. The example checks stored ownership and explicitly permits administrator
+transfers while rejecting ordinary owner/tenant reassignment.
+
+POST is create-only. It authorizes the final `preCreate` proposal and uses atomic
+create-if-absent when available. An existing identity returns 409 (412 with explicit
+`If-None-Match: *`); POST with If-Match is unsupported (501), so create permission
+cannot overwrite a protected record. PUT of a missing identity additionally uses
+the create policy and `preCreate`, preserving the route ID. It returns 201 when
+created. PUT's selected authentication requirement still applies before this lookup;
+creation cannot be used to evade a stricter create policy.
+
+A missing ordinary DELETE returns 404; a matching-revision delete of a missing
+record returns 412. Explicit assert-absence deletion can return 204 after atomic
+absence confirmation. No aggregate-specific hook runs when there is no aggregate
+to inspect. Denial, exceptions and conflicts cause no persistence/publication or
+pending-event acknowledgment. Policy snapshots cannot normalize stored/proposed
+state; use `preCreate` for server-owned creation fields.
+
+Unconfigured public CRUD and deliberately anonymous custom policies remain
+supported. Plain repositories retain public/authentication-only CRUD and reject
+sequential POST overwrite, but they cannot guarantee isolation of competing
+creations. Use the conditional capability for that guarantee or for custom mutation
+policy. An authenticated-only policy verifies identity without making an ownership
+decision; use a custom policy when permissions depend on stored state.
 
 ## Features
 
@@ -350,7 +490,7 @@ Future<QueryResult<User>> listUsers(
   Map<String, String> queryParams,
   int skip,
   int take,
-  dynamic authResult,
+  AuthorizedQuery<void> authorization,
 ) {
   return (repository as UserReadRepository).listPage(
     skip: skip,
@@ -363,7 +503,7 @@ Future<QueryResult<User>> firstNameHandler(
   Map<String, String> queryParams,
   int skip,
   int take,
-  dynamic authResult,
+  AuthorizedQuery<void> authorization,
 ) {
   final firstName = queryParams['firstName']!;
   return (repository as UserReadRepository).findByFirstName(
@@ -560,14 +700,15 @@ final resource = CrudResource<User, UuidValue, void>(
 | Strong tag list | Select a matching revision, then retain that condition through the atomic write. |
 | Weak tags | Never match; a list can still match another strong tag. |
 | `If-Match: *` | Explicit 501: the shared capability does not expose existence-only writes. GET a revision first. |
-| `If-None-Match: *` | Atomic create-if-absent on PUT (201), or assert-absence on DELETE (204). An existing record returns 412. |
+| `If-None-Match: *` | Atomic create-if-absent on POST/PUT (201), or assert-absence on DELETE (204). An existing record returns 412. |
 | Other valid `If-None-Match` shapes | Explicit 501. |
 | Malformed or conflicting condition headers | 400; no mutation. |
 | No condition | Ordinary CRUD by default; 428 on PUT/DELETE when `requirePrecondition` is enabled. |
 
-Successful conditional PUT returns its committed revision ETag. Successful
-unconditional POST/PUT returns no validator: its basic save API does not return a
-committed token. GET again before a conditional edit. A plain repository returns
+Successful conditional PUT, custom-policy PUT, and creation through a conditional
+repository return their committed revision ETag. Public ordinary updates return
+no validator: the basic save API does not return a committed token. GET again
+before a conditional edit. A plain repository returns
 no ETag on GET and rejects requested atomic mutations with 501; requiring
 preconditions with such a repository is a configuration error.
 
@@ -635,63 +776,48 @@ class HttpServer {
 }
 ```
 
-### CrudResource<T, UuidValue, TClaims>
-
-Configures and handles CRUD operations for an aggregate root type.
+### CrudResource<T, I, TClaims>
 
 ```dart
-class CrudResource<T extends AggregateRoot, TClaims> {
-  CrudResource({
-    required String path,
-    required Repository<T, UuidValue> repository,
-    required JsonSerializer<T> serializer,
-    QueryHandler<T, UuidValue>? collectionHandler,
-    Map<String, QueryHandler<T, UuidValue>> queryHandlers = const {},
-    Map<Type, Response Function(Object)> customExceptionHandlers = const {},
-    int defaultSkip = 0,
-    int defaultTake = 50,
-    int maxTake = 100,
-    bool requirePrecondition = false,
-  });
-}
-```
-
-**Parameters:**
-- `path` - Base URL path for the resource (e.g., '/users')
-- `repository` - Repository instance for persistence operations
-- `serializer` - JSON serializer for request and success response bodies
-- `collectionHandler` - Optional handler for an unfiltered collection GET. It
-  owns selection, ordering, pagination, and `totalCount`; without it the request
-  returns 400.
-- `queryHandlers` - Map of query parameter names to handler functions
-- `customExceptionHandlers` - Map of exception types to error response handlers
-- `defaultSkip` - Default skip value for pagination (default: 0)
-- `defaultTake` - Default take value for pagination (default: 50)
-- `maxTake` - Maximum allowed take value (default: 100)
-- `requirePrecondition` - Require conditions on PUT/DELETE (default: false)
-- `queryHandlers` - Map of query parameter names to handler functions
-- `customExceptionHandlers` - Map of exception types to error response handlers
-- `defaultSkip` - Default skip value for pagination (default: 0)
-- `defaultTake` - Default take value for pagination (default: 50)
-- `maxTake` - Maximum allowed take value (default: 100)
-
-### QueryHandler<T, UuidValue>
-
-Function signature for custom query handlers.
-
-```dart
-typedef QueryHandler<T extends AggregateRoot> = Future<QueryResult<T>> Function(
-  Repository<T, UuidValue> repository,
-  Map<String, String> queryParams,
-  int skip,
-  int take,
-  dynamic authResult,
+CrudResource<T, I, TClaims>(
+  path: '/records',
+  repository: repository,
+  serializer: serializer,
+  authenticationHandler: verifier, // Optional credential verification
+  defaultPolicy: const AccessPolicy.authenticated(),
+  operationPolicies: {
+    CrudOperation.read: const AccessPolicy.public(),
+    CrudOperation.query: const AccessPolicy.public(),
+  },
+  collectionHandler: collectionHandler,
+  queryHandlers: queryHandlers,
+  requirePrecondition: false,
 );
 ```
 
-For `collectionHandler`, `queryParams` is empty. Both collection and named
-handlers receive normalized pagination values and the current authentication
-result.
+`defaultSkip` (0), `defaultTake` (50), and `maxTake` (100) normalize pagination.
+`collectionHandler` handles unfiltered and pagination-only requests; if absent,
+those requests return 400. `queryHandlers` selects one named filter. The serializer
+and `identityCodecs` use the same typed identity vocabulary. `preCreate` receives
+`(T, Caller<TClaims>)` and returns the final proposal before create authorization.
+
+### QueryHandler<T, I, TClaims>
+
+```dart
+typedef QueryHandler<T extends AggregateRoot<I>, I extends Identity, TClaims>
+    = Future<QueryResult<T>> Function(
+  Repository<T, I> repository,
+  Map<String, String> queryParams,
+  int skip,
+  int take,
+  AuthorizedQuery<TClaims> authorization,
+);
+```
+
+`authorization.caller` retains the concrete claims type. `authorization.scope`
+is an application-defined `QueryScope`; apply it to rows AND totalCount before
+pagination. Untrusted owner/tenant filters may narrow this scope, never widen it.
+A handler can enforce stricter permissions with `AccessDeniedException`.
 
 ### QueryResult<T>
 
@@ -744,13 +870,15 @@ shelf Server
     ↓
 Router (matches path + method)
     ↓
-CrudResource (determines operation type)
+CrudResource (selects operation policy and verifies the caller)
     ↓
-├─ handleGetById() → Repository.getById()
-├─ handleQuery() → Explicit Collection or Named Query Handler
-├─ handleCreate() → Deserialize + Repository.save()
-├─ handleUpdate() → Deserialize + Repository.save()
-└─ handleDelete() → Repository.deleteById()
+├─ Item GET → Stored snapshot → Read policy
+├─ Collection GET → Query policy/scope → Application selection/count/pagination
+├─ POST → Deserialize/normalize → Create policy → Create-if-absent
+├─ PUT → Current + proposal → Update/create policy → Conditional mutation
+└─ DELETE → Current state → Delete policy → Conditional mutation
+    ↓
+Public/authentication-only ordinary CRUD remains available where no condition is required.
     ↓
 ErrorMapper (catches exceptions)
     ↓
@@ -758,54 +886,6 @@ ResponseBuilder (serializes result)
     ↓
 HTTP Response
 ```
-
-## Migration from dddart_http
-
-This package was renamed from `dddart_http` to `dddart_rest` to better reflect its purpose of providing RESTful CRUD APIs, distinguishing it from other HTTP concerns like webhook handling.
-
-### Migration Steps
-
-**1. Update pubspec.yaml:**
-```yaml
-dependencies:
-  dddart_rest: ^0.9.0  # Changed from dddart_http
-```
-
-**2. Update imports:**
-```dart
-// Before
-import 'package:dddart_http/dddart_http.dart';
-
-// After
-import 'package:dddart_rest/dddart_rest.dart';
-```
-
-**3. Update logger configuration (if used):**
-```dart
-// Before
-Logger('dddart.http').level = Level.INFO;
-
-// After
-Logger('dddart.rest').level = Level.INFO;
-```
-
-**4. Run pub get and test:**
-```bash
-dart pub get
-dart test
-```
-
-### What Changed
-
-- **Package name**: `dddart_http` → `dddart_rest`
-- **Import path**: `package:dddart_http/*` → `package:dddart_rest/*`
-- **Logger name**: `dddart.http` → `dddart.rest`
-
-### What Stayed the Same
-
-- All API surfaces remain identical
-- No breaking changes to functionality
-- All class names and methods unchanged
 
 ## Authentication
 
@@ -1077,25 +1157,19 @@ server.registerResource(
 
 ### Using Authentication in Custom Handlers
 
-Access user identity and claims in custom query handlers:
+Query handlers receive `AuthorizedQuery<TClaims>`. They may add restrictions to
+the resource policy, and must apply its authorized scope to rows/counts before
+pagination. Use required authentication on a `me` operation or reject an anonymous
+caller explicitly; the context itself is never null.
 
 ```dart
 queryHandlers: {
-  'me': (repo, params, skip, take, authResult) async {
-    // authResult is null for public resources
-    // authResult is non-null for protected resources
-    
-    if (authResult == null) {
-      throw UnauthorizedException();
+  'me': (repo, params, skip, take, authorization) async {
+    final claims = authorization.caller.claims;
+    if (!authorization.caller.isAuthenticated || claims == null) {
+      throw const AccessDeniedException();
     }
-    
-    // Type-safe access to claims
-    final userId = authResult.claims.userId;
-    final email = authResult.claims.email;
-    final isAdmin = authResult.claims.roles.contains('admin');
-    
-    // Return user's own data
-    final user = await repo.getById(UuidValue.fromString(userId));
+    final user = await repo.getById(UuidValue.fromString(claims.userId));
     return QueryResult([user], totalCount: 1);
   },
 }

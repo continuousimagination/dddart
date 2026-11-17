@@ -18,8 +18,11 @@ and use their existing authentication provider. InMemory history/channel stores
 are instance-local test backends. Production Lambda invocations share DynamoDB;
 constructing an adapter starts no listener, worker or infrastructure deployment.
 
-The older timestamp `EventBusClient`/`EventBusServer` API remains available as a
-separate legacy flow. Use `AggregateEventClient` for the behavior in this guide.
+Both transports implement `AggregateEventTransport` and use `AggregateEventClient`.
+The [finite HTTP-only example](../packages/dddart_events_distributed/example/http_polling.dart)
+starts a local server, publishes an event, receives it by polling and closes its
+resources. Run it with `dart run packages/dddart_events_distributed/example/http_polling.dart`.
+It requires neither the AppSync package nor AWS setup.
 
 ## Saving aggregates and publishing events
 
@@ -62,7 +65,7 @@ retry policy: three attempts by default, exponential backoff with 20% jitter,
 100 ms initial delay, one-second maximum delay, two-second attempt timeout and
 six-second total waiting budget. The policy is configurable. Only classified
 transient failures retry; authentication, validation and programming errors stop.
-The legacy HTTP publisher retries network failures, HTTP 408, 429 and 5xx.
+The shared HTTP publisher retries network failures, HTTP 408, 429 and 5xx.
 
 Retries preserve the same occurrence UUID. A timeout bounds the caller's wait;
 it does not prove a remote operation was cancelled. Stores must handle uncertain
@@ -73,7 +76,7 @@ transactional outbox or guarantee for an event never durably accepted, including
 when a short-lived server terminates before acceptance.
 
 Lambda handlers should await `repository.save` or `publisher.publish` before
-returning. Legacy `EventBus.publish` and auto-forward listeners are asynchronous
+returning. `EventBus.publish` and application-owned listeners are asynchronous
 local notifications and do not provide that serverless lifecycle guarantee.
 
 ## Safe pending-event acknowledgment
@@ -108,10 +111,10 @@ Application subscribers use `on<E>()` for both. Forwarding/persistence bridges u
 `onPublished<E>()` and only observe local publication. Origin is per delivery and
 never inferred from the event UUID or added to the event's domain payload.
 
-`EventBus(logger: logger)`, `EventBusClient(logger: logger)` and
+`EventBus(logger: logger)`, `AggregateEventClient(logger: logger)` and
 `RetryingEventPublisher(logger: logger)` accept application loggers. Their public
 `logger` properties expose the configured logger; defaults are named loggers
-`dddart.eventbus`, `dddart.events.client` and `dddart.events.publisher`. Configure
+`dddart.eventbus`, `dddart.events.watches` and `dddart.events.publisher`. Configure
 the standard `logging` package's level and sinks to collect records.
 
 ## Logical references and retained history
@@ -498,7 +501,7 @@ only when no longer needed. Existing tables, signing secrets, Cognito/OIDC
 providers and ECR repositories/images remain operator-owned. Removing the stack
 does not automatically remove them.
 
-## Validation and migration
+## Validation and limits
 
 Local checks include real serialized WebSocket protocol fixtures, native Lambda
 authorization/handler fixtures, shared real JWT verification, HMAC bridge/SigV4
@@ -514,24 +517,9 @@ generation, analyzer/formatter, tests, isolated archive consumers and examples.
 The plain command excludes documented external service tests. GitHub Actions
 is optional; this work is validated locally. Service tests use isolated resources.
 
-Migration from timestamp polling is explicit:
-
-1. Keep occurrence UUIDs, identity codecs and stable event discriminators. Define
-   aggregate kinds independently of Dart type names and adopt `EventEnvelope`.
-2. Add server history/channel repositories, verified-principal policy and the four
-   HTTP routes. Use the same service for optional AppSync handlers.
-3. Replace global timestamp subscriptions with per-reference watches. Old
-   timestamp cursors are not ingestion checkpoints: establish fresh watches and
-   reload state deliberately, or write an application-owned history migration.
-4. Configure one repository publisher hook. Keep aggregate REST JSON unchanged;
-   preserve failed events and use captured acknowledgment rather than clearing
-   the pending queue after an await. Await saves/publication in serverless code.
-5. Persist new per-watch checkpoints, handle revoked/resync signals, and connect
-   application pause/resume/disposal. Update clients when introducing event types.
-
-The legacy timestamp client retains its older malformed-payload retry behavior;
-it does not acquire aggregate filtering/recovery just by updating the package.
-New watches warn/skip unknown types and error/skip malformed known payloads while
+Both supported transports use ingestion checkpoints and the shared watch API.
+Watches warn/skip unknown types and error/skip malformed known payloads while
 advancing valid history progress. Other persistent event backends, APNs/FCM,
 atomic revocation/outbox delivery, strict live ordering and consumer acknowledgments
-remain outside this first release.
+remain outside this first release. 1.0 is the first compatibility baseline; no
+historical timestamp-cursor conversion or prerelease migration layer is supplied.

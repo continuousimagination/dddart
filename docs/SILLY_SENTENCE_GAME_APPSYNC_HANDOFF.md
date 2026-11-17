@@ -20,7 +20,7 @@ and repeatable regression tests. The owner explicitly proposed this approach.
   the branch. Record the actual revision used for each app test.
 - Issues #54–#64 contain the accepted scope and completed implementation
   checklists. All carry `appsync`; the shared PR closes them on merge.
-- Main API/deployment/migration guide: [DISTRIBUTED_EVENTS.md](DISTRIBUTED_EVENTS.md).
+- Main API/deployment reference: [DISTRIBUTED_EVENTS.md](DISTRIBUTED_EVENTS.md).
 
 The framework implementation passed the complete local service-backed gate.
 **No real AWS deployment or live AppSync smoke test has been performed.** Native
@@ -65,8 +65,8 @@ redesign:
 
 Find the existing dddart revision, event registry/serializers, event bus wiring,
 poller/server endpoints, authentication provider, aggregate repositories and
-deployment entrypoints. Useful search terms include `EventBusClient`,
-`EventBusServer`, `EventRepository`, `raiseEvent`, `getUncommittedEvents`,
+deployment entrypoints. Useful search terms include `AggregateEventClient`,
+`AggregateEventTransport`, `AggregateEventRepository`, `raiseEvent`, `getUncommittedEvents`,
 `markEventsAsCommitted`, `eventPublisher` and `getIdToken`.
 
 Identify the actual game/match/room identity and membership rules, which events
@@ -231,9 +231,9 @@ re-publish received events. Choose one publication hook per save; do not retain
 the old auto-forwarder alongside `eventPublisher: client.publisher` for the same
 events. Explicit publication is `await client.publisher.publish(event)`.
 
-The legacy timestamp `EventBusClient` is a separate API, not the HTTP variant of
-this SDK. Old timestamp cursors cannot become new ingestion checkpoints. Define
-stable kinds and preserve actual typed IDs, occurrence UUIDs and event type keys.
+HTTP polling and AppSync both use `AggregateEventClient` and implement
+`AggregateEventTransport`. Define stable kinds and preserve actual typed IDs,
+occurrence UUIDs and event type keys; watch progress uses ingestion checkpoints.
 
 ### 4. Connect state, membership changes and lifecycle
 

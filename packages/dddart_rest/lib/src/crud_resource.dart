@@ -2,9 +2,10 @@ import 'dart:convert';
 
 import 'package:dddart/dddart.dart';
 import 'package:dddart_json/dddart_json.dart';
+import 'package:dddart_rest/src/access_policy.dart';
 import 'package:dddart_rest/src/authentication_handler.dart';
-import 'package:dddart_rest/src/authentication_result.dart';
-import 'package:dddart_rest/src/authorization_handler.dart';
+import 'package:dddart_rest/src/authorization_context.dart';
+import 'package:dddart_rest/src/authorization_result.dart';
 import 'package:dddart_rest/src/error_mapper.dart';
 import 'package:dddart_rest/src/query_handler.dart';
 import 'package:dddart_rest/src/response_builder.dart';
@@ -19,7 +20,8 @@ import 'package:shelf/shelf.dart';
 /// configured for a specific aggregate type and can be registered with an HTTP server.
 ///
 /// Generic over [T] (aggregate type) and optional [TClaims] (authentication claims type).
-/// When [authenticationHandler] is provided, all CRUD operations require authentication.
+/// Authentication and access policy are separate. Explicit public operation overrides
+/// remain anonymous even when a verifier protects other operations.
 ///
 /// Example without authentication:
 /// ```dart
@@ -46,8 +48,10 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   /// - [path]: The base path for this resource (e.g., '/users')
   /// - [repository]: Repository instance for persistence operations
   /// - [serializer]: JSON serializer for request and response bodies
-  /// - [authenticationHandler]: Optional authentication handler. When provided, all CRUD operations require authentication
-  /// - [authorizationHandler]: Optional authorization handler. When provided, operations are authorized after authentication
+  /// - [authenticationHandler]: Optional verifier; defaults operations to authenticated access unless a policy overrides it
+  /// - [authorizationSnapshot]: Complete detached domain copier for custom aggregate policies
+  /// - [defaultPolicy]: Resource access policy; operation overrides replace it
+  /// - [operationPolicies]: Explicit access policy for each selected operation
   /// - [collectionHandler]: Optional handler for unfiltered collection retrieval
   /// - [queryHandlers]: Map of query parameter names to handler functions
   /// - [customExceptionHandlers]: Map of exception types to error response handlers
@@ -58,13 +62,20 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   /// - [preCreate]: Optional callback to modify aggregate before creation (e.g., set fields from auth context)
   ///
   /// Throws [ArgumentError] if:
-  /// - [path] is null or empty
+  /// - [path] is empty
+  /// - A required policy has no authentication verifier
+  /// - A custom aggregate policy has no [authorizationSnapshot]
+  /// - The identity codec or required conditional repository is unavailable
   CrudResource({
     required this.path,
     required this.repository,
     required this.serializer,
     this.authenticationHandler,
-    this.authorizationHandler,
+    this.authorizationSnapshot,
+    AccessPolicy<T, I, TClaims>? defaultPolicy,
+    Map<CrudOperation, AccessPolicy<T, I, TClaims>> operationPolicies =
+        const {},
+    bool Function(Request)? credentialsPresent,
     this.collectionHandler,
     this.queryHandlers = const {},
     this.customExceptionHandlers = const {},
@@ -74,9 +85,34 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
     this.requirePrecondition = false,
     this.preCreate,
     IdentityCodecRegistry? identityCodecs,
-  }) : identityCodecs = identityCodecs ?? IdentityCodecRegistry() {
+  })  : identityCodecs = identityCodecs ?? IdentityCodecRegistry(),
+        defaultPolicy = defaultPolicy ??
+            (authenticationHandler == null
+                ? AccessPolicy<T, I, TClaims>.public()
+                : AccessPolicy<T, I, TClaims>.authenticated()),
+        operationPolicies = Map.unmodifiable(operationPolicies),
+        credentialsPresent = credentialsPresent ?? _hasAuthorizationHeader {
+    for (final operation in CrudOperation.values) {
+      if (_policy(operation).authentication ==
+              AuthenticationRequirement.required &&
+          authenticationHandler == null) {
+        throw ArgumentError(
+          'Required authentication for $operation needs a verifier',
+        );
+      }
+    }
     if (!this.identityCodecs.contains<I>()) {
       throw ArgumentError('Register a codec for the resource identity $I');
+    }
+    if (authorizationSnapshot == null &&
+        CrudOperation.values.any(
+          (operation) =>
+              operation != CrudOperation.query &&
+              _policy(operation).handler != null,
+        )) {
+      throw ArgumentError(
+        'Custom aggregate policies require authorizationSnapshot to preserve complete permission state independently of public JSON.',
+      );
     }
     // Validate path is not null or empty
     if (path.isEmpty) {
@@ -107,31 +143,52 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
 
   /// Optional authentication handler
   ///
-  /// When provided, all CRUD operations will require authentication.
+  /// Installing a verifier defaults the resource to authenticated access.
+  /// A public/optional operation override does not require missing credentials;
+  /// invalid supplied credentials still return 401.
   /// The handler is invoked before any repository operations.
   /// If authentication fails, a 401 Unauthorized response is returned.
   final AuthenticationHandler<TClaims>? authenticationHandler;
 
-  /// Optional authorization handler
+  /// Copies all domain and permission state, including fields omitted from the
+  /// public JSON representation. Required for custom aggregate policies.
   ///
-  /// When provided, operations are authorized after authentication succeeds.
-  /// The handler is invoked after authentication but before executing the operation.
-  /// If authorization fails, a 403 Forbidden response is returned.
-  final AuthorizationHandler<T, I, TClaims>? authorizationHandler;
+  /// Return a detached, identity-preserving deep copy without pending events.
+  /// A complete persistence codec can be used; a public projection must not be.
+  /// The callback runs before policy and must not mutate its input.
+  final T Function(T)? authorizationSnapshot;
+
+  /// Default access policy. Without a verifier the default is public; installing
+  /// a verifier selects authenticated access unless an explicit default is given.
+  final AccessPolicy<T, I, TClaims> defaultPolicy;
+
+  /// Complete policy replacements for individual operations.
+  final Map<CrudOperation, AccessPolicy<T, I, TClaims>> operationPolicies;
+
+  /// Detects supplied credentials on optional/public operations. Defaults to the
+  /// presence of Authorization, including an empty header. Cookie-based verifiers
+  /// can supply their own detector. Required operations always invoke the verifier.
+  final bool Function(Request) credentialsPresent;
+
+  static bool _hasAuthorizationHeader(Request request) =>
+      request.headers.containsKey('authorization');
+
+  AccessPolicy<T, I, TClaims> _policy(CrudOperation operation) =>
+      operationPolicies[operation] ?? defaultPolicy;
 
   /// Optional handler for unfiltered collection retrieval.
   ///
   /// The handler owns datastore-side selection, ordering, pagination, and the
   /// accurate total count. It receives an empty query-parameter map, normalized
-  /// pagination values, and the current authentication result.
-  final QueryHandler<T, I>? collectionHandler;
+  /// pagination values, and an [AuthorizedQuery] with the typed caller and scope.
+  final QueryHandler<T, I, TClaims>? collectionHandler;
 
   /// Map of query parameter names to handler functions
   ///
   /// Key: the query parameter name (e.g., 'firstName')
   /// Value: the handler function to invoke when that parameter is present
-  /// Note: The same handler can be registered multiple times for backward compatibility
-  final Map<String, QueryHandler<T, I>> queryHandlers;
+  /// The same handler may be registered for multiple filter names.
+  final Map<String, QueryHandler<T, I, TClaims>> queryHandlers;
 
   /// Map of custom exception types to error response handlers
   ///
@@ -153,7 +210,7 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   /// Optional callback to modify aggregate before creation
   ///
   /// This callback is invoked after deserialization but before authorization and saving.
-  /// It receives the deserialized aggregate and authentication result, and returns
+  /// It receives the deserialized aggregate and typed caller, and returns
   /// a potentially modified aggregate.
   ///
   /// Common use cases:
@@ -163,15 +220,11 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   ///
   /// Example:
   /// ```dart
-  /// preCreate: (player, authResult) {
-  ///   return Player(
-  ///     ...player,
-  ///     cognitoSub: authResult?.claims?.sub,
-  ///   );
+  /// preCreate: (player, caller) {
+  ///   return player.withOwner(caller.claims?.sub);
   /// }
   /// ```
-  final T Function(T aggregate, AuthenticationResult<TClaims>? authResult)?
-      preCreate;
+  final T Function(T aggregate, Caller<TClaims> caller)? preCreate;
 
   /// ResponseBuilder instance for creating HTTP responses
   late final ResponseBuilder<T> _responseBuilder = ResponseBuilder<T>();
@@ -185,32 +238,149 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   /// Logger instance for REST API request/response logging
   final Logger _logger = Logger('dddart.rest');
 
-  /// Authenticates a request if auth handler is configured
-  ///
-  /// Returns null if authentication succeeds or auth handler is not configured.
-  /// Returns a 401 Response if authentication fails.
-  ///
-  /// Parameters:
-  /// - [request]: The HTTP request to authenticate
-  ///
-  /// Returns: null if authenticated or no auth required, 401 Response if auth fails
-  Future<({Response? response, AuthenticationResult<TClaims>? authResult})>
-      _authenticate(
+  Future<({Response? response, Caller<TClaims> caller})> _authenticate(
     Request request,
+    CrudOperation operation,
   ) async {
-    if (authenticationHandler == null) {
-      return (response: null, authResult: null);
+    final policy = _policy(operation);
+    final verifier = authenticationHandler;
+    try {
+      if (verifier == null ||
+          (policy.authentication == AuthenticationRequirement.optional &&
+              !credentialsPresent(request))) {
+        return (response: null, caller: AnonymousCaller<TClaims>());
+      }
+      final result = await verifier.authenticate(request);
+      if (!result.isAuthenticated) {
+        return (
+          response: _responseBuilder
+              .unauthorized(result.errorMessage ?? 'Authentication required'),
+          caller: AnonymousCaller<TClaims>()
+        );
+      }
+      return (response: null, caller: VerifiedCaller(result));
+    } catch (error, stack) {
+      _logger.warning('Credential verification failed', error, stack);
+      throw const AccessEvaluationException();
     }
+  }
 
-    final authResult = await authenticationHandler!.authenticate(request);
-    if (!authResult.isAuthenticated) {
-      final response = _responseBuilder.unauthorized(
-        authResult.errorMessage ?? 'Authentication required',
+  T _policySnapshot(T value) {
+    try {
+      final copy = authorizationSnapshot!(value);
+      if (identical(copy, value) || copy.id != value.id) {
+        throw StateError(
+          'authorizationSnapshot must produce a detached identity-preserving copy',
+        );
+      }
+      return copy;
+    } catch (error, stack) {
+      _logger.warning('Cannot construct authorization snapshot', error, stack);
+      throw const AccessEvaluationException();
+    }
+  }
+
+  Future<AuthorizationResult> _authorize(
+    AuthorizationContext<T, I, TClaims> context,
+  ) async {
+    final policy = _policy(context.operation);
+    final handler = policy.handler;
+    if (handler == null) {
+      return const AuthorizationResult.allow(scope: UnrestrictedQueryScope());
+    }
+    final AuthorizationResult result;
+    try {
+      result = await handler.authorize(context);
+      if (result.isAuthorized &&
+          context is QueryContext<T, I, TClaims> &&
+          result.scope == null) {
+        throw StateError(
+          'An allowed collection policy must supply a query scope',
+        );
+      }
+    } catch (error, stack) {
+      _logger.warning('Authorization policy failed', error, stack);
+      throw const AccessEvaluationException();
+    }
+    if (!result.isAuthorized) {
+      throw AccessDeniedException(conceal: result.conceal);
+    }
+    return result;
+  }
+
+  Future<({T aggregate, String? revision})?> _current(I id) async {
+    try {
+      if (repository is VersionedRepository<T, I>) {
+        final snapshot =
+            await (repository as VersionedRepository<T, I>).getVersioned(id);
+        return (aggregate: snapshot.aggregate, revision: snapshot.revision);
+      }
+      return (aggregate: await repository.getById(id), revision: null);
+    } on RepositoryException catch (error) {
+      if (error.type == RepositoryExceptionType.notFound) return null;
+      rethrow;
+    }
+  }
+
+  ExpectedRevision _expectedAtSnapshot(
+    WritePrecondition? condition,
+    String? revision,
+  ) {
+    if (condition != null) {
+      if (condition.absent
+          ? revision != null
+          : revision == null || !condition.revisions.contains(revision)) {
+        throw const PreconditionException.failed();
+      }
+    }
+    return revision == null
+        ? const ExpectedRevision.absent()
+        : ExpectedRevision.match(revision);
+  }
+
+  Never _implicitConflict() => throw const RepositoryException(
+        'The resource changed while access was evaluated. Reload and authorize a new request.',
+        type: RepositoryExceptionType.conflict,
       );
-      return (response: response, authResult: null);
-    }
 
-    return (response: null, authResult: authResult);
+  Future<String?> _createOnly(
+    T aggregate,
+    WritePrecondition? condition, {
+    bool checkedAbsent = false,
+  }) async {
+    if (condition != null && !condition.absent) {
+      throw const PreconditionException.unsupported(
+        'POST/create requires absence, not an existing revision. Use PUT to update.',
+      );
+    }
+    if (repository is ConditionalAggregateRepository<T, I>) {
+      try {
+        return await (repository as ConditionalAggregateRepository<T, I>)
+            .saveConditional(
+          aggregate,
+          expected: const ExpectedRevision.absent(),
+        );
+      } on RevisionConflictException<I> {
+        if (condition != null) rethrow;
+        throw const RepositoryException(
+          'A resource with this identity already exists',
+          type: RepositoryExceptionType.conflict,
+        );
+      }
+    }
+    if (condition != null || _policy(CrudOperation.create).handler != null) {
+      throw const ConditionalCapabilityUnsupportedException();
+    }
+    // Plain public/authentication-only CRUD has no atomic capability. Reject
+    // sequential POST overwrite; concurrent create isolation requires the capability.
+    if (!checkedAbsent && await _current(aggregate.id) != null) {
+      throw const RepositoryException(
+        'A resource with this identity already exists',
+        type: RepositoryExceptionType.conflict,
+      );
+    }
+    await repository.save(aggregate);
+    return null;
   }
 
   I _identityFromKey(String key) {
@@ -239,7 +409,7 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   /// Versioned repositories include a strong storage-revision ETag. Plain
   /// repositories return no validator and cannot accept conditional mutations.
   ///
-  /// If auth handler is configured, authenticates the request first.
+  /// Evaluates the selected operation's credential requirement before protected work.
   ///
   /// Parameters:
   /// - [request]: The HTTP request
@@ -255,8 +425,8 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
         return negotiationError;
       }
 
-      // Authenticate if handler is configured
-      final authCheck = await _authenticate(request);
+      // Resolve the selected operation's credential requirement.
+      final authCheck = await _authenticate(request, CrudOperation.read);
       if (authCheck.response != null) {
         _logger.fine('GET /$path/$id - ${authCheck.response!.statusCode}');
         return authCheck.response!;
@@ -264,20 +434,29 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
 
       final identity = _identityFromKey(id);
       final T aggregate;
-      String? etag;
+      String? revision;
       if (repository is VersionedRepository<T, I>) {
         final snapshot = await (repository as VersionedRepository<T, I>)
             .getVersioned(identity);
         aggregate = snapshot.aggregate;
-        etag = RevisionETag.encode(snapshot.revision);
+        revision = snapshot.revision;
       } else {
         aggregate = await repository.getById(identity);
+      }
+
+      if (_policy(CrudOperation.read).handler != null) {
+        await _authorize(
+          ReadContext(
+            caller: authCheck.caller,
+            current: _policySnapshot(aggregate),
+          ),
+        );
       }
 
       final response = _responseBuilder.ok(
         aggregate,
         serializer,
-        etag: etag,
+        etag: revision == null ? null : RevisionETag.encode(revision),
       );
       _logger.fine('GET /$path/$id - ${response.statusCode}');
       return response;
@@ -292,9 +471,9 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   /// - One query param: looks up and invokes corresponding query handler
   /// - Multiple query params: returns 400 error
   ///
-  /// If auth handler is configured, authenticates the request first and passes
-  /// auth result to query handlers.
-  /// If authorization handler is configured, authorizes filtered queries after authentication.
+  /// Evaluates the selected operation's credential requirement first and passes
+  /// the typed caller and authorized scope to query handlers.
+  /// The selected collection policy runs for every request, including unfiltered reads.
   ///
   /// Parameters:
   /// - [request]: The HTTP request
@@ -313,8 +492,8 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
         return negotiationError;
       }
 
-      // Authenticate if handler is configured
-      final authCheck = await _authenticate(request);
+      // Resolve the selected operation's credential requirement.
+      final authCheck = await _authenticate(request, CrudOperation.query);
       if (authCheck.response != null) {
         _logger
             .fine('GET /$path$queryString - ${authCheck.response!.statusCode}');
@@ -329,29 +508,14 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
         ..remove('skip')
         ..remove('take');
 
-      // Authorize filtered queries if handler is configured
-      if (filterParams.isNotEmpty &&
-          authorizationHandler != null &&
-          authCheck.authResult != null) {
-        final authzResult = await authorizationHandler!.authorizeQuery(
-          filterParams,
-          authCheck.authResult!,
-        );
-        if (!authzResult.isAuthorized) {
-          final response = Response(
-            403,
-            headers: {'Content-Type': 'application/problem+json'},
-            body: jsonEncode({
-              'type': 'about:blank',
-              'title': 'Forbidden',
-              'status': 403,
-              'detail': authzResult.errorMessage ?? 'Access denied',
-            }),
-          );
-          _logger.fine('GET /$path$queryString - ${response.statusCode}');
-          return response;
-        }
-      }
+      final decision = await _authorize(
+        QueryContext<T, I, TClaims>(
+          caller: authCheck.caller,
+          filters: filterParams,
+        ),
+      );
+      final queryAuthorization =
+          AuthorizedQuery(caller: authCheck.caller, scope: decision.scope!);
 
       QueryResult<T> result;
 
@@ -371,7 +535,7 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
           const <String, String>{},
           pagination.skip,
           pagination.take,
-          authCheck.authResult,
+          queryAuthorization,
         );
       } else if (filterParams.length > 1) {
         // Multiple filters not allowed
@@ -398,7 +562,7 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
           filterParams,
           pagination.skip,
           pagination.take,
-          authCheck.authResult,
+          queryAuthorization,
         );
       }
 
@@ -416,15 +580,15 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
 
   /// Handles POST /resource
   ///
-  /// Deserializes a JSON request body, calls repository.save(), and returns the
-  /// created aggregate as JSON. Content-Type must be application/json and the
+  /// Creates a previously absent aggregate and returns it as JSON. POST cannot
+  /// overwrite an existing identity, even when If-Match is supplied. Content-Type must be application/json and the
   /// Accept header must allow JSON.
   ///
   /// Versioned repositories include a strong storage-revision ETag. Plain
   /// repositories return no validator and cannot accept conditional mutations.
   ///
-  /// If auth handler is configured, authenticates the request first.
-  /// If authorization handler is configured, authorizes the request after authentication.
+  /// Evaluates the selected operation's credential requirement before protected work.
+  /// The selected custom policy always runs, including for anonymous callers.
   ///
   /// Parameters:
   /// - [request]: The HTTP request
@@ -446,8 +610,8 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
         return contentTypeError;
       }
 
-      // Authenticate if handler is configured
-      final authCheck = await _authenticate(request);
+      // Resolve the selected operation's credential requirement.
+      final authCheck = await _authenticate(request, CrudOperation.create);
       if (authCheck.response != null) {
         _logger.fine('POST /$path - ${authCheck.response!.statusCode}');
         return authCheck.response!;
@@ -464,46 +628,24 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
 
       // Apply preCreate callback if configured
       if (preCreate != null) {
-        aggregate = preCreate!(aggregate, authCheck.authResult);
+        aggregate = preCreate!(aggregate, authCheck.caller);
       }
 
       // The final aggregate must be addressable by this REST adapter.
       _validateCreatedIdentity(aggregate.id);
 
-      // Authorize if handler is configured
-      if (authorizationHandler != null && authCheck.authResult != null) {
-        final authzResult = await authorizationHandler!.authorizeCreate(
-          aggregate,
-          authCheck.authResult!,
+      if (_policy(CrudOperation.create).handler != null) {
+        await _authorize(
+          CreateContext(
+            caller: authCheck.caller,
+            proposed: _policySnapshot(aggregate),
+          ),
         );
-        if (!authzResult.isAuthorized) {
-          final response = Response(
-            403,
-            headers: {'Content-Type': 'application/problem+json'},
-            body: jsonEncode({
-              'type': 'about:blank',
-              'title': 'Forbidden',
-              'status': 403,
-              'detail': authzResult.errorMessage ?? 'Access denied',
-            }),
-          );
-          _logger.fine('POST /$path - ${response.statusCode}');
-          return response;
-        }
       }
 
       final condition = WritePrecondition.parse(request.headers);
-      String? etag;
-      if (condition == null) {
-        await repository.save(aggregate);
-      } else {
-        final conditional = requireConditionalAggregateRepository(repository);
-        final revision = await conditional.saveConditional(
-          aggregate,
-          expected: await condition.resolve(conditional, aggregate.id),
-        );
-        etag = RevisionETag.encode(revision);
-      }
+      final revision = await _createOnly(aggregate, condition);
+      final etag = revision == null ? null : RevisionETag.encode(revision);
 
       final response = _responseBuilder.created(
         aggregate,
@@ -529,17 +671,18 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   /// Supports atomic conditional writes via the If-Match header:
   /// A supplied precondition uses atomic repository writes. Strong ETags come
   /// from storage revisions, not timestamps or payload hashes. A successful
-  /// conditional PUT returns its new ETag. Unconditional PUT returns no ETag;
-  /// GET a coherent snapshot before the next conditional edit.
+  /// conditional PUT returns its new ETag. Custom mutation policies also bind
+  /// their decision to the loaded revision. Public ordinary updates return no
+  /// ETag; GET a coherent snapshot before the next conditional edit.
   ///
-  /// If auth handler is configured, authenticates the request first.
-  /// If authorization handler is configured, authorizes the request after authentication.
+  /// Evaluates the selected operation's credential requirement before protected work.
+  /// The selected custom policy always runs, including for anonymous callers.
   ///
   /// Parameters:
   /// - [request]: The HTTP request
   /// - [id]: The canonical key after one URI-decoding step (direct callers pass it decoded)
   ///
-  /// Returns: A Response with status 200 and serialized aggregate, or error response
+  /// Returns: 200 for replacement, 201 for creation, or an error response.
   Future<Response> handleUpdate(Request request, String id) async {
     _logger.info('PUT /$path/$id - Updating $T');
     try {
@@ -556,8 +699,8 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
         return contentTypeError;
       }
 
-      // Authenticate if handler is configured
-      final authCheck = await _authenticate(request);
+      // Resolve the selected operation's credential requirement.
+      final authCheck = await _authenticate(request, CrudOperation.update);
       if (authCheck.response != null) {
         _logger.fine('PUT /$path/$id - ${authCheck.response!.statusCode}');
         return authCheck.response!;
@@ -581,46 +724,73 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
         return response;
       }
 
-      // Authorize if handler is configured
-      if (authorizationHandler != null && authCheck.authResult != null) {
-        final authzResult = await authorizationHandler!.authorizeUpdate(
-          aggregate,
-          authCheck.authResult!,
-        );
-        if (!authzResult.isAuthorized) {
-          final response = Response(
-            403,
-            headers: {'Content-Type': 'application/problem+json'},
-            body: jsonEncode({
-              'type': 'about:blank',
-              'title': 'Forbidden',
-              'status': 403,
-              'detail': authzResult.errorMessage ?? 'Access denied',
-            }),
-          );
-          _logger.fine('PUT /$path/$id - ${response.statusCode}');
-          return response;
-        }
-      }
-
       final condition = WritePrecondition.parse(
         request.headers,
         required: requirePrecondition,
       );
-      String? etag;
-      if (condition == null) {
-        await repository.save(aggregate);
-      } else {
-        final conditional = requireConditionalAggregateRepository(repository);
-        final expected = await condition.resolve(conditional, identity);
+      if (condition != null) requireConditionalAggregateRepository(repository);
+      final current = await _current(identity);
+      if (current == null) {
+        // PUT is an upsert route: a missing record also needs create permission.
+        // The update gate above cannot be used to bypass a stricter create policy.
+        final createAuth = authCheck.caller.isAuthenticated
+            ? authCheck
+            : await _authenticate(request, CrudOperation.create);
+        if (createAuth.response != null) return createAuth.response!;
+        if (preCreate != null) {
+          aggregate = preCreate!(aggregate, createAuth.caller);
+        }
+        _validateCreatedIdentity(aggregate.id);
+        if (aggregate.id != identity) {
+          return _responseBuilder
+              .badRequest('preCreate must preserve the PUT route identity.');
+        }
+        if (_policy(CrudOperation.create).handler != null) {
+          await _authorize(
+            CreateContext(
+              caller: createAuth.caller,
+              proposed: _policySnapshot(aggregate),
+            ),
+          );
+        }
+        if (condition != null && !condition.absent) {
+          throw const PreconditionException.failed();
+        }
         final revision =
-            await conditional.saveConditional(aggregate, expected: expected);
-        etag = RevisionETag.encode(revision);
+            await _createOnly(aggregate, condition, checkedAbsent: true);
+        return _responseBuilder.created(
+          aggregate,
+          serializer,
+          etag: revision == null ? null : RevisionETag.encode(revision),
+        );
       }
-
-      final response = condition?.absent ?? false
-          ? _responseBuilder.created(aggregate, serializer, etag: etag)
-          : _responseBuilder.ok(aggregate, serializer, etag: etag);
+      final custom = _policy(CrudOperation.update).handler != null;
+      if (custom) {
+        requireConditionalAggregateRepository(repository);
+        await _authorize(
+          UpdateContext(
+            caller: authCheck.caller,
+            current: _policySnapshot(current.aggregate),
+            proposed: _policySnapshot(aggregate),
+          ),
+        );
+      }
+      String? etag;
+      if (condition != null || custom) {
+        final conditional = requireConditionalAggregateRepository(repository);
+        final expected = _expectedAtSnapshot(condition, current.revision);
+        try {
+          final revision =
+              await conditional.saveConditional(aggregate, expected: expected);
+          etag = RevisionETag.encode(revision);
+        } on RevisionConflictException<I> {
+          if (condition != null) rethrow;
+          _implicitConflict();
+        }
+      } else {
+        await repository.save(aggregate);
+      }
+      final response = _responseBuilder.ok(aggregate, serializer, etag: etag);
       _logger.fine('PUT /$path/$id - ${response.statusCode}');
       return response;
     } catch (e, stackTrace) {
@@ -632,8 +802,8 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   ///
   /// Parses ID, calls repository.deleteById(), returns 204 No Content
   ///
-  /// If auth handler is configured, authenticates the request first.
-  /// If authorization handler is configured, authorizes the request after authentication.
+  /// Evaluates the selected operation's credential requirement before protected work.
+  /// The selected custom policy always runs, including for anonymous callers.
   ///
   /// Parameters:
   /// - [request]: The HTTP request
@@ -649,8 +819,8 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
         return negotiationError;
       }
 
-      // Authenticate if handler is configured
-      final authCheck = await _authenticate(request);
+      // Resolve the selected operation's credential requirement.
+      final authCheck = await _authenticate(request, CrudOperation.delete);
       if (authCheck.response != null) {
         _logger.fine('DELETE /$path/$id - ${authCheck.response!.statusCode}');
         return authCheck.response!;
@@ -658,40 +828,49 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
 
       final identity = _identityFromKey(id);
 
-      // Authorize if handler is configured
-      if (authorizationHandler != null && authCheck.authResult != null) {
-        final authzResult = await authorizationHandler!.authorizeDelete(
-          identity,
-          authCheck.authResult!,
-        );
-        if (!authzResult.isAuthorized) {
-          final response = Response(
-            403,
-            headers: {'Content-Type': 'application/problem+json'},
-            body: jsonEncode({
-              'type': 'about:blank',
-              'title': 'Forbidden',
-              'status': 403,
-              'detail': authzResult.errorMessage ?? 'Access denied',
-            }),
-          );
-          _logger.fine('DELETE /$path/$id - ${response.statusCode}');
-          return response;
-        }
-      }
-
       final condition = WritePrecondition.parse(
         request.headers,
         required: requirePrecondition,
       );
-      if (condition == null) {
-        await repository.deleteById(identity);
-      } else {
-        final conditional = requireConditionalAggregateRepository(repository);
-        await conditional.deleteConditional(
-          identity,
-          expected: await condition.resolve(conditional, identity),
+      final custom = _policy(CrudOperation.delete).handler != null;
+      if (condition != null || custom) {
+        requireConditionalAggregateRepository(repository);
+      }
+      final current = await _current(identity);
+      if (current == null) {
+        if (condition?.absent ?? false) {
+          await requireConditionalAggregateRepository(repository)
+              .deleteConditional(
+            identity,
+            expected: const ExpectedRevision.absent(),
+          );
+          return _responseBuilder.noContent();
+        }
+        if (condition != null) throw const PreconditionException.failed();
+        throw const RepositoryException(
+          'Resource not found',
+          type: RepositoryExceptionType.notFound,
         );
+      }
+      if (custom) {
+        await _authorize(
+          DeleteContext(
+            caller: authCheck.caller,
+            current: _policySnapshot(current.aggregate),
+          ),
+        );
+      }
+      if (condition != null || custom) {
+        final expected = _expectedAtSnapshot(condition, current.revision);
+        try {
+          await requireConditionalAggregateRepository(repository)
+              .deleteConditional(identity, expected: expected);
+        } on RevisionConflictException<I> {
+          if (condition != null) rethrow;
+          _implicitConflict();
+        }
+      } else {
+        await repository.deleteById(identity);
       }
       final response = _responseBuilder.noContent();
       _logger.fine('DELETE /$path/$id - ${response.statusCode}');
@@ -781,10 +960,30 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   Response _handleException(Object error, StackTrace stackTrace) {
     _logger.severe('Exception during request handling', error, stackTrace);
 
+    if (error is AccessDeniedException) {
+      return Response(
+        error.conceal ? 404 : 403,
+        headers: {'content-type': 'application/problem+json'},
+        body: jsonEncode({
+          'type': 'about:blank',
+          'title': error.conceal ? 'Not Found' : 'Forbidden',
+          'status': error.conceal ? 404 : 403,
+          'detail': error.conceal ? 'Resource not found' : 'Access denied',
+        }),
+      );
+    }
+    if (error is AccessEvaluationException) {
+      return ErrorMapper.mapException(error, stackTrace);
+    }
     // Check custom handlers first
     final customHandler = customExceptionHandlers[error.runtimeType];
     if (customHandler != null) {
       return customHandler(error);
+    }
+
+    if (error is RepositoryException &&
+        error.type == RepositoryExceptionType.notFound) {
+      return _responseBuilder.notFound('Resource not found');
     }
 
     // Fall back to built-in ErrorMapper

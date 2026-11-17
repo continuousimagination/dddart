@@ -8,6 +8,7 @@ environment:
 resolution: workspace
 
 dependencies:
+  shelf: ^1.4.0
   dddart:
     resolution: workspace
   dddart_events_distributed:

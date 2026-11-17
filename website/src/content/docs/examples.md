@@ -47,7 +47,7 @@ This is a broader check and may take time. Local compilation of a service exampl
 
 ## Explore the example directories
 
-Links in this table point to the source revision used by the documentation.
+Links point to the documented source revision; the HTTP polling example links to the maintained main branch.
 
 | Example | What it demonstrates | Runtime expectations |
 | --- | --- | --- |
@@ -63,10 +63,21 @@ Links in this table point to the source revision used by the documentation.
 | [Configuration](https://github.com/continuousimagination/dddart/tree/b4aacf0671873e729a1a390dc2bb609b80c723e5/packages/dddart_config/example) | Providers, precedence, defaults, and validation | Native local files/process environment |
 | [Webhooks](https://github.com/continuousimagination/dddart/tree/b4aacf0671873e729a1a390dc2bb609b80c723e5/packages/dddart_webhooks/example) | JSON/form payloads and custom verifiers | Long-running HTTP endpoints |
 | [Slack](https://github.com/continuousimagination/dddart/tree/b4aacf0671873e729a1a390dc2bb609b80c723e5/packages/dddart_webhooks_slack/example) | Slash commands and interactive messages | Slack credentials and public HTTPS ingress |
+| [HTTP polling](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_events_distributed/example/http_polling.dart) | Shared client/publisher with local history and real HTTP | Finite loopback server; no AppSync or AWS dependency |
 | [DynamoDB event history](https://github.com/continuousimagination/dddart/tree/b4aacf0671873e729a1a390dc2bb609b80c723e5/packages/dddart_events_dynamodb/example) | Durable ingestion history and channel rotation | Isolated DynamoDB Local table |
 | [AppSync/native handlers](https://github.com/continuousimagination/dddart/tree/b4aacf0671873e729a1a390dc2bb609b80c723e5/packages/dddart_events_appsync/example) | Native invocation, Lambda composition, opt-in live smoke | Local invocation is finite; live AWS is separate |
 
-The current [distributed-events reference](https://github.com/continuousimagination/dddart/blob/b4aacf0671873e729a1a390dc2bb609b80c723e5/docs/DISTRIBUTED_EVENTS.md) describes the new aggregate-watch flow. Some older files under `example/legacy` are explicitly excluded historical sketches. Do not use them as current end-to-end instructions.
+The [distributed-events reference](https://github.com/continuousimagination/dddart/blob/main/docs/DISTRIBUTED_EVENTS.md) describes the shared aggregate-watch flow for HTTP polling and AppSync. Both use the same client and publisher interfaces.
+
+## Run HTTP polling without AWS
+
+```bash
+dart run packages/dddart_events_distributed/example/http_polling.dart
+```
+
+It starts an ephemeral local HTTP server, publishes and receives one counter event,
+then closes its resources. Expected output: `HTTP polling accepted and delivered counter value 1.`
+The fixed token and single-aggregate policy are local fixtures; applications supply their own verifier and membership policy.
 
 ## Run native event composition without AWS
 

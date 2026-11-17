@@ -145,11 +145,11 @@ void main() async {
       queryHandlers: {
         'me': (repo, params, skip, take, authResult) async {
           // Return current user's data based on Cognito sub
-          if (authResult == null) {
+          if (!authResult.caller.isAuthenticated) {
             throw Exception('Unauthorized');
           }
 
-          final cognitoSub = authResult.claims!.sub;
+          final cognitoSub = authResult.caller.claims!.sub;
 
           // Find user by Cognito sub
           // Note: InMemoryRepository doesn't have efficient querying,
@@ -161,9 +161,10 @@ void main() async {
             // Auto-create user from Cognito claims
             final newUser = User(
               id: UuidValue.fromString(cognitoSub),
-              email: authResult.claims!.email,
-              name: authResult.claims!.name ?? authResult.claims!.email,
-              cognitoGroups: authResult.claims!.cognitoGroups,
+              email: authResult.caller.claims!.email,
+              name: authResult.caller.claims!.name ??
+                  authResult.caller.claims!.email,
+              cognitoGroups: authResult.caller.claims!.cognitoGroups,
             );
             await repo.save(newUser);
             return QueryResult([newUser], totalCount: 1);
@@ -171,8 +172,8 @@ void main() async {
         },
         'admins': (repo, params, skip, take, authResult) async {
           // Only allow admins to see admin list
-          if (authResult == null ||
-              !authResult.claims!.cognitoGroups.contains('Admins')) {
+          if (!authResult.caller.isAuthenticated ||
+              !authResult.caller.claims!.cognitoGroups.contains('Admins')) {
             throw Exception('Forbidden');
           }
 

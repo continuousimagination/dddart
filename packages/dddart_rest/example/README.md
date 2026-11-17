@@ -56,28 +56,25 @@ Shows how to add custom routes alongside CRUD resources:
 
 **Run:** `dart run custom_routes_example.dart`
 
-### 6. ETag Conditional Checks (`etag_concurrency_example.dart`)
+### 6. Atomic ETag Checks (`etag_concurrency_example.dart`)
 
-Demonstrates best-effort stale-update detection using ETags:
-- Rejecting an update after an earlier persisted update changes the ETag
-- If-Match header validation
-- 412 Precondition Failed responses
-- Client retry logic after conflicts
-- Backward compatibility (If-Match is optional)
-
-The ETag comparison and repository save are not atomic, so overlapping writes
-can both pass validation.
+Two HTTP clients read the same storage revision and attempt competing updates.
+Exactly one commits; the other receives 412. The example then reloads and
+explicitly recomputes the change before submitting a new condition. It uses
+`ConditionalAggregateRepository`; ordinary public CRUD remains available without
+client conditions. It starts an ephemeral server and closes it when finished.
 
 **Run:** `dart run etag_concurrency_example.dart`
 
 ### 7. Authorization (`authorization_example.dart`)
 
 Demonstrates authorization with resource ownership:
-- Implementing AuthorizationHandler for ownership checks
-- Users can only modify their own resources
+- Typed current/proposed/caller contexts for ownership checks
+- Stored ownership controls edits/deletes; a forged proposed owner cannot grant access
 - Admin users can modify any resource
 - Combining authentication and authorization
-- Different authorization rules per operation (create, update, delete, query)
+- Explicit public object reads and scoped collection counts before pagination
+- Revision-bound mutation permission and explicitly authorized owner transfer
 
 **Run:** `dart run authorization_example.dart`
 
@@ -692,3 +689,13 @@ This is a learning example. For production use:
 - [dddart_rest Package](../README.md) - RESTful CRUD API framework
 - [Domain-Driven Design](https://martinfowler.com/bliki/DomainDrivenDesign.html) - Martin Fowler's overview
 - [RFC 7807](https://tools.ietf.org/html/rfc7807) - Problem Details for HTTP APIs
+
+### Public leaderboard and optional authorization (`public_leaderboard_example.dart`)
+
+Run `dart run public_leaderboard_example.dart` from this directory. This finite
+local example starts an ephemeral HTTP server, verifies anonymous leaderboard
+reads with protected submissions and moderator changes, checks private/public
+document rows and counts, and exercises unconfigured public CRUD. It closes the
+server automatically. The local credential fixture needs no external service;
+production applications can supply the existing JWT/OAuth verifier. This example
+runs as part of the shared validation inventory.

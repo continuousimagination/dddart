@@ -130,7 +130,7 @@ Future<QueryResult<T>>
   Map<String, String> queryParams,
   int skip,
   int take,
-  dynamic authResult,
+  AuthorizedQuery<void> authorization,
 ) async {
   final items = (repository as InMemoryRepository<T, UuidValue>).getAllSync();
   return QueryResult<T>(

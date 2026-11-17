@@ -5,10 +5,12 @@
 /// and extensible error handling.
 library dddart_rest;
 
+export 'src/access_policy.dart';
 export 'src/auth_endpoints.dart';
 export 'src/auth_error_mapper.dart';
 export 'src/authentication_handler.dart';
 export 'src/authentication_result.dart';
+export 'src/authorization_context.dart';
 export 'src/authorization_handler.dart';
 export 'src/authorization_result.dart';
 export 'src/crud_resource.dart';

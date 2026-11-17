@@ -1,21 +1,31 @@
-# Distributed events examples
+# Distributed event examples
 
-The active `custom_stored_event_json_example.dart` proves a generated JSON
-round trip for a concrete `StoredEvent<UuidValue>` subtype with application fields.
-Run from this directory:
+From the workspace root:
 
 ```bash
 dart pub get
+dart run packages/dddart_events_distributed/example/http_polling.dart
+dart tool/validation/validate.dart example dddart_events_distributed_example
+```
+
+`http_polling.dart` is a finite HTTP-only publish/watch example. It uses the shared
+`AggregateEventTransport`, `AggregateEventClient` and `EventPublisher` contracts,
+with an ephemeral loopback server, explicit local fixture authentication and
+in-memory history/channel repositories. It prints the received counter value and
+closes its resources. It requires no AppSync dependency, AWS account or database.
+
+`custom_stored_event_json_example.dart` independently demonstrates generated JSON
+for a concrete `StoredEvent` subtype. Its input is `lib/custom_stored_event.dart`;
+`build.yaml` enables the JSON builder and disables the registry builder because
+this example declares no domain event to register. The validation lane generates,
+analyzes and runs the example. Generate manually before running it directly:
+
+```bash
+cd packages/dddart_events_distributed/example
 dart run build_runner build --delete-conflicting-outputs
 dart run custom_stored_event_json_example.dart
 ```
 
-Its build enables only `dddart_json:json_serializable` for
-`lib/custom_stored_event.dart`; it makes no transport-envelope claim. The package's
-separate identity fixture and clean-consumer tests prove current generated event
-registries, native/scoped/UUID references, forwarding/filtering and cursor retry.
-See the package README for the current combined-part workflow.
-
-Old client/server/range sketches remain excluded under `legacy/` as `.skip` files.
-Their unrelated EVENT-001 through EVENT-004 and optional transport work remains
-deferred. They are historical context, not runnable framework contracts.
+For optional live transport, reuse the [AppSync examples](../../dddart_events_appsync/example/)
+and [protocol fixtures](../../dddart_events_appsync/test/websocket_protocol_test.dart).
+The same application client/publisher APIs work with either transport.
