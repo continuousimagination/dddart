@@ -1,5 +1,12 @@
 # dddart_repository_indexeddb
 
+For complete setup, named source files, expected output and cleanup, follow the
+[canonical quickstart](../../docs/QUICKSTARTS.md#browser-and-external-integrations). Other inline Dart snippets below are
+**illustrative fragments** that assume application-specific models and surrounding
+setup; they are not standalone programs. See the [quickstart inventory](../../docs/QUICKSTARTS.md)
+for runnable, browser, service and credential-dependent coverage.
+
+
 A small IndexedDB implementation of dddart's `Repository<T, I>` CRUD contract for
 browser applications. It stores one detached, encoded aggregate snapshot per
 concrete identity. Aggregate encoding, decoding, naming, and other domain rules stay with the

@@ -40,7 +40,7 @@ composition fragments clearly and state their prerequisites. Do not present a
 source-only or external-service example as a verified standalone program.
 
 The initial guides target library revision
-`b4aacf0671873e729a1a390dc2bb609b80c723e5`. Update source references, the installation
+`56607ac8d3913b8e896ac03f8ecff58473d62ce2`. Update source references, the installation
 revision, `public/downloads/git-dependencies.yaml`, and the relevant example checks
 together when the library changes. The repository's legacy package README examples
 are not always current; use implementation and active example fixtures to verify APIs.

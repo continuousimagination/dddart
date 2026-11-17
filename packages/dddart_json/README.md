@@ -1,5 +1,12 @@
 # DDDart JSON
 
+For complete setup, named source files, expected output and cleanup, follow the
+[canonical quickstart](../../docs/quickstarts/json/README.md). Other inline Dart snippets below are
+**illustrative fragments** that assume application-specific models and surrounding
+setup; they are not standalone programs. See the [quickstart inventory](../../docs/QUICKSTARTS.md)
+for runnable, browser, service and credential-dependent coverage.
+
+
 See the [serialization configuration and error contract](../../docs/SERIALIZATION.md)
 for typed options, precedence, identity codecs, and failure behavior.
 
@@ -27,101 +34,15 @@ value objects.
 
 ## Installation
 
-Add the required packages to your `pubspec.yaml`:
-
-```yaml
-dependencies:
-  dddart: ^1.0.0
-  dddart_serialization: ^1.0.0
-  dddart_json: ^1.0.0
-
-dev_dependencies:
-  build_runner: ^2.4.0
-```
+DDDart is currently Git-only. Use the [Git installation guide](../../docs/GIT_INSTALLATION.md)
+and the complete dependency setup in the [canonical quickstart](../../docs/quickstarts/json/README.md).
+Pin all DDDart dependencies and overrides to the same full commit.
 
 ## Quick Start
 
-### 1. Annotate Your Classes
-
-```dart
-import 'package:dddart/dddart.dart';
-import 'package:dddart_json/dddart_json.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
-
-part 'user.g.dart';  // Required for code generation
-
-@Serializable()
-class User extends AggregateRoot<UuidValue> {
-  User({
-    required this.name,
-    required this.email,
-    UuidValue? id,
-    super.createdAt,
-    super.updatedAt,
-  }) : super(id: id ?? UuidValue.generate());
-  
-  final String name;
-  final String email;
-}
-
-@Serializable()
-class Address extends Value {
-  const Address({
-    required this.street,
-    required this.city,
-    required this.zipCode,
-  });
-  
-  final String street;
-  final String city;
-  final String zipCode;
-  
-  @override
-  List<Object?> get props => [street, city, zipCode];
-}
-```
-
-Generated deserialization calls the annotated type's unnamed constructor and
-passes every serialized field as a same-name named argument. Define that
-constructor even when the type has other named constructors.
-
-Inherited application state is supported when the concrete constructor exposes
-the field as a same-name named super-formal parameter, and every intermediate
-constructor forwards that named super-formal until it reaches the field-formal
-parameter that declares the state. If that reconstruction path is absent,
-generation fails instead of omitting the field or relying on an initializer or
-default value. The annotation on the concrete type controls the representation
-of both concrete and inherited fields; ancestor annotations are not merged.
-
-### 2. Generate Code
-
-```bash
-dart run build_runner build
-```
-
-This generates `*JsonSerializer` service classes for each annotated type.
-
-### 3. Use Serialization
-
-```dart
-// Create a serializer instance
-final serializer = UserJsonSerializer();
-
-// Serialize to JSON
-final user = User(name: 'John Doe', email: 'john@example.com');
-final json = serializer.toJson(user);
-
-// Deserialize from JSON
-final userFromJson = serializer.fromJson(json);
-
-// String serialization
-final jsonString = serializer.serialize(user);
-final userFromString = serializer.deserialize(jsonString);
-
-// Static convenience methods
-final json2 = UserJsonSerializer.encode(user);
-final user2 = UserJsonSerializer.decode(json2);
-```
+Follow the [complete json generation and round trip workflow](../../docs/quickstarts/json/README.md).
+It includes an outside-workspace pubspec, every import/model/part, clean generation
+where required, execution, expected output and cleanup.
 
 ## Configuration
 

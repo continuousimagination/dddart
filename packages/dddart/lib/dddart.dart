@@ -1,7 +1,10 @@
-/// DDDart - A lightweight Domain-Driven Design (DDD) framework for Dart.
+/// dddart: supported DDDart application and extension APIs.
 ///
-/// This library provides base classes and utilities to help developers
-/// implement DDD principles in their applications.
+/// Complete setup and runnable examples:
+/// https://github.com/continuousimagination/dddart/blob/main/docs/quickstarts/core/README.md
+///
+/// Supported imports and extension contracts:
+/// https://github.com/continuousimagination/dddart/blob/main/docs/PUBLIC_API.md
 library dddart;
 
 /// ## Logging Integration

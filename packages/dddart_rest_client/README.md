@@ -1,5 +1,12 @@
 # dddart_rest_client
 
+For complete setup, named source files, expected output and cleanup, follow the
+[canonical quickstart](../../docs/quickstarts/rest/README.md). Other inline Dart snippets below are
+**illustrative fragments** that assume application-specific models and surrounding
+setup; they are not standalone programs. See the [quickstart inventory](../../docs/QUICKSTARTS.md)
+for runnable, browser, service and credential-dependent coverage.
+
+
 Client library for dddart_rest APIs with automatic authentication and token management.
 
 ## Features
@@ -13,14 +20,9 @@ Client library for dddart_rest APIs with automatic authentication and token mana
 
 ## Installation
 
-Add to your `pubspec.yaml`:
-
-```yaml
-dependencies:
-  dddart_rest_client: ^0.1.0
-  http: ^1.2.0
-  path: ^1.9.0
-```
+DDDart is currently Git-only. Use the [Git installation guide](../../docs/GIT_INSTALLATION.md)
+and the complete dependency setup in the [canonical quickstart](../../docs/quickstarts/rest/README.md).
+Pin all DDDart dependencies and overrides to the same full commit.
 
 ## Usage
 

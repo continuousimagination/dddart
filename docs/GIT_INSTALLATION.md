@@ -90,3 +90,12 @@ Chrome. It fails if Chrome is unavailable. An optional second argument is an
 unauthenticated HTTPS or local file Git URL for an isolated test fixture; fixture
 SHAs are not accepted upstream revisions. Run again on the final accepted main
 SHA and retain its output as acceptance evidence.
+
+## Complete applications
+
+The [canonical quickstarts](QUICKSTARTS.md) provide complete, tested manifests,
+models, generated parts, executable entrypoints, expected output and teardown.
+They pin all Git dependencies to the same real revision and use Dart 3.13.7 for
+verification. Required adapter overrides are in each complete manifest. The
+primary JSON workflow declares build_runner and all packages its model imports;
+it can run outside this monorepo without workspace dependency resolution.

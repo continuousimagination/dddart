@@ -5,6 +5,12 @@ section: Build your domain
 order: 30
 ---
 
+Code outside an explicitly named complete workflow is an **illustrative fragment**
+that assumes the surrounding application models and setup. Use the
+[complete quickstarts](https://github.com/continuousimagination/dddart/blob/main/docs/QUICKSTARTS.md)
+for copyable manifests, named files, generation commands, expected output and cleanup.
+
+
 ## Put the dependency in the constructor
 
 An application service should say what it needs. It should not create a database connection every time it performs a domain action.

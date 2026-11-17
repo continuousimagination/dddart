@@ -5,6 +5,12 @@ section: Build your domain
 order: 10
 ---
 
+Code outside an explicitly named complete workflow is an **illustrative fragment**
+that assumes the surrounding application models and setup. Use the
+[complete quickstarts](https://github.com/continuousimagination/dddart/blob/main/docs/QUICKSTARTS.md)
+for copyable manifests, named files, generation commands, expected output and cleanup.
+
+
 ## Start with the conversation
 
 A reservation is confirmed. An order is placed. A subscription is cancelled. These are useful names because the people doing the work already use them.
@@ -167,7 +173,7 @@ Share the domain model and its tests between the server and clients. Keep platfo
 
 ## Implementation references
 
-- [Entity and UUID specializations](https://github.com/continuousimagination/dddart/blob/b4aacf0671873e729a1a390dc2bb609b80c723e5/packages/dddart/lib/src/entity.dart)
-- [Aggregate roots and captured event batches](https://github.com/continuousimagination/dddart/blob/b4aacf0671873e729a1a390dc2bb609b80c723e5/packages/dddart/lib/src/aggregate_root.dart)
-- [Value equality](https://github.com/continuousimagination/dddart/blob/b4aacf0671873e729a1a390dc2bb609b80c723e5/packages/dddart/lib/src/value.dart)
-- [Typed-identity tests](https://github.com/continuousimagination/dddart/blob/b4aacf0671873e729a1a390dc2bb609b80c723e5/packages/dddart/test/identity_test.dart)
+- [Entity and UUID specializations](https://github.com/continuousimagination/dddart/blob/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart/lib/src/entity.dart)
+- [Aggregate roots and captured event batches](https://github.com/continuousimagination/dddart/blob/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart/lib/src/aggregate_root.dart)
+- [Value equality](https://github.com/continuousimagination/dddart/blob/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart/lib/src/value.dart)
+- [Typed-identity tests](https://github.com/continuousimagination/dddart/blob/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart/test/identity_test.dart)

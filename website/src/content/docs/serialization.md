@@ -21,11 +21,36 @@ JSON is the supplied format implementation. The generic `Serializer<T>` contract
 
 ## Install the generator
 
-Follow the [Git installation instructions](/dddart/docs/getting-started/) and add `dddart`, `dddart_serialization`, and `dddart_json` from the **same full commit SHA**. Add the generator runner as a development dependency:
+Create an empty directory outside the repository with `bin` and `lib`
+subdirectories. Save this complete Git-only manifest as `pubspec.yaml`, then run
+`dart pub get`:
 
-```bash
-dart pub add dev:build_runner
+<!-- dddart-source: docs/quickstarts/json/pubspec.yaml.txt -->
+```yaml
+name: dddart_json_quickstart
+publish_to: none
+environment:
+  sdk: '>=3.13.7 <4.0.0'
+dependencies:
+  dddart:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
+      path: packages/dddart
+  dddart_json:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
+      path: packages/dddart_json
+  dddart_serialization:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
+      path: packages/dddart_serialization
+dev_dependencies:
+  build_runner: ^2.4.0
 ```
+<!-- /dddart-source -->
 
 The model file must import `dart:convert`, the domain package, the serialization package, and the JSON package. The generated part shares those imports.
 
@@ -33,6 +58,7 @@ The model file must import `dart:convert`, the domain package, the serialization
 
 Save this complete library as `lib/reservation.dart`:
 
+<!-- dddart-source: docs/quickstarts/json/lib/reservation.dart -->
 ```dart
 import 'dart:convert';
 
@@ -72,15 +98,19 @@ class SeatCount extends Value {
   List<Object?> get props => [value];
 }
 ```
+<!-- /dddart-source -->
 
 Generate the part:
 
 ```bash
+dart run build_runner clean
 dart run build_runner build --delete-conflicting-outputs
+dart analyze --fatal-infos
 ```
 
-Then save this as `bin/serialization.dart` and run `dart run bin/serialization.dart`:
+Then save this as `bin/main.dart` and run `dart run bin/main.dart`:
 
+<!-- dddart-source: docs/quickstarts/json/bin/main.dart -->
 ```dart
 import '../lib/reservation.dart';
 
@@ -100,6 +130,7 @@ void main() {
   print(restored.seats == original.seats); // true
 }
 ```
+<!-- /dddart-source -->
 
 The generated class implements `JsonSerializer<Reservation>`. Use `toJson` and `fromJson` for maps, and `serialize` and `deserialize` for strings. UUIDs use their string representation; timestamps use ISO 8601 text. A nullable field is omitted by default when its value is null.
 
@@ -109,6 +140,7 @@ Configuration precedence runs from a method call, to the serializer's constructo
 
 With the model above, this standalone program creates snake-case JSON and includes a null `note`:
 
+<!-- dddart-source: docs/quickstarts/json/bin/configuration.dart -->
 ```dart
 import 'package:dddart_serialization/dddart_serialization.dart';
 
@@ -136,6 +168,7 @@ void main() {
   print(ordinary['guestName']); // Sam
 }
 ```
+<!-- /dddart-source -->
 
 Supported naming strategies are unchanged names, `snake_case`, and `kebab-case`. Use the same effective format when encoding and decoding. The parent serializer passes its effective configuration and identity registry to nested serializers.
 
@@ -145,6 +178,7 @@ A domain identity describes equality. An `IdentityCodec<I>` describes its JSON a
 
 This standalone example needs `dddart` and `dddart_serialization`; it does not require code generation:
 
+<!-- dddart-source: docs/quickstarts/json/bin/identity.dart -->
 ```dart
 import 'dart:convert';
 
@@ -186,8 +220,10 @@ class IssueIdCodec implements IdentityCodec<IssueId> {
   @override
   IssueId fromKey(String value) {
     final decoded = jsonDecode(value);
-    if (decoded is! List || decoded.length != 2 ||
-        decoded[0] is! String || decoded[1] is! int) {
+    if (decoded is! List ||
+        decoded.length != 2 ||
+        decoded[0] is! String ||
+        decoded[1] is! int) {
       throw const FormatException('Expected canonical issue key');
     }
     return IssueId(decoded[0] as String, decoded[1] as int);
@@ -203,6 +239,7 @@ void main() {
   print(codecs.toTaggedJson(id)['type']); // issue.v1
 }
 ```
+<!-- /dddart-source -->
 
 For a generated `IssueJsonSerializer`, inject this registry using its `withIdentityCodecs(codecs)` constructor. Pass the same registry to the repository and event boundaries that need it. This constructor call assumes you have defined an annotated `Issue` aggregate and run the generator; it is not an additional built-in serializer.
 
@@ -220,7 +257,11 @@ Run generation and analysis after changing a model. Treat generated code as buil
 
 ## Implementation references
 
-- [Generator and supported type rules](https://github.com/continuousimagination/dddart/blob/b4aacf0671873e729a1a390dc2bb609b80c723e5/packages/dddart_json/lib/src/generators/serializable_generator.dart)
-- [Identity codecs and registry](https://github.com/continuousimagination/dddart/blob/b4aacf0671873e729a1a390dc2bb609b80c723e5/packages/dddart_serialization/lib/src/identity_codec.dart)
-- [Configuration precedence tests](https://github.com/continuousimagination/dddart/blob/b4aacf0671873e729a1a390dc2bb609b80c723e5/packages/dddart_json/test/annotation_configuration_precedence_test.dart)
-- [Event metadata round-trip tests](https://github.com/continuousimagination/dddart/blob/b4aacf0671873e729a1a390dc2bb609b80c723e5/packages/dddart_json/test/domain_event_roundtrip_test.dart)
+- [Generator and supported type rules](https://github.com/continuousimagination/dddart/blob/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_json/lib/src/generators/serializable_generator.dart)
+- [Identity codecs and registry](https://github.com/continuousimagination/dddart/blob/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_serialization/lib/src/identity_codec.dart)
+- [Configuration precedence tests](https://github.com/continuousimagination/dddart/blob/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_json/test/annotation_configuration_precedence_test.dart)
+- [Event metadata round-trip tests](https://github.com/continuousimagination/dddart/blob/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_json/test/domain_event_roundtrip_test.dart)
+
+All programs finish without external services. Remove the temporary application
+directory after experimenting. The [canonical workflow](https://github.com/continuousimagination/dddart/blob/main/docs/quickstarts/json/README.md)
+records exact output for each program.

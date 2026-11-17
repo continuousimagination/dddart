@@ -1,23 +1,10 @@
-/// Configuration management package for DDDart framework.
+/// dddart_config: supported DDDart application and extension APIs.
 ///
-/// Provides a unified interface for accessing configuration values from
-/// multiple sources (YAML files, environment variables, cloud services)
-/// with support for layering, type safety, and validation.
+/// Complete setup and runnable examples:
+/// https://github.com/continuousimagination/dddart/blob/main/docs/QUICKSTARTS.md
 ///
-/// Example usage:
-/// ```dart
-/// import 'package:dddart_config/dddart_config.dart';
-///
-/// void main() {
-///   final config = Configuration([
-///     EnvironmentConfigProvider(prefix: 'MYAPP'),
-///     YamlConfigProvider('config.yaml'),
-///   ]);
-///
-///   final host = config.getRequiredString('database.host');
-///   final port = config.getIntOrDefault('database.port', 5432);
-/// }
-/// ```
+/// Supported imports and extension contracts:
+/// https://github.com/continuousimagination/dddart/blob/main/docs/PUBLIC_API.md
 library dddart_config;
 
 export 'src/config_lookup.dart';

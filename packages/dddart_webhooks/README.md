@@ -1,5 +1,12 @@
 # dddart_webhooks
 
+For complete setup, named source files, expected output and cleanup, follow the
+[canonical quickstart](../../docs/QUICKSTARTS.md#browser-and-external-integrations). Other inline Dart snippets below are
+**illustrative fragments** that assume application-specific models and surrounding
+setup; they are not standalone programs. See the [quickstart inventory](../../docs/QUICKSTARTS.md)
+for runnable, browser, service and credential-dependent coverage.
+
+
 Webhook support for DDDart - A framework for receiving, verifying, and processing webhooks from external services with strongly-typed payloads and verification results.
 
 ## Overview
@@ -23,12 +30,9 @@ Webhooks are HTTP callbacks that external services (GitHub, Slack, Stripe, etc.)
 
 ## Installation
 
-Add to your `pubspec.yaml`:
-
-```yaml
-dependencies:
-  dddart_webhooks: ^0.9.0
-```
+DDDart is currently Git-only. Use the [Git installation guide](../../docs/GIT_INSTALLATION.md)
+and the complete dependency setup in the [canonical quickstart](../../docs/QUICKSTARTS.md#browser-and-external-integrations).
+Pin all DDDart dependencies and overrides to the same full commit.
 
 ## Quick Start
 

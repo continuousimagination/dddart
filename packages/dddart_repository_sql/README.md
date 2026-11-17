@@ -1,5 +1,12 @@
 # dddart_repository_sql
 
+For complete setup, named source files, expected output and cleanup, follow the
+[canonical quickstart](../../docs/quickstarts/sqlite/README.md). Other inline Dart snippets below are
+**illustrative fragments** that assume application-specific models and surrounding
+setup; they are not standalone programs. See the [quickstart inventory](../../docs/QUICKSTARTS.md)
+for runnable, browser, service and credential-dependent coverage.
+
+
 ## Typed identity contracts
 
 `SqlDialect` supplies `identityColumnType`, `maxIdentityKeyBytes`,
@@ -66,14 +73,9 @@ dddart_repository_sqlite (concrete implementation)
 
 ## Installation
 
-This package is typically not used directly. Instead, use a concrete implementation:
-
-```yaml
-dependencies:
-  dddart: ^0.9.0
-  dddart_json: ^0.9.0
-  dddart_repository_sqlite: ^0.9.0  # Or postgres, mysql, etc.
-```
+DDDart is currently Git-only. Use the [Git installation guide](../../docs/GIT_INSTALLATION.md)
+and the complete dependency setup in the [canonical quickstart](../../docs/quickstarts/sqlite/README.md).
+Pin all DDDart dependencies and overrides to the same full commit.
 
 ## Core Abstractions
 

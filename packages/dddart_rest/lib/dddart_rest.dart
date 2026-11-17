@@ -1,8 +1,10 @@
-/// RESTful CRUD API framework for DDDart
+/// dddart_rest: supported DDDart application and extension APIs.
 ///
-/// Provides a declarative, type-safe way to expose aggregate roots through
-/// RESTful HTTP endpoints with a JSON media contract, custom query handlers,
-/// and extensible error handling.
+/// Complete setup and runnable examples:
+/// https://github.com/continuousimagination/dddart/blob/main/docs/quickstarts/rest/README.md
+///
+/// Supported imports and extension contracts:
+/// https://github.com/continuousimagination/dddart/blob/main/docs/PUBLIC_API.md
 library dddart_rest;
 
 export 'src/access_policy.dart';

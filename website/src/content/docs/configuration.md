@@ -5,6 +5,12 @@ section: Connect the pieces
 order: 40
 ---
 
+Code outside an explicitly named complete workflow is an **illustrative fragment**
+that assumes the surrounding application models and setup. Use the
+[complete quickstarts](https://github.com/continuousimagination/dddart/blob/main/docs/QUICKSTARTS.md)
+for copyable manifests, named files, generation commands, expected output and cleanup.
+
+
 ## Configure the application at its edges
 
 `dddart_config` combines configuration sources behind `ConfigProvider`. Read and validate settings when wiring the application, then pass the values or dependencies your domain needs into constructors. A reservation should not need to know an environment-variable name or a YAML file path.
@@ -158,7 +164,7 @@ Call `await config.reload()` to ask each provider to refresh. YAML reload reread
 
 ## Implementation references
 
-- [Configuration lookup, precedence, and typed getters](https://github.com/continuousimagination/dddart/blob/b4aacf0671873e729a1a390dc2bb609b80c723e5/packages/dddart_config/lib/src/configuration.dart)
-- [Environment name conversion](https://github.com/continuousimagination/dddart/blob/b4aacf0671873e729a1a390dc2bb609b80c723e5/packages/dddart_config/lib/src/environment_config_provider.dart)
-- [Provider extension contract](https://github.com/continuousimagination/dddart/blob/b4aacf0671873e729a1a390dc2bb609b80c723e5/packages/dddart_config/lib/src/config_provider.dart)
-- [Structured configuration tests](https://github.com/continuousimagination/dddart/blob/b4aacf0671873e729a1a390dc2bb609b80c723e5/packages/dddart_config/test/structured_configuration_test.dart)
+- [Configuration lookup, precedence, and typed getters](https://github.com/continuousimagination/dddart/blob/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_config/lib/src/configuration.dart)
+- [Environment name conversion](https://github.com/continuousimagination/dddart/blob/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_config/lib/src/environment_config_provider.dart)
+- [Provider extension contract](https://github.com/continuousimagination/dddart/blob/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_config/lib/src/config_provider.dart)
+- [Structured configuration tests](https://github.com/continuousimagination/dddart/blob/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_config/test/structured_configuration_test.dart)

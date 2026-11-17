@@ -1,5 +1,12 @@
 # DDDart
 
+For complete setup, named source files, expected output and cleanup, follow the
+[canonical quickstart](../../docs/quickstarts/core/README.md). Other inline Dart snippets below are
+**illustrative fragments** that assume application-specific models and surrounding
+setup; they are not standalone programs. See the [quickstart inventory](../../docs/QUICKSTARTS.md)
+for runnable, browser, service and credential-dependent coverage.
+
+
 A lightweight Domain-Driven Design (DDD) framework for Dart that provides base classes and utilities to help developers implement DDD principles in their applications.
 
 ## Features
@@ -15,157 +22,15 @@ A lightweight Domain-Driven Design (DDD) framework for Dart that provides base c
 
 ## Installation
 
-Until the package is published on pub.dev, add it from Git using a full commit
-SHA and `path: packages/dddart`. See the [Git installation guide](../../docs/GIT_INSTALLATION.md)
-for a working `pubspec.yaml` and the additional setup needed when combining
-DD Dart packages.
-
-Then run:
-
-```bash
-dart pub get
-```
+DDDart is currently Git-only. Use the [Git installation guide](../../docs/GIT_INSTALLATION.md)
+and the complete dependency setup in the [canonical quickstart](../../docs/quickstarts/core/README.md).
+Pin all DDDart dependencies and overrides to the same full commit.
 
 ## Quick Start
 
-All domain entities use `Entity<I>` or `AggregateRoot<I>`, with a required
-identity. UUID models use `Entity<UuidValue>` or `AggregateRoot<UuidValue>`;
-their constructors can generate an ID explicitly with `UuidValue.generate()`.
-Repositories use `Repository<T, I>` and reject unrelated identity types in typed
-code. See [native identity and UUID migration](IDENTITY_GUIDE.md).
-
-### Creating Entities
-
-```dart
-import 'package:dddart/dddart.dart';
-
-class User extends Entity<UuidValue> {
-  final String name;
-  final String email;
-  
-  User({
-    required this.name,
-    required this.email,
-    UuidValue? id,
-    super.createdAt,
-    super.updatedAt,
-  }) : super(id: id ?? UuidValue.generate());
-}
-```
-
-### Creating Aggregate Roots with Events
-
-```dart
-import 'package:dddart/dddart.dart';
-
-// Define a domain event
-class OrderPlaced extends DomainEvent<UuidValue> {
-  final String customerId;
-  final double totalAmount;
-  
-  OrderPlaced({
-    required UuidValue orderId,
-    required this.customerId,
-    required this.totalAmount,
-  }) : super(aggregateId: orderId);
-}
-
-// Create an aggregate that raises events
-class Order extends AggregateRoot<UuidValue> {
-  final String customerId;
-  final List<OrderItem> items;
-  
-  Order._({
-    required this.customerId,
-    required this.items,
-    UuidValue? id,
-    super.createdAt,
-    super.updatedAt,
-  }) : super(id: id ?? UuidValue.generate());
-  
-  // Factory method that raises domain event
-  factory Order.place({
-    required String customerId,
-    required List<OrderItem> items,
-  }) {
-    final order = Order._(
-      customerId: customerId,
-      items: items,
-    );
-    
-    // Raise domain event
-    order.raiseEvent(OrderPlaced(
-      orderId: order.id,
-      customerId: customerId,
-      totalAmount: items.fold(0, (sum, item) => sum + item.price),
-    ));
-    
-    return order;
-  }
-}
-```
-
-### Creating Value Objects
-
-```dart
-import 'package:dddart/dddart.dart';
-
-class Money extends Value {
-  final double amount;
-  final String currency;
-  
-  const Money(this.amount, this.currency);
-  
-  @override
-  List<Object?> get props => [amount, currency];
-}
-```
-
-`Value.props` also compares nested lists and other finite iterables element by element
-in order. Sets and maps compare without regard to insertion order, including
-nested collection members and map keys; equal values have equal hash codes.
-Lists, sets, maps, and other iterables are distinct equality categories at every
-nesting level. Different non-list/non-set iterable implementations can compare
-equal when they yield the same elements in order.
-Keep collection properties immutable. Mutating one after a `Value` has been used
-as a set member or map key changes its equality and may change its hash code.
-Cyclic collections are not supported. Values with only scalar properties keep
-their existing equality and hash behavior.
-
-### Using the Event Bus
-
-```dart
-import 'package:dddart/dddart.dart';
-
-void main() async {
-  // Create an event bus
-  final eventBus = EventBus();
-  
-  // Subscribe to events
-  eventBus.on<OrderPlaced>().listen((event) {
-    print('Order placed: ${event.aggregateId}');
-    // Send confirmation email, update inventory, etc.
-  });
-  
-  // Create an aggregate
-  final order = Order.place(
-    customerId: 'customer-123',
-    items: [/* order items */],
-  );
-  
-  // Capture before asynchronous infrastructure work.
-  final batch = order.captureUncommittedEvents();
-  for (final event in batch.events) {
-    eventBus.publish(event);
-  }
-  
-  // Mark events as committed
-  order.markEventsAsCommitted(batch: batch);
-  
-  // Clean up
-  await eventBus.close();
-}
-```
+Follow the [complete core model and local events workflow](../../docs/quickstarts/core/README.md).
+It includes an outside-workspace pubspec, every import/model/part, clean generation
+where required, execution, expected output and cleanup.
 
 ## Core Concepts
 

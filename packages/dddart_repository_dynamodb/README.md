@@ -1,5 +1,12 @@
 # dddart_repository_dynamodb
 
+For complete setup, named source files, expected output and cleanup, follow the
+[canonical quickstart](../../docs/quickstarts/dynamodb/README.md). Other inline Dart snippets below are
+**illustrative fragments** that assume application-specific models and surrounding
+setup; they are not standalone programs. See the [quickstart inventory](../../docs/QUICKSTARTS.md)
+for runnable, browser, service and credential-dependent coverage.
+
+
 DynamoDB repository implementation for DDDart aggregate roots with code generation support.
 
 ## Features
@@ -50,85 +57,15 @@ generation. No default scan or enumeration capability is added.
 
 ## Installation
 
-Add to your `pubspec.yaml`:
-
-```yaml
-dependencies:
-  dddart: ^1.0.0
-  dddart_json: ^1.0.0
-  dddart_repository_dynamodb: ^0.1.0
-
-dev_dependencies:
-  build_runner: ^2.4.0
-```
+DDDart is currently Git-only. Use the [Git installation guide](../../docs/GIT_INSTALLATION.md)
+and the complete dependency setup in the [canonical quickstart](../../docs/quickstarts/dynamodb/README.md).
+Pin all DDDart dependencies and overrides to the same full commit.
 
 ## Quick Start
 
-### 1. Annotate Your Aggregate Root
-
-```dart
-import 'package:dddart/dddart.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
-import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';
-
-part 'user.g.dart';
-
-@Serializable()
-@GenerateDynamoRepository(tableName: 'users')
-class User extends AggregateRoot<UuidValue> {
-  User({
-    required UuidValue id,
-    required this.email,
-    required this.firstName,
-    required this.lastName,
-  }) : super(id: id);
-
-  final String email;
-  final String firstName;
-  final String lastName;
-}
-```
-
-### 2. Generate Repository Code
-
-```bash
-dart run build_runner build
-```
-
-### 3. Use the Generated Repository
-
-```dart
-import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';
-
-void main() async {
-  // Configure connection
-  final connection = DynamoConnection(
-    region: 'us-east-1',
-    // Credentials will use AWS default credential chain
-  );
-
-  // Create repository instance
-  final userRepo = UserDynamoRepository(connection);
-
-  // Create table (one-time setup)
-  await userRepo.createTable();
-
-  // Use repository
-  final user = User(
-    id: UuidValue.generate(),
-    email: 'john@example.com',
-    firstName: 'John',
-    lastName: 'Doe',
-  );
-
-  await userRepo.save(user);
-  final retrieved = await userRepo.getById(user.id);
-  await userRepo.deleteById(user.id);
-
-  // Clean up
-  connection.dispose();
-}
-```
+Follow the [complete dynamodb local persistence workflow](../../docs/quickstarts/dynamodb/README.md).
+It includes an outside-workspace pubspec, every import/model/part, clean generation
+where required, execution, expected output and cleanup.
 
 ## Configuration
 

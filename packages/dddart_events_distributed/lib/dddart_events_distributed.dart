@@ -1,7 +1,10 @@
-/// Distributed event system for DDDart.
+/// dddart_events_distributed: supported DDDart application and extension APIs.
 ///
-/// One aggregate-scoped client/publisher API with an HTTP polling transport.
-/// Add dddart_events_appsync for the optional live transport on the same interface.
+/// Complete setup and runnable examples:
+/// https://github.com/continuousimagination/dddart/blob/main/docs/QUICKSTARTS.md
+///
+/// Supported imports and extension contracts:
+/// https://github.com/continuousimagination/dddart/blob/main/docs/PUBLIC_API.md
 library dddart_events_distributed;
 
 export 'src/aggregate_event_client.dart';

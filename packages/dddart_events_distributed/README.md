@@ -1,5 +1,12 @@
 # dddart_events_distributed
 
+For complete setup, named source files, expected output and cleanup, follow the
+[canonical quickstart](../../docs/QUICKSTARTS.md#browser-and-external-integrations). Other inline Dart snippets below are
+**illustrative fragments** that assume application-specific models and surrounding
+setup; they are not standalone programs. See the [quickstart inventory](../../docs/QUICKSTARTS.md)
+for runnable, browser, service and credential-dependent coverage.
+
+
 Aggregate-scoped domain events with one `AggregateEventClient` and one
 `EventPublisher` contract. This package supplies `HttpAggregateEventTransport`
 for HTTP publication and polling. Optional

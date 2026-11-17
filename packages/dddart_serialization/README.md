@@ -1,5 +1,12 @@
 # DDDart Serialization
 
+For complete setup, named source files, expected output and cleanup, follow the
+[canonical quickstart](../../docs/quickstarts/json/README.md). Other inline Dart snippets below are
+**illustrative fragments** that assume application-specific models and surrounding
+setup; they are not standalone programs. See the [quickstart inventory](../../docs/QUICKSTARTS.md)
+for runnable, browser, service and credential-dependent coverage.
+
+
 See the [serialization configuration and error contract](../../docs/SERIALIZATION.md)
 for typed options, precedence, identity codecs, and failure behavior.
 
@@ -18,10 +25,9 @@ This is a framework package - you'll typically use it alongside a specific seria
 
 ## Installation
 
-Until these packages are published on pub.dev, use the
-[Git installation guide](../../docs/GIT_INSTALLATION.md). Pin every direct
-dddart dependency to one Git commit. The package's sibling dependency on core
-resolves from that same checkout.
+DDDart is currently Git-only. Use the [Git installation guide](../../docs/GIT_INSTALLATION.md)
+and the complete dependency setup in the [canonical quickstart](../../docs/quickstarts/json/README.md).
+Pin all DDDart dependencies and overrides to the same full commit.
 
 ## Usage
 

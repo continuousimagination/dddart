@@ -1,5 +1,12 @@
 # dddart_events_dynamodb
 
+For complete setup, named source files, expected output and cleanup, follow the
+[canonical quickstart](../../docs/QUICKSTARTS.md#browser-and-external-integrations). Other inline Dart snippets below are
+**illustrative fragments** that assume application-specific models and surrounding
+setup; they are not standalone programs. See the [quickstart inventory](../../docs/QUICKSTARTS.md)
+for runnable, browser, service and credential-dependent coverage.
+
+
 Durable server-side aggregate event history and random channel mappings for
 short-lived or concurrent serverless invocations. Clients need neither this
 package nor their own event database. See the

@@ -41,12 +41,80 @@ and separate-tab/lifecycle guarantees remain explicit follow-ups.
 
 ## Quick Start
 
-1. **Add dependencies** using the [Git installation guide](docs/GIT_INSTALLATION.md).
-   These packages are not yet published on pub.dev, so the hosted `^1.0.0`
-   examples previously shown here cannot resolve. Pin all direct dddart
-   dependencies to the same repository commit.
+Start with the [complete core example](docs/quickstarts/core/README.md), or follow
+the JSON workflow below. [All quickstarts and classifications](docs/QUICKSTARTS.md)
+list service/platform prerequisites and the additional examples.
 
-2. **Create your domain models**:
+Use Dart **3.13.7**, the development SDK used for these checks. This is a verified
+setup, not a claim about the minimum SDK on every platform (#98 tracks that).
+The DDDart dependencies below use one immutable Git revision; they do not require
+published DDDart packages. See [Git installation](https://github.com/continuousimagination/dddart/blob/main/docs/GIT_INSTALLATION.md)
+for source overrides and [the support matrix](https://continuousimagination.github.io/dddart/docs/contracts/) for platform limits.
+
+Create an empty directory **outside this repository**, then create the named files:
+
+```sh
+mkdir dddart_json_quickstart
+cd dddart_json_quickstart
+mkdir -p bin lib
+```
+
+Save as `pubspec.yaml` (the fixture uses `.txt` only to keep it out of the monorepo workspace):
+
+<!-- dddart-source: docs/quickstarts/json/pubspec.yaml.txt -->
+```yaml
+name: dddart_json_quickstart
+publish_to: none
+environment:
+  sdk: '>=3.13.7 <4.0.0'
+dependencies:
+  dddart:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
+      path: packages/dddart
+  dddart_json:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
+      path: packages/dddart_json
+  dddart_serialization:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
+      path: packages/dddart_serialization
+dev_dependencies:
+  build_runner: ^2.4.0
+```
+<!-- /dddart-source -->
+
+Save as `bin/main.dart`:
+
+<!-- dddart-source: docs/quickstarts/json/bin/main.dart -->
+```dart
+import '../lib/reservation.dart';
+
+void main() {
+  final serializer = ReservationJsonSerializer();
+  final original = Reservation(
+    guestName: 'Sam',
+    seats: SeatCount(value: 2),
+  );
+
+  final json = serializer.toJson(original);
+  final text = serializer.serialize(original);
+  final restored = serializer.deserialize(text);
+
+  print(json['guestName']); // Sam
+  print(restored.id == original.id); // true
+  print(restored.seats == original.seats); // true
+}
+```
+<!-- /dddart-source -->
+
+Save as `lib/reservation.dart`:
+
+<!-- dddart-source: docs/quickstarts/json/lib/reservation.dart -->
 ```dart
 import 'dart:convert';
 
@@ -54,41 +122,59 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_json/dddart_json.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
-part 'user.g.dart';
+part 'reservation.g.dart';
 
 @Serializable()
-class User extends AggregateRoot<UuidValue> {
-  User({
-    required this.name,
-    required this.email,
+class Reservation extends AggregateRoot<UuidValue> {
+  Reservation({
+    required this.guestName,
+    required this.seats,
+    this.note,
     UuidValue? id,
     super.createdAt,
     super.updatedAt,
   }) : super(id: id ?? UuidValue.generate());
-  
-  final String name;
-  final String email;
+
+  final String guestName;
+  final SeatCount seats;
+  final String? note;
+}
+
+@Serializable()
+class SeatCount extends Value {
+  factory SeatCount({required int value}) {
+    if (value < 1) throw ArgumentError('At least one seat is required');
+    return SeatCount._(value);
+  }
+
+  const SeatCount._(this.value);
+  final int value;
+
+  @override
+  List<Object?> get props => [value];
 }
 ```
+<!-- /dddart-source -->
 
-3. **Generate serialization code**:
-```bash
-dart run build_runner build
+Resolve dependencies, generate from clean build state, analyze, and run:
+
+```sh
+dart pub get
+dart run build_runner clean
+dart run build_runner build --delete-conflicting-outputs
+dart analyze --fatal-infos
+dart run bin/main.dart
 ```
 
-4. **Use serialization**:
-```dart
-final serializer = UserJsonSerializer();
-final user = User(name: 'John', email: 'john@example.com');
+Expected output for `bin/main.dart`:
 
-// Serialize
-final json = serializer.toJson(user);
-final jsonString = serializer.serialize(user);
-
-// Deserialize
-final userFromJson = serializer.fromJson(json);
-final userFromString = serializer.deserialize(jsonString);
+```text
+Sam
+true
+true
 ```
+
+The program finishes and closes its resources. Delete the temporary application directory when finished.
 
 ## Features
 
