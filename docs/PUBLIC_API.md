@@ -161,7 +161,6 @@ or export requires review of this inventory.
 
 ### `dddart_repository_sql/generator.dart`
 
-- `namespace. library`
 - `'dddart_repository_sql.dart'`
 - `'src/schema/collection_analyzer.dart'`
 - `'src/schema/identity_type.dart'`

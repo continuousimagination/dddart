@@ -11,6 +11,41 @@ import unittest
 import validate as gate
 
 
+class ExportScanning(unittest.TestCase):
+    def test_export_prose_and_commented_directives_are_ignored(self):
+        source = """/// Keep internal types out of this export namespace.
+library;
+// export 'line_comment.dart';
+/* export 'block_comment.dart';
+   /* Nested Dart comments are allowed. */
+   export 'still_commented.dart'; */
+export 'public.dart';
+"""
+        self.assertEqual(gate.export_directives(source), ["'public.dart'"])
+
+    def test_literals_do_not_create_directives_or_comments(self):
+        source = """const example = '''
+export 'example.dart';
+''';
+const rawExample = r"export 'raw_example.dart'; //";
+const escaped = 'It\\'s not an export';
+export 'https://example.com/public.dart';
+"""
+        self.assertEqual(gate.export_directives(source), ["'https://example.com/public.dart'"])
+
+    def test_multiline_conditional_and_filtered_exports_keep_their_contract(self):
+        source = """export /* public API */ 'base.dart'
+  if (dart.library.io) 'native.dart'
+  show First, Second;
+export 'other.dart' // internal implementation
+  hide Internal;
+"""
+        self.assertEqual(gate.export_directives(source), [
+            "'base.dart' if (dart.library.io) 'native.dart' show First, Second",
+            "'other.dart' hide Internal",
+        ])
+
+
 class DocumentationFailures(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -67,6 +102,13 @@ class DocumentationFailures(unittest.TestCase):
         path = self.root / 'packages/dddart_json/lib/dddart_json.dart'
         path.write_text(path.read_text() + "\nexport 'src/unreviewed.dart';\n")
         with self.assertRaisesRegex(gate.Failure, 'public exports differ'):
+            gate.check(self.root)
+
+    def test_comment_only_export_mentions_do_not_change_inventory(self):
+        path = self.root / 'packages/dddart_repository_sql/lib/generator.dart'
+        path.write_text(path.read_text() + "\n// export 'not_public.dart';\n"
+                        "/* export 'also_not_public.dart'; */\n")
+        with contextlib.redirect_stdout(io.StringIO()):
             gate.check(self.root)
 
     def test_missing_builder_dependency_fails_before_execution(self):

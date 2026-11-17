@@ -177,6 +177,56 @@ def check(root=ROOT):
     return metadata, inventory
 
 
+def export_directives(source):
+    """Read directives without mistaking Dart comments or string data for code.
+
+    Mask literals before matching directives so comment markers and semicolons
+    inside URIs stay intact. Dart analysis remains responsible for syntax checks.
+    """
+    code = []
+    strings = []
+    position = 0
+    string_start = re.compile("r?(\"\"\"|'''|\"|')")
+    while position < len(source):
+        if source.startswith('//', position):
+            end = source.find('\n', position)
+            position = len(source) if end == -1 else end
+            code.append(' ')
+        elif source.startswith('/*', position):
+            position += 2
+            depth = 1
+            while position < len(source) and depth:
+                if source.startswith('/*', position):
+                    depth += 1
+                    position += 2
+                elif source.startswith('*/', position):
+                    depth -= 1
+                    position += 2
+                else:
+                    position += 1
+            if depth:
+                raise Failure('Unterminated Dart comment while scanning exports')
+            code.append(' ')
+        elif match := string_start.match(source, position):
+            start = position
+            raw = source[start] == 'r'
+            quote = match[1]
+            position = match.end()
+            while position < len(source) and not source.startswith(quote, position):
+                position += 2 if source[position] == '\\' and not raw else 1
+            if position >= len(source):
+                raise Failure('Unterminated Dart string while scanning exports')
+            position += len(quote)
+            code.append(f'\0{len(strings)}\0')
+            strings.append(source[start:position])
+        else:
+            code.append(source[position])
+            position += 1
+    directives = re.findall(r'\bexport\s*(\0\d+\0[^;]*);', ''.join(code))
+    return [' '.join(re.sub(r'\0(\d+)\0', lambda m: strings[int(m[1])], body).split())
+            for body in directives]
+
+
 def check_exports(root, packages):
     inventory = (root / 'docs/PUBLIC_API.md').read_text()
     listed = set(re.findall(r'^### `([^`]+)`', inventory, re.M))
@@ -189,7 +239,7 @@ def check_exports(root, packages):
             raise Failure(f'New public entrypoint absent from API inventory: {label}')
         section = inventory.split(heading, 1)[1].split('\n### ', 1)[0]
         recorded = re.findall(r'^- `([^`]+)`', section, re.M)
-        exports = [' '.join(m.split()) for m in re.findall(r'export\s+([^;]+);', path.read_text())]
+        exports = export_directives(path.read_text())
         if recorded != exports:
             raise Failure(f'{label}: public exports differ from docs/PUBLIC_API.md')
     if listed != actual:
