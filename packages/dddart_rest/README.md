@@ -861,13 +861,15 @@ shelf Server
     ↓
 Router (matches path + method)
     ↓
-CrudResource (determines operation type)
+CrudResource (selects operation policy and verifies the caller)
     ↓
-├─ handleGetById() → Repository.getById()
-├─ handleQuery() → Explicit Collection or Named Query Handler
-├─ handleCreate() → Deserialize + Repository.save()
-├─ handleUpdate() → Deserialize + Repository.save()
-└─ handleDelete() → Repository.deleteById()
+├─ Item GET → Stored snapshot → Read policy
+├─ Collection GET → Query policy/scope → Application selection/count/pagination
+├─ POST → Deserialize/normalize → Create policy → Create-if-absent
+├─ PUT → Current + proposal → Update/create policy → Conditional mutation
+└─ DELETE → Current state → Delete policy → Conditional mutation
+    ↓
+Public/authentication-only ordinary CRUD remains available where no condition is required.
     ↓
 ErrorMapper (catches exceptions)
     ↓
