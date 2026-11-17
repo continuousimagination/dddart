@@ -5,6 +5,10 @@ section: Connect the pieces
 order: 40
 ---
 
+The checked [outside-workspace manifest and commands](https://github.com/continuousimagination/dddart/tree/main/docs/quickstarts/configuration)
+provide the surrounding compilation context for the complete program below.
+
+
 Code outside an explicitly named complete workflow is an **illustrative fragment**
 that assumes the surrounding application models and setup. Use the
 [complete quickstarts](https://github.com/continuousimagination/dddart/blob/main/docs/QUICKSTARTS.md)
@@ -23,6 +27,7 @@ Install `dddart_config` from the same repository revision as your other DDDart d
 
 Create `config.yaml` in your application's working directory:
 
+<!-- dddart-source: docs/quickstarts/configuration/config.yaml -->
 ```yaml
 server:
   host: 127.0.0.1
@@ -32,9 +37,11 @@ logging:
 allowed_origins:
   - https://example.com
 ```
+<!-- /dddart-source -->
 
 Save this complete program as `bin/configuration.dart`:
 
+<!-- dddart-source: docs/quickstarts/configuration/bin/configuration.dart -->
 ```dart
 import 'package:dddart_config/dddart_config.dart';
 
@@ -66,6 +73,7 @@ void main() {
   print(config.getRequiredList('allowed_origins'));
 }
 ```
+<!-- /dddart-source -->
 
 Run it from the directory containing `config.yaml`:
 
@@ -123,6 +131,7 @@ A provider implements `lookup` and `reload`. The empty path must return its comp
 
 This complete example supplies an in-memory configuration tree without filesystem or process-environment access:
 
+<!-- dddart-source: docs/quickstarts/configuration/bin/provider.dart -->
 ```dart
 import 'package:dddart_config/dddart_config.dart';
 
@@ -153,6 +162,7 @@ void main() {
   print(config.getRequiredList('booking.supported_locales')); // [en, es]
 }
 ```
+<!-- /dddart-source -->
 
 A remote or embedded provider can use the same contract, but no cloud configuration provider is included automatically. Fetching, authentication, caching, and refresh policy belong to that implementation.
 

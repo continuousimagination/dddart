@@ -17,6 +17,7 @@ An application service should say what it needs. It should not create a database
 
 The following complete program takes a repository through its constructor. The action has no database, HTTP, Flutter, filesystem, or browser dependency:
 
+<!-- dddart-source: docs/quickstarts/core/bin/contracts.dart -->
 ```dart
 import 'package:dddart/dddart.dart';
 
@@ -55,6 +56,7 @@ Future<void> main() async {
   print((await repository.getById(reservation.id)).confirmed); // true
 }
 ```
+<!-- /dddart-source -->
 
 This example can run with only the core package. Replacing the repository with another implementation preserves the application's dependency contract. The concrete model and adapter must still support the chosen persistence/serialization mapping; the sample's private boolean is not offered as a generated-serialization model.
 

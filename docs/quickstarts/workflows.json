@@ -21,13 +21,52 @@
         {
           "source": "pubspec.yaml.txt",
           "destination": "pubspec.yaml"
+        },
+        {
+          "source": "bin/repository.dart",
+          "destination": "bin/repository.dart"
+        },
+        {
+          "source": "bin/contracts.dart",
+          "destination": "bin/contracts.dart"
+        },
+        {
+          "source": "bin/modeling.dart",
+          "destination": "bin/modeling.dart"
+        },
+        {
+          "source": "bin/identity.dart",
+          "destination": "bin/identity.dart"
         }
       ],
       "runs": [
         {
           "path": "bin/main.dart",
-          "stdout": "Sam: order placed = true\n"
+          "stdoutFile": "expected/main.txt"
+        },
+        {
+          "path": "bin/repository.dart",
+          "stdoutFile": "expected/repository.txt"
+        },
+        {
+          "path": "bin/contracts.dart",
+          "stdoutFile": "expected/contracts.txt"
+        },
+        {
+          "path": "bin/modeling.dart",
+          "stdoutFile": "expected/modeling.txt"
+        },
+        {
+          "path": "bin/identity.dart",
+          "stdoutFile": "expected/identity.txt"
         }
+      ],
+      "commandsFiles": [
+        "commands.sh",
+        "guide_commands.sh"
+      ],
+      "javascript": [
+        "bin/main.dart"
       ]
     },
     {
@@ -69,16 +108,23 @@
       "runs": [
         {
           "path": "bin/main.dart",
-          "stdout": "Sam\ntrue\ntrue\n"
+          "stdoutFile": "expected/main.txt"
         },
         {
           "path": "bin/configuration.dart",
-          "stdout": "Sam\ntrue\nSam\nSam\n"
+          "stdoutFile": "expected/configuration.txt"
         },
         {
           "path": "bin/identity.dart",
-          "stdout": "true\nissue.v1\n"
+          "stdoutFile": "expected/identity.txt"
         }
+      ],
+      "commandsFiles": [
+        "commands.sh",
+        "guide_commands.sh"
+      ],
+      "javascript": [
+        "bin/main.dart"
       ]
     },
     {
@@ -115,8 +161,11 @@
       "runs": [
         {
           "path": "bin/main.dart",
-          "stdout": "hello: persisted\n"
+          "stdoutFile": "expected/main.txt"
         }
+      ],
+      "commandsFiles": [
+        "commands.sh"
       ]
     },
     {
@@ -153,8 +202,11 @@
       "runs": [
         {
           "path": "bin/main.dart",
-          "stdout": "hello: persisted\n"
+          "stdoutFile": "expected/main.txt"
         }
+      ],
+      "commandsFiles": [
+        "commands.sh"
       ]
     },
     {
@@ -190,8 +242,11 @@
       "runs": [
         {
           "path": "bin/main.dart",
-          "stdout": "hello: persisted\n"
+          "stdoutFile": "expected/main.txt"
         }
+      ],
+      "commandsFiles": [
+        "commands.sh"
       ]
     },
     {
@@ -227,8 +282,11 @@
       "runs": [
         {
           "path": "bin/main.dart",
-          "stdout": "hello: persisted\n"
+          "stdoutFile": "expected/main.txt"
         }
+      ],
+      "commandsFiles": [
+        "commands.sh"
       ]
     },
     {
@@ -267,8 +325,90 @@
       "runs": [
         {
           "path": "bin/main.dart",
-          "stdout": "200: public hello\n"
+          "stdoutFile": "expected/main.txt"
         }
+      ],
+      "commandsFiles": [
+        "commands.sh"
+      ]
+    },
+    {
+      "name": "configuration",
+      "packages": [
+        "dddart_config"
+      ],
+      "allowedLocalPackages": [
+        "dddart_config"
+      ],
+      "service": "none",
+      "generation": false,
+      "files": [
+        {
+          "source": "pubspec.yaml.txt",
+          "destination": "pubspec.yaml"
+        },
+        {
+          "source": "bin/configuration.dart",
+          "destination": "bin/configuration.dart"
+        },
+        {
+          "source": "bin/provider.dart",
+          "destination": "bin/provider.dart"
+        },
+        {
+          "source": "config.yaml",
+          "destination": "config.yaml"
+        }
+      ],
+      "runs": [
+        {
+          "path": "bin/configuration.dart",
+          "stdoutFile": "expected/configuration.txt"
+        },
+        {
+          "path": "bin/provider.dart",
+          "stdoutFile": "expected/provider.txt"
+        }
+      ],
+      "commandsFiles": [
+        "commands.sh",
+        "guide_commands.sh"
+      ]
+    },
+    {
+      "name": "slack_server",
+      "packages": [
+        "dddart_rest",
+        "dddart_webhooks",
+        "dddart_webhooks_slack"
+      ],
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_json",
+        "dddart_rest",
+        "dddart_serialization",
+        "dddart_webhooks",
+        "dddart_webhooks_slack"
+      ],
+      "service": "none",
+      "generation": false,
+      "files": [
+        {
+          "source": "pubspec.yaml.txt",
+          "destination": "pubspec.yaml"
+        },
+        {
+          "source": "bin/main.dart",
+          "destination": "bin/main.dart"
+        }
+      ],
+      "runs": [],
+      "compile": [
+        "bin/main.dart"
+      ],
+      "coverage": "Compile-only: requires SLACK_SIGNING_SECRET, a configured sender, and an application-owned long-running server.",
+      "commandsFiles": [
+        "commands.sh"
       ]
     }
   ]

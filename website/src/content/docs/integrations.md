@@ -5,6 +5,10 @@ section: Connect the pieces
 order: 50
 ---
 
+The checked [outside-workspace manifest and commands](https://github.com/continuousimagination/dddart/tree/main/docs/quickstarts/slack_server)
+provide the surrounding compilation context for the complete program below.
+
+
 Code outside an explicitly named complete workflow is an **illustrative fragment**
 that assumes the surrounding application models and setup. Use the
 [complete quickstarts](https://github.com/continuousimagination/dddart/blob/main/docs/QUICKSTARTS.md)
@@ -21,6 +25,7 @@ These integrations are optional. You can use the core package without a server, 
 
 This complete server program uses the supplied Slack verifier and form decoder:
 
+<!-- dddart-source: docs/quickstarts/slack_server/bin/main.dart -->
 ```dart
 import 'dart:io' as io;
 
@@ -53,6 +58,7 @@ Future<void> main() async {
   await server.start();
 }
 ```
+<!-- /dddart-source -->
 
 Install `dddart_rest`, `dddart_webhooks`, `dddart_webhooks_slack`, and `shelf` through your application's dependency setup. Use the [Git installation guide](/dddart/docs/getting-started/) for the dddart packages. Configure Slack's command request URL to reach this route through your deployment's HTTPS endpoint.
 

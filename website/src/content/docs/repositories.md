@@ -29,11 +29,13 @@ The interface deliberately has no universal `getAll()`, query language, transact
 
 After [installing the core package](/dddart/docs/getting-started/), this is a complete Dart program:
 
+<!-- dddart-source: docs/quickstarts/core/bin/repository.dart -->
 ```dart
 import 'package:dddart/dddart.dart';
 
 class Note extends AggregateRoot<UuidValue> {
-  Note({required this.title, UuidValue? id}) : super(id: id ?? UuidValue.generate());
+  Note({required this.title, UuidValue? id})
+      : super(id: id ?? UuidValue.generate());
 
   final String title;
 }
@@ -56,6 +58,7 @@ Future<void> main() async {
   await notes.deleteById(note.id);
 }
 ```
+<!-- /dddart-source -->
 
 `readTitle` knows neither where the data lives nor how it travels. The same function can receive a database repository on a server or an HTTP-backed repository in a client.
 
@@ -195,6 +198,7 @@ class Note extends AggregateRoot<UuidValue> {
 
 Resolve dependencies, generate from clean build state, analyze, and run:
 
+<!-- dddart-source: docs/quickstarts/sqlite/commands.sh -->
 ```sh
 dart pub get
 dart run build_runner clean
@@ -202,12 +206,15 @@ dart run build_runner build --delete-conflicting-outputs
 dart analyze --fatal-infos
 dart run bin/main.dart
 ```
+<!-- /dddart-source -->
 
 Expected output:
 
+<!-- dddart-source: docs/quickstarts/sqlite/expected/main.txt -->
 ```text
 hello: persisted
 ```
+<!-- /dddart-source -->
 
 The program finishes and closes its resources. Delete the temporary application directory when finished.
 

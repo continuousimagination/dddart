@@ -136,6 +136,7 @@ class Note extends AggregateRoot<UuidValue> {
 
 Resolve dependencies, generate from clean build state, analyze, and run:
 
+<!-- dddart-source: docs/quickstarts/dynamodb/commands.sh -->
 ```sh
 dart pub get
 dart run build_runner clean
@@ -143,12 +144,15 @@ dart run build_runner build --delete-conflicting-outputs
 dart analyze --fatal-infos
 dart run bin/main.dart
 ```
+<!-- /dddart-source -->
 
 Expected output:
 
+<!-- dddart-source: docs/quickstarts/dynamodb/expected/main.txt -->
 ```text
 hello: persisted
 ```
+<!-- /dddart-source -->
 
 The program finishes and closes its resources. Delete the temporary application directory when finished.
 Stop the disposable service with `docker stop dddart-quickstart-dynamo`.

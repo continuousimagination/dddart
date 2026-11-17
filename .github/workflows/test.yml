@@ -161,6 +161,10 @@ jobs:
           dart tool/validation/validate.dart consumer
           "${{ matrix.name }}"
 
+      - name: Validate documented service quickstart
+        if: matrix.name == 'dddart_repository_mongodb'
+        run: python3 tool/documentation/validate.py all --service-kind=mongo
+
   dynamodb-packages:
     needs: inventory
     runs-on: ubuntu-latest
@@ -203,6 +207,10 @@ jobs:
         run: >-
           dart tool/validation/validate.dart consumer
           "${{ matrix.name }}"
+
+      - name: Validate documented service quickstart
+        if: matrix.name == 'dddart_repository_dynamodb'
+        run: python3 tool/documentation/validate.py all --service-kind=dynamodb
 
   mysql-packages:
     needs: inventory
@@ -255,6 +263,10 @@ jobs:
         run: >-
           dart tool/validation/validate.dart consumer
           "${{ matrix.name }}"
+
+      - name: Validate documented service quickstart
+        if: matrix.name == 'dddart_repository_mysql'
+        run: python3 tool/documentation/validate.py all --service-kind=mysql
 
   examples:
     needs: inventory
@@ -416,3 +428,27 @@ jobs:
         run: >-
           dart tool/validation/validate.dart example
           "${{ matrix.name }}" --mode=ci
+
+  documentation:
+    needs: inventory
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: 3.13.7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.15.0
+      - name: Resolve workspace tooling
+        run: dart pub get
+      - name: Analyze and format documentation staging helper
+        run: |
+          dart analyze --fatal-infos tool/documentation/stage.dart
+          dart format --output=none --set-exit-if-changed tool/documentation/stage.dart
+      - name: Check published source and API classifications
+        run: python3 tool/documentation/validate.py check
+      - name: Exercise documentation failure detection
+        run: python3 tool/documentation/self_test.py
+      - name: Run isolated documented workflows and portable JS checks
+        run: python3 tool/documentation/validate.py all --service-kind=none

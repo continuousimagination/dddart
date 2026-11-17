@@ -168,6 +168,7 @@ class Note extends AggregateRoot<UuidValue> {
 
 Resolve dependencies, generate from clean build state, analyze, and run:
 
+<!-- dddart-source: docs/quickstarts/rest/commands.sh -->
 ```sh
 dart pub get
 dart run build_runner clean
@@ -175,11 +176,14 @@ dart run build_runner build --delete-conflicting-outputs
 dart analyze --fatal-infos
 dart run bin/main.dart
 ```
+<!-- /dddart-source -->
 
 Expected output:
 
+<!-- dddart-source: docs/quickstarts/rest/expected/main.txt -->
 ```text
 200: public hello
 ```
+<!-- /dddart-source -->
 
 The program finishes and closes its resources. Delete the temporary application directory when finished.

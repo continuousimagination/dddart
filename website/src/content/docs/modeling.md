@@ -31,13 +31,15 @@ Every entity and aggregate requires an explicit identity. Use `Entity<UuidValue>
 
 This complete example needs only the `dddart` dependency from [Getting started](/dddart/docs/getting-started/). Save it as `bin/reservations.dart` and run `dart run bin/reservations.dart`.
 
+<!-- dddart-source: docs/quickstarts/core/bin/modeling.dart -->
 ```dart
 import 'package:dddart/dddart.dart';
 
 class SeatCount extends Value {
   factory SeatCount({required int value}) {
     if (value < 1) {
-      throw ArgumentError.value(value, 'value', 'At least one seat is required');
+      throw ArgumentError.value(
+          value, 'value', 'At least one seat is required');
     }
     return SeatCount._(value);
   }
@@ -69,8 +71,8 @@ class Reservation extends AggregateRoot<UuidValue> {
     UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  }) : _confirmed = confirmed,
-       super(id: id ?? UuidValue.generate());
+  })  : _confirmed = confirmed,
+        super(id: id ?? UuidValue.generate());
 
   final String guestName;
   final SeatCount seats;
@@ -105,6 +107,7 @@ Future<void> main() async {
   print(loaded.getUncommittedEvents().single.runtimeType);
 }
 ```
+<!-- /dddart-source -->
 
 The aggregate owns the rule that a reservation cannot be confirmed twice. The application owns when to save it. Calling `raiseEvent()` records a pending event; this ordinary in-memory save does **not** publish or clear it. [Events](/dddart/docs/events/) explains the publication lifecycle.
 
@@ -124,6 +127,7 @@ A UUID is useful when your application creates identities. It is not necessary w
 
 This is another standalone core-only example:
 
+<!-- dddart-source: docs/quickstarts/core/bin/identity.dart -->
 ```dart
 import 'package:dddart/dddart.dart';
 
@@ -142,7 +146,8 @@ class Issue extends AggregateRoot<IssueId> {
 }
 
 Future<void> main() async {
-  final Repository<Issue, IssueId> issues = InMemoryRepository<Issue, IssueId>();
+  final Repository<Issue, IssueId> issues =
+      InMemoryRepository<Issue, IssueId>();
   final issue = Issue(
     id: const IssueId('team/booking', 12),
     title: 'Explain cancellation rules',
@@ -152,6 +157,7 @@ Future<void> main() async {
   print(loaded.title);
 }
 ```
+<!-- /dddart-source -->
 
 `IssueId('team/booking', 12)` and `IssueId('team/billing', 12)` are different identities. Another identity class with identical properties is also different. A `Repository<Issue, IssueId>` requires an `IssueId` for lookup and deletion; passing an unrelated ID type is a compile-time error in typed Dart code.
 

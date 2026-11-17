@@ -67,3 +67,11 @@ configuration, JSON, and SQLite snippets were extracted and exercised; represent
 client compositions were compiled to JavaScript. The public example catalog records
 the scope and distinguishes local verification from live provider/device testing.
 No live AWS or Slack resources are needed for the website build.
+
+## Dart snippets and workflows
+
+From the repository root, run `python3 tool/documentation/validate.py check` for
+published-source/classification drift, then the relevant execution lane described
+in [the documentation gate](../tool/documentation/README.md). The Test workflow
+runs those checks for library/generator changes too. `npm run check` validates the
+built site and links; it does not replace the isolated Dart consumer gate.
