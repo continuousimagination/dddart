@@ -6,9 +6,11 @@
 ///
 /// - SQL connection abstractions
 /// - SQL dialect support for database-specific syntax
-/// - Schema generation from aggregate root definitions
+/// - Runtime schema values for dialect and query extensions
 /// - Object-relational mapping utilities
-/// - Relationship analysis and foreign key management
+/// - Foreign key management
+///
+/// Build-time schema analysis is available from `generator.dart`.
 ///
 /// This package is designed to be extended by concrete implementations
 /// like `dddart_repository_sqlite`, `dddart_repository_postgres`, etc.
@@ -28,18 +30,11 @@ export 'src/dialect/sql_dialect.dart';
 // See src/exceptions/sql_repository_exception.dart for mapping documentation.
 
 // Mapping
-export 'src/mapping/graph_traverser.dart';
 export 'src/mapping/object_mapper.dart';
 
 // Query
 export 'src/query/join_builder.dart';
 export 'src/query/query_builder.dart';
 
-// Schema
-export 'src/schema/collection_analyzer.dart';
-export 'src/schema/identity_type.dart';
-export 'src/schema/relationship_analyzer.dart'
-    hide CollectionKind; // Use CollectionKind from collection_analyzer
-export 'src/schema/schema_generator.dart';
+// Runtime schema values used by dialect and query extension APIs.
 export 'src/schema/table_definition.dart';
-export 'src/schema/type_mapper.dart';

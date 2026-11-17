@@ -25,4 +25,3 @@ library dddart_repository_sqlite;
 export 'src/annotations/generate_sqlite_repository.dart';
 export 'src/connection/sqlite_connection.dart';
 export 'src/dialect/sqlite_dialect.dart';
-export 'src/generators/sqlite_repository_generator.dart';
