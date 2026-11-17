@@ -35,6 +35,8 @@ class UuidIdentityCodec implements IdentityCodec<UuidValue> {
     if (value is! String) throw const FormatException('Expected UUID string');
     try {
       return UuidValue.fromString(value);
+      // UuidValue validates its string constructor with ArgumentError.
+      // ignore: avoid_catching_errors
     } on ArgumentError {
       throw FormatException('Expected valid UUID string', value);
     }
