@@ -27,6 +27,7 @@ void main() {
         path: '/documents',
         repository: repository,
         serializer: DocumentSerializer(),
+        authorizationSnapshot: cloneDocument,
         authenticationHandler: withVerifier ? verifier : null,
         defaultPolicy: policy,
         operationPolicies: overrides,
@@ -319,6 +320,7 @@ void main() {
       path: '/documents',
       repository: repository,
       serializer: DocumentSerializer(),
+      authorizationSnapshot: cloneDocument,
       defaultPolicy: AccessPolicy.custom(policy),
       preCreate: (value, caller) {
         expect(caller, isA<AnonymousCaller<Claims>>());
@@ -371,6 +373,7 @@ void main() {
       path: '/documents',
       repository: repository,
       serializer: DocumentSerializer(),
+      authorizationSnapshot: cloneDocument,
       authenticationHandler: verifier,
       defaultPolicy: const AccessPolicy.public(),
       credentialsPresent: (_) =>
@@ -383,6 +386,64 @@ void main() {
       isNot(contains('private cookie detail')),
     );
     expect(repository.reads, 0);
+  });
+
+  test(
+      'custom aggregate policy requires an explicit complete snapshot strategy',
+      () {
+    expect(
+      () => CrudResource<Document, UuidValue, Claims>(
+        path: '/documents',
+        repository: repository,
+        serializer: DocumentSerializer(),
+        defaultPolicy: AccessPolicy.custom(
+          Policy((context) => const AuthorizationResult.allow()),
+        ),
+      ),
+      throwsArgumentError,
+    );
+  });
+
+  test('query-only policy needs no aggregate snapshot function', () async {
+    final api = CrudResource<Document, UuidValue, Claims>(
+      path: '/documents',
+      repository: repository,
+      serializer: DocumentSerializer(),
+      operationPolicies: {
+        CrudOperation.query: AccessPolicy.custom(
+          Policy(
+            (context) => const AuthorizationResult.allow(
+              scope: UnrestrictedQueryScope(),
+            ),
+          ),
+        ),
+      },
+      collectionHandler: (repo, filters, skip, take, authorization) async =>
+          QueryResult([]),
+    );
+    expect((await api.handleQuery(request('GET'))).statusCode, 200);
+  });
+
+  test('invalid snapshot function fails closed before policy or mutation',
+      () async {
+    final handler = Policy((context) => const AuthorizationResult.allow());
+    final api = CrudResource<Document, UuidValue, Claims>(
+      path: '/documents',
+      repository: repository,
+      serializer: DocumentSerializer(),
+      defaultPolicy: AccessPolicy.custom(handler),
+      authorizationSnapshot: (value) => value,
+    );
+    expect(
+      (await api.handleUpdate(
+        request('PUT', document: document),
+        document.id.uuid,
+      ))
+          .statusCode,
+      500,
+    );
+    expect(handler.contexts, isEmpty);
+    expect(repository.writes, 0);
   });
 
   test('incompatible required authentication fails at construction', () {

@@ -3,7 +3,7 @@
 Snapshot: 2026-08-10, after the authentication fixes and the
 QueryableRepository/DynamoDB cleanup were merged.
 
-This register contains the 5 implementation defects that remain. Resolved
+This register contains the 4 implementation defects that remain. Resolved
 entries are removed once their completion tests pass. It is not an exhaustive
 issue tracker; source and executable tests remain authoritative.
 
@@ -19,7 +19,6 @@ Suggested priorities are provisional:
 
 - **EVENT-001** through **EVENT-004**: the distributed-events feature remains a
   work in progress.
-- **AUTH-002**: revisit the authorization contract later.
 
 ## Summary
 
@@ -29,7 +28,6 @@ Suggested priorities are provisional:
 | EVENT-002 | P2 | Distributed events | POST ingestion ignores its server and cannot safely support a custom stored-event subtype. |
 | EVENT-003 | P1 | Distributed events | `autoForward` can forward a remotely polled event back to the server. |
 | EVENT-004 | P1 | Distributed events | Polling advances its cursor before an event is successfully reconstructed and published. |
-| AUTH-002 | P1 | Authorization | Item GET and unfiltered collection GET bypass `AuthorizationHandler`. |
 
 ## Confirmed generator and persistence defects
 
@@ -85,19 +83,6 @@ Suggested priorities are provisional:
   events sharing a timestamp are delivered exactly once. A compound
   timestamp/ID cursor or inclusive fetch plus deduplication may be required.
 
-## REST, authentication, and authorization defects
-
-### AUTH-002 — authorization is not applied to two read paths
-
-- **Evidence:** `AuthorizationHandler` is invoked for create, update, delete, and
-  filtered queries. `GET /resource/<id>` and unfiltered collection GET do not
-  invoke it.
-- **Impact:** an authenticated caller can read objects or whole collections that
-  operation-level policy would otherwise deny.
-- **Done when:** read authorization hooks cover both paths, or the framework
-  requires an explicit policy that disables those routes. Tests should prove a
-  denied identity cannot read either form.
-
 ## Resolved concurrency regression
 
 REST-004 was resolved by #91. REST validators now carry coherent storage
@@ -107,3 +92,23 @@ uses two HTTP servers and independent MySQL connections: exactly one competing
 If-Match write succeeds. REST and generated-client suites also cover absence,
 recreation, unsupported capabilities and uncertain outcomes. Unconditional CRUD
 remains optional by design; `requirePrecondition` enables mandatory conditions.
+
+## Resolved optional authorization regressions
+
+AUTH-002 and the proposed-owner mutation bypass were resolved by #92. Every item
+and collection read now resolves an explicit policy. Anonymous public operations
+remain supported on otherwise protected resources. Custom policies receive typed
+callers, persisted/current/proposed snapshots and explicit application query scopes.
+Custom mutations bind permission to a stored revision and POST is create-only.
+Aggregate policies use an explicit complete domain snapshot function, so a lossy
+public response projection cannot change the owner/permission state they inspect.
+
+`packages/dddart_rest/test/read_authorization_test.dart`,
+`mutation_authorization_test.dart`, and `optional_auth_http_test.dart` cover private
+read denial, scoped rows/counts, public objects, forged fields, create/update bypass,
+ownership races, event retention and the real HTTP caller/operation matrix.
+`example/public_leaderboard_example.dart` runs all three intended use cases:
+public leaderboard/protected writes, private documents with public objects, and
+unconfigured public CRUD. Domain query scoping remains application-owned. Basic
+repositories cannot provide atomic custom mutation enforcement and fail closed;
+plain public CRUD retains its documented concurrent-creation limitation.

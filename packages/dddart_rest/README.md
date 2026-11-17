@@ -35,8 +35,6 @@ response with a different typed identity is rejected.
 
 RESTful CRUD API framework for DDDart - Provides REST endpoints for aggregate roots with minimal boilerplate.
 
-> **Note:** This package was previously named `dddart_http`. See the [Migration Guide](#migration-from-dddart_http) below.
-
 ## Optional access policies
 
 No verifier or security policy means public CRUD. Installing an
@@ -72,9 +70,18 @@ anonymous and request claims are never trusted.
 | `UpdateContext` | Separate current and proposed aggregate snapshots |
 | `DeleteContext` | Current persisted aggregate |
 
-Policies receive detached serializer snapshots, so changing a context object
-cannot modify storage or normalize the eventual proposal. Use `preCreate` for
-normalization. `Caller<TClaims>` is either `AnonymousCaller` (no claims) or
+Custom aggregate policies require an explicit `authorizationSnapshot` function
+that deep-copies the complete domain state, including permission fields omitted
+from public JSON. It must preserve identity and metadata, detach mutable values,
+and omit transient pending events. Use a domain copy function or a complete
+persistence codec, never a lossy public projection. The framework deliberately
+has no response-serializer fallback: public serialization must not rewrite the
+stored owner seen by policy. Query-only policies do not need aggregate snapshots.
+Public and authentication-only resources need no snapshot configuration.
+
+For example, the ownership sample supplies `authorizationSnapshot: snapshotDocument`
+alongside its custom policy. Changing a policy context object cannot modify storage
+or normalize the eventual proposal. Use `preCreate` for normalization. `Caller<TClaims>` is either `AnonymousCaller` (no claims) or
 `VerifiedCaller` (successful verifier result). Claims can be absent if the
 application's verifier intentionally returns none.
 
@@ -98,11 +105,28 @@ policy using stored ownership, explicit owner transfer, public objects and scope
 queries. Treat proposed ownership/tenant fields as untrusted unless server-owned
 normalization has assigned them. Policies must check the stored state first.
 
+### Run the public/protected example
+
+From `packages/dddart_rest/example`, run:
+
+```bash
+dart pub get
+dart run public_leaderboard_example.dart
+```
+
+The example starts an ephemeral local HTTP server, exercises anonymous leaderboard
+reads, authenticated submissions and moderator corrections/deletions, then checks
+public/private document scope and an unconfigured public CRUD resource. It closes
+the server and exits. Its credential verifier uses deterministic local fixtures;
+replace that verifier with JWT/OAuth verification in an application. The policies
+and optional/public operation configuration remain the same. This entrypoint is
+registered in the normal validation inventory and is executed, not just compiled.
+
 ### Read authorization and query scope
 
 Item policy evaluates a detached view of persisted state before the HTTP response
-encoder or ETag builder runs. The JSON value codec is used internally to detach
-policy snapshots; a denied read produces no aggregate response. A concealed denial
+encoder or ETag builder runs. The explicit domain snapshot function is independent
+of public serialization; a denied read produces no aggregate response. A concealed denial
 and a missing item share the generic 404 body.
 
 Filtered, unfiltered and pagination-only reads all pass through the same selected
@@ -846,13 +870,15 @@ shelf Server
     ↓
 Router (matches path + method)
     ↓
-CrudResource (determines operation type)
+CrudResource (selects operation policy and verifies the caller)
     ↓
-├─ handleGetById() → Repository.getById()
-├─ handleQuery() → Explicit Collection or Named Query Handler
-├─ handleCreate() → Deserialize + Repository.save()
-├─ handleUpdate() → Deserialize + Repository.save()
-└─ handleDelete() → Repository.deleteById()
+├─ Item GET → Stored snapshot → Read policy
+├─ Collection GET → Query policy/scope → Application selection/count/pagination
+├─ POST → Deserialize/normalize → Create policy → Create-if-absent
+├─ PUT → Current + proposal → Update/create policy → Conditional mutation
+└─ DELETE → Current state → Delete policy → Conditional mutation
+    ↓
+Public/authentication-only ordinary CRUD remains available where no condition is required.
     ↓
 ErrorMapper (catches exceptions)
     ↓
@@ -860,54 +886,6 @@ ResponseBuilder (serializes result)
     ↓
 HTTP Response
 ```
-
-## Migration from dddart_http
-
-This package was renamed from `dddart_http` to `dddart_rest` to better reflect its purpose of providing RESTful CRUD APIs, distinguishing it from other HTTP concerns like webhook handling.
-
-### Migration Steps
-
-**1. Update pubspec.yaml:**
-```yaml
-dependencies:
-  dddart_rest: ^0.9.0  # Changed from dddart_http
-```
-
-**2. Update imports:**
-```dart
-// Before
-import 'package:dddart_http/dddart_http.dart';
-
-// After
-import 'package:dddart_rest/dddart_rest.dart';
-```
-
-**3. Update logger configuration (if used):**
-```dart
-// Before
-Logger('dddart.http').level = Level.INFO;
-
-// After
-Logger('dddart.rest').level = Level.INFO;
-```
-
-**4. Run pub get and test:**
-```bash
-dart pub get
-dart test
-```
-
-### What Changed
-
-- **Package name**: `dddart_http` → `dddart_rest`
-- **Import path**: `package:dddart_http/*` → `package:dddart_rest/*`
-- **Logger name**: `dddart.http` → `dddart.rest`
-
-### What Stayed the Same
-
-- All API surfaces remain identical
-- No breaking changes to functionality
-- All class names and methods unchanged
 
 ## Authentication
 
@@ -1179,25 +1157,19 @@ server.registerResource(
 
 ### Using Authentication in Custom Handlers
 
-Access user identity and claims in custom query handlers:
+Query handlers receive `AuthorizedQuery<TClaims>`. They may add restrictions to
+the resource policy, and must apply its authorized scope to rows/counts before
+pagination. Use required authentication on a `me` operation or reject an anonymous
+caller explicitly; the context itself is never null.
 
 ```dart
 queryHandlers: {
-  'me': (repo, params, skip, take, authResult) async {
-    // authResult is null for public resources
-    // authResult is non-null for protected resources
-    
-    if (authResult == null) {
-      throw UnauthorizedException();
+  'me': (repo, params, skip, take, authorization) async {
+    final claims = authorization.caller.claims;
+    if (!authorization.caller.isAuthenticated || claims == null) {
+      throw const AccessDeniedException();
     }
-    
-    // Type-safe access to claims
-    final userId = authResult.claims.userId;
-    final email = authResult.claims.email;
-    final isAdmin = authResult.claims.roles.contains('admin');
-    
-    // Return user's own data
-    final user = await repo.getById(UuidValue.fromString(userId));
+    final user = await repo.getById(UuidValue.fromString(claims.userId));
     return QueryResult([user], totalCount: 1);
   },
 }

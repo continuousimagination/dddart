@@ -43,7 +43,7 @@ class NativeId extends Identity {
   @override List<Object?> get props => [value];
 }
 class Record extends AggregateRoot<NativeId> {
-  Record(NativeId id) : super(id: id);
+  Record(NativeId id, {DateTime? createdAt, DateTime? updatedAt}) : super(id: id, createdAt: createdAt, updatedAt: updatedAt);
 }
 class Claims {
   const Claims(this.tenant);
@@ -73,7 +73,7 @@ CrudResource<Record, NativeId, Claims> resource(
     Repository<Record, NativeId> repository, JsonSerializer<Record> serializer,
     IdentityCodecRegistry codecs) => CrudResource<Record, NativeId, Claims>(
   path: '/records', repository: repository, serializer: serializer,
-  identityCodecs: codecs, defaultPolicy: AccessPolicy.custom(Policy()),
+  identityCodecs: codecs, authorizationSnapshot: (record) => Record(record.id, createdAt: record.createdAt, updatedAt: record.updatedAt), defaultPolicy: AccessPolicy.custom(Policy()),
   collectionHandler: (repository, filters, skip, take, authorization) async {
     final Claims? claims = authorization.caller.claims;
     final TenantScope scope = authorization.scope as TenantScope;

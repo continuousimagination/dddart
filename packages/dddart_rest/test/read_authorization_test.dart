@@ -35,6 +35,17 @@ class EncodingSpy extends DocumentSerializer {
   }
 }
 
+// A response projection intentionally omits ownership. It must never become
+// the source of trusted permission state.
+class ProjectedSerializer extends EncodingSpy {
+  @override
+  Map<String, dynamic> toJson(Document value, [dynamic config]) =>
+      super.toJson(value, config)..remove('owner');
+  @override
+  Document fromJson(dynamic value, [dynamic config]) => super
+      .fromJson({...value as Map<String, dynamic>, 'owner': 'bob'}, config);
+}
+
 void main() {
   late Documents repository;
   late Document alice;
@@ -77,6 +88,7 @@ void main() {
       path: '/documents',
       repository: repository,
       serializer: serializer,
+      authorizationSnapshot: cloneDocument,
       authenticationHandler: Verifier(),
       defaultPolicy: AccessPolicy.custom(
         policy,
@@ -131,6 +143,7 @@ void main() {
           path: '/documents',
           repository: repository,
           serializer: serializer,
+          authorizationSnapshot: cloneDocument,
           defaultPolicy: AccessPolicy.custom(policy),
           collectionHandler: query,
           queryHandlers: {'tenant': query},
@@ -181,6 +194,7 @@ void main() {
       path: '/documents',
       repository: repository,
       serializer: serializer,
+      authorizationSnapshot: cloneDocument,
       authenticationHandler: Verifier(),
       defaultPolicy: AccessPolicy.custom(
         policy,
@@ -230,6 +244,7 @@ void main() {
       path: '/documents',
       repository: repository,
       serializer: serializer,
+      authorizationSnapshot: cloneDocument,
       authenticationHandler: Verifier(),
       defaultPolicy: const AccessPolicy.authenticated(),
       operationPolicies: {CrudOperation.read: AccessPolicy.custom(policy)},
@@ -254,12 +269,42 @@ void main() {
     );
   });
 
+  test('response projection cannot rewrite the stored owner seen by policy',
+      () async {
+    final api = CrudResource<Document, UuidValue, Claims>(
+      path: '/documents',
+      repository: repository,
+      serializer: ProjectedSerializer(),
+      authorizationSnapshot: cloneDocument,
+      authenticationHandler: Verifier(),
+      defaultPolicy: AccessPolicy.custom(
+        Policy(
+          (context) => (context as ReadContext<Document, UuidValue, Claims>)
+                      .current
+                      .owner ==
+                  context.caller.claims?.user
+              ? const AuthorizationResult.allow()
+              : const AuthorizationResult.deny(),
+        ),
+        authentication: AuthenticationRequirement.required,
+      ),
+    );
+    final response =
+        await api.handleGetById(request('GET', token: 'bob'), alice.id.uuid);
+    expect(response.statusCode, 403);
+    expect(
+      await response.readAsString(),
+      isNot(contains('Alice confidential')),
+    );
+  });
+
   test('query handler can impose stricter access than the resource policy',
       () async {
     final api = CrudResource<Document, UuidValue, Claims>(
       path: '/documents',
       repository: repository,
       serializer: serializer,
+      authorizationSnapshot: cloneDocument,
       collectionHandler: (repo, filters, skip, take, authorization) async =>
           throw const AccessDeniedException(),
     );
@@ -272,6 +317,7 @@ void main() {
       path: '/documents',
       repository: repository,
       serializer: serializer,
+      authorizationSnapshot: cloneDocument,
       defaultPolicy: AccessPolicy.custom(
         Policy((context) => const AuthorizationResult.deny()),
       ),

@@ -48,7 +48,8 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   /// - [path]: The base path for this resource (e.g., '/users')
   /// - [repository]: Repository instance for persistence operations
   /// - [serializer]: JSON serializer for request and response bodies
-  /// - [authenticationHandler]: Optional authentication handler. When provided, all CRUD operations require authentication
+  /// - [authenticationHandler]: Optional verifier; defaults operations to authenticated access unless a policy overrides it
+  /// - [authorizationSnapshot]: Complete detached domain copier for custom aggregate policies
   /// - [defaultPolicy]: Resource access policy; operation overrides replace it
   /// - [operationPolicies]: Explicit access policy for each selected operation
   /// - [collectionHandler]: Optional handler for unfiltered collection retrieval
@@ -61,12 +62,16 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   /// - [preCreate]: Optional callback to modify aggregate before creation (e.g., set fields from auth context)
   ///
   /// Throws [ArgumentError] if:
-  /// - [path] is null or empty
+  /// - [path] is empty
+  /// - A required policy has no authentication verifier
+  /// - A custom aggregate policy has no [authorizationSnapshot]
+  /// - The identity codec or required conditional repository is unavailable
   CrudResource({
     required this.path,
     required this.repository,
     required this.serializer,
     this.authenticationHandler,
+    this.authorizationSnapshot,
     AccessPolicy<T, I, TClaims>? defaultPolicy,
     Map<CrudOperation, AccessPolicy<T, I, TClaims>> operationPolicies =
         const {},
@@ -98,6 +103,16 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
     }
     if (!this.identityCodecs.contains<I>()) {
       throw ArgumentError('Register a codec for the resource identity $I');
+    }
+    if (authorizationSnapshot == null &&
+        CrudOperation.values.any(
+          (operation) =>
+              operation != CrudOperation.query &&
+              _policy(operation).handler != null,
+        )) {
+      throw ArgumentError(
+        'Custom aggregate policies require authorizationSnapshot to preserve complete permission state independently of public JSON.',
+      );
     }
     // Validate path is not null or empty
     if (path.isEmpty) {
@@ -135,6 +150,14 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   /// If authentication fails, a 401 Unauthorized response is returned.
   final AuthenticationHandler<TClaims>? authenticationHandler;
 
+  /// Copies all domain and permission state, including fields omitted from the
+  /// public JSON representation. Required for custom aggregate policies.
+  ///
+  /// Return a detached, identity-preserving deep copy without pending events.
+  /// A complete persistence codec can be used; a public projection must not be.
+  /// The callback runs before policy and must not mutate its input.
+  final T Function(T)? authorizationSnapshot;
+
   /// Default access policy. Without a verifier the default is public; installing
   /// a verifier selects authenticated access unless an explicit default is given.
   final AccessPolicy<T, I, TClaims> defaultPolicy;
@@ -157,7 +180,7 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   ///
   /// The handler owns datastore-side selection, ordering, pagination, and the
   /// accurate total count. It receives an empty query-parameter map, normalized
-  /// pagination values, and the current authentication result.
+  /// pagination values, and an [AuthorizedQuery] with the typed caller and scope.
   final QueryHandler<T, I, TClaims>? collectionHandler;
 
   /// Map of query parameter names to handler functions
@@ -197,8 +220,8 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   ///
   /// Example:
   /// ```dart
-  /// preCreate: (player, authResult) {
-  ///   return player.withOwner(authResult.claims?.sub);
+  /// preCreate: (player, caller) {
+  ///   return player.withOwner(caller.claims?.sub);
   /// }
   /// ```
   final T Function(T aggregate, Caller<TClaims> caller)? preCreate;
@@ -244,13 +267,10 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
 
   T _policySnapshot(T value) {
     try {
-      // Build detached domain snapshots through the JSON value codec. The
-      // response encoder is invoked only after the access decision succeeds.
-      final copy =
-          serializer.fromJson(jsonDecode(jsonEncode(serializer.toJson(value))));
+      final copy = authorizationSnapshot!(value);
       if (identical(copy, value) || copy.id != value.id) {
         throw StateError(
-          'Serializer must produce a detached identity-preserving snapshot',
+          'authorizationSnapshot must produce a detached identity-preserving copy',
         );
       }
       return copy;
@@ -389,7 +409,7 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   /// Versioned repositories include a strong storage-revision ETag. Plain
   /// repositories return no validator and cannot accept conditional mutations.
   ///
-  /// If auth handler is configured, authenticates the request first.
+  /// Evaluates the selected operation's credential requirement before protected work.
   ///
   /// Parameters:
   /// - [request]: The HTTP request
@@ -405,7 +425,7 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
         return negotiationError;
       }
 
-      // Authenticate if handler is configured
+      // Resolve the selected operation's credential requirement.
       final authCheck = await _authenticate(request, CrudOperation.read);
       if (authCheck.response != null) {
         _logger.fine('GET /$path/$id - ${authCheck.response!.statusCode}');
@@ -451,8 +471,8 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   /// - One query param: looks up and invokes corresponding query handler
   /// - Multiple query params: returns 400 error
   ///
-  /// If auth handler is configured, authenticates the request first and passes
-  /// auth result to query handlers.
+  /// Evaluates the selected operation's credential requirement first and passes
+  /// the typed caller and authorized scope to query handlers.
   /// The selected collection policy runs for every request, including unfiltered reads.
   ///
   /// Parameters:
@@ -472,7 +492,7 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
         return negotiationError;
       }
 
-      // Authenticate if handler is configured
+      // Resolve the selected operation's credential requirement.
       final authCheck = await _authenticate(request, CrudOperation.query);
       if (authCheck.response != null) {
         _logger
@@ -567,7 +587,7 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   /// Versioned repositories include a strong storage-revision ETag. Plain
   /// repositories return no validator and cannot accept conditional mutations.
   ///
-  /// If auth handler is configured, authenticates the request first.
+  /// Evaluates the selected operation's credential requirement before protected work.
   /// The selected custom policy always runs, including for anonymous callers.
   ///
   /// Parameters:
@@ -590,7 +610,7 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
         return contentTypeError;
       }
 
-      // Authenticate if handler is configured
+      // Resolve the selected operation's credential requirement.
       final authCheck = await _authenticate(request, CrudOperation.create);
       if (authCheck.response != null) {
         _logger.fine('POST /$path - ${authCheck.response!.statusCode}');
@@ -655,14 +675,14 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   /// their decision to the loaded revision. Public ordinary updates return no
   /// ETag; GET a coherent snapshot before the next conditional edit.
   ///
-  /// If auth handler is configured, authenticates the request first.
+  /// Evaluates the selected operation's credential requirement before protected work.
   /// The selected custom policy always runs, including for anonymous callers.
   ///
   /// Parameters:
   /// - [request]: The HTTP request
   /// - [id]: The canonical key after one URI-decoding step (direct callers pass it decoded)
   ///
-  /// Returns: A Response with status 200 and serialized aggregate, or error response
+  /// Returns: 200 for replacement, 201 for creation, or an error response.
   Future<Response> handleUpdate(Request request, String id) async {
     _logger.info('PUT /$path/$id - Updating $T');
     try {
@@ -679,7 +699,7 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
         return contentTypeError;
       }
 
-      // Authenticate if handler is configured
+      // Resolve the selected operation's credential requirement.
       final authCheck = await _authenticate(request, CrudOperation.update);
       if (authCheck.response != null) {
         _logger.fine('PUT /$path/$id - ${authCheck.response!.statusCode}');
@@ -782,7 +802,7 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   ///
   /// Parses ID, calls repository.deleteById(), returns 204 No Content
   ///
-  /// If auth handler is configured, authenticates the request first.
+  /// Evaluates the selected operation's credential requirement before protected work.
   /// The selected custom policy always runs, including for anonymous callers.
   ///
   /// Parameters:
@@ -799,7 +819,7 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
         return negotiationError;
       }
 
-      // Authenticate if handler is configured
+      // Resolve the selected operation's credential requirement.
       final authCheck = await _authenticate(request, CrudOperation.delete);
       if (authCheck.response != null) {
         _logger.fine('DELETE /$path/$id - ${authCheck.response!.statusCode}');

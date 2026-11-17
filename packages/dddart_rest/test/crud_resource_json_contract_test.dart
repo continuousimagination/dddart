@@ -153,6 +153,8 @@ void main() {
         path: '/users',
         repository: repository,
         serializer: serializer,
+        authorizationSnapshot: (value) =>
+            serializer.deserialize(serializer.serialize(value)),
       );
       final response = await resource.handleGetById(
         _request(
@@ -185,6 +187,8 @@ void main() {
           path: '/users',
           repository: repository,
           serializer: serializer,
+          authorizationSnapshot: (value) =>
+              serializer.deserialize(serializer.serialize(value)),
           authenticationHandler: authentication,
         );
 
@@ -256,6 +260,8 @@ void main() {
           path: '/users',
           repository: repository,
           serializer: serializer,
+          authorizationSnapshot: (value) =>
+              serializer.deserialize(serializer.serialize(value)),
           authenticationHandler: authentication,
         );
         final headers = <String, String>{'if-match': '"stale"'};
@@ -285,6 +291,8 @@ void main() {
       path: '/users',
       repository: repository,
       serializer: serializer,
+      authorizationSnapshot: (value) =>
+          serializer.deserialize(serializer.serialize(value)),
     );
     final response = await resource.handleCreate(
       _request(
@@ -316,6 +324,8 @@ void main() {
       path: '/users',
       repository: repository,
       serializer: serializer,
+      authorizationSnapshot: (value) =>
+          serializer.deserialize(serializer.serialize(value)),
       authenticationHandler: authentication,
       defaultPolicy: AccessPolicy.custom(
         authorization,
@@ -368,6 +378,8 @@ void main() {
       path: '/users',
       repository: repository,
       serializer: serializer,
+      authorizationSnapshot: (value) =>
+          serializer.deserialize(serializer.serialize(value)),
       authenticationHandler: authentication,
       defaultPolicy: AccessPolicy.custom(
         authorization,
@@ -403,6 +415,8 @@ void main() {
         path: '/users',
         repository: _CountingRepository(items),
         serializer: serializer,
+        authorizationSnapshot: (value) =>
+            serializer.deserialize(serializer.serialize(value)),
         collectionHandler: (repo, params, skip, take, authResult) async {
           final allItems = await (repo as _CountingRepository).getAll();
           return QueryResult(

@@ -25,6 +25,7 @@ void main() {
       path: '/documents',
       repository: repository,
       serializer: serializer,
+      authorizationSnapshot: cloneDocument,
       authenticationHandler: Verifier(),
       defaultPolicy: AccessPolicy.custom(
         policy,
@@ -207,6 +208,7 @@ void main() {
       path: '/documents',
       repository: repository,
       serializer: serializer,
+      authorizationSnapshot: cloneDocument,
       authenticationHandler: Verifier(),
       defaultPolicy: AccessPolicy.custom(
         normalizationPolicy,
@@ -261,6 +263,7 @@ void main() {
       path: '/documents',
       repository: repository,
       serializer: serializer,
+      authorizationSnapshot: cloneDocument,
       authenticationHandler: Verifier(),
       defaultPolicy: const AccessPolicy.public(),
       operationPolicies: {
@@ -349,6 +352,7 @@ void main() {
       path: '/documents',
       repository: repository,
       serializer: serializer,
+      authorizationSnapshot: cloneDocument,
       defaultPolicy: AccessPolicy.custom(
         Policy((context) => throw StateError('private policy state')),
       ),
@@ -377,6 +381,7 @@ void main() {
       path: '/documents',
       repository: repository,
       serializer: serializer,
+      authorizationSnapshot: cloneDocument,
       defaultPolicy: AccessPolicy.custom(anonymousPolicy),
     );
     final proposed = Document();
@@ -410,6 +415,7 @@ void main() {
       path: '/documents',
       repository: repository,
       serializer: otherSerializer,
+      authorizationSnapshot: cloneDocument,
       authenticationHandler: Verifier(),
       defaultPolicy: AccessPolicy.custom(
         Policy(ownershipPolicy),
@@ -459,6 +465,7 @@ void main() {
       path: '/documents',
       repository: repository,
       serializer: serializer,
+      authorizationSnapshot: cloneDocument,
       defaultPolicy: AccessPolicy.custom(
         Policy((context) {
           final update = context as UpdateContext<Document, UuidValue, Claims>;
@@ -486,6 +493,7 @@ void main() {
       path: '/documents',
       repository: basic,
       serializer: serializer,
+      authorizationSnapshot: cloneDocument,
       defaultPolicy: AccessPolicy.custom(
         Policy((context) => const AuthorizationResult.allow()),
       ),
