@@ -69,7 +69,8 @@ Future<void> main() async {
       throw StateError('Polling did not preserve the accepted event');
     }
     print(
-        'HTTP polling accepted and delivered counter value ${delivered.value}.',);
+      'HTTP polling accepted and delivered counter value ${delivered.value}.',
+    );
     await watch.close();
   } finally {
     await client.close();
