@@ -14,10 +14,10 @@ There are three packages involved:
 | Package | Responsibility |
 | --- | --- |
 | `dddart` | Domain types such as `AggregateRoot`, `Value`, and `Identity` |
-| `dddart_serialization` | `@Serializable()`, `Serializer<T>`, configuration, and identity codecs |
+| `dddart_serialization` | `@Serializable()`, `Serializer<T, C>`, configuration, and identity codecs |
 | `dddart_json` | `JsonSerializer<T>` and generated JSON serializer services |
 
-JSON is the supplied format implementation. The generic `Serializer<T>` contract leaves room for other implementations; it does not mean YAML or Protocol Buffers serializers are included.
+JSON is the supplied format implementation. The generic `Serializer<T, C>` contract leaves room for other implementations; it does not mean YAML or Protocol Buffers serializers are included.
 
 ## Install the generator
 
@@ -265,3 +265,8 @@ Run generation and analysis after changing a model. Treat generated code as buil
 All programs finish without external services. Remove the temporary application
 directory after experimenting. The [canonical workflow](https://github.com/continuousimagination/dddart/blob/main/docs/quickstarts/json/README.md)
 records exact output for each program.
+
+The [serialization contract](https://github.com/continuousimagination/dddart/blob/main/docs/SERIALIZATION.md)
+defines typed configuration, shared handwritten/generated error boundaries and
+cause/stack preservation. Unrelated application errors are not relabeled as
+malformed input.

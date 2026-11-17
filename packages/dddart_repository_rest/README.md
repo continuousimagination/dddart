@@ -1,5 +1,9 @@
 # dddart_repository_rest
 
+[Supported platforms and capability boundaries](../../docs/CAPABILITIES.md) ·
+[Supported imports and extension APIs](../../docs/PUBLIC_API.md)
+
+
 For complete setup, named source files, expected output and cleanup, follow the
 [canonical quickstart](../../docs/quickstarts/rest/README.md). Other inline Dart snippets below are
 **illustrative fragments** that assume application-specific models and surrounding
@@ -7,7 +11,7 @@ setup; they are not standalone programs. See the [quickstart inventory](../../do
 for runnable, browser, service and credential-dependent coverage.
 
 
-## Typed identities (pre-release breaking change)
+## Typed identity contracts
 
 Use `AggregateRoot<UuidValue>` for UUID models and `Repository<User, UuidValue>`
 for UUID CRUD. Native models extend `AggregateRoot<IssueId>`. Both base

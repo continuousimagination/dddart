@@ -1,5 +1,9 @@
 # DDDart JSON
 
+[Supported platforms and capability boundaries](../../docs/CAPABILITIES.md) ·
+[Supported imports and extension APIs](../../docs/PUBLIC_API.md)
+
+
 For complete setup, named source files, expected output and cleanup, follow the
 [canonical quickstart](../../docs/quickstarts/json/README.md). Other inline Dart snippets below are
 **illustrative fragments** that assume application-specific models and surrounding
@@ -317,12 +321,13 @@ Common error scenarios:
 
 ## DDD Compliance
 
-This package generates serializers only for the three DDDart domain base types:
+This package generates serializers for these DDDart domain base hierarchies:
 
 ### ✅ Allowed
 - **AggregateRoots**: The consistency boundaries of your domain
 - **Entities**: Identity-bearing domain objects, whether serialized directly or nested in an aggregate
-- **Values**: Immutable objects that can be safely shared
+- **Values**: Value objects with application-owned immutability
+- **DomainEvents**: Typed aggregate references and event occurrence data
 
 Types outside these actual DDDart base-class hierarchies are rejected, even if
 an application class happens to use one of the same class names.

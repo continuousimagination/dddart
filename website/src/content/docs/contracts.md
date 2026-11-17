@@ -121,17 +121,18 @@ When a local save publishes an event, capture the pending batch before the first
 
 ## Know the current platform boundaries
 
-| Piece | Portable behavior | Platform-specific choice |
-| --- | --- | --- |
-| Core models, typed IDs, values, in-memory repository, local bus | The exercised paths compile to JavaScript and run on the Dart VM | Core file logging needs a native filesystem |
-| Generated JSON and identity codecs | Representation and reconstruction can be shared | Keep native adapter imports out of the model library |
-| HTTP repositories and REST client | Shared HTTP and auth-provider contracts | Browser CORS, token storage, login navigation, and mobile callbacks |
-| Aggregate watch and AppSync clients | Shared event types and client composition compile for JavaScript | Platform lifecycle; an actual deployed endpoint and credentials |
-| SQLite repository | Native local persistence | The supplied adapter is FFI-based; it does not supply browser storage |
-| MySQL, MongoDB, DynamoDB repositories | Shared repository interface | Trusted server/database connectivity and credentials |
-| Configuration | Structural provider and resolution contracts can be shared | Built-in filesystem YAML and process environment providers are native |
+The [capability/support matrix](https://github.com/continuousimagination/dddart/blob/main/docs/CAPABILITIES.md)
+is the authoritative table for all 18 packages, native/service/browser
+prerequisites, generation and exclusions. Core models and JSON mappings can be
+portable; file logging, built-in file/environment configuration providers, native
+login callbacks and database connections are platform-specific. SQLite here is
+native FFI; IndexedDB is the supplied browser persistence adapter.
 
-The documentation checks exercised representative Dart VM programs and JavaScript compilation, with selected JavaScript programs also executed under Node. Those checks do not certify every package configuration, Flutter device, browser login flow, or live AWS deployment. Use the [examples](/dddart/docs/examples/) as a starting point for testing your composition.
+A JavaScript compilation or Node run checks a representative portable program;
+it does not certify every browser or Flutter device. Native Chrome contracts are
+separate from VM memory IndexedDB tests. Local AppSync/DynamoDB protocol tests do
+not prove a live AWS deployment. The [quickstart inventory](https://github.com/continuousimagination/dddart/blob/main/docs/QUICKSTARTS.md)
+and package/example lanes state exactly what is run, compiled or illustrative.
 
 ## Let the shared language lead the abstraction
 

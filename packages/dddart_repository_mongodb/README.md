@@ -1,5 +1,9 @@
 # dddart_repository_mongodb
 
+[Supported platforms and capability boundaries](../../docs/CAPABILITIES.md) ·
+[Supported imports and extension APIs](../../docs/PUBLIC_API.md)
+
+
 For complete setup, named source files, expected output and cleanup, follow the
 [canonical quickstart](../../docs/quickstarts/mongodb/README.md). Other inline Dart snippets below are
 **illustrative fragments** that assume application-specific models and surrounding
@@ -11,7 +15,7 @@ MongoDB repository implementation for DDDart - Domain-Driven Design for Dart.
 
 ## Overview
 
-### Typed identities and migration
+### Typed identity contracts
 
 Until publication, use the [Git installation guide](../../docs/GIT_INSTALLATION.md).
 The adapter still declares hosted internal dependencies, so use the guide's
@@ -34,20 +38,18 @@ final repository = IssueMongoRepository(database, identityCodecs: codecs);
 The registry is shared with generated JSON serializers. Generic inherited state
 is resolved before generation, and erased/open identity roots are rejected.
 
-MongoDB `_id` now stores the canonical key's UTF-8 bytes as BSON binary. The
+MongoDB `_id` stores the canonical key's UTF-8 bytes as BSON binary. The
 document retains its structural JSON `id`; custom reads can call
 `fromDocument(document)`. This preserves exact identity comparison under
 case-insensitive collection collation. Keys with malformed Unicode fail before
 I/O; complete documents remain subject to the
 [16 MiB BSON limit](https://www.mongodb.com/docs/manual/reference/limits/).
 
-This is a breaking physical-schema change, including for UUID consumers. Migrate
-or recreate existing collections explicitly; changing an immutable `_id` requires
-rewriting documents. Generated code expects the new representation. Regenerate
-every owning combined part and update custom queries that formerly copied `_id`
-into `id`. Each aggregate collection owns one concrete identity kind.
+Provision fresh collections and regenerate owning parts. Each aggregate
+collection owns one concrete identity kind. Custom reads use fromDocument to
+restore the structural identity; 1.0 is the first compatibility baseline.
 
-`dddart_repository_mongodb` provides code-generated MongoDB repositories for DDDart aggregate roots. It leverages existing JSON serialization from `dddart_json` and the mature `mongo_dart` driver for MongoDB connectivity, with full support for AWS DocumentDB Serverless.
+`dddart_repository_mongodb` provides code-generated MongoDB repositories for DDDart aggregate roots. It leverages existing JSON serialization from `dddart_json` and the mature `mongo_dart` driver for MongoDB connectivity. MongoDB is exercised by the service lane; validate DocumentDB against the actual deployment before relying on its compatibility.
 
 The package follows DDDart's code generation pattern to automatically create repository implementations from annotated aggregate roots, eliminating boilerplate while maintaining type safety and extensibility.
 
@@ -56,7 +58,7 @@ The package follows DDDart's code generation pattern to automatically create rep
 - **Code Generation**: Automatically generate repository implementations from annotated aggregate roots
 - **JSON Serialization Integration**: Reuses `dddart_json` serializers for seamless persistence - no duplicate serialization logic
 - **Extensibility**: Support for custom repository interfaces with domain-specific query methods
-- **AWS DocumentDB Compatible**: Works with AWS DocumentDB Serverless and standard MongoDB 4.0+
+- **MongoDB service validation**: DocumentDB configuration examples are illustrative and do not establish tested compatibility
 - **Type-Safe**: Leverages Dart's type system for compile-time safety
 - **Error Handling**: Comprehensive exception mapping to `RepositoryException` types
 - **Connection Management**: Flexible connection configuration with URI support and TLS options
@@ -440,7 +442,9 @@ Future<void> main() async {
 
 ## AWS DocumentDB Compatibility
 
-The package is fully compatible with AWS DocumentDB Serverless through `mongo_dart`'s MongoDB protocol support.
+The connection accepts DocumentDB-style endpoints through `mongo_dart`, but the
+MongoDB service lane does not verify DocumentDB. Validate protocol features,
+write acknowledgment, identity keys, queries and TLS in the actual deployment.
 
 ### Connection Configuration
 
@@ -470,7 +474,7 @@ await connection.open();
 
 - **TLS Required**: DocumentDB requires TLS connections
 - **Certificate Validation**: Use `tlsAllowInvalidCertificates: true` or provide a CA bundle
-- **Feature Compatibility**: DocumentDB supports MongoDB 4.0 API - all features in this package are compatible
+- **Feature validation**: Check every repository operation against the target DocumentDB service; MongoDB protocol similarity is not a compatibility guarantee
 - **Serverless Mode**: Works seamlessly with DocumentDB Serverless clusters
 
 ## Error Handling Patterns

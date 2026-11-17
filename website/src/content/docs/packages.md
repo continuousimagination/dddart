@@ -1,15 +1,19 @@
 ---
 title: Package map
-description: Find the 17 packages, their responsibilities, and the guides that show how to compose them.
+description: Find the 18 packages, their responsibilities, and the guides that show how to compose them.
 section: Reference
 order: 10
 ---
 
 ## Start small
 
+The [capability and support matrix](https://github.com/continuousimagination/dddart/blob/main/docs/CAPABILITIES.md)
+is the authoritative package/platform/verification summary;
+[PUBLIC_API.md](https://github.com/continuousimagination/dddart/blob/main/docs/PUBLIC_API.md) defines supported extension imports.
+
 Use `dddart` for the core model. Add JSON when you need a representation, a repository adapter when you need persistence, and the HTTP or event packages when you need a remote boundary. Configuration and webhooks can also be used independently.
 
-All dddart dependencies in an application should use the same pinned Git revision. See [Getting started](/dddart/docs/getting-started/) before copying a hosted dependency from an older package README.
+All dddart dependencies in an application should use the same pinned Git revision. See [Getting started](/dddart/docs/getting-started/) for current Git-only setup.
 
 ## Domain and serialization
 
@@ -31,6 +35,7 @@ Every repository adapter implements the typed aggregate repository contract. Bac
 | [dddart_repository_mongodb](https://github.com/continuousimagination/dddart/tree/main/packages/dddart_repository_mongodb) | Generated MongoDB document repositories | Trusted server |
 | [dddart_repository_dynamodb](https://github.com/continuousimagination/dddart/tree/main/packages/dddart_repository_dynamodb) | Generated DynamoDB aggregate repositories | Trusted server / AWS integration |
 | [dddart_repository_rest](https://github.com/continuousimagination/dddart/tree/main/packages/dddart_repository_rest) | Generated HTTP implementation of `Repository<T, I>` | Client or service calling a remote API |
+| [dddart_repository_indexeddb](https://github.com/continuousimagination/dddart/tree/main/packages/dddart_repository_indexeddb) | Native browser IndexedDB and stronger conditional transactions/receipts | Browser; application encode/decode callbacks |
 
 See [Repositories](/dddart/docs/repositories/) for a complete SQLite walkthrough and an adapter comparison, and [Shared contracts](/dddart/docs/contracts/) for platform composition.
 
@@ -65,4 +70,4 @@ Start with a local `EventBus` in core. Use `AggregateEventClient` for new per-ag
 
 Each package contains its public exports, implementation, tests, and API notes. The [example catalog](/dddart/docs/examples/) distinguishes finite local examples, long-running servers, external-service integrations, and retained legacy sketches. A folder called `example` does not by itself mean every file can run without setup.
 
-The packages are MIT licensed. The site documents a pre-release API; pin a revision and review migrations when upgrading, especially around typed identities and stored key formats.
+The packages are MIT licensed. The site documents a pre-release API; pin a revision, regenerate code and provision fresh fixtures during development. 1.0 is the first compatibility baseline.

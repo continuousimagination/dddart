@@ -1,5 +1,7 @@
 # Supported public API
 
+See the [support matrix](CAPABILITIES.md) for runtime prerequisites and capability limits.
+
 This is the intended API surface for the first compatibility baseline, 1.0.
 Package release inclusion, versions and SDK bounds are tracked separately in
 #97–#99. `lib/src` files are implementation details even when a public library

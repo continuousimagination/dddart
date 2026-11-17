@@ -1,5 +1,9 @@
 # dddart_repository_dynamodb
 
+[Supported platforms and capability boundaries](../../docs/CAPABILITIES.md) ·
+[Supported imports and extension APIs](../../docs/PUBLIC_API.md)
+
+
 For complete setup, named source files, expected output and cleanup, follow the
 [canonical quickstart](../../docs/quickstarts/dynamodb/README.md). Other inline Dart snippets below are
 **illustrative fragments** that assume application-specific models and surrounding
@@ -11,7 +15,7 @@ DynamoDB repository implementation for DDDart aggregate roots with code generati
 
 ## Features
 
-### Typed identities and migration
+### Typed identity contracts
 
 Until publication, use the [Git installation guide](../../docs/GIT_INSTALLATION.md).
 The adapter still declares hosted internal dependencies, so use the guide's
@@ -40,17 +44,16 @@ Unicode keys fail before I/O; case and trailing whitespace remain significant.
 These are the [DynamoDB partition-key constraints](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Constraints.html).
 Complete item limits remain enforced by DynamoDB. A table owns one identity kind.
 
-UUID string keys retain their existing representation. Native/scoped identities
-use the application's codec; changing its canonical representation requires a
-data migration. Regenerate every owning combined part after migrating base
-classes and repository interfaces. Annotated open/erased identity roots fail
-generation. No default scan or enumeration capability is added.
+UUID keys use their string representation. Native/scoped identities use the
+application codec. Provision fresh tables and regenerate owning parts; 1.0 is
+the first compatibility baseline. Annotated open/erased identity roots fail
+generation. No default scan or enumeration capability is supplied.
 
 - 🚀 **Code Generation**: Automatically generate DynamoDB repository implementations from annotated aggregate roots
 - 🔄 **JSON Serialization**: Reuse existing `dddart_json` serializers with automatic AttributeValue conversion
 - 🎯 **Type Safety**: Full type safety with compile-time code generation
 - 🔌 **Extensibility**: Support for custom repository interfaces with domain-specific query methods
-- 🌍 **AWS Integration**: Built on official AWS SDK for Dart with proper credential management
+- 🌍 **AWS Integration**: Uses the aws_dynamodb_api service client with explicit connection credentials
 - 🧪 **Local Development**: Support for DynamoDB Local and LocalStack
 - 📦 **Base Contract**: Implements dddart's shared CRUD repository contract while
   keeping DynamoDB-specific reads explicit

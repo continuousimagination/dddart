@@ -1,5 +1,9 @@
 # DDDart
 
+[Supported platforms and capability boundaries](../../docs/CAPABILITIES.md) ·
+[Supported imports and extension APIs](../../docs/PUBLIC_API.md)
+
+
 For complete setup, named source files, expected output and cleanup, follow the
 [canonical quickstart](../../docs/quickstarts/core/README.md). Other inline Dart snippets below are
 **illustrative fragments** that assume application-specific models and surrounding
@@ -53,8 +57,8 @@ Domain events represent something significant that happened in your domain. They
 **Key characteristics:**
 - Immutable - events cannot be changed after creation
 - Named in past tense - `OrderPlaced`, `UserRegistered`, `PaymentProcessed`
-- Include relevant context - aggregate ID (as UuidValue), timestamp, and additional metadata
-- Type-safe IDs - uses UuidValue for aggregate and event IDs to enforce GUID usage
+- Include relevant context - aggregate ID (as its concrete Identity type), timestamp, and additional metadata
+- Type-safe IDs - aggregate IDs use I; occurrence IDs use UuidValue independently
 - Serializable - can be persisted or transmitted across boundaries
 
 ### Aggregate Roots
@@ -591,27 +595,16 @@ class OrderPlaced extends DomainEvent<UuidValue> {
 
 ### Event Serialization
 
-Events can be serialized using the `dddart_serialization` package:
+Use `@Serializable()` from `dddart_serialization` and the `dddart_json` builder
+to generate a separate event serializer. Follow the complete
+[JSON workflow](../../docs/quickstarts/json/README.md) and
+[event registry setup](../dddart_events_distributed/README.md):
 
 ```dart
-import 'package:dddart_serialization/dddart_serialization.dart';
-
-@Serializable()
-class UserRegistered extends DomainEvent<UuidValue> {
-  final String email;
-  final String fullName;
-  
-  UserRegistered({
-    required UuidValue userId,
-    required this.email,
-    required this.fullName,
-  }) : super(aggregateId: userId);
-  
-  // Generated serialization methods
-  factory UserRegistered.fromJson(Map<String, dynamic> json) =>
-      _$UserRegisteredFromJson(json);
-  Map<String, dynamic> toJson() => _$UserRegisteredToJson(this);
-}
+// Context fragment: UserRegistered is an application-defined annotated event.
+final serializer = UserRegisteredJsonSerializer();
+final json = serializer.toJson(event);
+final restored = serializer.fromJson(json);
 ```
 
 **Note on UuidValue Serialization:** When manually serializing events, use `.uuid` to convert UuidValue to string:
@@ -689,13 +682,11 @@ dart run example/event_serialization_example.dart
 
 ## Platform Support
 
-DDDart works on all Dart platforms:
-- ✅ **Server** - Dart VM and compiled executables
-- ✅ **Web** - Dart web and Flutter web applications
-- ✅ **Mobile** - Flutter iOS and Android apps
-- ✅ **Desktop** - Flutter desktop applications
-
-The event system uses only Dart core libraries with no platform-specific dependencies.
+The core domain model, identity, local event and reference-repository paths are
+portable Dart code. FileLogHandler requires native filesystem IO. A portable
+model does not make a database adapter or login callback browser-compatible.
+The [support matrix](../../docs/CAPABILITIES.md) records exact composition limits
+and verification paths; it does not certify every Flutter device or browser.
 
 ## Contributing
 

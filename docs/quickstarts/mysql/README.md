@@ -4,7 +4,7 @@ Use Dart **3.13.7**, the development SDK used for these checks. This is a verifi
 setup, not a claim about the minimum SDK on every platform (#98 tracks that).
 The DDDart dependencies below use one immutable Git revision; they do not require
 published DDDart packages. See [Git installation](https://github.com/continuousimagination/dddart/blob/main/docs/GIT_INSTALLATION.md)
-for source overrides and [the support matrix](https://continuousimagination.github.io/dddart/docs/contracts/) for platform limits.
+for source overrides and [the support matrix](https://github.com/continuousimagination/dddart/blob/main/docs/CAPABILITIES.md) for platform limits.
 
 MySQL 8 on localhost:3307, database `test_db`, root password `test_password`. Docker must be installed and running.
 Use these commands in another terminal; wait until the readiness command succeeds

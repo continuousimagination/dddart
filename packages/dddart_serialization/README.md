@@ -1,5 +1,9 @@
 # DDDart Serialization
 
+[Supported platforms and capability boundaries](../../docs/CAPABILITIES.md) ·
+[Supported imports and extension APIs](../../docs/PUBLIC_API.md)
+
+
 For complete setup, named source files, expected output and cleanup, follow the
 [canonical quickstart](../../docs/quickstarts/json/README.md). Other inline Dart snippets below are
 **illustrative fragments** that assume application-specific models and surrounding
@@ -55,7 +59,7 @@ class User extends AggregateRoot<UuidValue> {
 
 @Serializable()
 class Address extends Value {
-  const Address(this.street, this.city, this.zipCode);
+  const Address({required this.street, required this.city, required this.zipCode});
   
   final String street;
   final String city;

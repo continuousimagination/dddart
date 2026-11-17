@@ -1,5 +1,9 @@
 # dddart_rest
 
+[Supported platforms and capability boundaries](../../docs/CAPABILITIES.md) ·
+[Supported imports and extension APIs](../../docs/PUBLIC_API.md)
+
+
 For complete setup, named source files, expected output and cleanup, follow the
 [canonical quickstart](../../docs/quickstarts/rest/README.md). Other inline Dart snippets below are
 **illustrative fragments** that assume application-specific models and surrounding
@@ -15,7 +19,7 @@ and `http.dart` exports support standalone runtimes. See the
 [aggregate events guide](../../docs/DISTRIBUTED_EVENTS.md) for shared HTTP/AppSync
 authentication, policy injection and serverless handler registration.
 
-## Typed identities (pre-release breaking change)
+## Typed identity contracts
 
 Use `AggregateRoot<UuidValue>` for UUID models and `Repository<User, UuidValue>`
 for UUID CRUD. Native models extend `AggregateRoot<IssueId>`. Both base
