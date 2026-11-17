@@ -35,8 +35,6 @@ response with a different typed identity is rejected.
 
 RESTful CRUD API framework for DDDart - Provides REST endpoints for aggregate roots with minimal boilerplate.
 
-> **Note:** This package was previously named `dddart_http`. See the [Migration Guide](#migration-from-dddart_http) below.
-
 ## Optional access policies
 
 No verifier or security policy means public CRUD. Installing an
@@ -878,54 +876,6 @@ ResponseBuilder (serializes result)
 HTTP Response
 ```
 
-## Migration from dddart_http
-
-This package was renamed from `dddart_http` to `dddart_rest` to better reflect its purpose of providing RESTful CRUD APIs, distinguishing it from other HTTP concerns like webhook handling.
-
-### Migration Steps
-
-**1. Update pubspec.yaml:**
-```yaml
-dependencies:
-  dddart_rest: ^0.9.0  # Changed from dddart_http
-```
-
-**2. Update imports:**
-```dart
-// Before
-import 'package:dddart_http/dddart_http.dart';
-
-// After
-import 'package:dddart_rest/dddart_rest.dart';
-```
-
-**3. Update logger configuration (if used):**
-```dart
-// Before
-Logger('dddart.http').level = Level.INFO;
-
-// After
-Logger('dddart.rest').level = Level.INFO;
-```
-
-**4. Run pub get and test:**
-```bash
-dart pub get
-dart test
-```
-
-### What Changed
-
-- **Package name**: `dddart_http` → `dddart_rest`
-- **Import path**: `package:dddart_http/*` → `package:dddart_rest/*`
-- **Logger name**: `dddart.http` → `dddart.rest`
-
-### What Stayed the Same
-
-- All API surfaces remain identical
-- No breaking changes to functionality
-- All class names and methods unchanged
-
 ## Authentication
 
 dddart_rest provides comprehensive JWT-based authentication with support for both self-hosted and OAuth/OIDC providers.
@@ -1196,25 +1146,19 @@ server.registerResource(
 
 ### Using Authentication in Custom Handlers
 
-Access user identity and claims in custom query handlers:
+Query handlers receive `AuthorizedQuery<TClaims>`. They may add restrictions to
+the resource policy, and must apply its authorized scope to rows/counts before
+pagination. Use required authentication on a `me` operation or reject an anonymous
+caller explicitly; the context itself is never null.
 
 ```dart
 queryHandlers: {
-  'me': (repo, params, skip, take, authResult) async {
-    // authResult is null for public resources
-    // authResult is non-null for protected resources
-    
-    if (authResult == null) {
-      throw UnauthorizedException();
+  'me': (repo, params, skip, take, authorization) async {
+    final claims = authorization.caller.claims;
+    if (!authorization.caller.isAuthenticated || claims == null) {
+      throw const AccessDeniedException();
     }
-    
-    // Type-safe access to claims
-    final userId = authResult.claims.userId;
-    final email = authResult.claims.email;
-    final isAdmin = authResult.claims.roles.contains('admin');
-    
-    // Return user's own data
-    final user = await repo.getById(UuidValue.fromString(userId));
+    final user = await repo.getById(UuidValue.fromString(claims.userId));
     return QueryResult([user], totalCount: 1);
   },
 }

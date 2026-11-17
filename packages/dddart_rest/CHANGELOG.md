@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Explicit per-operation public, authenticated and custom access policies replace
+  implicit authorization hooks. Typed caller/operation contexts support anonymous
+  access and application-owned query scope on every collection path.
+- Custom mutations bind stored-state permission to an atomic revision; POST is
+  create-only and missing PUTs also evaluate create permission. Incapable custom
+  mutation backends fail closed. Public CRUD remains supported.
+- Added the executable public-leaderboard/private-documents/public-CRUD example
+  and real HTTP caller/operation matrix. 1.0 is the first compatibility baseline;
+  obsolete prerelease migration instructions were removed.
+
 - Share typed credential verification through `CredentialVerifier` and
   `TokenAuthenticationHandler` across HTTP and native event authorization.
   Built-in JWT issuance/refresh and optional OAuth verification remain available;

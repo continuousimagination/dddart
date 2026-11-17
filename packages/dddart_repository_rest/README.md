@@ -10,8 +10,10 @@ Register explicit `IdentityCodec<IssueId>` implementations in an instance-local
 repositories accept `identityCodecs: registry` and share it with body serialization.
 
 `CrudResource<T, I, TClaims>`, `AuthorizationHandler<T, I, TClaims>` and
-`QueryHandler<T, I>` retain concrete identity types. Delete authorization receives
-I. Query selection, pagination and authentication semantics are unchanged.
+`QueryHandler<T, I, TClaims>` retain concrete identity and claims types. Read and
+delete policies receive stored aggregates; updates receive separate current and
+proposed snapshots. Query handlers receive a typed caller and authorized scope.
+See the REST package optional-policy contract.
 
 Client paths URI-encode canonical codec keys once. `HttpServer` decodes one
 segment once; direct `CrudResource.handleGetById/handleUpdate/handleDelete`

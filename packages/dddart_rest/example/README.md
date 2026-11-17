@@ -692,3 +692,13 @@ This is a learning example. For production use:
 - [dddart_rest Package](../README.md) - RESTful CRUD API framework
 - [Domain-Driven Design](https://martinfowler.com/bliki/DomainDrivenDesign.html) - Martin Fowler's overview
 - [RFC 7807](https://tools.ietf.org/html/rfc7807) - Problem Details for HTTP APIs
+
+### Public leaderboard and optional authorization (`public_leaderboard_example.dart`)
+
+Run `dart run public_leaderboard_example.dart` from this directory. This finite
+local example starts an ephemeral HTTP server, verifies anonymous leaderboard
+reads with protected submissions and moderator changes, checks private/public
+document rows and counts, and exercises unconfigured public CRUD. It closes the
+server automatically. The local credential fixture needs no external service;
+production applications can supply the existing JWT/OAuth verifier. This example
+runs as part of the shared validation inventory.
