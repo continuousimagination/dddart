@@ -84,5 +84,5 @@ in [the documentation gate](../tool/documentation/README.md). The active
 Documentation workflow runs the fast check for library/generator changes too;
 the disabled Test workflow defines the heavier execution gates, which must be run
 locally. `npm run check` builds the site, checks its HTML metadata, links, anchors,
-source references and search index, then runs 12 failure-detection tests against
+source references and search index, then runs 13 regression tests against
 temporary copies of that output. It does not replace the isolated Dart consumer gate.

@@ -27,6 +27,24 @@ reject() {
   grep -Fq "$1" "$WORK/result" || { cat "$WORK/result" >&2; fail "Missing site diagnostic: $1"; }
   COUNT=$((COUNT + 1)); printf 'PASS %s\n' "$1"
 }
+# libxml2 versions differ in whether XPath scalar output ends with a newline.
+# Exercise the real checker/parser with newline-terminated output on every host.
+fresh
+mkdir -p "$WORK/bin"
+REAL_XMLLINT=$(command -v xmllint)
+export REAL_XMLLINT
+cat > "$WORK/bin/xmllint" <<'SH'
+#!/usr/bin/env bash
+"$REAL_XMLLINT" "$@"
+result=$?
+printf '\n'
+exit "$result"
+SH
+chmod +x "$WORK/bin/xmllint"
+PATH="$WORK/bin:$PATH" bash "$SCRIPT_DIR/check-site.sh" > "$WORK/result" 2>&1 || {
+  cat "$WORK/result" >&2; fail 'Newline-terminated parser output was rejected'
+}
+COUNT=$((COUNT + 1)); printf 'PASS newline-terminated parser output\n'
 fresh
 change_html 'sub("<h1";"<h2")|sub("</h1>";"</h2>")'
 reject 'expected one h1'

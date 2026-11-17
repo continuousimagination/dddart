@@ -5,13 +5,13 @@ set -euo pipefail
 fail() { printf '%s\n' "$*" >&2; exit 1; }
 need() { command -v "$1" >/dev/null 2>&1 || fail "Required tool missing: $1"; }
 need jq
-need git
 
 # Keep all paths relative to a declared root. Reject absolute paths and traversal.
 safe_relative() {
   case "$1" in ''|/*|..|../*|*/../*|*/..|*\\*) fail "Unsafe relative path: $1";; esac
 }
 repository_files() {
+  need git
   local root=$1 path
   if [[ -e "$root/.git" ]]; then
     while IFS= read -r -d '' path; do

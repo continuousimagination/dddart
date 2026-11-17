@@ -40,7 +40,7 @@ while IFS= read -r path; do
     "$DOC_JQ "'
     def attributes: [scan("=\"([^\"]*)\"")|.[0]|html_decode];
     {path:$path, public:$public, ids:($ids|attributes), references:($references|attributes),
-     title:($title|trim), description:($description|trim), canonical:($canonical|trim), h1:($headings|tonumber)}'
+     title:($title|trim), description:($description|trim), canonical:($canonical|trim), h1:($headings|trim|tonumber)}'
 done < "$WORK/pages.txt" | jq -s '.' > "$WORK/pages.json"
 
 jq -e --arg origin "$ORIGIN" "$DOC_JQ "'
