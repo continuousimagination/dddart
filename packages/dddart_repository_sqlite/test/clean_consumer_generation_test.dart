@@ -255,14 +255,14 @@ void main() { print($symbol); }
             'kernel',
             'bin/private_api.dart',
             '-o',
-            'build/private.dill'
+            'build/private.dill',
           ],
           workingDirectory: fixture.path,
         );
         final diagnostic = '${rejected.stdout}\n${rejected.stderr}';
         expect(rejected.exitCode, isNot(0), reason: diagnostic);
         expect(diagnostic, contains("Undefined name '$symbol'"),
-            reason: diagnostic);
+            reason: diagnostic,);
       }
     },
     timeout: const Timeout(Duration(minutes: 5)),
