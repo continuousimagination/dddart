@@ -123,3 +123,24 @@ git push --no-verify
 ```
 
 **Note:** The hook itself is not committed to git (it lives in `.git/hooks/`), but the logic is in the versioned `test-all.sh` script. This ensures the hook behavior is consistent across all developers and can be updated through git.
+
+## Documentation consumers
+
+The [documentation gate](../tool/documentation/README.md) verifies primary code
+inclusions, explicit snippet coverage, supported export inventories and fresh
+outside-workspace workflows. It runs on API/generator changes as well as docs:
+
+```sh
+python3 tool/documentation/validate.py check
+python3 tool/documentation/validate.py all --service-kind=none
+python3 tool/documentation/validate.py all --service-kind=mysql
+python3 tool/documentation/validate.py all --service-kind=mongo
+python3 tool/documentation/validate.py all --service-kind=dynamodb
+python3 tool/documentation/self_test.py
+```
+
+Service setup is in the [canonical quickstarts](../docs/QUICKSTARTS.md). The local
+mode stages Pub-selected archives and is not hosted consumer proof. Use
+`--source=git` for exact Git-manifest resolution; #100/#101 still require separate
+published-package release evidence. Node is needed for representative core/JSON
+JavaScript runs; these do not replace browser or physical-device validation.

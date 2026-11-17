@@ -161,6 +161,7 @@ class SeatCount extends Value {
 
 Resolve dependencies, generate from clean build state, analyze, and run:
 
+<!-- dddart-source: docs/quickstarts/json/commands.sh -->
 ```sh
 dart pub get
 dart run build_runner clean
@@ -168,14 +169,17 @@ dart run build_runner build --delete-conflicting-outputs
 dart analyze --fatal-infos
 dart run bin/main.dart
 ```
+<!-- /dddart-source -->
 
 Expected output for `bin/main.dart`:
 
+<!-- dddart-source: docs/quickstarts/json/expected/main.txt -->
 ```text
 Sam
 true
 true
 ```
+<!-- /dddart-source -->
 
 The program finishes and closes its resources. Delete the temporary application directory when finished.
 

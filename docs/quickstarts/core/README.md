@@ -82,17 +82,36 @@ Future<void> main() async {
 
 Resolve dependencies, analyze, and run:
 
+<!-- dddart-source: docs/quickstarts/core/commands.sh -->
 ```sh
 dart pub get
 dart analyze --fatal-infos
 dart run bin/main.dart
 ```
+<!-- /dddart-source -->
 
-Expected output:
+Optional additional guide programs: copy their named files from the
+[modeling](https://continuousimagination.github.io/dddart/docs/modeling/),
+[contracts](https://continuousimagination.github.io/dddart/docs/contracts/) and
+[repository](https://continuousimagination.github.io/dddart/docs/repositories/) guides
+into `bin` before running these commands.
 
+<!-- dddart-source: docs/quickstarts/core/guide_commands.sh -->
+```sh
+dart run bin/repository.dart
+dart run bin/contracts.dart
+dart run bin/modeling.dart
+dart run bin/identity.dart
+```
+<!-- /dddart-source -->
+
+Expected output from `bin/main.dart`:
+
+<!-- dddart-source: docs/quickstarts/core/expected/main.txt -->
 ```text
 Sam: order placed = true
 ```
+<!-- /dddart-source -->
 
 The program finishes and closes its resources. Delete the temporary application directory when finished.
 The repository holds object references and the event bus is local. This example

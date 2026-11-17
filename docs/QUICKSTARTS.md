@@ -73,3 +73,19 @@ archives. The pinned Git run verifies the instructions available before first
 publication. #100 can reuse these same inputs with real hosted dependencies and
 no overrides; local archive/Git runs are not pub.dev release proof. #101 owns the
 release-time switch to hosted installation instructions.
+
+## Continuous validation
+
+The [documentation gate](../tool/documentation/README.md) now enforces this mapping.
+It also checks the website's complete modeling, repository-injection and
+configuration programs, and compiles the credential-dependent Slack server.
+Configuration and Slack have [checked manifests](quickstarts/) alongside the seven
+primary workflows; Slack is compile-only and requires real application setup to run.
+
+Run `python3 tool/documentation/validate.py all --service-kind=none` for local
+unserviced consumers and core/JSON JavaScript execution under Node. Select
+`mysql`, `mongo`, or `dynamodb` for a required database lane. Plain `all` requires
+all services. Every published `dddart-source` block is checked, including command
+and expected-output files. Other scoped Dart fences are explicitly classified
+and a newly unclassified snippet fails the gate. See the gate documentation for
+fault tests, Git mode, CI wiring and the separate hosted release responsibility.
