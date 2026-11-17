@@ -13,16 +13,16 @@ part 'user.g.dart';
 /// User aggregate root representing a user in the system.
 @Serializable()
 @GenerateRestRepository(resourcePath: '/users')
-class User extends UuidAggregateRoot {
+class User extends AggregateRoot<UuidValue> {
   /// Creates a new user.
   User({
     required this.firstName,
     required this.lastName,
     required this.email,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   /// User's first name.
   final String firstName;

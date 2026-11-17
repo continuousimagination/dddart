@@ -16,17 +16,17 @@ part 'custom_user.g.dart';
   tableName: 'custom_users',
   implements: CustomUserRepository,
 )
-class CustomUser extends UuidAggregateRoot {
+class CustomUser extends AggregateRoot<UuidValue> {
   /// Creates a custom user.
   CustomUser({
     required this.name,
     required this.email,
     required this.isActive,
     required this.registeredAt,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   /// User's full name.
   final String name;

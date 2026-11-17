@@ -7,24 +7,24 @@ import 'package:logging/logging.dart';
 import 'package:test/test.dart';
 
 // Test aggregate classes for testing repository functionality
-class TestAggregate extends UuidAggregateRoot {
+class TestAggregate extends AggregateRoot<UuidValue> {
   TestAggregate({
     required this.name,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   final String name;
 }
 
-class AnotherTestAggregate extends UuidAggregateRoot {
+class AnotherTestAggregate extends AggregateRoot<UuidValue> {
   AnotherTestAggregate({
     required this.value,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   final int value;
 }

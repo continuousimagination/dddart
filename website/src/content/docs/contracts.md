@@ -14,8 +14,8 @@ The following complete program takes a repository through its constructor. The a
 ```dart
 import 'package:dddart/dddart.dart';
 
-class Reservation extends UuidAggregateRoot {
-  Reservation({required this.guest});
+class Reservation extends AggregateRoot<UuidValue> {
+  Reservation({required this.guest}) : super(id: UuidValue.generate());
   final String guest;
   bool _confirmed = false;
   bool get confirmed => _confirmed;

@@ -1,17 +1,16 @@
 import 'package:dddart/src/domain_event.dart';
 import 'package:dddart/src/entity.dart';
 import 'package:dddart/src/identity.dart';
-import 'package:dddart/src/uuid_value.dart';
 
 /// Base class for aggregate roots in the DDD framework.
 ///
-/// An aggregate root is the entry point to an aggregate and extends UuidEntity
+/// An aggregate root is the entry point to an aggregate and extends [Entity]
 /// to provide identity and lifecycle management. It serves as the boundary
 /// for consistency and transaction management within the aggregate.
 abstract class AggregateRoot<I extends Identity> extends Entity<I> {
   /// Creates an aggregate root with an explicit identity.
   ///
-  /// Use [UuidAggregateRoot] for automatic UUID generation.
+  /// The caller supplies the identity, including UUIDs, and owns its generation.
   /// If [createdAt] is not provided, the current time will be used.
   /// If [updatedAt] is not provided, the current time will be used.
   AggregateRoot({
@@ -117,11 +116,4 @@ class _PendingEvent<I extends Identity> {
   _PendingEvent(this.event);
 
   final DomainEvent<I> event;
-}
-
-/// An aggregate with a supplied or automatically generated UUID identity.
-abstract class UuidAggregateRoot extends AggregateRoot<UuidValue> {
-  /// Creates a UUID aggregate, generating [id] when omitted.
-  UuidAggregateRoot({UuidValue? id, super.createdAt, super.updatedAt})
-      : super(id: id ?? UuidValue.generate());
 }

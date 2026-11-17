@@ -7,14 +7,14 @@ import 'package:test/test.dart';
 import 'json_serializer_test_support.dart';
 
 // Test domain model
-class TestProduct extends UuidAggregateRoot {
+class TestProduct extends AggregateRoot<UuidValue> {
   TestProduct({
     required this.name,
     required this.price,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
   final String name;
   final double price;
 }

@@ -35,8 +35,8 @@ import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
 
 @Serializable()
 @GenerateMysqlRepository()
-class Order extends UuidAggregateRoot {
-  Order({required this.total}) : super();
+class Order extends AggregateRoot<UuidValue> {
+  Order({required this.total}) : super(id: UuidValue.generate());
   final double total;
 }
 ''',
@@ -77,8 +77,8 @@ import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
 
 @Serializable()
 @GenerateMysqlRepository()
-class Product extends UuidAggregateRoot {
-  Product({required this.name}) : super();
+class Product extends AggregateRoot<UuidValue> {
+  Product({required this.name}) : super(id: UuidValue.generate());
   final String name;
 }
 ''',
@@ -122,15 +122,15 @@ import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
 
 @Serializable()
-class Item extends UuidEntity {
-  Item({required this.name}) : super();
+class Item extends Entity<UuidValue> {
+  Item({required this.name}) : super(id: UuidValue.generate());
   final String name;
 }
 
 @Serializable()
 @GenerateMysqlRepository()
-class Container extends UuidAggregateRoot {
-  Container({required this.items}) : super();
+class Container extends AggregateRoot<UuidValue> {
+  Container({required this.items}) : super(id: UuidValue.generate());
   final List<Item> items;
 }
 ''',
@@ -181,8 +181,8 @@ import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
 
 @Serializable()
 @GenerateMysqlRepository()
-class SimpleEntity extends UuidAggregateRoot {
-  SimpleEntity({required this.value}) : super();
+class SimpleEntity extends AggregateRoot<UuidValue> {
+  SimpleEntity({required this.value}) : super(id: UuidValue.generate());
   final String value;
 }
 ''',
@@ -236,8 +236,8 @@ abstract class CustomOrderRepository implements Repository<Order, UuidValue> {
 
 @Serializable()
 @GenerateMysqlRepository(implements: CustomOrderRepository)
-class Order extends UuidAggregateRoot {
-  Order({required this.customerId}) : super();
+class Order extends AggregateRoot<UuidValue> {
+  Order({required this.customerId}) : super(id: UuidValue.generate());
   final String customerId;
 }
 ''',
@@ -287,8 +287,8 @@ import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
 
 @Serializable()
 @GenerateMysqlRepository()
-class TestAggregate extends UuidAggregateRoot {
-  TestAggregate({required this.name}) : super();
+class TestAggregate extends AggregateRoot<UuidValue> {
+  TestAggregate({required this.name}) : super(id: UuidValue.generate());
   final String name;
 }
 ''',
@@ -336,8 +336,8 @@ import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
 
 @Serializable()
 @GenerateMysqlRepository()
-class Entity1 extends UuidAggregateRoot {
-  Entity1({required this.name}) : super();
+class Entity1 extends AggregateRoot<UuidValue> {
+  Entity1({required this.name}) : super(id: UuidValue.generate());
   final String name;
 }
 ''',

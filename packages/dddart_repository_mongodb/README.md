@@ -11,8 +11,9 @@ The adapter still declares hosted internal dependencies, so use the guide's
 overrides pinned to the same immutable Git revision.
 
 Generated repositories implement `Repository<T, I>`, where `I` is the concrete
-identity on the aggregate. Use `UuidAggregateRoot` for optional generated UUIDs,
-or `AggregateRoot<IssueId>` with a required native/scoped ID. Register application
+identity on the aggregate. Use `AggregateRoot<UuidValue>` for UUIDs, or
+`AggregateRoot<IssueId>` for native/scoped IDs. Both require an ID; domain
+constructors can generate UUIDs with `UuidValue.generate()`. Register application
 codecs and pass them into the repository:
 
 ```dart
@@ -80,7 +81,7 @@ import 'package:dddart_repository_mongodb/dddart_repository_mongodb.dart';
 
 @Serializable()
 @GenerateMongoRepository(collectionName: 'users')
-class User extends UuidAggregateRoot {
+class User extends AggregateRoot<UuidValue> {
   final String firstName;
   final String lastName;
   final String email;
@@ -89,7 +90,7 @@ class User extends UuidAggregateRoot {
     required this.firstName,
     required this.lastName,
     required this.email,
-  });
+  }) : super(id: UuidValue.generate());
 }
 
 part 'user.g.dart';
@@ -154,7 +155,7 @@ abstract interface class UserRepository implements Repository<User, UuidValue> {
 // Annotate with custom interface
 @Serializable()
 @GenerateMongoRepository(implements: UserRepository)
-class User extends UuidAggregateRoot {
+class User extends AggregateRoot<UuidValue> {
   final String firstName;
   final String lastName;
   final String email;
@@ -163,7 +164,7 @@ class User extends UuidAggregateRoot {
     required this.firstName,
     required this.lastName,
     required this.email,
-  });
+  }) : super(id: UuidValue.generate());
 }
 
 part 'user.g.dart';
@@ -295,11 +296,11 @@ Best for simple CRUD operations without custom queries.
 ```dart
 @Serializable()
 @GenerateMongoRepository()
-class Product extends UuidAggregateRoot {
+class Product extends AggregateRoot<UuidValue> {
   final String name;
   final double price;
   
-  Product({required this.name, required this.price});
+  Product({required this.name, required this.price}) : super(id: UuidValue.generate());
 }
 
 // Usage
@@ -320,9 +321,9 @@ abstract interface class UserRepository implements Repository<User, UuidValue> {
 // Aggregate with interface
 @Serializable()
 @GenerateMongoRepository(implements: UserRepository)
-class User extends UuidAggregateRoot {
+class User extends AggregateRoot<UuidValue> {
   final String email;
-  User({required this.email});
+  User({required this.email}) : super(id: UuidValue.generate());
 }
 
 // MongoDB implementation
@@ -686,8 +687,8 @@ dart run build_runner build --delete-conflicting-outputs
 
 Ensure your class extends `AggregateRoot`:
 ```dart
-class User extends UuidAggregateRoot { // ✅ Correct
-class User extends UuidEntity {        // ❌ Wrong
+class User extends AggregateRoot<UuidValue> { // ✅ Correct
+class User extends Entity<UuidValue> {        // ❌ Wrong
 ```
 
 **Problem**: "Class must be annotated with @Serializable()" error
@@ -696,7 +697,7 @@ Add both annotations:
 ```dart
 @Serializable()                    // ✅ Required
 @GenerateMongoRepository()
-class User extends UuidAggregateRoot { ... }
+class User extends AggregateRoot<UuidValue> { ... }
 ```
 
 ### Connection Issues

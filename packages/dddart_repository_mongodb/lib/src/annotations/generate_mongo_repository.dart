@@ -19,11 +19,11 @@
 /// ```dart
 /// @Serializable()
 /// @GenerateMongoRepository(collectionName: 'users')
-/// class User extends UuidAggregateRoot {
+/// class User extends AggregateRoot<UuidValue> {
 ///   final String firstName;
 ///   final String lastName;
 ///
-///   User({required this.firstName, required this.lastName});
+///   User({required this.firstName, required this.lastName}) : super(id: UuidValue.generate());
 /// }
 ///
 /// part 'user.g.dart';
@@ -59,7 +59,7 @@
 ///   collectionName: 'users',
 ///   implements: UserRepository,
 /// )
-/// class User extends UuidAggregateRoot {
+/// class User extends AggregateRoot<UuidValue> {
 ///   final String firstName;
 ///   final String lastName;
 ///   final String email;
@@ -68,7 +68,7 @@
 ///     required this.firstName,
 ///     required this.lastName,
 ///     required this.email,
-///   });
+///   }) : super(id: UuidValue.generate());
 /// }
 ///
 /// part 'user.g.dart';

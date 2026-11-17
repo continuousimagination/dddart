@@ -24,14 +24,14 @@
 ///
 /// @Serializable()
 /// @GenerateDynamoRepository(tableName: 'users')
-/// class User extends UuidAggregateRoot {
+/// class User extends AggregateRoot<UuidValue> {
 ///   User({
-///     super.id,
+///     UuidValue? id,
 ///     required this.email,
 ///     required this.name,
 ///     super.createdAt,
 ///     super.updatedAt,
-///   });
+///   }) : super(id: id ?? UuidValue.generate());
 ///
 ///   final String email;
 ///   final String name;

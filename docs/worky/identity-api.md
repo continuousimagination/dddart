@@ -21,8 +21,6 @@ abstract class Identity extends Value {}
 class UuidValue extends Identity { /* existing UUID API */ }
 abstract class Entity<I extends Identity> { /* required I id */ }
 abstract class AggregateRoot<I extends Identity> extends Entity<I> {}
-abstract class UuidEntity extends Entity<UuidValue> { /* optional UUID */ }
-abstract class UuidAggregateRoot extends AggregateRoot<UuidValue> { /* optional UUID */ }
 abstract interface class Repository<T extends AggregateRoot<I>, I extends Identity> {
   Future<T> getById(I id);
   Future<void> save(T aggregate);
@@ -44,9 +42,11 @@ custom-interface semantics.
 Identity retains Value's structural equality/hash and runtime-kind separation.
 Immutable consumer identity properties include every scope component. UuidValue
 remains the supplied UUID implementation, with generation, validation and original
-text/case preserved. General entities require their concrete ID; UUID convenience
-bases generate only UUIDs. Existing timestamp, touch, upsert and event policies
-remain in scope only for regression preservation.
+text/case preserved. All entities require their concrete ID. As of the owner's
+17 November 2026 API revision, UUID models use `Entity<UuidValue>` and
+`AggregateRoot<UuidValue>`; domain constructors own any UUID generation. Existing
+timestamp, touch, upsert and event policies remain in scope only for regression
+preservation.
 
 AggregateRoot<I> carries DomainEvent<I>. EventBus intentionally dispatches
 heterogeneous DomainEvent<Identity> values; occurrence UUIDs remain distinct from
@@ -130,7 +130,7 @@ at immutable revision 8131339 proves configuration, all adapters, REST and mixed
 events; the integration record identifies the exact SHA and source equivalence.
 Real AWS/OIDC and excluded legacy examples are not represented as passed.
 
-Migration guidance and package changelogs cover UuidAggregateRoot/UuidEntity,
+Migration guidance and package changelogs cover typed UUID entities/aggregates,
 Repository<T, UuidValue>, typed events, native IDs, codec injection and explicit
 storage/wire breaks. Current Git consumption uses documented dependency overrides;
 publication remains #30. Worky has no consumer lockfile to update. Browser

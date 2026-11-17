@@ -14,15 +14,15 @@ part 'test_models_impl.dart';
 /// Simple test aggregate for basic CRUD testing.
 @Serializable()
 @GenerateRestRepository(resourcePath: '/users')
-class TestUser extends UuidAggregateRoot {
+class TestUser extends AggregateRoot<UuidValue> {
   /// Creates a test user.
   TestUser({
     required this.name,
     required this.email,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   /// User's name.
   final String name;
@@ -34,15 +34,15 @@ class TestUser extends UuidAggregateRoot {
 /// Test aggregate with custom resource path.
 @Serializable()
 @GenerateRestRepository(resourcePath: '/products')
-class TestProduct extends UuidAggregateRoot {
+class TestProduct extends AggregateRoot<UuidValue> {
   /// Creates a test product.
   TestProduct({
     required this.name,
     required this.price,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   /// Product name.
   final String name;
@@ -67,16 +67,16 @@ abstract interface class TestOrderRepository
   resourcePath: '/orders',
   implements: TestOrderRepository,
 )
-class TestOrder extends UuidAggregateRoot {
+class TestOrder extends AggregateRoot<UuidValue> {
   /// Creates a test order.
   TestOrder({
     required this.orderNumber,
     required this.customerId,
     required this.total,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   /// Order number.
   final String orderNumber;
@@ -91,16 +91,16 @@ class TestOrder extends UuidAggregateRoot {
 /// Test aggregate for additional testing scenarios.
 @Serializable()
 @GenerateRestRepository(resourcePath: '/accounts')
-class TestAccount extends UuidAggregateRoot {
+class TestAccount extends AggregateRoot<UuidValue> {
   /// Creates a test account.
   TestAccount({
     required this.accountName,
     required this.accountType,
     required this.balance,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   /// Account name.
   final String accountName;
@@ -115,14 +115,14 @@ class TestAccount extends UuidAggregateRoot {
 /// Test aggregate that relies on the inferred REST resource path.
 @Serializable()
 @GenerateRestRepository()
-class InferredResource extends UuidAggregateRoot {
+class InferredResource extends AggregateRoot<UuidValue> {
   /// Creates an inferred-resource test aggregate.
   InferredResource({
     required this.name,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   /// Resource name.
   final String name;

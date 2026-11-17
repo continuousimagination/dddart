@@ -89,8 +89,9 @@ Future<Response> _handleHealthCheck(Request request) async {
 }
 
 // User aggregate root for example
-class User extends UuidAggregateRoot {
-  User({required this.name, super.id, super.createdAt, super.updatedAt});
+class User extends AggregateRoot<UuidValue> {
+  User({required this.name, UuidValue? id, super.createdAt, super.updatedAt})
+      : super(id: id ?? UuidValue.generate());
   final String name;
 }
 

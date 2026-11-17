@@ -10,7 +10,7 @@ A lightweight Domain-Driven Design (DDD) framework for Dart that provides base c
 - **Value Object**: Base class for immutable value types
 - **Domain Events**: Event-driven architecture with local publish/subscribe
 - **Event Bus**: Type-safe event distribution system
-- Optional automatic UUID generation through UUID entity/aggregate specializations; event occurrence IDs remain UUIDs
+- Explicit identity creation for all entities; `UuidValue.generate()` supplies UUIDs and event occurrence IDs remain UUIDs
 - Automatic timestamp management (createdAt, updatedAt, occurredAt)
 
 ## Installation
@@ -28,8 +28,9 @@ dart pub get
 
 ## Quick Start
 
-General domain types use `Entity<I>` and `AggregateRoot<I>`, with a required
-identity. `UuidEntity` and `UuidAggregateRoot` preserve convenient generated UUIDs.
+All domain entities use `Entity<I>` or `AggregateRoot<I>`, with a required
+identity. UUID models use `Entity<UuidValue>` or `AggregateRoot<UuidValue>`;
+their constructors can generate an ID explicitly with `UuidValue.generate()`.
 Repositories use `Repository<T, I>` and reject unrelated identity types in typed
 code. See [native identity and UUID migration](IDENTITY_GUIDE.md).
 
@@ -38,17 +39,17 @@ code. See [native identity and UUID migration](IDENTITY_GUIDE.md).
 ```dart
 import 'package:dddart/dddart.dart';
 
-class User extends UuidEntity {
+class User extends Entity<UuidValue> {
   final String name;
   final String email;
   
   User({
     required this.name,
     required this.email,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 }
 ```
 
@@ -70,17 +71,17 @@ class OrderPlaced extends DomainEvent<UuidValue> {
 }
 
 // Create an aggregate that raises events
-class Order extends UuidAggregateRoot {
+class Order extends AggregateRoot<UuidValue> {
   final String customerId;
   final List<OrderItem> items;
   
   Order._({
     required this.customerId,
     required this.items,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
   
   // Factory method that raises domain event
   factory Order.place({
@@ -461,7 +462,7 @@ class RegisterUser extends DomainEvent<UuidValue> {
 Events should be raised when significant business operations occur:
 
 ```dart
-class User extends UuidAggregateRoot {
+class User extends AggregateRoot<UuidValue> {
   String email;
   String fullName;
   bool isActive;
@@ -470,8 +471,8 @@ class User extends UuidAggregateRoot {
     required this.email,
     required this.fullName,
     this.isActive = true,
-    super.id,
-  });
+    UuidValue? id,
+  }) : super(id: id ?? UuidValue.generate());
   
   // Factory method for user registration
   factory User.register({

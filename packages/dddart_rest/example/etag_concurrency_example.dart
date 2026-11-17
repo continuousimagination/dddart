@@ -11,7 +11,7 @@ import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'lib/json_serializer_support.dart';
 
 // Simple User aggregate for demonstration
-class User extends UuidAggregateRoot {
+class User extends AggregateRoot<UuidValue> {
   User({
     required super.id,
     required this.name,

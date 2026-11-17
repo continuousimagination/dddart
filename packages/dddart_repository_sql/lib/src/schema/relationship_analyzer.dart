@@ -159,7 +159,7 @@ class RelationshipAnalyzer {
   ///
   /// Example:
   /// ```dart
-  /// class OrderItem extends UuidEntity {
+  /// class OrderItem extends Entity<UuidValue> {
   ///   final UuidValue productId;
   ///   final int quantity;
   /// }
@@ -185,7 +185,7 @@ class RelationshipAnalyzer {
   ///
   /// Example:
   /// ```dart
-  /// class Order extends UuidAggregateRoot {
+  /// class Order extends AggregateRoot<UuidValue> {
   ///   final List<OrderItem> items; // Entities within aggregate
   ///   final UuidValue customerId;  // Reference to another aggregate
   /// }

@@ -35,8 +35,8 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 @Serializable()
-class TestAggregate extends UuidAggregateRoot {
-  TestAggregate({required this.favoriteNumbers}) : super();
+class TestAggregate extends AggregateRoot<UuidValue> {
+  TestAggregate({required this.favoriteNumbers}) : super(id: UuidValue.generate());
   final List<int> favoriteNumbers;
 }
 ''',
@@ -109,8 +109,8 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 @Serializable()
-class TestAggregate extends UuidAggregateRoot {
-  TestAggregate({required this.tags}) : super();
+class TestAggregate extends AggregateRoot<UuidValue> {
+  TestAggregate({required this.tags}) : super(id: UuidValue.generate());
   final List<String> tags;
 }
 ''',
@@ -153,8 +153,8 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 @Serializable()
-class TestAggregate extends UuidAggregateRoot {
-  TestAggregate({required this.measurements}) : super();
+class TestAggregate extends AggregateRoot<UuidValue> {
+  TestAggregate({required this.measurements}) : super(id: UuidValue.generate());
   final List<double> measurements;
 }
 ''',
@@ -198,8 +198,8 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 @Serializable()
-class TestAggregate extends UuidAggregateRoot {
-  TestAggregate({required this.flags}) : super();
+class TestAggregate extends AggregateRoot<UuidValue> {
+  TestAggregate({required this.flags}) : super(id: UuidValue.generate());
   final List<bool> flags;
 }
 ''',
@@ -243,8 +243,8 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 @Serializable()
-class TestAggregate extends UuidAggregateRoot {
-  TestAggregate({required this.timestamps}) : super();
+class TestAggregate extends AggregateRoot<UuidValue> {
+  TestAggregate({required this.timestamps}) : super(id: UuidValue.generate());
   final List<DateTime> timestamps;
 }
 ''',
@@ -288,8 +288,8 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 @Serializable()
-class TestAggregate extends UuidAggregateRoot {
-  TestAggregate({required this.relatedIds}) : super();
+class TestAggregate extends AggregateRoot<UuidValue> {
+  TestAggregate({required this.relatedIds}) : super(id: UuidValue.generate());
   final List<UuidValue> relatedIds;
 }
 ''',
@@ -337,8 +337,8 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 @Serializable()
-class TestAggregate extends UuidAggregateRoot {
-  TestAggregate({required this.uniqueNumbers}) : super();
+class TestAggregate extends AggregateRoot<UuidValue> {
+  TestAggregate({required this.uniqueNumbers}) : super(id: UuidValue.generate());
   final Set<int> uniqueNumbers;
 }
 ''',
@@ -405,8 +405,8 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 @Serializable()
-class TestAggregate extends UuidAggregateRoot {
-  TestAggregate({required this.categories}) : super();
+class TestAggregate extends AggregateRoot<UuidValue> {
+  TestAggregate({required this.categories}) : super(id: UuidValue.generate());
   final Set<String> categories;
 }
 ''',
@@ -454,8 +454,8 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 @Serializable()
-class TestAggregate extends UuidAggregateRoot {
-  TestAggregate({required this.uniqueScores}) : super();
+class TestAggregate extends AggregateRoot<UuidValue> {
+  TestAggregate({required this.uniqueScores}) : super(id: UuidValue.generate());
   final Set<double> uniqueScores;
 }
 ''',
@@ -502,8 +502,8 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 @Serializable()
-class TestAggregate extends UuidAggregateRoot {
-  TestAggregate({required this.scoresByGame}) : super();
+class TestAggregate extends AggregateRoot<UuidValue> {
+  TestAggregate({required this.scoresByGame}) : super(id: UuidValue.generate());
   final Map<String, int> scoresByGame;
 }
 ''',
@@ -579,8 +579,8 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 @Serializable()
-class TestAggregate extends UuidAggregateRoot {
-  TestAggregate({required this.namesByCode}) : super();
+class TestAggregate extends AggregateRoot<UuidValue> {
+  TestAggregate({required this.namesByCode}) : super(id: UuidValue.generate());
   final Map<int, String> namesByCode;
 }
 ''',
@@ -630,8 +630,8 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 @Serializable()
-class TestAggregate extends UuidAggregateRoot {
-  TestAggregate({required this.ratesByCountry}) : super();
+class TestAggregate extends AggregateRoot<UuidValue> {
+  TestAggregate({required this.ratesByCountry}) : super(id: UuidValue.generate());
   final Map<String, double> ratesByCountry;
 }
 ''',
@@ -680,8 +680,8 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 @Serializable()
-class TestAggregate extends UuidAggregateRoot {
-  TestAggregate({required this.flagsById}) : super();
+class TestAggregate extends AggregateRoot<UuidValue> {
+  TestAggregate({required this.flagsById}) : super(id: UuidValue.generate());
   final Map<int, bool> flagsById;
 }
 ''',

@@ -47,14 +47,14 @@ import 'package:dddart_serialization/dddart_serialization.dart';
 part 'user.g.dart';  // Required for code generation
 
 @Serializable()
-class User extends UuidAggregateRoot {
+class User extends AggregateRoot<UuidValue> {
   User({
     required this.name,
     required this.email,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
   
   final String name;
   final String email;
@@ -123,8 +123,9 @@ final user2 = UserJsonSerializer.decode(json2);
 
 ### Identity generation
 
-Use `UuidAggregateRoot`/`UuidEntity` for optional, generated UUIDs. Externally
-identified aggregates extend `AggregateRoot<IssueId>` and require their native
+Use `AggregateRoot<UuidValue>`/`Entity<UuidValue>` for UUID identities, supplying
+an ID or generating one explicitly in the domain constructor. Externally
+identified aggregates extend `AggregateRoot<IssueId>` and supply their native
 ID. Define a concrete application `Identity` and register its `IdentityCodec`
 with `IdentityCodecRegistry` from `dddart_serialization`.
 
@@ -224,15 +225,15 @@ The serializer handles nested entities and values automatically:
 
 ```dart
 @Serializable()
-class Company extends UuidAggregateRoot {
+class Company extends AggregateRoot<UuidValue> {
   Company({
     required this.name,
     required this.address,
     required this.employees,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
   
   final String name;
   final Address address;           // Nested value
@@ -240,14 +241,14 @@ class Company extends UuidAggregateRoot {
 }
 
 @Serializable()
-class Employee extends UuidEntity {
+class Employee extends Entity<UuidValue> {
   Employee({
     required this.name,
     required this.position,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
   
   final String name;
   final String position;

@@ -13,17 +13,17 @@ part 'order.g.dart';
 /// Aggregate root representing a customer order.
 @Serializable()
 @GenerateMysqlRepository(tableName: 'orders')
-class Order extends UuidAggregateRoot {
+class Order extends AggregateRoot<UuidValue> {
   /// Creates a new Order aggregate.
   Order({
     required this.customerName,
     required this.shippingAddress,
     required this.items,
     this.billingAddress,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   /// Name of the customer placing the order.
   final String customerName;

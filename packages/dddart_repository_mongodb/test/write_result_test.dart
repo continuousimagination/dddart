@@ -59,7 +59,9 @@ void main() {
   });
 }
 
-class Probe extends UuidAggregateRoot {}
+class Probe extends AggregateRoot<UuidValue> {
+  Probe() : super(id: UuidValue.generate());
+}
 
 class Changed extends DomainEvent<UuidValue> {
   Changed() : super(aggregateId: UuidValue.generate());

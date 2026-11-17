@@ -6,8 +6,8 @@ import '../styles/home.css';
 const examples = [
   { id: 'model', title: '01 / Model', file: 'order.dart', note: 'Your language. Your rules. Ordinary Dart.', code: `import 'package:dddart/dddart.dart';
 
-class Order extends UuidAggregateRoot {
-  Order({required this.customer});
+class Order extends AggregateRoot<UuidValue> {
+  Order({required this.customer}) : super(id: UuidValue.generate());
 
   final String customer;
   bool _placed = false;

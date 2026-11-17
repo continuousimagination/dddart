@@ -4,18 +4,18 @@ import 'package:test/test.dart';
 import 'package:uuid/uuid.dart' as uuid_pkg;
 
 // Concrete implementation of Entity for testing
-class TestEntity extends UuidEntity {
+class TestEntity extends Entity<UuidValue> {
   TestEntity({
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 }
 
 void main() {
   group('Entity', () {
     group('constructor', () {
-      test('creates entity with auto-generated ID when ID not provided', () {
+      test('domain constructor can generate an ID when none is provided', () {
         final entity = TestEntity();
 
         expect(entity.id, isA<UuidValue>());

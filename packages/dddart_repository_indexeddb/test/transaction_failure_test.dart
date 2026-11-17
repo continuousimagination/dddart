@@ -6,8 +6,9 @@ import 'package:dddart_repository_indexeddb/dddart_repository_indexeddb.dart';
 import 'package:idb_shim/idb.dart';
 import 'package:test/test.dart';
 
-class _Sample extends UuidAggregateRoot {
-  _Sample({required this.label, super.id});
+class _Sample extends AggregateRoot<UuidValue> {
+  _Sample({required this.label, UuidValue? id})
+      : super(id: id ?? UuidValue.generate());
 
   final String label;
 }

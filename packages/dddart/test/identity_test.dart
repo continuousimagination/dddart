@@ -33,12 +33,12 @@ class _Raised<I extends Identity> extends DomainEvent<I> {
   _Raised({required super.aggregateId});
 }
 
-class _UuidAggregate extends UuidAggregateRoot {
-  _UuidAggregate({super.id});
+class _UuidAggregate extends AggregateRoot<UuidValue> {
+  _UuidAggregate({required super.id});
 }
 
-class _UuidEntity extends UuidEntity {
-  _UuidEntity({super.id});
+class _UuidRecord extends Entity<UuidValue> {
+  _UuidRecord({required super.id});
 }
 
 void main() {
@@ -109,13 +109,13 @@ void main() {
     expect(await repository.getById(lower.id), same(lower));
   });
 
-  test('UUID generation and explicit UUID convenience remain available',
+  test('explicit UUID identities flow through entities and aggregates',
       () async {
-    final entity = _UuidEntity();
-    final aggregate = _UuidAggregate();
+    final entity = _UuidRecord(id: UuidValue.generate());
+    final aggregate = _UuidAggregate(id: UuidValue.generate());
     expect(entity.id, isA<Identity>());
     expect(aggregate.id, isA<UuidValue>());
-    expect(_UuidEntity(id: entity.id).id, entity.id);
+    expect(_UuidRecord(id: entity.id).id, entity.id);
     expect(_UuidAggregate(id: aggregate.id).id, aggregate.id);
     expect(UuidValue.fromString(entity.id.uuid), entity.id);
     expect(() => UuidValue.fromString('github-native'), throwsArgumentError);
@@ -136,7 +136,7 @@ void main() {
   });
 
   test(
-    'compiler rejects unrelated ID types and missing external identity',
+    'compiler rejects unrelated ID types and missing identities',
     () async {
       final directory = Directory.systemTemp.createTempSync('identity_types_');
       try {
@@ -162,12 +162,18 @@ class OtherId extends Identity {
   @override List<Object?> get props => [value];
 }
 class Issue extends AggregateRoot<IssueId> { Issue({required super.id}); }
+class UuidRecord extends Entity<UuidValue> { UuidRecord({required super.id}); }
+class UuidAggregate extends AggregateRoot<UuidValue> { UuidAggregate({required super.id}); }
 class OtherEvent extends DomainEvent<OtherId> { OtherEvent({required super.aggregateId}); }
 ''';
-        Future<ProcessResult> compile(String statement) async {
+        Future<ProcessResult> compile(
+          String statement, {
+          String extraDeclarations = '',
+        }) async {
           final source = File('${directory.path}/probe.dart')
             ..writeAsStringSync('''
 $declarations
+$extraDeclarations
 void main() {
   final issue = Issue(id: const IssueId('native'));
   final repository = InMemoryRepository<Issue, IssueId>();
@@ -186,8 +192,10 @@ void main() {
           ]);
         }
 
-        final positive = await compile("""
+        final positive = await compile('''
 repository.getById(const IssueId('native'));
+UuidRecord(id: UuidValue.generate());
+UuidAggregate(id: UuidValue.generate());
 final mutation = ConditionalMutation<Issue, IssueId>.put(
   issue, expected: const ExpectedRevision.absent());
 final IssueId id = mutation.id;
@@ -201,7 +209,7 @@ final result = CommitResult<IssueId>(operationId: request.operationId,
   payloadDigest: 'digest', decision: CommitDecision.committed,
   revisions: {id: 'revision'});
 final Map<IssueId, String> revisions = result.revisions;
-""");
+''');
         expect(
           positive.exitCode,
           0,
@@ -217,6 +225,10 @@ final Map<IssueId, String> revisions = result.revisions;
           'ConditionalCommit<Issue, OtherId>(operationId: UuidValue.generate(), mutations: []);',
           "void wrong(ConditionalRepository<Issue, IssueId> r) { r.getVersioned(const OtherId('wrong')); }",
           "CommitResult<IssueId>(operationId: UuidValue.generate(), payloadDigest: 'd', decision: CommitDecision.committed, revisions: {const OtherId('wrong'): 'v'});",
+          'UuidRecord();',
+          'UuidAggregate();',
+          "UuidRecord(id: const IssueId('wrong'));",
+          "UuidAggregate(id: const IssueId('wrong'));",
         ]) {
           final negative = await compile(statement);
           expect(negative.exitCode, isNot(0), reason: statement);
@@ -225,6 +237,15 @@ final Map<IssueId, String> revisions = result.revisions;
             contains('Error:'),
             reason: statement,
           );
+        }
+        for (final base in ['Entity<UuidValue>', 'AggregateRoot<UuidValue>']) {
+          final negative = await compile(
+            'MissingIdentity();',
+            extraDeclarations: 'class MissingIdentity extends $base { '
+                'MissingIdentity() : super(); }',
+          );
+          expect(negative.exitCode, isNot(0), reason: base);
+          expect('${negative.stdout}\n${negative.stderr}', contains("'id'"));
         }
       } finally {
         directory.deleteSync(recursive: true);

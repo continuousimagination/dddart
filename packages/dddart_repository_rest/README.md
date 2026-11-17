@@ -2,8 +2,9 @@
 
 ## Typed identities (pre-release breaking change)
 
-Use `UuidAggregateRoot` for existing UUID models and `Repository<User, UuidValue>`
-for UUID CRUD. Native models extend `AggregateRoot<IssueId>` with a required ID.
+Use `AggregateRoot<UuidValue>` for UUID models and `Repository<User, UuidValue>`
+for UUID CRUD. Native models extend `AggregateRoot<IssueId>`. Both base
+constructors require an ID; domain constructors can call `UuidValue.generate()`.
 Register explicit `IdentityCodec<IssueId>` implementations in an instance-local
 `IdentityCodecRegistry`; configure the server's `JsonSerializer` and
 `CrudResource<Issue, IssueId, void>` with the same registry. Generated REST
@@ -75,7 +76,7 @@ import 'package:dddart_repository_rest/dddart_repository_rest.dart';
 
 @Serializable()
 @GenerateRestRepository(resourcePath: '/users')
-class User extends UuidAggregateRoot {
+class User extends AggregateRoot<UuidValue> {
   User({
     UuidValue? id,
     required this.firstName,
@@ -83,7 +84,7 @@ class User extends UuidAggregateRoot {
     required this.email,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) : super(id: id, createdAt: createdAt, updatedAt: updatedAt);
+  }) : super(id: id ?? UuidValue.generate(), createdAt: createdAt, updatedAt: updatedAt);
 
   final String firstName;
   final String lastName;
@@ -298,7 +299,7 @@ Specifies the REST API resource path for the aggregate:
 
 ```dart
 @GenerateRestRepository(resourcePath: '/users')
-class User extends UuidAggregateRoot { ... }
+class User extends AggregateRoot<UuidValue> { ... }
 ```
 
 If omitted, the path is generated from the class name:
@@ -320,7 +321,7 @@ abstract interface class UserRepository implements Repository<User, UuidValue> {
 // Use in annotation
 @Serializable()
 @GenerateRestRepository(implements: UserRepository)
-class User extends UuidAggregateRoot { ... }
+class User extends AggregateRoot<UuidValue> { ... }
 ```
 
 When `implements` is specified with custom methods, the generator creates an **abstract base class** that you must extend. See [Custom Repository Interface Pattern](#custom-repository-interface-pattern) below.
@@ -343,7 +344,7 @@ abstract interface class ProductRepository implements Repository<Product, UuidVa
 ```dart
 @Serializable()
 @GenerateRestRepository(implements: ProductRepository)
-class Product extends UuidAggregateRoot {
+class Product extends AggregateRoot<UuidValue> {
   Product({
     UuidValue? id,
     required this.name,
@@ -352,7 +353,7 @@ class Product extends UuidAggregateRoot {
     required this.category,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) : super(id: id, createdAt: createdAt, updatedAt: updatedAt);
+  }) : super(id: id ?? UuidValue.generate(), createdAt: createdAt, updatedAt: updatedAt);
 
   final String name;
   final String description;
@@ -651,7 +652,7 @@ dart run build_runner build --delete-conflicting-outputs
 
 **Solution**: Ensure your class extends `AggregateRoot` from `dddart`:
 ```dart
-class User extends UuidAggregateRoot { ... }
+class User extends AggregateRoot<UuidValue> { ... }
 ```
 
 **Problem**: "Class must have @Serializable annotation" error
@@ -660,7 +661,7 @@ class User extends UuidAggregateRoot { ... }
 ```dart
 @Serializable()
 @GenerateRestRepository()
-class User extends UuidAggregateRoot { ... }
+class User extends AggregateRoot<UuidValue> { ... }
 ```
 
 ### Connection Issues

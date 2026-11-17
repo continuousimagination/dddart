@@ -8,7 +8,7 @@ import 'package:dddart_serialization/dddart_serialization.dart';
 ///
 /// Mixed stores use StoredEvent<Identity>. JSON explicitly tags the aggregate
 /// identity kind; old records with bare UUID strings require migration.
-class StoredEvent<I extends Identity> extends UuidAggregateRoot {
+class StoredEvent<I extends Identity> extends AggregateRoot<UuidValue> {
   /// Creates a stored record with common authorization metadata.
   StoredEvent({
     required super.id,

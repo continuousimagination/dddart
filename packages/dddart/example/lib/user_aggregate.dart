@@ -5,7 +5,7 @@ import 'user_registered_event.dart';
 ///
 /// This aggregate manages user lifecycle and raises domain events
 /// when significant actions occur.
-class UserAggregate extends UuidAggregateRoot {
+class UserAggregate extends AggregateRoot<UuidValue> {
   /// The user's email address.
   final String email;
 
@@ -29,13 +29,13 @@ class UserAggregate extends UuidAggregateRoot {
 
   /// Private constructor for creating a user.
   UserAggregate._({
-    required UuidValue id,
+    required super.id,
     required this.email,
     required this.fullName,
     required this.organizationId,
     required DateTime createdAt,
     required DateTime updatedAt,
-  }) : super(id: id, createdAt: createdAt, updatedAt: updatedAt);
+  }) : super(createdAt: createdAt, updatedAt: updatedAt);
 
   /// Factory method to register a new user.
   ///

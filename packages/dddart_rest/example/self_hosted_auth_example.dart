@@ -18,7 +18,7 @@ import 'package:shelf/shelf.dart';
 import 'lib/json_serializer_support.dart';
 
 // Domain model
-class User extends UuidAggregateRoot {
+class User extends AggregateRoot<UuidValue> {
   User({
     required super.id,
     required this.username,

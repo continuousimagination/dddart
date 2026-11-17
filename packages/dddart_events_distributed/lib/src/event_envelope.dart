@@ -9,7 +9,7 @@ import 'package:dddart_serialization/dddart_serialization.dart';
 ///
 /// This is an event repository record and publication contract. It must never be
 /// appended to an aggregate's public REST JSON or serialized pending-event list.
-class EventEnvelope extends UuidAggregateRoot {
+class EventEnvelope extends AggregateRoot<UuidValue> {
   /// Associates one event occurrence with its logical aggregate stream.
   EventEnvelope({required this.aggregate, required this.event})
       : super(

@@ -13,9 +13,10 @@ part 'integration_test_models.g.dart';
 /// A migration probe whose table is deliberately provisioned with the old type.
 @Serializable()
 @GenerateMysqlRepository(tableName: 'worky_legacy_identity')
-class LegacyIdentity extends UuidAggregateRoot {
+class LegacyIdentity extends AggregateRoot<UuidValue> {
   /// Creates the migration probe.
-  LegacyIdentity({super.id, super.createdAt, super.updatedAt});
+  LegacyIdentity({UuidValue? id, super.createdAt, super.updatedAt})
+      : super(id: id ?? UuidValue.generate());
 }
 
 // ============================================================================
@@ -25,14 +26,14 @@ class LegacyIdentity extends UuidAggregateRoot {
 /// Simple product aggregate for basic CRUD testing.
 @Serializable()
 @GenerateMysqlRepository()
-class SimpleProduct extends UuidAggregateRoot {
+class SimpleProduct extends AggregateRoot<UuidValue> {
   SimpleProduct({
     required this.name,
     required this.price,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   final String name;
   final double price;
@@ -45,14 +46,14 @@ class SimpleProduct extends UuidAggregateRoot {
 /// Order aggregate with entity collection for testing object graphs.
 @Serializable()
 @GenerateMysqlRepository(tableName: 'orders')
-class Order extends UuidAggregateRoot {
+class Order extends AggregateRoot<UuidValue> {
   Order({
     required this.customerName,
     required this.items,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   final String customerName;
   final List<OrderItem> items;
@@ -60,15 +61,15 @@ class Order extends UuidAggregateRoot {
 
 /// Order item entity for testing entity relationships.
 @Serializable()
-class OrderItem extends UuidEntity {
+class OrderItem extends Entity<UuidValue> {
   OrderItem({
     required this.productName,
     required this.quantity,
     required this.unitPrice,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   final String productName;
   final int quantity;
@@ -82,16 +83,16 @@ class OrderItem extends UuidEntity {
 /// Customer aggregate for testing value object embedding.
 @Serializable()
 @GenerateMysqlRepository()
-class Customer extends UuidAggregateRoot {
+class Customer extends AggregateRoot<UuidValue> {
   Customer({
     required this.name,
     required this.email,
     required this.shippingAddress,
     this.billingAddress,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   final String name;
   final Email email;
@@ -136,14 +137,14 @@ class Address extends Value {
 /// Product aggregate for custom repository testing.
 @Serializable()
 @GenerateMysqlRepository(implements: CustomProductRepository)
-class Product extends UuidAggregateRoot {
+class Product extends AggregateRoot<UuidValue> {
   Product({
     required this.name,
     required this.price,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   final String name;
   final double price;
@@ -211,17 +212,17 @@ class Money extends Value {
 /// Aggregate with primitive collections for testing.
 @Serializable()
 @GenerateMysqlRepository(tableName: 'test_primitive_collections')
-class TestPrimitiveCollections extends UuidAggregateRoot {
+class TestPrimitiveCollections extends AggregateRoot<UuidValue> {
   /// Creates a test aggregate with primitive collections.
   TestPrimitiveCollections({
     required this.name,
     required this.favoriteNumbers,
     required this.tags,
     required this.scoresByGame,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   /// Name field.
   final String name;
@@ -239,17 +240,17 @@ class TestPrimitiveCollections extends UuidAggregateRoot {
 /// Aggregate with value object collections for testing.
 @Serializable()
 @GenerateMysqlRepository(tableName: 'test_value_collections')
-class TestValueCollections extends UuidAggregateRoot {
+class TestValueCollections extends AggregateRoot<UuidValue> {
   /// Creates a test aggregate with value object collections.
   TestValueCollections({
     required this.name,
     required this.payments,
     required this.addresses,
     required this.pricesByProduct,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   /// Name field.
   final String name;
@@ -269,15 +270,15 @@ class TestValueCollections extends UuidAggregateRoot {
 //
 // /// Simple entity for collection testing.
 // @Serializable()
-// class TestItem extends UuidEntity {
+// class TestItem extends Entity<UuidValue> {
 //   /// Creates a test item entity.
 //   TestItem({
 //     required this.name,
 //     required this.quantity,
-//     super.id,
+//     UuidValue? id,
 //     super.createdAt,
 //     super.updatedAt,
-//   });
+//   }) : super(id: id ?? UuidValue.generate());
 //
 //   /// Item name.
 //   final String name;
@@ -289,16 +290,16 @@ class TestValueCollections extends UuidAggregateRoot {
 // /// Aggregate with entity collections for testing.
 // @Serializable()
 // @GenerateMysqlRepository(tableName: 'test_entity_collections')
-// class TestEntityCollections extends UuidAggregateRoot {
+// class TestEntityCollections extends AggregateRoot<UuidValue> {
 //   /// Creates a test aggregate with entity collections.
 //   TestEntityCollections({
 //     required this.name,
 //     required this.uniqueItems,
 //     required this.itemsByCategory,
-//     super.id,
+//     UuidValue? id,
 //     super.createdAt,
 //     super.updatedAt,
-//   });
+//   }) : super(id: id ?? UuidValue.generate());
 //
 //   /// Name field.
 //   final String name;
@@ -313,17 +314,17 @@ class TestValueCollections extends UuidAggregateRoot {
 /// Aggregate with nullable collections for testing null handling.
 @Serializable()
 @GenerateMysqlRepository(tableName: 'test_nullable_collections')
-class TestNullableCollections extends UuidAggregateRoot {
+class TestNullableCollections extends AggregateRoot<UuidValue> {
   /// Creates a test aggregate with nullable collections.
   TestNullableCollections({
     required this.name,
     this.optionalNumbers,
     this.optionalTags,
     this.optionalScores,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   /// Name field.
   final String name;

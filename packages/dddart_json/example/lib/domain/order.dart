@@ -19,7 +19,7 @@ class OrderStatus {
 
 /// Aggregate root representing an order.
 @Serializable()
-class Order extends UuidAggregateRoot {
+class Order extends AggregateRoot<UuidValue> {
   Order({
     required this.customerId,
     required this.items,
@@ -27,10 +27,10 @@ class Order extends UuidAggregateRoot {
     required this.status,
     this.billingAddress,
     this.notes,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   final UuidValue customerId;
   final List<OrderItem> items;

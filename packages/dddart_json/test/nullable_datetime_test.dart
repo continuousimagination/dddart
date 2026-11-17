@@ -12,15 +12,15 @@ part 'nullable_datetime_test.g.dart';
 
 /// Test aggregate with nullable DateTime field.
 @Serializable()
-class TaskAggregate extends UuidAggregateRoot {
+class TaskAggregate extends AggregateRoot<UuidValue> {
   TaskAggregate({
     required this.title,
     this.completedAt,
     this.dueDate,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   final String title;
   final DateTime? completedAt;

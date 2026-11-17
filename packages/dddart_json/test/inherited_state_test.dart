@@ -7,7 +7,7 @@ import 'package:test/test.dart';
 
 part 'inherited_state_test.g.dart';
 
-abstract class AggregateStateBase extends UuidAggregateRoot {
+abstract class AggregateStateBase extends AggregateRoot<UuidValue> {
   AggregateStateBase({
     required this.aggregateBaseName,
     required super.id,
@@ -44,7 +44,7 @@ class InheritedStateAggregate extends AggregateStateMiddle {
   final String aggregateChildName;
 }
 
-abstract class EntityStateBase extends UuidEntity {
+abstract class EntityStateBase extends Entity<UuidValue> {
   EntityStateBase({
     required this.entityBaseName,
     required super.id,

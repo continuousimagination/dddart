@@ -14,8 +14,13 @@ import 'package:test/test.dart';
 
 import 'json_serializer_test_support.dart';
 
-class _TestUser extends UuidAggregateRoot {
-  _TestUser({required this.name, super.id, super.createdAt, super.updatedAt});
+class _TestUser extends AggregateRoot<UuidValue> {
+  _TestUser({
+    required this.name,
+    UuidValue? id,
+    super.createdAt,
+    super.updatedAt,
+  }) : super(id: id ?? UuidValue.generate());
 
   final String name;
 }

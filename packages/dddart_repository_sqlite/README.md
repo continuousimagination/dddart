@@ -2,8 +2,10 @@
 
 ## Typed identity migration
 
-Use `UuidAggregateRoot`/`UuidEntity` for optional generated UUIDs, or
+Use `AggregateRoot<UuidValue>`/`Entity<UuidValue>` for UUID identities, or
 `AggregateRoot<IssueId>`/`Entity<CommentId>` with required application identities.
+All base constructors require an ID; domain constructors can generate UUIDs with
+`UuidValue.generate()`.
 Generated repositories implement `Repository<T, I>` and accept an optional named
 `identityCodecs` registry shared with their generated JSON serializer:
 
@@ -71,13 +73,13 @@ import 'package:dddart_repository_sqlite/dddart_repository_sqlite.dart';
 
 @Serializable()
 @GenerateSqliteRepository()
-class Order extends UuidAggregateRoot {
+class Order extends AggregateRoot<UuidValue> {
   Order({
     required UuidValue id,
     required this.customerId,
     required this.totalAmount,
     required this.items,
-  }) : super(id);
+  }) : super(id: id);
 
   final UuidValue customerId;
   final Money totalAmount;  // Value object (embedded)
@@ -272,13 +274,13 @@ abstract class OrderRepository implements Repository<Order, UuidValue> {
 
 @Serializable()
 @GenerateSqliteRepository(implements: OrderRepository)
-class Order extends UuidAggregateRoot {
+class Order extends AggregateRoot<UuidValue> {
   Order({
     required UuidValue id,
     required this.customerId,
     required this.totalAmount,
     required this.createdAt,
-  }) : super(id);
+  }) : super(id: id);
 
   final UuidValue customerId;
   final Money totalAmount;
@@ -579,14 +581,14 @@ DDDart SQLite repositories provide comprehensive support for collections in your
 ```dart
 @Serializable()
 @GenerateSqliteRepository()
-class User extends UuidAggregateRoot {
+class User extends AggregateRoot<UuidValue> {
   User({
     required UuidValue id,
     required this.name,
     required this.favoriteNumbers,
     required this.tags,
     required this.scoresByGame,
-  }) : super(id);
+  }) : super(id: id);
 
   final String name;
   final List<int> favoriteNumbers;      // Ordered list
@@ -659,13 +661,13 @@ class Address {
 
 @Serializable()
 @GenerateSqliteRepository()
-class Order extends UuidAggregateRoot {
+class Order extends AggregateRoot<UuidValue> {
   Order({
     required UuidValue id,
     required this.payments,
     required this.deliveryLocations,
     required this.discountsByCode,
-  }) : super(id);
+  }) : super(id: id);
 
   final List<Money> payments;                    // Ordered payments
   final Set<Address> deliveryLocations;          // Unique addresses
@@ -727,24 +729,24 @@ CREATE TABLE orders_discountsByCode_items (
 
 ```dart
 @Serializable()
-class CartItem extends UuidEntity {
+class CartItem extends Entity<UuidValue> {
   CartItem({
     required UuidValue id,
     required this.productId,
     required this.quantity,
-  }) : super(id);
+  }) : super(id: id);
 
   final UuidValue productId;
   final int quantity;
 }
 
 @Serializable()
-class Discount extends UuidEntity {
+class Discount extends Entity<UuidValue> {
   Discount({
     required UuidValue id,
     required this.code,
     required this.percentage,
-  }) : super(id);
+  }) : super(id: id);
 
   final String code;
   final double percentage;
@@ -752,13 +754,13 @@ class Discount extends UuidEntity {
 
 @Serializable()
 @GenerateSqliteRepository()
-class ShoppingCart extends UuidAggregateRoot {
+class ShoppingCart extends AggregateRoot<UuidValue> {
   ShoppingCart({
     required UuidValue id,
     required this.items,
     required this.appliedDiscounts,
     required this.savedItems,
-  }) : super(id);
+  }) : super(id: id);
 
   final List<CartItem> items;                    // Ordered items (existing support)
   final Set<Discount> appliedDiscounts;          // Unique discounts
@@ -854,13 +856,13 @@ CREATE TABLE saved_cart_items (
 ```dart
 @Serializable()
 @GenerateSqliteRepository()
-class Event extends UuidAggregateRoot {
+class Event extends AggregateRoot<UuidValue> {
   Event({
     required UuidValue id,
     required this.scheduledFor,
     required this.birthday,
     required this.timestamps,
-  }) : super(id);
+  }) : super(id: id);
 
   final DateTime scheduledFor;  // Stored as TEXT (ISO8601)
   final DateTime birthday;      // Stored as TEXT (ISO8601)
@@ -877,12 +879,12 @@ class Event extends UuidAggregateRoot {
 ```dart
 @Serializable()
 @GenerateSqliteRepository()
-class Task extends UuidAggregateRoot {
+class Task extends AggregateRoot<UuidValue> {
   Task({
     required UuidValue id,
     required this.completed,
     required this.flags,
-  }) : super(id);
+  }) : super(id: id);
 
   final bool completed;        // Stored as INTEGER (0/1)
   final List<bool> flags;      // Each stored as INTEGER (0/1)

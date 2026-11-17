@@ -41,11 +41,11 @@
 ///
 /// @Serializable()
 /// @GenerateRestRepository(resourcePath: '/users')
-/// class User extends UuidAggregateRoot {
+/// class User extends AggregateRoot<UuidValue> {
 ///   final String firstName;
 ///   final String lastName;
 ///
-///   User({required this.firstName, required this.lastName});
+///   User({required this.firstName, required this.lastName}) : super(id: UuidValue.generate());
 /// }
 ///
 /// part 'user.g.dart';
@@ -107,9 +107,9 @@
 ///
 /// @Serializable()
 /// @GenerateRestRepository(implements: UserRepository)
-/// class User extends UuidAggregateRoot {
+/// class User extends AggregateRoot<UuidValue> {
 ///   final String email;
-///   User({required this.email});
+///   User({required this.email}) : super(id: UuidValue.generate());
 /// }
 ///
 /// part 'user.g.dart';

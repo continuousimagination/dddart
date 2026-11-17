@@ -26,17 +26,17 @@ abstract interface class ProductRepository
   resourcePath: '/products',
   implements: ProductRepository,
 )
-class Product extends UuidAggregateRoot {
+class Product extends AggregateRoot<UuidValue> {
   /// Creates a new product.
   Product({
     required this.name,
     required this.description,
     required this.price,
     required this.category,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   /// Product name.
   final String name;

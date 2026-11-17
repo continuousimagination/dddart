@@ -54,17 +54,17 @@ class Address extends Value {
 
 /// Entity representing an order item within an order aggregate.
 @Serializable()
-class OrderItem extends UuidEntity {
+class OrderItem extends Entity<UuidValue> {
   /// Creates an order item entity.
   OrderItem({
     required this.productId,
     required this.productName,
     required this.quantity,
     required this.unitPrice,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   /// The product ID.
   final UuidValue productId;
@@ -82,7 +82,7 @@ class OrderItem extends UuidEntity {
 /// Aggregate root representing an order with nested entities and value objects.
 @Serializable()
 @GenerateSqliteRepository(tableName: 'orders')
-class Order extends UuidAggregateRoot {
+class Order extends AggregateRoot<UuidValue> {
   /// Creates an order aggregate.
   Order({
     required this.customerId,
@@ -92,10 +92,10 @@ class Order extends UuidAggregateRoot {
     required this.billingAddress,
     required this.items,
     required this.status,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  });
+  }) : super(id: id ?? UuidValue.generate());
 
   /// Customer ID (reference to another aggregate).
   final UuidValue customerId;

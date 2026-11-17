@@ -7,7 +7,7 @@
 /// ```dart
 /// @Serializable()
 /// @GenerateMysqlRepository()
-/// class Order extends UuidAggregateRoot {
+/// class Order extends AggregateRoot<UuidValue> {
 ///   // ...
 /// }
 /// ```

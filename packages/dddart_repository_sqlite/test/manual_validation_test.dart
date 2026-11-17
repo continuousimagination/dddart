@@ -11,13 +11,13 @@ library;
 // Test 1: Nested collections - should fail with clear error
 // @Serializable()
 // @GenerateSqliteRepository(tableName: 'test_nested')
-// class TestNested extends UuidAggregateRoot {
+// class TestNested extends AggregateRoot<UuidValue> {
 //   TestNested({
 //     required this.matrix,
-//     super.id,
+//     UuidValue? id,
 //     super.createdAt,
 //     super.updatedAt,
-//   });
+//   }) : super(id: id ?? UuidValue.generate());
 //
 //   final List<List<int>> matrix;
 // }
@@ -25,13 +25,13 @@ library;
 // Test 2: Dynamic collections - should fail with clear error
 // @Serializable()
 // @GenerateSqliteRepository(tableName: 'test_dynamic')
-// class TestDynamic extends UuidAggregateRoot {
+// class TestDynamic extends AggregateRoot<UuidValue> {
 //   TestDynamic({
 //     required this.stuff,
-//     super.id,
+//     UuidValue? id,
 //     super.createdAt,
 //     super.updatedAt,
-//   });
+//   }) : super(id: id ?? UuidValue.generate());
 //
 //   final List<dynamic> stuff;
 // }
@@ -39,13 +39,13 @@ library;
 // Test 3: Object collections - should fail with clear error
 // @Serializable()
 // @GenerateSqliteRepository(tableName: 'test_object')
-// class TestObject extends UuidAggregateRoot {
+// class TestObject extends AggregateRoot<UuidValue> {
 //   TestObject({
 //     required this.things,
-//     super.id,
+//     UuidValue? id,
 //     super.createdAt,
 //     super.updatedAt,
-//   });
+//   }) : super(id: id ?? UuidValue.generate());
 //
 //   final List<Object> things;
 // }
@@ -61,38 +61,38 @@ library;
 //
 // @Serializable()
 // @GenerateSqliteRepository(tableName: 'test_value_key')
-// class TestValueKey extends UuidAggregateRoot {
+// class TestValueKey extends AggregateRoot<UuidValue> {
 //   TestValueKey({
 //     required this.items,
-//     super.id,
+//     UuidValue? id,
 //     super.createdAt,
 //     super.updatedAt,
-//   });
+//   }) : super(id: id ?? UuidValue.generate());
 //
 //   final Map<TestValue, int> items;
 // }
 
 // Test 5: Aggregate root in collection - should fail with clear error
 // @Serializable()
-// class OtherRoot extends UuidAggregateRoot {
+// class OtherRoot extends AggregateRoot<UuidValue> {
 //   OtherRoot({
 //     required this.name,
-//     super.id,
+//     UuidValue? id,
 //     super.createdAt,
 //     super.updatedAt,
-//   });
+//   }) : super(id: id ?? UuidValue.generate());
 //   final String name;
 // }
 //
 // @Serializable()
 // @GenerateSqliteRepository(tableName: 'test_aggregate')
-// class TestAggregateCollection extends UuidAggregateRoot {
+// class TestAggregateCollection extends AggregateRoot<UuidValue> {
 //   TestAggregateCollection({
 //     required this.others,
-//     super.id,
+//     UuidValue? id,
 //     super.createdAt,
 //     super.updatedAt,
-//   });
+//   }) : super(id: id ?? UuidValue.generate());
 //
 //   final List<OtherRoot> others;
 // }

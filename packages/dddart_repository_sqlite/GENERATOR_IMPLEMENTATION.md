@@ -92,12 +92,12 @@ For an aggregate root like:
 ```dart
 @Serializable()
 @GenerateSqliteRepository()
-class Order extends UuidAggregateRoot {
+class Order extends AggregateRoot<UuidValue> {
   Order({
     required UuidValue id,
     required this.totalAmount,
     required this.items,
-  }) : super(id);
+  }) : super(id: id);
 
   final Money totalAmount;  // Value object
   final List<OrderItem> items;  // Entities
@@ -175,7 +175,7 @@ The current implementation provides basic CRUD operations. Future enhancements c
 ```dart
 @Serializable()
 @GenerateSqliteRepository()
-class MyAggregate extends UuidAggregateRoot {
+class MyAggregate extends AggregateRoot<UuidValue> {
   // ...
 }
 ```

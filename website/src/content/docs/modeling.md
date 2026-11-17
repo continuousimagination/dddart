@@ -19,7 +19,7 @@ Model those actions directly. A method named `confirm()` gives a conversation, a
 | `AggregateRoot<I>` | The entry point that protects a group of related objects | Entity equality, plus pending domain events |
 | `DomainEvent<I>` | A fact about something that happened to an aggregate | Its event occurrence ID |
 
-`UuidEntity` and `UuidAggregateRoot` are convenient specializations when a generated UUID fits the domain. General entities and aggregates require an explicit identity.
+Every entity and aggregate requires an explicit identity. Use `Entity<UuidValue>` or `AggregateRoot<UuidValue>` when UUIDs fit the domain; callers or domain constructors create them with `UuidValue.generate()`.
 
 ## Build a reservation
 
@@ -55,15 +55,16 @@ class ReservationConfirmed extends DomainEvent<UuidValue> {
   final String guestName;
 }
 
-class Reservation extends UuidAggregateRoot {
+class Reservation extends AggregateRoot<UuidValue> {
   Reservation({
     required this.guestName,
     required this.seats,
     bool confirmed = false,
-    super.id,
+    UuidValue? id,
     super.createdAt,
     super.updatedAt,
-  }) : _confirmed = confirmed;
+  }) : _confirmed = confirmed,
+       super(id: id ?? UuidValue.generate());
 
   final String guestName;
   final SeatCount seats;

@@ -41,8 +41,8 @@ abstract class CustomOrderRepository implements Repository<Order, UuidValue> {
 
 @Serializable()
 @GenerateMysqlRepository(implements: CustomOrderRepository)
-class Order extends UuidAggregateRoot {
-  Order({required this.status}) : super();
+class Order extends AggregateRoot<UuidValue> {
+  Order({required this.status}) : super(id: UuidValue.generate());
   final String status;
 }
 ''',
@@ -97,8 +97,8 @@ abstract class CustomProductRepository implements Repository<Product, UuidValue>
 
 @Serializable()
 @GenerateMysqlRepository(implements: CustomProductRepository)
-class Product extends UuidAggregateRoot {
-  Product({required this.category}) : super();
+class Product extends AggregateRoot<UuidValue> {
+  Product({required this.category}) : super(id: UuidValue.generate());
   final String category;
 }
 ''',
@@ -152,8 +152,8 @@ abstract class CustomCustomerRepository implements Repository<Customer, UuidValu
 
 @Serializable()
 @GenerateMysqlRepository(implements: CustomCustomerRepository)
-class Customer extends UuidAggregateRoot {
-  Customer({required this.email}) : super();
+class Customer extends AggregateRoot<UuidValue> {
+  Customer({required this.email}) : super(id: UuidValue.generate());
   final String email;
 }
 ''',
@@ -205,8 +205,8 @@ import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
 
 @Serializable()
 @GenerateMysqlRepository()
-class SimpleAggregate extends UuidAggregateRoot {
-  SimpleAggregate({required this.name}) : super();
+class SimpleAggregate extends AggregateRoot<UuidValue> {
+  SimpleAggregate({required this.name}) : super(id: UuidValue.generate());
   final String name;
 }
 ''',
@@ -264,8 +264,8 @@ abstract class ComplexRepository implements Repository<ComplexAggregate, UuidVal
 
 @Serializable()
 @GenerateMysqlRepository(implements: ComplexRepository)
-class ComplexAggregate extends UuidAggregateRoot {
-  ComplexAggregate({required this.status, required this.date}) : super();
+class ComplexAggregate extends AggregateRoot<UuidValue> {
+  ComplexAggregate({required this.status, required this.date}) : super(id: UuidValue.generate());
   final String status;
   final DateTime date;
 }
@@ -324,15 +324,15 @@ abstract class CustomOrderRepository implements Repository<Order, UuidValue> {
 }
 
 @Serializable()
-class OrderItem extends UuidEntity {
-  OrderItem({required this.productId}) : super();
+class OrderItem extends Entity<UuidValue> {
+  OrderItem({required this.productId}) : super(id: UuidValue.generate());
   final String productId;
 }
 
 @Serializable()
 @GenerateMysqlRepository(implements: CustomOrderRepository)
-class Order extends UuidAggregateRoot {
-  Order({required this.customerId, required this.items}) : super();
+class Order extends AggregateRoot<UuidValue> {
+  Order({required this.customerId, required this.items}) : super(id: UuidValue.generate());
   final String customerId;
   final List<OrderItem> items;
 }
@@ -390,8 +390,8 @@ abstract class CustomProductRepository implements Repository<Product, UuidValue>
 
 @Serializable()
 @GenerateMysqlRepository(implements: CustomProductRepository)
-class Product extends UuidAggregateRoot {
-  Product({required this.name}) : super();
+class Product extends AggregateRoot<UuidValue> {
+  Product({required this.name}) : super(id: UuidValue.generate());
   final String name;
 }
 ''',
@@ -437,8 +437,8 @@ abstract class CustomCustomerRepository implements Repository<Customer, UuidValu
 
 @Serializable()
 @GenerateMysqlRepository(implements: CustomCustomerRepository)
-class Customer extends UuidAggregateRoot {
-  Customer({required this.active}) : super();
+class Customer extends AggregateRoot<UuidValue> {
+  Customer({required this.active}) : super(id: UuidValue.generate());
   final bool active;
 }
 ''',
@@ -485,8 +485,8 @@ abstract class CustomEventRepository implements Repository<Event, UuidValue> {
 
 @Serializable()
 @GenerateMysqlRepository(implements: CustomEventRepository)
-class Event extends UuidAggregateRoot {
-  Event({required this.eventDate}) : super();
+class Event extends AggregateRoot<UuidValue> {
+  Event({required this.eventDate}) : super(id: UuidValue.generate());
   final DateTime eventDate;
 }
 ''',
@@ -532,16 +532,16 @@ abstract class CustomCartRepository implements Repository<Cart, UuidValue> {
 }
 
 @Serializable()
-class CartItem extends UuidEntity {
-  CartItem({required this.productId, required this.quantity}) : super();
+class CartItem extends Entity<UuidValue> {
+  CartItem({required this.productId, required this.quantity}) : super(id: UuidValue.generate());
   final String productId;
   final int quantity;
 }
 
 @Serializable()
 @GenerateMysqlRepository(implements: CustomCartRepository)
-class Cart extends UuidAggregateRoot {
-  Cart({required this.userId, required this.items}) : super();
+class Cart extends AggregateRoot<UuidValue> {
+  Cart({required this.userId, required this.items}) : super(id: UuidValue.generate());
   final String userId;
   final List<CartItem> items;
 }
@@ -590,8 +590,8 @@ abstract class CustomAccountRepository implements Repository<Account, UuidValue>
 
 @Serializable()
 @GenerateMysqlRepository(implements: CustomAccountRepository)
-class Account extends UuidAggregateRoot {
-  Account({required this.type}) : super();
+class Account extends AggregateRoot<UuidValue> {
+  Account({required this.type}) : super(id: UuidValue.generate());
   final String type;
 }
 ''',
@@ -639,8 +639,8 @@ abstract class CustomOrderRepository implements Repository<Order, UuidValue> {
 
 @Serializable()
 @GenerateMysqlRepository(implements: CustomOrderRepository)
-class Order extends UuidAggregateRoot {
-  Order({required this.status}) : super();
+class Order extends AggregateRoot<UuidValue> {
+  Order({required this.status}) : super(id: UuidValue.generate());
   final String status;
 }
 ''',

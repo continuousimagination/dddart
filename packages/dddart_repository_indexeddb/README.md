@@ -262,7 +262,7 @@ The aggregate and repository use the same concrete identity type, just like core
 `ConditionalRepository<MyAggregate, MyId>`. Versioned snapshots and mutations
 carry both type parameters; `CommitResult<MyId>.revisions` is keyed by `MyId`.
 Operation IDs and generated revision tokens remain UUIDs independently of the
-aggregate identity. Existing UUID consumers use `UuidAggregateRoot` and
+aggregate identity. Existing UUID consumers use `AggregateRoot<UuidValue>` and
 `IndexedDbRepository<MyAggregate, UuidValue>`.
 
 The adapter uses the application's registered `IdentityCodec<MyId>` canonical

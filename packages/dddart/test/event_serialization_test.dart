@@ -394,8 +394,8 @@ void main() {
 }
 
 // Test aggregate for integration testing
-class TestAggregate extends UuidAggregateRoot {
-  TestAggregate({super.id});
+class TestAggregate extends AggregateRoot<UuidValue> {
+  TestAggregate({UuidValue? id}) : super(id: id ?? UuidValue.generate());
 
   void registerUser(String email, String organizationId, String fullName) {
     raiseEvent(
