@@ -629,7 +629,8 @@ $fromJsonWithConfigBody
       return '_identityCodecs.fromJson<$name>($value)';
     }
     if (name == 'DateTime') return 'DateTime.parse($value as String)';
-    if (_isEnumType(type)) return '$name.values.byName($value as String)';
+    if (_isEnumType(type))
+      return 'JsonSerializer.readEnum($name.values, $value)';
     if (_coreCollection(type, 'List') || _coreCollection(type, 'Set')) {
       final item = (type as InterfaceType).typeArguments.single;
       final method = _coreCollection(type, 'Set') ? 'toSet()' : 'toList()';

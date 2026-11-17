@@ -64,6 +64,14 @@ abstract class JsonSerializer<T> implements Serializer<T, SerializationConfig> {
     }
   }
 
+  /// Decodes a declared enum name with an explicit input-validation failure.
+  static E readEnum<E extends Enum>(Iterable<E> values, Object? input) {
+    for (final value in values) {
+      if (value.name == input) return value;
+    }
+    throw FormatException('Unknown enum value', input);
+  }
+
   /// Decodes one input value, preserving typed errors and their identity.
   ///
   /// FormatException and TypeError at this boundary indicate malformed input.
