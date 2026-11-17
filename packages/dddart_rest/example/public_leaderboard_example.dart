@@ -16,10 +16,22 @@ import 'authorization_example.dart' as documents;
 import 'lib/json_serializer_support.dart';
 
 class Score extends UuidAggregateRoot {
-  Score({super.id, required this.player, required this.points});
+  Score(
+      {super.id,
+      super.createdAt,
+      super.updatedAt,
+      required this.player,
+      required this.points});
   final String player;
   final int points;
 }
+
+Score snapshotScore(Score value) => Score(
+    id: value.id,
+    createdAt: value.createdAt,
+    updatedAt: value.updatedAt,
+    player: value.player,
+    points: value.points);
 
 class ScoreSerializer extends ExampleJsonSerializer<Score> {
   @override
@@ -39,10 +51,7 @@ class ScoreSerializer extends ExampleJsonSerializer<Score> {
 }
 
 class ScoreRepository extends InMemoryConditionalRepository<Score, UuidValue> {
-  ScoreRepository()
-      : super(
-            clone: (value) => ScoreSerializer()
-                .deserialize(ScoreSerializer().serialize(value)));
+  ScoreRepository() : super(clone: snapshotScore);
   final _ids = <UuidValue>{};
   @override
   Future<void> save(Score value) async {
@@ -139,6 +148,7 @@ Future<void> main() async {
       path: '/leaderboard',
       repository: scores,
       serializer: scoreSerializer,
+      authorizationSnapshot: snapshotScore,
       authenticationHandler: verifier,
       defaultPolicy: scorePolicy,
       operationPolicies: {
@@ -172,6 +182,7 @@ Future<void> main() async {
           path: '/documents',
           repository: privateDocuments,
           serializer: documents.DocumentSerializer(),
+          authorizationSnapshot: documents.snapshotDocument,
           authenticationHandler: verifier,
           defaultPolicy: AccessPolicy.custom(documentPolicy,
               authentication: AuthenticationRequirement.required),

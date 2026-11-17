@@ -10,6 +10,8 @@ import 'json_serializer_test_support.dart';
 class Document extends UuidAggregateRoot {
   Document({
     super.id,
+    super.createdAt,
+    super.updatedAt,
     this.owner = 'alice',
     this.tenant = 'one',
     this.role = 'member',
@@ -32,6 +34,8 @@ class Document extends UuidAggregateRoot {
   }) =>
       Document(
         id: id,
+        createdAt: createdAt,
+        updatedAt: updatedAt,
         owner: owner ?? this.owner,
         tenant: tenant ?? this.tenant,
         role: role ?? this.role,
@@ -52,6 +56,8 @@ class DocumentSerializer extends TestJsonSerializer<Document> {
   @override
   String serialize(Document value, [dynamic config]) => jsonEncode({
         'id': value.id.uuid,
+        'createdAt': value.createdAt.toIso8601String(),
+        'updatedAt': value.updatedAt.toIso8601String(),
         'owner': value.owner,
         'tenant': value.tenant,
         'role': value.role,
@@ -64,6 +70,12 @@ class DocumentSerializer extends TestJsonSerializer<Document> {
     final json = jsonDecode(data) as Map<String, dynamic>;
     return Document(
       id: UuidValue.fromString(json['id'] as String),
+      createdAt: json['createdAt'] == null
+          ? null
+          : DateTime.parse(json['createdAt'] as String),
+      updatedAt: json['updatedAt'] == null
+          ? null
+          : DateTime.parse(json['updatedAt'] as String),
       owner: json['owner'] as String,
       tenant: json['tenant'] as String,
       role: json['role'] as String,

@@ -81,6 +81,7 @@ void main() {
       path: '/private',
       repository: repository,
       serializer: serializer,
+      authorizationSnapshot: cloneDocument,
       authenticationHandler: verifier,
       defaultPolicy: AccessPolicy.custom(
         privatePolicy,
@@ -108,6 +109,7 @@ void main() {
       path: '/leaderboard',
       repository: leaderboard,
       serializer: DocumentSerializer(),
+      authorizationSnapshot: cloneDocument,
       authenticationHandler: verifier,
       defaultPolicy: AccessPolicy.custom(
         scorePolicy,
@@ -129,6 +131,7 @@ void main() {
       path: '/visible',
       repository: repository,
       serializer: DocumentSerializer(),
+      authorizationSnapshot: cloneDocument,
       authenticationHandler: verifier,
       defaultPolicy: AccessPolicy.custom(
         Policy(ownershipPolicy),
@@ -167,6 +170,7 @@ void main() {
       path: '/broken',
       repository: repository,
       serializer: serializer,
+      authorizationSnapshot: cloneDocument,
       defaultPolicy: AccessPolicy.custom(
         Policy(
           (context) => throw const FormatException('PRIVATE-EXCEPTION'),
@@ -181,6 +185,7 @@ void main() {
       path: '/broken-verifier',
       repository: repository,
       serializer: serializer,
+      authorizationSnapshot: cloneDocument,
       authenticationHandler: ThrowingVerifier(),
     );
     final openStore = InMemoryRepository<Document, UuidValue>();
@@ -188,6 +193,7 @@ void main() {
       path: '/open',
       repository: openStore,
       serializer: DocumentSerializer(),
+      authorizationSnapshot: cloneDocument,
       collectionHandler: (repo, filters, skip, take, authorization) async =>
           QueryResult(
         openStore.getAllSync().skip(skip).take(take).toList(),

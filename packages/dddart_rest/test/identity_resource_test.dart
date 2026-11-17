@@ -79,6 +79,12 @@ void main() {
       path: '/issues',
       repository: repository,
       serializer: serializer,
+      authorizationSnapshot: (value) => NativeIssue(
+        id: value.id,
+        title: value.title,
+        createdAt: value.createdAt,
+        updatedAt: value.updatedAt,
+      ),
       identityCodecs: codecs,
     );
     for (final key in ['.', '..', String.fromCharCode(0xd800)]) {
@@ -108,6 +114,12 @@ void main() {
         path: '/issues',
         repository: repository,
         serializer: serializer,
+        authorizationSnapshot: (value) => NativeIssue(
+          id: value.id,
+          title: value.title,
+          createdAt: value.createdAt,
+          updatedAt: value.updatedAt,
+        ),
         identityCodecs: codecs,
         preCreate: (issue, auth) =>
             NativeIssue(id: NativeId(key), title: issue.title),
@@ -139,6 +151,12 @@ void main() {
       path: '/issues',
       repository: repository,
       serializer: serializer,
+      authorizationSnapshot: (value) => NativeIssue(
+        id: value.id,
+        title: value.title,
+        createdAt: value.createdAt,
+        updatedAt: value.updatedAt,
+      ),
       identityCodecs: codecs,
       preCreate: (issue, auth) => NativeIssue(id: id, title: issue.title),
     );
@@ -177,6 +195,12 @@ void main() {
       path: '/issues',
       repository: repository,
       serializer: serializer,
+      authorizationSnapshot: (value) => NativeIssue(
+        id: value.id,
+        title: value.title,
+        createdAt: value.createdAt,
+        updatedAt: value.updatedAt,
+      ),
       identityCodecs: codecs,
       authenticationHandler: _Auth(),
       defaultPolicy: AccessPolicy.custom(

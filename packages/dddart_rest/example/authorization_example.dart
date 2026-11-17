@@ -21,6 +21,8 @@ import 'lib/json_serializer_support.dart';
 class Document extends UuidAggregateRoot {
   Document({
     required super.id,
+    super.createdAt,
+    super.updatedAt,
     required this.title,
     required this.content,
     required this.ownerId,
@@ -58,13 +60,19 @@ class UserClaims {
       );
 }
 
+Document snapshotDocument(Document value) => Document(
+    id: value.id,
+    createdAt: value.createdAt,
+    updatedAt: value.updatedAt,
+    title: value.title,
+    content: value.content,
+    ownerId: value.ownerId,
+    isPublic: value.isPublic);
+
 // This example needs atomic revision checks for ownership-based writes.
 class DocumentRepository
     extends InMemoryConditionalRepository<Document, UuidValue> {
-  DocumentRepository()
-      : super(
-            clone: (value) => DocumentSerializer()
-                .deserialize(DocumentSerializer().serialize(value)));
+  DocumentRepository() : super(clone: snapshotDocument);
   final _ids = <UuidValue>{};
   @override
   Future<void> save(Document value) async {
@@ -261,6 +269,7 @@ void main() async {
       path: '/documents',
       repository: documentRepo,
       serializer: DocumentSerializer(),
+      authorizationSnapshot: snapshotDocument,
       authenticationHandler: authHandler,
       defaultPolicy: AccessPolicy.custom(authzHandler,
           authentication: AuthenticationRequirement.required),

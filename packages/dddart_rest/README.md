@@ -70,9 +70,18 @@ anonymous and request claims are never trusted.
 | `UpdateContext` | Separate current and proposed aggregate snapshots |
 | `DeleteContext` | Current persisted aggregate |
 
-Policies receive detached serializer snapshots, so changing a context object
-cannot modify storage or normalize the eventual proposal. Use `preCreate` for
-normalization. `Caller<TClaims>` is either `AnonymousCaller` (no claims) or
+Custom aggregate policies require an explicit `authorizationSnapshot` function
+that deep-copies the complete domain state, including permission fields omitted
+from public JSON. It must preserve identity and metadata, detach mutable values,
+and omit transient pending events. Use a domain copy function or a complete
+persistence codec, never a lossy public projection. The framework deliberately
+has no response-serializer fallback: public serialization must not rewrite the
+stored owner seen by policy. Query-only policies do not need aggregate snapshots.
+Public and authentication-only resources need no snapshot configuration.
+
+For example, the ownership sample supplies `authorizationSnapshot: snapshotDocument`
+alongside its custom policy. Changing a policy context object cannot modify storage
+or normalize the eventual proposal. Use `preCreate` for normalization. `Caller<TClaims>` is either `AnonymousCaller` (no claims) or
 `VerifiedCaller` (successful verifier result). Claims can be absent if the
 application's verifier intentionally returns none.
 
@@ -116,8 +125,8 @@ registered in the normal validation inventory and is executed, not just compiled
 ### Read authorization and query scope
 
 Item policy evaluates a detached view of persisted state before the HTTP response
-encoder or ETag builder runs. The JSON value codec is used internally to detach
-policy snapshots; a denied read produces no aggregate response. A concealed denial
+encoder or ETag builder runs. The explicit domain snapshot function is independent
+of public serialization; a denied read produces no aggregate response. A concealed denial
 and a missing item share the generic 404 body.
 
 Filtered, unfiltered and pagination-only reads all pass through the same selected

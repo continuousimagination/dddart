@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Explicit per-operation public, authenticated and custom access policies replace
   implicit authorization hooks. Typed caller/operation contexts support anonymous
   access and application-owned query scope on every collection path.
+- Custom aggregate policies explicitly supply complete domain snapshots,
+  independently of public response projections.
 - Custom mutations bind stored-state permission to an atomic revision; POST is
   create-only and missing PUTs also evaluate create permission. Incapable custom
   mutation backends fail closed. Public CRUD remains supported.

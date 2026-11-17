@@ -49,6 +49,7 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   /// - [repository]: Repository instance for persistence operations
   /// - [serializer]: JSON serializer for request and response bodies
   /// - [authenticationHandler]: Optional authentication handler. When provided, all CRUD operations require authentication
+  /// - [authorizationSnapshot]: Complete detached domain copier for custom aggregate policies
   /// - [defaultPolicy]: Resource access policy; operation overrides replace it
   /// - [operationPolicies]: Explicit access policy for each selected operation
   /// - [collectionHandler]: Optional handler for unfiltered collection retrieval
@@ -67,6 +68,7 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
     required this.repository,
     required this.serializer,
     this.authenticationHandler,
+    this.authorizationSnapshot,
     AccessPolicy<T, I, TClaims>? defaultPolicy,
     Map<CrudOperation, AccessPolicy<T, I, TClaims>> operationPolicies =
         const {},
@@ -98,6 +100,16 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
     }
     if (!this.identityCodecs.contains<I>()) {
       throw ArgumentError('Register a codec for the resource identity $I');
+    }
+    if (authorizationSnapshot == null &&
+        CrudOperation.values.any(
+          (operation) =>
+              operation != CrudOperation.query &&
+              _policy(operation).handler != null,
+        )) {
+      throw ArgumentError(
+        'Custom aggregate policies require authorizationSnapshot to preserve complete permission state independently of public JSON.',
+      );
     }
     // Validate path is not null or empty
     if (path.isEmpty) {
@@ -134,6 +146,14 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   /// The handler is invoked before any repository operations.
   /// If authentication fails, a 401 Unauthorized response is returned.
   final AuthenticationHandler<TClaims>? authenticationHandler;
+
+  /// Copies all domain and permission state, including fields omitted from the
+  /// public JSON representation. Required for custom aggregate policies.
+  ///
+  /// Return a detached, identity-preserving deep copy without pending events.
+  /// A complete persistence codec can be used; a public projection must not be.
+  /// The callback runs before policy and must not mutate its input.
+  final T Function(T)? authorizationSnapshot;
 
   /// Default access policy. Without a verifier the default is public; installing
   /// a verifier selects authenticated access unless an explicit default is given.
@@ -244,13 +264,10 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
 
   T _policySnapshot(T value) {
     try {
-      // Build detached domain snapshots through the JSON value codec. The
-      // response encoder is invoked only after the access decision succeeds.
-      final copy =
-          serializer.fromJson(jsonDecode(jsonEncode(serializer.toJson(value))));
+      final copy = authorizationSnapshot!(value);
       if (identical(copy, value) || copy.id != value.id) {
         throw StateError(
-          'Serializer must produce a detached identity-preserving snapshot',
+          'authorizationSnapshot must produce a detached identity-preserving copy',
         );
       }
       return copy;

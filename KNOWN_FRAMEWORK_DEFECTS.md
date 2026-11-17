@@ -100,6 +100,8 @@ and collection read now resolves an explicit policy. Anonymous public operations
 remain supported on otherwise protected resources. Custom policies receive typed
 callers, persisted/current/proposed snapshots and explicit application query scopes.
 Custom mutations bind permission to a stored revision and POST is create-only.
+Aggregate policies use an explicit complete domain snapshot function, so a lossy
+public response projection cannot change the owner/permission state they inspect.
 
 `packages/dddart_rest/test/read_authorization_test.dart`,
 `mutation_authorization_test.dart`, and `optional_auth_http_test.dart` cover private
