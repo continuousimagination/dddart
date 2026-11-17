@@ -83,6 +83,17 @@ fresh
 printf '\n[Missing](missing.md)\n' >> "$CASE/packages/dddart/GETTING_STARTED.md"
 check_failure 'broken local link' 'broken relative links fail'
 fresh
+printf '\nUse Dart **9.9.9** for this example.\n' >> "$CASE/README.md"
+check_failure 'keep tool and SDK versions in manifests' 'SDK requirements cannot be duplicated in prose'
+fresh
+printf '\n```yaml\n' >> "$CASE/README.md"
+cat "$CASE/docs/quickstarts/json/pubspec.yaml.txt" >> "$CASE/README.md"
+printf '\n```\n' >> "$CASE/README.md"
+check_failure 'link the example pubspec' 'dependency constraints cannot be copied into a guide'
+fresh
+replace docs/quickstarts/json/README.md '[example pubspec](pubspec.yaml.txt)' 'example pubspec'
+check_failure 'quickstart must link its example pubspec' 'quickstarts must retain their installation manifest link'
+fresh
 printf '\n[Missing](https://github.com/continuousimagination/dddart/blob/main/docs/README.md#gone)\n' >> "$CASE/README.md"
 check_failure 'broken local anchor' 'broken repository URL anchors fail'
 fresh

@@ -60,7 +60,7 @@ application logging. HTTP responses still apply their own error/redaction policy
 
 ## Verification
 
-From the repository root, with the documented development SDK:
+From the repository root, after resolving dependencies from the pubspecs:
 
 ```sh
 dart tool/validation/validate.dart package dddart_serialization --mode=ci

@@ -54,6 +54,8 @@ check_sources() {
     require(same([$files[]|select(startswith($base) and endswith(".dart"))|ltrimstr($base)];
                  [$w.files[].source|select(endswith(".dart"))]); $w.name + ": unclassified/missing canonical Dart input") |
     (content($base + "pubspec.yaml.txt")) as $pubspec |
+    require(any(content($base + "README.md")|links[]; . == "pubspec.yaml.txt");
+            $w.name + ": quickstart must link its example pubspec") |
     require(([$pubspec|scan("(?m)^ +ref: (.+)$")|.[0]]|unique) == [$meta.revision];
             $w.name + ": Git setup must use the shared immutable code revision") |
     ([$w.commandsFiles[] as $f | content($base+$f)|split("\n")[]|command_args]) as $commands |
@@ -100,6 +102,13 @@ check_sources() {
       ((.key|test("^packages/.*\\.dart$")) and (.key|test("/(lib|example)/")))) |
     .key as $path | {path:$path,text:(.value|doc_text($path))}] as $documents |
   reduce $documents[] as $doc ({inclusions:[],links:[],documents:($documents|length)};
+    require(($doc.text|without_fences|test("(?i)(?:^|[^\\w.])(?:Dart(?: SDK)?|Node(?:\\.js)?|Bash|jq)[ \\t]+[`*]*v?[0-9]+(?:\\.[0-9]+)*")|not);
+            $doc.path + ": keep tool and SDK versions in manifests, not documentation") |
+    require(([$doc.text|matches(fence_pattern)[]|
+      select((.language|ascii_downcase) == "yaml" or (.language|ascii_downcase) == "yml")|
+      select((.body|test("(?m)^(environment|dependencies|dev_dependencies|dependency_overrides):")) and
+             (.body|test("(?m)^[ \\t]+\\w+:[ \\t]*[\"\u0027]?[<>=^~]*[0-9]+\\.[0-9]+")))]|length) == 0;
+            $doc.path + ": link the example pubspec instead of copying dependency constraints") |
     ($doc.text|matches(source_pattern)) as $included |
     require(([$doc.text|scan("(?m)^<!-- dddart-source:")]|length) == ($included|length);
             $doc.path + ": malformed or unclosed source inclusion") |

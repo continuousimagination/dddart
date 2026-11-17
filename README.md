@@ -48,9 +48,7 @@ Start with the [complete core example](docs/quickstarts/core/README.md), or foll
 the JSON workflow below. [All quickstarts and classifications](docs/QUICKSTARTS.md)
 list service/platform prerequisites and the additional examples.
 
-Use Dart **3.13.7**, the development SDK used for these checks. This is a verified
-setup, not a claim about the minimum SDK on every platform (#98 tracks that).
-The DDDart dependencies below use one immutable Git revision; they do not require
+The example manifest uses one immutable Git revision; it does not require
 published DDDart packages. See [Git installation](https://github.com/continuousimagination/dddart/blob/main/docs/GIT_INSTALLATION.md)
 for source overrides and [the support matrix](https://github.com/continuousimagination/dddart/blob/main/docs/CAPABILITIES.md) for platform limits.
 
@@ -62,34 +60,8 @@ cd dddart_json_quickstart
 mkdir -p bin lib
 ```
 
-Save as `pubspec.yaml` (the fixture uses `.txt` only to keep it out of the monorepo workspace):
-
-<!-- dddart-source: docs/quickstarts/json/pubspec.yaml.txt -->
-```yaml
-name: dddart_json_quickstart
-publish_to: none
-environment:
-  sdk: '>=3.13.7 <4.0.0'
-dependencies:
-  dddart:
-    git:
-      url: https://github.com/continuousimagination/dddart.git
-      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
-      path: packages/dddart
-  dddart_json:
-    git:
-      url: https://github.com/continuousimagination/dddart.git
-      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
-      path: packages/dddart_json
-  dddart_serialization:
-    git:
-      url: https://github.com/continuousimagination/dddart.git
-      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
-      path: packages/dddart_serialization
-dev_dependencies:
-  build_runner: ^2.4.0
-```
-<!-- /dddart-source -->
+Copy the [example pubspec](docs/quickstarts/json/pubspec.yaml.txt) into the application as `pubspec.yaml`.
+It declares the SDK requirement and all dependency constraints.
 
 Save as `bin/main.dart`:
 

@@ -9,7 +9,7 @@ Generated MySQL repositories for typed aggregates on trusted native servers.
 Follow the [complete mysql workflow](../../docs/quickstarts/mysql/README.md)
 for the current Git manifest, named files, clean generation where required,
 expected output and cleanup. Hosted release installation remains separate under
-#30. Use the documented development SDK; 1.0 is the first compatibility baseline.
+#30. The workflow links its example pubspec. 1.0 is the first compatibility baseline.
 
 ## Models and storage
 
@@ -53,8 +53,8 @@ The optional publisher runs only after confirmed outer commit and lock release.
 uncertain results, permissions and retry boundaries. Storage errors are mapped
 to `RepositoryException`; inspect its type and cause rather than message text.
 
-The [service test guide](TESTING.md) uses MySQL 8. Other server versions and cloud
-deployments require their own evidence. The [driver reference](MYSQL_DRIVER_MIGRATION.md)
+The [service test guide](TESTING.md) links the tested MySQL setup. Other server
+configurations and cloud deployments require their own evidence. The [driver reference](MYSQL_DRIVER_MIGRATION.md)
 replaces the obsolete mysql1 migration plan. No pre-1.0 upgrade bridge is required.
 
 ## API and validation

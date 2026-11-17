@@ -1,8 +1,7 @@
 # Install dddart from Git
 
-The dddart packages are Git-only for now. A hosted dependency such as
-`dddart: ^0.9.0` does not work in an external application because core is not
-on pub.dev. The Git-only manifests for `dddart_serialization` and
+The dddart packages are Git-only for now; core is not on pub.dev.
+The Git-only manifests for `dddart_serialization` and
 `dddart_json` use sibling path dependencies, which Pub resolves from the same
 Git checkout.
 
@@ -71,8 +70,9 @@ dependencies:
       path: packages/dddart_repository_indexeddb
 ```
 
-Add direct serialization and `idb_shim: 2.10.1+1` dependencies when importing their
-registry and native factory APIs. See the [adapter guide](../packages/dddart_repository_indexeddb/README.md)
+Add direct serialization and `idb_shim` dependencies when importing their
+registry and native factory APIs; the [adapter pubspec](../packages/dddart_repository_indexeddb/pubspec.yaml)
+declares the supported constraints. See the [adapter guide](../packages/dddart_repository_indexeddb/README.md)
 for typed identity composition, schema compatibility and browser limits. Use the
 final accepted integration SHA after review/merge, not the old UUID-only browser
 branch SHA. Record the resolved Git SHAs from the clean consumer's lockfile.
@@ -95,7 +95,7 @@ SHA and retain its output as acceptance evidence.
 
 The [canonical quickstarts](QUICKSTARTS.md) provide complete, tested manifests,
 models, generated parts, executable entrypoints, expected output and teardown.
-They pin all Git dependencies to the same real revision and use Dart 3.13.7 for
-verification. Required adapter overrides are in each complete manifest. The
+Their example pubspec files declare the SDK requirement and dependency constraints,
+including the Git revision and any required adapter overrides. The
 primary JSON workflow declares build_runner and all packages its model imports;
 it can run outside this monorepo without workspace dependency resolution.

@@ -1,7 +1,7 @@
 # Testing dddart_repository_sqlite
 
-Use Dart 3.13.7 and resolve workspace tooling with `dart pub get` from the
-repository root. Run the integrated package and sample lanes:
+Resolve workspace tooling with `dart pub get` from the repository root.
+The [package pubspec](pubspec.yaml) declares SDK and dependency constraints. Run the integrated package and sample lanes:
 
 ```sh
 dart tool/validation/validate.dart package dddart_repository_sqlite --mode=ci

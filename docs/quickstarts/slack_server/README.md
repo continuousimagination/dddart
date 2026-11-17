@@ -1,6 +1,6 @@
 # Slack server compilation context
 
-Use Dart 3.13.7. Create an empty application directory outside the repository
+Create an empty application directory outside the repository
 and copy the following named files. The manifest pins Git dependencies to the
 same revision as the primary quickstarts.
 
@@ -8,64 +8,8 @@ This is a **compile-only** integration example. Running the server requires an
 application-owned `SLACK_SIGNING_SECRET`, a configured Slack sender and deployment.
 The check never starts the server, reads a secret or contacts Slack.
 
-Save as `pubspec.yaml`:
-
-<!-- dddart-source: docs/quickstarts/slack_server/pubspec.yaml.txt -->
-```yaml
-name: dddart_slack_server_quickstart
-publish_to: none
-environment:
-  sdk: '>=3.13.7 <4.0.0'
-dependencies:
-  dddart_rest:
-    git:
-      url: https://github.com/continuousimagination/dddart.git
-      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
-      path: packages/dddart_rest
-  dddart_webhooks:
-    git:
-      url: https://github.com/continuousimagination/dddart.git
-      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
-      path: packages/dddart_webhooks
-  dddart_webhooks_slack:
-    git:
-      url: https://github.com/continuousimagination/dddart.git
-      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
-      path: packages/dddart_webhooks_slack
-  shelf: ^1.4.0
-dependency_overrides:
-  dddart:
-    git:
-      url: https://github.com/continuousimagination/dddart.git
-      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
-      path: packages/dddart
-  dddart_json:
-    git:
-      url: https://github.com/continuousimagination/dddart.git
-      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
-      path: packages/dddart_json
-  dddart_rest:
-    git:
-      url: https://github.com/continuousimagination/dddart.git
-      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
-      path: packages/dddart_rest
-  dddart_serialization:
-    git:
-      url: https://github.com/continuousimagination/dddart.git
-      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
-      path: packages/dddart_serialization
-  dddart_webhooks:
-    git:
-      url: https://github.com/continuousimagination/dddart.git
-      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
-      path: packages/dddart_webhooks
-  dddart_webhooks_slack:
-    git:
-      url: https://github.com/continuousimagination/dddart.git
-      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
-      path: packages/dddart_webhooks_slack
-```
-<!-- /dddart-source -->
+Copy the [example pubspec](pubspec.yaml.txt) into the application as `pubspec.yaml`.
+It declares the SDK requirement and all dependency constraints.
 
 Save as `bin/main.dart`:
 

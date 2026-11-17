@@ -2,8 +2,8 @@
 
 Start with the [complete core quickstart](../../docs/quickstarts/core/README.md).
 It supplies a Git-pinned manifest, a named Dart program, exact output and cleanup.
-Create the application outside this monorepo and use the documented development
-SDK. DDDart's first compatibility baseline will be 1.0; hosted installation is
+Create the application outside this monorepo using its example pubspec.
+DDDart's first compatibility baseline will be 1.0; hosted installation is
 part of the separate release process, not a prerequisite for this guide.
 
 The program defines an aggregate and an event, persists the aggregate through a

@@ -7,7 +7,8 @@ the workspace's package resolution and are not hosted-installation evidence.
 
 ## Setup and validation
 
-Use Dart 3.13.7 from the repository root. Resolve workspace tooling with
+SDK and dependency constraints are declared in the [example pubspec](pubspec.yaml).
+From the repository root, resolve workspace tooling with
 `dart pub get`, then run the lane below. It resolves the example package,
 regenerates its declared parts when required, analyzes with fatal infos, compiles
 each program, runs eligible finite/service programs and cleans temporary outputs.

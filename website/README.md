@@ -6,7 +6,7 @@ this repository; no separate website repository or hosting subscription is neede
 
 ## Work locally
 
-Use Node 24.15 or later in the Node 24 line:
+The Node requirement and website dependencies are declared in [package.json](package.json).
 
 Site validation also uses Bash, jq and libxml2's `xmllint`. macOS includes
 `xmllint`; on Ubuntu install `jq libxml2-utils`. The workflow installs the HTML

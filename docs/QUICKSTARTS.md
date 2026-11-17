@@ -2,16 +2,16 @@
 
 Use the complete workflows below from an empty application directory outside this
 monorepo. Each has an exact Git-only pubspec, named files, generation/analysis/run
-commands, expected output and cleanup. They use code revision
-`56607ac8d3913b8e896ac03f8ecff58473d62ce2` and Dart 3.13.7. Publication and minimum
-SDK decisions remain under #30/#98; these are tested development instructions.
+commands, expected output and cleanup. Each workflow links its example pubspec;
+SDK requirements and dependency constraints live in those files. Publication and
+minimum SDK decisions remain under #30/#98.
 
 | Complete workflow | Canonical source and instructions | Additional prerequisite |
 | --- | --- | --- |
 | Domain model, repository and local event | [Core](quickstarts/core/README.md) | Dart VM |
 | Generated JSON, config and typed identity round trips | [JSON](quickstarts/json/README.md) | build_runner (declared in pubspec) |
 | SQLite repository | [SQLite](quickstarts/sqlite/README.md) | Native VM and SQLite shared library; no server |
-| MySQL repository | [MySQL](quickstarts/mysql/README.md) | Disposable MySQL 8 on localhost:3307 |
+| MySQL repository | [MySQL](quickstarts/mysql/README.md) | Disposable MySQL on localhost:3307 |
 | MongoDB repository | [MongoDB](quickstarts/mongodb/README.md) | Disposable MongoDB on localhost:27017 |
 | DynamoDB repository | [DynamoDB Local](quickstarts/dynamodb/README.md) | Fresh disposable DynamoDB Local on localhost:8000; no AWS account |
 | Public HTTP server and generated REST client repository | [HTTP](quickstarts/rest/README.md) | Native VM and ephemeral loopback port; no login/token |
@@ -44,7 +44,7 @@ Run the commands from a clone of the same revision after `dart pub get`.
 
 | Packages | Complete context / verification command | Honest boundary |
 | --- | --- | --- |
-| dddart_repository_indexeddb | [Git consumer instructions](GIT_INSTALLATION.md#core-and-indexeddb); `dart tool/validation/verify_indexeddb_git_consumer.dart 56607ac8d3913b8e896ac03f8ecff58473d62ce2` | Tool creates an outside-workspace consumer and runs native Chrome; Chrome is required. This is browser persistence, not SQLite-on-Web. The adapter requires application encode/decode callbacks |
+| dddart_repository_indexeddb | [Git consumer instructions](GIT_INSTALLATION.md#core-and-indexeddb); `dart tool/validation/verify_indexeddb_git_consumer.dart <full-commit-sha>` | Tool creates an outside-workspace consumer and runs native Chrome; Chrome is required. This is browser persistence, not SQLite-on-Web. The adapter requires application encode/decode callbacks |
 | dddart_config | [Example files and YAML](../packages/dddart_config/example); `dart tool/validation/validate.dart example dddart_config_example --mode=ci` | Finite VM examples; file/environment providers need native IO |
 | dddart_events_distributed | [HTTP polling example](../packages/dddart_events_distributed/README.md#run-an-http-only-publishwatch-example); `dart tool/validation/validate.dart example dddart_events_distributed_example --mode=ci` | Finite local HTTP publication/watch; no AppSync dependency or AWS credentials |
 | dddart_events_appsync | [Native invocation example](../packages/dddart_events_appsync/example/native_invocation.dart); `dart tool/validation/validate.dart example dddart_events_appsync_example --mode=ci` | Local protocol/handler demonstration. Live AppSync endpoint/token examples require application deployment and credentials; this is not cloud deployment proof |

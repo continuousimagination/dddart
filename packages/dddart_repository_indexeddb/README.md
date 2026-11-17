@@ -118,7 +118,7 @@ request if no receipt can be found. An absent receipt is never rollback proof.
 The base CRUD API has not acquired conditional guarantees; callers that need
 them must use `commitConditional`.
 
-The native adapter temporarily suppresses `idb_shim` 2.10.1+1's transaction
+The native adapter temporarily suppresses the pinned `idb_shim` dependency's transaction
 `onerror` callback because it assumes a nullable browser error is present
 during request-error bubbling. It still observes the final transaction abort
 or completion and separately awaits each request. A native duplicate-key

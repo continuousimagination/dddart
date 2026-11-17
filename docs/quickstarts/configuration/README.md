@@ -1,25 +1,11 @@
 # Layered configuration
 
-Use Dart 3.13.7. Create an empty application directory outside the repository
+Create an empty application directory outside the repository
 and copy the following named files. The manifest pins Git dependencies to the
 same revision as the primary quickstarts.
 
-Save as `pubspec.yaml`:
-
-<!-- dddart-source: docs/quickstarts/configuration/pubspec.yaml.txt -->
-```yaml
-name: dddart_configuration_quickstart
-publish_to: none
-environment:
-  sdk: '>=3.13.7 <4.0.0'
-dependencies:
-  dddart_config:
-    git:
-      url: https://github.com/continuousimagination/dddart.git
-      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
-      path: packages/dddart_config
-```
-<!-- /dddart-source -->
+Copy the [example pubspec](pubspec.yaml.txt) into the application as `pubspec.yaml`.
+It declares the SDK requirement and all dependency constraints.
 
 Save as `bin/configuration.dart`:
 

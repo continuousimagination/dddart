@@ -2,9 +2,11 @@
 
 Run from any working directory, using the script's absolute path if necessary.
 The script locates the repository from its own file, never from the caller's cwd.
-The fast checks require Bash 3.2+, jq 1.6+, Git and standard Unix tools. Execution
-checks also require the development SDK (currently Dart 3.13.7), Node 24.15.0+,
-tar and GNU `timeout` (`brew install coreutils` on macOS supplies it).
+The fast checks require Bash, jq, Git and standard Unix tools. Execution
+checks also require Dart, Node, tar and GNU `timeout`
+(`brew install coreutils` on macOS supplies it). SDK and dependency constraints
+live in the [example pubspecs](../../docs/quickstarts/); the Node requirement
+lives in the [website package manifest](../../website/package.json).
 Resolve repository tooling first with `dart pub get` from the workspace root.
 
 From that root:
@@ -54,6 +56,11 @@ Slack server. The Slack server is never run without a real application-owned
 secret and sender. Every canonical Dart input must appear verbatim in scoped
 published documentation. `commands.sh` and expected-output inclusions are checked
 against the same files used by execution, preventing silent command/output drift.
+
+Guides link to example pubspecs instead of copying their SDK or dependency
+constraints. Each quickstart must retain its manifest link. The gate rejects
+copied constraints in YAML blocks and repeated tool/SDK version requirements in
+current prose. Keep Node constraints in the website package manifest as well.
 
 The surface inventory covers **every repository Markdown/MDX/RST document**, including
 standalone guides, testing/how-to pages, all sample READMEs and the website. All

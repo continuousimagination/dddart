@@ -7,7 +7,7 @@ order: 20
 
 ## Install the current pre-release
 
-The dddart packages are currently installed from Git. The examples in this guide use the same immutable revision, `56607ac8d3913b8e896ac03f8ecff58473d62ce2`, so they do not silently change when the repository advances. Core, generation, and example checks for these guides used Dart 3.13.7. Flutter applications use their bundled Dart SDK.
+The dddart packages are currently installed from Git. The example pubspec pins an immutable revision so the application does not silently change when the repository advances. Flutter applications use their bundled Dart SDK.
 
 Create a small Dart application:
 
@@ -17,22 +17,8 @@ cd dddart_core_quickstart
 mkdir bin
 ```
 
-Save this complete manifest as `pubspec.yaml`:
-
-<!-- dddart-source: docs/quickstarts/core/pubspec.yaml.txt -->
-```yaml
-name: dddart_core_quickstart
-publish_to: none
-environment:
-  sdk: '>=3.13.7 <4.0.0'
-dependencies:
-  dddart:
-    git:
-      url: https://github.com/continuousimagination/dddart.git
-      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
-      path: packages/dddart
-```
-<!-- /dddart-source -->
+Copy the [example pubspec](https://github.com/continuousimagination/dddart/blob/main/docs/quickstarts/core/pubspec.yaml.txt) into the application as `pubspec.yaml`.
+It declares the SDK requirement and all dependency constraints.
 
 Then resolve the dependency:
 
@@ -40,7 +26,7 @@ Then resolve the dependency:
 dart pub get
 ```
 
-Use `flutter pub get` in a Flutter project. Commit your application's `pubspec.lock` so its resolved dependency graph is reproducible. A hosted dependency such as `dddart: ^0.9.0` is not a substitute for this Git installation.
+Use `flutter pub get` in a Flutter project. Commit your application's `pubspec.lock` so its resolved dependency graph is reproducible. Hosted installation will be available after package publication.
 
 ## Model one useful action
 

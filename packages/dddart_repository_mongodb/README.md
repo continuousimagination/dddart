@@ -9,7 +9,7 @@ Generated MongoDB repositories with explicit typed identities and application qu
 Follow the [complete mongodb workflow](../../docs/quickstarts/mongodb/README.md)
 for the current Git manifest, named files, clean generation where required,
 expected output and cleanup. Hosted release installation remains separate under
-#30. Use the documented development SDK; 1.0 is the first compatibility baseline.
+#30. The workflow links its example pubspec. 1.0 is the first compatibility baseline.
 
 ## Models and identity
 

@@ -22,35 +22,8 @@ JSON is the supplied format implementation. The generic `Serializer<T, C>` contr
 ## Install the generator
 
 Create an empty directory outside the repository with `bin` and `lib`
-subdirectories. Save this complete Git-only manifest as `pubspec.yaml`, then run
-`dart pub get`:
-
-<!-- dddart-source: docs/quickstarts/json/pubspec.yaml.txt -->
-```yaml
-name: dddart_json_quickstart
-publish_to: none
-environment:
-  sdk: '>=3.13.7 <4.0.0'
-dependencies:
-  dddart:
-    git:
-      url: https://github.com/continuousimagination/dddart.git
-      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
-      path: packages/dddart
-  dddart_json:
-    git:
-      url: https://github.com/continuousimagination/dddart.git
-      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
-      path: packages/dddart_json
-  dddart_serialization:
-    git:
-      url: https://github.com/continuousimagination/dddart.git
-      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
-      path: packages/dddart_serialization
-dev_dependencies:
-  build_runner: ^2.4.0
-```
-<!-- /dddart-source -->
+subdirectories. Copy the [example pubspec](https://github.com/continuousimagination/dddart/blob/main/docs/quickstarts/json/pubspec.yaml.txt) into the application as `pubspec.yaml`.
+It declares the SDK requirement and all dependency constraints.
 
 The model file must import `dart:convert`, the domain package, the serialization package, and the JSON package. The generated part shares those imports.
 

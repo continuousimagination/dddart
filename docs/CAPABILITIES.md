@@ -8,7 +8,7 @@ code; old generated artifacts and schemas are not an upgrade commitment.
 
 The table covers the 18 packages in the [validation inventory](../tool/validation/inventory.json).
 It does not select the release set (#97), establish every minimum SDK (#98), or
-claim published packages (#99/#100). Current development checks use Dart 3.13.7.
+claim published packages (#99/#100).
 A runtime target is not certification of every Flutter device, browser, SDK,
 database version or deployed cloud configuration.
 
@@ -20,7 +20,7 @@ database version or deployed cloud configuration.
 | dddart_config | Provider/lookup contracts; supplied environment and YAML-file providers require native process/filesystem IO | None | [Providers](../packages/dddart_config/lib/dddart_config.dart), finite config examples; custom providers must satisfy their own platform requirements |
 | dddart_repository_sql | Runtime connection/dialect/query/mapping extension contracts; actual IO belongs to the concrete adapter | Its `generator.dart` helpers run at build time using analyzer | [Supported exports](PUBLIC_API.md), SQL package tests; not a database adapter, no generic runtime graph traversal |
 | dddart_repository_sqlite | Native VM/Flutter composition with a usable SQLite shared library through FFI | Repository and JSON builders | [SQLite workflow](quickstarts/sqlite/README.md), native package/transaction tests; the supplied adapter has **no Web/WASM backend** |
-| dddart_repository_mysql | Trusted native server; MySQL connection, InnoDB tables and database permissions | Repository builder (JSON builder when annotated for JSON) | [MySQL workflow](quickstarts/mysql/README.md), MySQL 8 service lane; one physical connection, no pool; entity Set/Map collections are rejected |
+| dddart_repository_mysql | Trusted native server; MySQL connection, InnoDB tables and database permissions | Repository builder (JSON builder when annotated for JSON) | [MySQL workflow](quickstarts/mysql/README.md), MySQL service lane; one physical connection, no pool; entity Set/Map collections are rejected |
 | dddart_repository_mongodb | Trusted native server with MongoDB driver/connectivity and collection permissions | Repository and JSON builders | [Mongo workflow](quickstarts/mongodb/README.md), Mongo service lane; DocumentDB compatibility is not established by MongoDB Local tests |
 | dddart_repository_dynamodb | Trusted service with DynamoDB SDK credentials/permissions, or disposable local endpoint | Repository and JSON builders | [DynamoDB Local workflow](quickstarts/dynamodb/README.md), local service lane; local tests do not certify AWS IAM, networking, Global Tables or a deployment |
 | dddart_repository_rest | Generated HTTP client repository; reachable compatible server | Repository and JSON builders | [Public HTTP workflow](quickstarts/rest/README.md), transport tests; browser CORS/auth composition remains application-owned |
