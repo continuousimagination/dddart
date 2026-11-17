@@ -261,8 +261,11 @@ void main() { print($symbol); }
         );
         final diagnostic = '${rejected.stdout}\n${rejected.stderr}';
         expect(rejected.exitCode, isNot(0), reason: diagnostic);
-        expect(diagnostic, contains("Undefined name '$symbol'"),
-            reason: diagnostic,);
+        expect(
+          diagnostic,
+          contains("Undefined name '$symbol'"),
+          reason: diagnostic,
+        );
       }
     },
     timeout: const Timeout(Duration(minutes: 5)),
