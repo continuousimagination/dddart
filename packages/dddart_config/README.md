@@ -1,5 +1,12 @@
 # dddart_config
 
+For complete setup, named source files, expected output and cleanup, follow the
+[canonical quickstart](../../docs/QUICKSTARTS.md#browser-and-external-integrations). Other inline Dart snippets below are
+**illustrative fragments** that assume application-specific models and surrounding
+setup; they are not standalone programs. See the [quickstart inventory](../../docs/QUICKSTARTS.md)
+for runnable, browser, service and credential-dependent coverage.
+
+
 A unified configuration management package for the DDDart framework. Provides a consistent interface for accessing configuration values from multiple sources (environment variables, YAML files) with support for layering, type safety, and validation.
 
 ## Features
@@ -16,22 +23,9 @@ A unified configuration management package for the DDDart framework. Provides a 
 
 ## Installation
 
-Add `dddart_config` to your `pubspec.yaml`:
-
-```yaml
-dependencies:
-  dddart_config:
-    git:
-      url: https://github.com/continuousimagination/dddart.git
-      path: packages/dddart_config
-      ref: <approved-immutable-candidate-revision>
-```
-
-Replace the revision placeholder with the reviewed candidate commit, then run:
-
-```bash
-dart pub get
-```
+DDDart is currently Git-only. Use the [Git installation guide](../../docs/GIT_INSTALLATION.md)
+and the complete dependency setup in the [canonical quickstart](../../docs/QUICKSTARTS.md#browser-and-external-integrations).
+Pin all DDDart dependencies and overrides to the same full commit.
 
 ## Quick Start
 

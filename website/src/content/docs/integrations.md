@@ -5,6 +5,12 @@ section: Connect the pieces
 order: 50
 ---
 
+Code outside an explicitly named complete workflow is an **illustrative fragment**
+that assumes the surrounding application models and setup. Use the
+[complete quickstarts](https://github.com/continuousimagination/dddart/blob/main/docs/QUICKSTARTS.md)
+for copyable manifests, named files, generation commands, expected output and cleanup.
+
+
 External systems have their own protocols. An adapter translates those protocols into your application's language. It should not make a Slack request, an AWS channel, or a database connection part of a domain object's identity.
 
 These integrations are optional. You can use the core package without a server, use HTTP events without AWS, or expose a webhook without adopting distributed events.
@@ -62,7 +68,7 @@ Implement `WebhookVerifier<YourVerificationResult>` for the provider's exact sig
 
 Register the handler with `HttpServer.addRoute('POST', path, resource.handleRequest)`, or mount it in your existing Shelf router. There is no `registerWebhook` method on `HttpServer`.
 
-See the [webhook resource](https://github.com/continuousimagination/dddart/blob/b4aacf0671873e729a1a390dc2bb609b80c723e5/packages/dddart_webhooks/lib/src/webhook_resource.dart), [Slack verifier](https://github.com/continuousimagination/dddart/blob/b4aacf0671873e729a1a390dc2bb609b80c723e5/packages/dddart_webhooks_slack/lib/src/slack_webhook_verifier.dart), and [Slack examples](https://github.com/continuousimagination/dddart/tree/b4aacf0671873e729a1a390dc2bb609b80c723e5/packages/dddart_webhooks_slack/example).
+See the [webhook resource](https://github.com/continuousimagination/dddart/blob/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_webhooks/lib/src/webhook_resource.dart), [Slack verifier](https://github.com/continuousimagination/dddart/blob/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_webhooks_slack/lib/src/slack_webhook_verifier.dart), and [Slack examples](https://github.com/continuousimagination/dddart/tree/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_webhooks_slack/example).
 
 ## Add live events with AppSync
 
@@ -152,6 +158,6 @@ From a checkout with workspace dependencies resolved, this finite example exerci
 dart run packages/dddart_events_appsync/example/native_invocation.dart
 ```
 
-The repository also includes a [CloudFormation template](https://github.com/continuousimagination/dddart/blob/b4aacf0671873e729a1a390dc2bb609b80c723e5/packages/dddart_events_appsync/deploy/cloudformation.yaml), [container definition](https://github.com/continuousimagination/dddart/blob/b4aacf0671873e729a1a390dc2bb609b80c723e5/packages/dddart_events_appsync/deploy/Dockerfile), and [Lambda entrypoint](https://github.com/continuousimagination/dddart/blob/b4aacf0671873e729a1a390dc2bb609b80c723e5/packages/dddart_events_appsync/example/lambda.dart). The template supports custom JWTs or an existing Cognito/OIDC provider; it does not create a user pool. Its reference ACL policy is example application code that you replace with your own authoritative policy.
+The repository also includes a [CloudFormation template](https://github.com/continuousimagination/dddart/blob/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_events_appsync/deploy/cloudformation.yaml), [container definition](https://github.com/continuousimagination/dddart/blob/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_events_appsync/deploy/Dockerfile), and [Lambda entrypoint](https://github.com/continuousimagination/dddart/blob/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_events_appsync/example/lambda.dart). The template supports custom JWTs or an existing Cognito/OIDC provider; it does not create a user pool. Its reference ACL policy is example application code that you replace with your own authoritative policy.
 
-Follow the [deployment and cleanup guide](https://github.com/continuousimagination/dddart/blob/b4aacf0671873e729a1a390dc2bb609b80c723e5/docs/DISTRIBUTED_EVENTS.md#build-and-deploy-the-reference-application) for account, region, image, table, and authentication configuration. That workflow creates billable AWS resources and is separate from this documentation site's free GitHub Pages hosting. The opt-in smoke program requires an existing configured deployment; local protocol fixtures are not a live AWS test.
+Follow the [deployment and cleanup guide](https://github.com/continuousimagination/dddart/blob/56607ac8d3913b8e896ac03f8ecff58473d62ce2/docs/DISTRIBUTED_EVENTS.md#build-and-deploy-the-reference-application) for account, region, image, table, and authentication configuration. That workflow creates billable AWS resources and is separate from this documentation site's free GitHub Pages hosting. The opt-in smoke program requires an existing configured deployment; local protocol fixtures are not a live AWS test.

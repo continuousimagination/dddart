@@ -1,5 +1,12 @@
 # dddart_rest
 
+For complete setup, named source files, expected output and cleanup, follow the
+[canonical quickstart](../../docs/quickstarts/rest/README.md). Other inline Dart snippets below are
+**illustrative fragments** that assume application-specific models and surrounding
+setup; they are not standalone programs. See the [quickstart inventory](../../docs/QUICKSTARTS.md)
+for runnable, browser, service and credential-dependent coverage.
+
+
 HTTP authentication also exposes request-independent
 `CredentialVerifier<TClaims>.verifyCredential`. Reuse `JwtAuthHandler` or
 `OAuthJwtAuthHandler` directly, or instantiate `JwtCredentialVerifier` without
@@ -193,74 +200,15 @@ decision; use a custom policy when permissions depend on stored state.
 
 ## Installation
 
-Add to your `pubspec.yaml`:
-
-```yaml
-dependencies:
-  dddart_rest: ^0.9.0
-  dddart: ^0.9.0
-  dddart_json: ^0.9.0
-  dddart_serialization: ^0.9.0
-```
+DDDart is currently Git-only. Use the [Git installation guide](../../docs/GIT_INSTALLATION.md)
+and the complete dependency setup in the [canonical quickstart](../../docs/quickstarts/rest/README.md).
+Pin all DDDart dependencies and overrides to the same full commit.
 
 ## Quick Start
 
-```dart
-import 'package:dddart/dddart.dart';
-import 'package:dddart_rest/dddart_rest.dart';
-
-void main() async {
-  // Create repository and serializer
-  final UserReadRepository repository = UserDatabaseRepository();
-  final serializer = UserJsonSerializer();
-
-  // Create and configure HTTP server
-  final server = HttpServer(port: 8080);
-  
-  server.registerResource(
-    CrudResource<User, UuidValue, void>(
-      path: '/users',
-      repository: repository,
-      serializer: serializer,
-      collectionHandler: listUsers,
-    ),
-  );
-
-  await server.start();
-  print('Server running on http://localhost:8080');
-}
-```
-
-This creates the following endpoints:
-- `GET /users` - List a datastore-paginated user collection
-- `GET /users/:id` - Get user by ID
-- `POST /users` - Create new user
-- `PUT /users/:id` - Update user
-- `DELETE /users/:id` - Delete user
-
-### Adding Custom Routes
-
-You can add custom routes (like health checks, metrics, or webhooks) to the same server:
-
-```dart
-import 'package:dddart_rest/dddart_rest.dart';
-
-final server = HttpServer(port: 8080);
-
-// Register CRUD resources (creates 5 routes automatically)
-server.registerResource(userResource);
-
-// Add custom routes
-server.addRoute('GET', '/health', healthCheckHandler);
-server.addRoute('GET', '/metrics', metricsHandler);
-
-// You can also add webhook handlers from dddart_webhooks package
-// server.addRoute('POST', webhook.path, webhook.handleRequest);
-
-await server.start();
-```
-
-This allows you to run REST CRUD endpoints and custom handlers on a single server instance. See `example/custom_routes_example.dart` for a complete example.
+Follow the [complete public http endpoint workflow](../../docs/quickstarts/rest/README.md).
+It includes an outside-workspace pubspec, every import/model/part, clean generation
+where required, execution, expected output and cleanup.
 
 ## Usage Guide
 

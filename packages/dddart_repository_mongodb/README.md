@@ -1,5 +1,12 @@
 # dddart_repository_mongodb
 
+For complete setup, named source files, expected output and cleanup, follow the
+[canonical quickstart](../../docs/quickstarts/mongodb/README.md). Other inline Dart snippets below are
+**illustrative fragments** that assume application-specific models and surrounding
+setup; they are not standalone programs. See the [quickstart inventory](../../docs/QUICKSTARTS.md)
+for runnable, browser, service and credential-dependent coverage.
+
+
 MongoDB repository implementation for DDDart - Domain-Driven Design for Dart.
 
 ## Overview
@@ -58,88 +65,15 @@ The package follows DDDart's code generation pattern to automatically create rep
 
 ## Installation
 
-Add to your `pubspec.yaml`:
-
-```yaml
-dependencies:
-  dddart: ^0.9.0
-  dddart_json: ^0.9.0
-  dddart_repository_mongodb: ^0.9.0
-
-dev_dependencies:
-  build_runner: ^2.4.0
-```
+DDDart is currently Git-only. Use the [Git installation guide](../../docs/GIT_INSTALLATION.md)
+and the complete dependency setup in the [canonical quickstart](../../docs/quickstarts/mongodb/README.md).
+Pin all DDDart dependencies and overrides to the same full commit.
 
 ## Quick Start
 
-### 1. Annotate Your Aggregate Root
-
-```dart
-import 'package:dddart/dddart.dart';
-import 'package:dddart_json/dddart_json.dart';
-import 'package:dddart_repository_mongodb/dddart_repository_mongodb.dart';
-
-@Serializable()
-@GenerateMongoRepository(collectionName: 'users')
-class User extends AggregateRoot<UuidValue> {
-  final String firstName;
-  final String lastName;
-  final String email;
-
-  User({
-    required this.firstName,
-    required this.lastName,
-    required this.email,
-  }) : super(id: UuidValue.generate());
-}
-
-part 'user.g.dart';
-```
-
-### 2. Generate Code
-
-```bash
-dart run build_runner build
-```
-
-This generates `UserMongoRepository` with full CRUD operations.
-
-### 3. Use the Repository
-
-```dart
-import 'package:mongo_dart/mongo_dart.dart';
-
-Future<void> main() async {
-  // Create connection
-  final connection = MongoConnection(
-    host: 'localhost',
-    port: 27017,
-    databaseName: 'myapp',
-  );
-  await connection.open();
-
-  // Create repository
-  final userRepo = UserMongoRepository(connection.database);
-
-  // Create and save a user
-  final user = User(
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'john@example.com',
-  );
-  await userRepo.save(user);
-
-  // Retrieve by ID
-  final retrieved = await userRepo.getById(user.id);
-  print('Retrieved: ${retrieved.firstName} ${retrieved.lastName}');
-
-  // Delete
-  await userRepo.deleteById(user.id);
-
-  // Close connection
-  await connection.close();
-}
-```
+Follow the [complete mongodb persistence workflow](../../docs/quickstarts/mongodb/README.md).
+It includes an outside-workspace pubspec, every import/model/part, clean generation
+where required, execution, expected output and cleanup.
 
 ## Custom Repository Interfaces
 

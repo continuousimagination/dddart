@@ -1,5 +1,12 @@
 # dddart_repository_rest
 
+For complete setup, named source files, expected output and cleanup, follow the
+[canonical quickstart](../../docs/quickstarts/rest/README.md). Other inline Dart snippets below are
+**illustrative fragments** that assume application-specific models and surrounding
+setup; they are not standalone programs. See the [quickstart inventory](../../docs/QUICKSTARTS.md)
+for runnable, browser, service and credential-dependent coverage.
+
+
 ## Typed identities (pre-release breaking change)
 
 Use `AggregateRoot<UuidValue>` for UUID models and `Repository<User, UuidValue>`
@@ -46,116 +53,15 @@ The package follows the established patterns from other DDDart repository packag
 
 ## Installation
 
-Add to your `pubspec.yaml`:
-
-```yaml
-dependencies:
-  dddart: ^0.9.0
-  dddart_json: ^0.9.0
-  dddart_repository_rest: ^0.1.0
-  dddart_rest_client: ^0.1.0
-
-dev_dependencies:
-  build_runner: ^2.4.0
-```
-
-Then run:
-
-```bash
-dart pub get
-```
+DDDart is currently Git-only. Use the [Git installation guide](../../docs/GIT_INSTALLATION.md)
+and the complete dependency setup in the [canonical quickstart](../../docs/quickstarts/rest/README.md).
+Pin all DDDart dependencies and overrides to the same full commit.
 
 ## Quick Start
 
-### 1. Annotate Your Aggregate Root
-
-```dart
-import 'package:dddart/dddart.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
-import 'package:dddart_repository_rest/dddart_repository_rest.dart';
-
-@Serializable()
-@GenerateRestRepository(resourcePath: '/users')
-class User extends AggregateRoot<UuidValue> {
-  User({
-    UuidValue? id,
-    required this.firstName,
-    required this.lastName,
-    required this.email,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) : super(id: id ?? UuidValue.generate(), createdAt: createdAt, updatedAt: updatedAt);
-
-  final String firstName;
-  final String lastName;
-  final String email;
-
-  String get fullName => '$firstName $lastName';
-}
-
-part 'user.g.dart';
-```
-
-### 2. Generate Code
-
-Run the build_runner to generate the repository and serializer:
-
-```bash
-dart run build_runner build
-```
-
-This generates one combined `user.g.dart` part containing both the JSON
-serializer and REST repository implementation.
-
-### 3. Use the Generated Repository
-
-```dart
-import 'package:dddart/dddart.dart';
-import 'package:dddart_repository_rest/dddart_repository_rest.dart';
-import 'user.dart';
-
-Future<void> main() async {
-  // Create a REST connection
-  final connection = RestConnection(
-    baseUrl: 'https://api.example.com',
-  );
-
-  // Create repository instance
-  final userRepo = UserRestRepository(connection);
-
-  // Create and save a user
-  final user = User(
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'john.doe@example.com',
-  );
-  await userRepo.save(user);
-  print('User created: ${user.id}');
-
-  // Retrieve the user
-  final retrieved = await userRepo.getById(user.id);
-  print('Retrieved: ${retrieved.fullName}');
-
-  // Update the user
-  final updated = User(
-    id: retrieved.id,
-    firstName: retrieved.firstName,
-    lastName: 'Smith',
-    email: 'john.smith@example.com',
-    createdAt: retrieved.createdAt,
-    updatedAt: DateTime.now(),
-  );
-  await userRepo.save(updated);
-  print('User updated');
-
-  // Delete the user
-  await userRepo.deleteById(user.id);
-  print('User deleted');
-
-  // Clean up
-  connection.dispose();
-}
-```
+Follow the [complete public http endpoint workflow](../../docs/quickstarts/rest/README.md).
+It includes an outside-workspace pubspec, every import/model/part, clean generation
+where required, execution, expected output and cleanup.
 
 ## Conditional snapshots and writes
 

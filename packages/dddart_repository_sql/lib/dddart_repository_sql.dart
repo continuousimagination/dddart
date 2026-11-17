@@ -1,19 +1,10 @@
-/// Base SQL repository abstractions for DDDart.
+/// dddart_repository_sql: supported DDDart application and extension APIs.
 ///
-/// This package provides the foundational abstractions and utilities for
-/// implementing SQL database repositories for DDDart aggregate roots.
-/// It includes:
+/// Complete setup and runnable examples:
+/// https://github.com/continuousimagination/dddart/blob/main/docs/quickstarts/sqlite/README.md
 ///
-/// - SQL connection abstractions
-/// - SQL dialect support for database-specific syntax
-/// - Runtime schema values for dialect and query extensions
-/// - Object-relational mapping utilities
-/// - Foreign key management
-///
-/// Build-time schema analysis is available from `generator.dart`.
-///
-/// This package is designed to be extended by concrete implementations
-/// like `dddart_repository_sqlite`, `dddart_repository_postgres`, etc.
+/// Supported imports and extension contracts:
+/// https://github.com/continuousimagination/dddart/blob/main/docs/PUBLIC_API.md
 library dddart_repository_sql;
 
 // Annotations

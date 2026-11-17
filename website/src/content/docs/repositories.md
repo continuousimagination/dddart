@@ -5,6 +5,12 @@ section: Connect the pieces
 order: 10
 ---
 
+Code outside an explicitly named complete workflow is an **illustrative fragment**
+that assumes the surrounding application models and setup. Use the
+[complete quickstarts](https://github.com/continuousimagination/dddart/blob/main/docs/QUICKSTARTS.md)
+for copyable manifests, named files, generation commands, expected output and cleanup.
+
+
 A repository gives application code a collection of aggregates without making it speak SQL, BSON, or HTTP. The useful abstraction is small: retrieve an aggregate, save it, and delete it. Start with that contract, then choose the implementation where the application is assembled.
 
 ## The contract you can share
@@ -57,122 +63,153 @@ The in-memory implementation stores object references. It is useful for tests an
 
 ## Generate a SQLite repository
 
-This example targets a native Dart application with SQLite available. The current adapter uses the native `sqlite3` API; it is not a browser SQLite adapter.
+Use Dart **3.13.7**, the development SDK used for these checks. This is a verified
+setup, not a claim about the minimum SDK on every platform (#98 tracks that).
+The DDDart dependencies below use one immutable Git revision; they do not require
+published DDDart packages. See [Git installation](https://github.com/continuousimagination/dddart/blob/main/docs/GIT_INSTALLATION.md)
+for source overrides and [the support matrix](https://continuousimagination.github.io/dddart/docs/contracts/) for platform limits.
 
-### 1. Prepare the dependencies
+This supplied SQLite adapter uses native FFI. Run on a native Dart VM with the
+SQLite shared library available (macOS includes it; on Ubuntu install `libsqlite3-0`).
+It does not run in a browser. The in-memory database is discarded when closed.
 
-The packages are currently installed from Git. Add these four direct dependencies at the same full commit: `dddart`, `dddart_serialization`, `dddart_json`, and `dddart_repository_sqlite`. Add `build_runner: ^2.4.0` under `dev_dependencies`.
+Create an empty directory **outside this repository**, then create the named files:
 
-Because the SQLite adapter still declares hosted sibling dependencies, the application must also override `dddart`, `dddart_serialization`, `dddart_json`, and `dddart_repository_sql` to the same Git revision. The [Git installation guide](https://github.com/continuousimagination/dddart/blob/b4aacf0671873e729a1a390dc2bb609b80c723e5/docs/GIT_INSTALLATION.md) explains the source setup. An override entry has this form; repeat it for the other three package names and paths:
+```sh
+mkdir dddart_sqlite_quickstart
+cd dddart_sqlite_quickstart
+mkdir -p bin lib
+```
 
+Save as `pubspec.yaml` (the fixture uses `.txt` only to keep it out of the monorepo workspace):
+
+<!-- dddart-source: docs/quickstarts/sqlite/pubspec.yaml.txt -->
 ```yaml
+name: dddart_sqlite_quickstart
+publish_to: none
+environment:
+  sdk: '>=3.13.7 <4.0.0'
+dependencies:
+  dddart:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
+      path: packages/dddart
+  dddart_json:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
+      path: packages/dddart_json
+  dddart_serialization:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
+      path: packages/dddart_serialization
+  dddart_repository_sqlite:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
+      path: packages/dddart_repository_sqlite
+dev_dependencies:
+  build_runner: ^2.4.0
 dependency_overrides:
+  dddart:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
+      path: packages/dddart
+  dddart_json:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
+      path: packages/dddart_json
   dddart_repository_sql:
     git:
       url: https://github.com/continuousimagination/dddart.git
-      ref: b4aacf0671873e729a1a390dc2bb609b80c723e5
+      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
       path: packages/dddart_repository_sql
+  dddart_repository_sqlite:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
+      path: packages/dddart_repository_sqlite
+  dddart_serialization:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
+      path: packages/dddart_serialization
 ```
+<!-- /dddart-source -->
 
-To try an already configured example instead of creating a new application, clone the repository and run its SQLite example:
+Save as `bin/main.dart`:
 
-```bash
-git clone https://github.com/continuousimagination/dddart.git
-cd dddart
-git checkout b4aacf0671873e729a1a390dc2bb609b80c723e5
-dart pub get
-cd packages/dddart_repository_sqlite/example
-dart run build_runner build --delete-conflicting-outputs
-dart run basic_crud_example.dart
-```
-
-### 2. Define the model
-
-In your own application, create `lib/note.dart`. The JSON and SQLite builders contribute to the same generated part. `dart:convert` and the JSON/serialization imports are used by that generated code, even when the handwritten model looks as though it does not need them.
-
+<!-- dddart-source: docs/quickstarts/sqlite/bin/main.dart -->
 ```dart
-import 'dart:convert';
-
-import 'package:dddart/dddart.dart';
-import 'package:dddart_json/dddart_json.dart';
-import 'package:dddart_repository_sqlite/dddart_repository_sqlite.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
-
-part 'note.g.dart';
-
-@Serializable()
-@GenerateSqliteRepository(tableName: 'notes')
-class Note extends AggregateRoot<UuidValue> {
-  Note({
-    required this.title,
-    UuidValue? id,
-    super.createdAt,
-    super.updatedAt,
-  }) : super(id: id ?? UuidValue.generate());
-
-  final String title;
-}
-```
-
-Exposing the identity and timestamps in the constructor lets deserialization restore the saved aggregate instead of creating a new identity on every read.
-
-Run generation from the application's root:
-
-```bash
-dart pub get
-dart run build_runner build --delete-conflicting-outputs
-```
-
-This produces `NoteJsonSerializer` and `NoteSqliteRepository` in `note.g.dart`. Do not edit that file by hand.
-
-### 3. Save, load, and delete
-
-Create `bin/main.dart`. The relative import keeps this example independent of your application's package name.
-
-```dart
-import 'package:dddart/dddart.dart';
 import 'package:dddart_repository_sqlite/dddart_repository_sqlite.dart';
 
 import '../lib/note.dart';
 
 Future<void> main() async {
   final connection = SqliteConnection.memory();
-  // For persistence across runs:
-  // final connection = SqliteConnection.file('notes.db');
   await connection.open();
-
   try {
-    final sqlite = NoteSqliteRepository(connection);
-    await sqlite.createTables();
-
-    final Repository<Note, UuidValue> notes = sqlite;
-    final note = Note(title: 'Ship the first version');
-    await notes.save(note);
-
-    final loaded = await notes.getById(note.id);
-    print(loaded.title);
-
-    await notes.save(Note(
-      id: loaded.id,
-      title: 'Ship the next version',
-      createdAt: loaded.createdAt,
-      updatedAt: DateTime.now(),
-    ));
-
-    await notes.deleteById(note.id);
+    final repository = NoteSqliteRepository(connection);
+    await repository.createTables();
+    final note = Note(text: 'hello');
+    await repository.save(note);
+    final restored = await repository.getById(note.id);
+    if (restored.id != note.id || restored.text != note.text) {
+      throw StateError('The saved note did not round trip');
+    }
+    print('hello: persisted');
+    await repository.deleteById(note.id);
   } finally {
     await connection.close();
   }
 }
 ```
+<!-- /dddart-source -->
 
-Run it with `dart run bin/main.dart`. Only the composition code knows about SQLite. Functions accepting `Repository<Note, UuidValue>` keep the same shape as the in-memory version.
+Save as `lib/note.dart`:
 
-### What the generated adapter does
+<!-- dddart-source: docs/quickstarts/sqlite/lib/note.dart -->
+```dart
+import 'dart:convert';
 
-SQLite saves an aggregate and its supported child collections inside a database transaction. Value objects are embedded into columns; collections use related tables. Foreign keys are enabled when the connection opens, and collection rows are removed with their parent.
+import 'package:dddart/dddart.dart';
+import 'package:dddart_json/dddart_json.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
+import 'package:dddart_repository_sqlite/dddart_repository_sqlite.dart';
 
-`createTables()` uses `CREATE TABLE IF NOT EXISTS`. It creates a fresh schema; it does **not** migrate an existing schema when your model changes. Plan migrations separately. The current generator replaces aggregate data on save and does not supply optimistic version checks.
+part 'note.g.dart';
+
+@Serializable()
+@GenerateSqliteRepository(tableName: 'quickstart_notes')
+class Note extends AggregateRoot<UuidValue> {
+  Note({required this.text, UuidValue? id, super.createdAt, super.updatedAt})
+      : super(id: id ?? UuidValue.generate());
+  final String text;
+}
+```
+<!-- /dddart-source -->
+
+Resolve dependencies, generate from clean build state, analyze, and run:
+
+```sh
+dart pub get
+dart run build_runner clean
+dart run build_runner build --delete-conflicting-outputs
+dart analyze --fatal-infos
+dart run bin/main.dart
+```
+
+Expected output:
+
+```text
+hello: persisted
+```
+
+The program finishes and closes its resources. Delete the temporary application directory when finished.
 
 ## Give queries a domain name
 
@@ -238,9 +275,9 @@ Portability also does not make a database connection safe to expose in an untrus
 
 The examples and behavior on this page are grounded in the following source revision:
 
-- [Repository contract](https://github.com/continuousimagination/dddart/blob/b4aacf0671873e729a1a390dc2bb609b80c723e5/packages/dddart/lib/src/repository.dart)
-- [SQLite CRUD example](https://github.com/continuousimagination/dddart/blob/b4aacf0671873e729a1a390dc2bb609b80c723e5/packages/dddart_repository_sqlite/example/basic_crud_example.dart) and [generator](https://github.com/continuousimagination/dddart/blob/b4aacf0671873e729a1a390dc2bb609b80c723e5/packages/dddart_repository_sqlite/lib/src/generators/sqlite_repository_generator.dart)
-- [MySQL generator](https://github.com/continuousimagination/dddart/blob/b4aacf0671873e729a1a390dc2bb609b80c723e5/packages/dddart_repository_mysql/lib/src/generators/mysql_repository_generator.dart)
-- [MongoDB generator](https://github.com/continuousimagination/dddart/blob/b4aacf0671873e729a1a390dc2bb609b80c723e5/packages/dddart_repository_mongodb/lib/src/generators/mongo_repository_generator.dart)
-- [DynamoDB generator](https://github.com/continuousimagination/dddart/blob/b4aacf0671873e729a1a390dc2bb609b80c723e5/packages/dddart_repository_dynamodb/lib/src/generators/dynamo_repository_generator.dart)
-- [REST generator](https://github.com/continuousimagination/dddart/blob/b4aacf0671873e729a1a390dc2bb609b80c723e5/packages/dddart_repository_rest/lib/src/generators/rest_repository_generator.dart)
+- [Repository contract](https://github.com/continuousimagination/dddart/blob/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart/lib/src/repository.dart)
+- [SQLite CRUD example](https://github.com/continuousimagination/dddart/blob/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_repository_sqlite/example/basic_crud_example.dart) and [generator](https://github.com/continuousimagination/dddart/blob/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_repository_sqlite/lib/src/generators/sqlite_repository_generator.dart)
+- [MySQL generator](https://github.com/continuousimagination/dddart/blob/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_repository_mysql/lib/src/generators/mysql_repository_generator.dart)
+- [MongoDB generator](https://github.com/continuousimagination/dddart/blob/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_repository_mongodb/lib/src/generators/mongo_repository_generator.dart)
+- [DynamoDB generator](https://github.com/continuousimagination/dddart/blob/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_repository_dynamodb/lib/src/generators/dynamo_repository_generator.dart)
+- [REST generator](https://github.com/continuousimagination/dddart/blob/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_repository_rest/lib/src/generators/rest_repository_generator.dart)

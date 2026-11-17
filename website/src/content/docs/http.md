@@ -5,6 +5,12 @@ section: Connect the pieces
 order: 20
 ---
 
+Code outside an explicitly named complete workflow is an **illustrative fragment**
+that assumes the surrounding application models and setup. Use the
+[complete quickstarts](https://github.com/continuousimagination/dddart/blob/main/docs/QUICKSTARTS.md)
+for copyable manifests, named files, generation commands, expected output and cleanup.
+
+
 A database repository and an HTTP repository can serve the same application interface. The server owns database access and authorization. The client works with the same domain types, identities, serializers, and repository methods.
 
 The two sides have different jobs:
@@ -121,7 +127,7 @@ await orders.deleteById(loaded.id);
 connection.dispose();
 ```
 
-Use a base URL without a trailing slash. The generated `save` sends a PUT to the aggregate's identity URL, including for an initially new object; it relies on the server repository's save/upsert behavior. It does not automatically perform a POST or attach an `If-Match` header. The [REST repository implementation and examples](https://github.com/continuousimagination/dddart/tree/b4aacf0671873e729a1a390dc2bb609b80c723e5/packages/dddart_repository_rest) show custom query interfaces and generated base classes.
+Use a base URL without a trailing slash. The generated `save` sends a PUT to the aggregate's identity URL, including for an initially new object; it relies on the server repository's save/upsert behavior. It does not automatically perform a POST or attach an `If-Match` header. The [REST repository implementation and examples](https://github.com/continuousimagination/dddart/tree/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_repository_rest) show custom query interfaces and generated base classes.
 
 ## Share identity codecs, not guessed URL formats
 
@@ -175,4 +181,4 @@ Success bodies use JSON. Errors use `application/problem+json`. PUT requires the
 
 Aggregate JSON carries public state. It does not carry the local pending-event queue. Attach an explicit publisher to an event-enabled repository when you want saves to publish [domain events](/dddart/docs/events/).
 
-See the [server implementation](https://github.com/continuousimagination/dddart/blob/b4aacf0671873e729a1a390dc2bb609b80c723e5/packages/dddart_rest/lib/src/crud_resource.dart), [client implementation](https://github.com/continuousimagination/dddart/blob/b4aacf0671873e729a1a390dc2bb609b80c723e5/packages/dddart_rest_client/lib/src/rest_client.dart), and [runnable REST examples](https://github.com/continuousimagination/dddart/tree/b4aacf0671873e729a1a390dc2bb609b80c723e5/packages/dddart_rest/example).
+See the [server implementation](https://github.com/continuousimagination/dddart/blob/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_rest/lib/src/crud_resource.dart), [client implementation](https://github.com/continuousimagination/dddart/blob/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_rest_client/lib/src/rest_client.dart), and [runnable REST examples](https://github.com/continuousimagination/dddart/tree/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_rest/example).

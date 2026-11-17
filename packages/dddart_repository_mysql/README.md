@@ -1,5 +1,12 @@
 # dddart_repository_mysql
 
+For complete setup, named source files, expected output and cleanup, follow the
+[canonical quickstart](../../docs/quickstarts/mysql/README.md). Other inline Dart snippets below are
+**illustrative fragments** that assume application-specific models and surrounding
+setup; they are not standalone programs. See the [quickstart inventory](../../docs/QUICKSTARTS.md)
+for runnable, browser, service and credential-dependent coverage.
+
+
 ## Typed identity migration
 
 Generated repositories implement `Repository<T, I>` with concrete identity
@@ -62,115 +69,15 @@ MySQL database repository implementation for DDDart aggregate roots with automat
 
 ## Installation
 
-Add to your `pubspec.yaml`:
-
-```yaml
-dependencies:
-  dddart: ^0.9.0
-  dddart_serialization: ^0.9.0
-  dddart_repository_mysql: ^0.9.0
-
-dev_dependencies:
-  build_runner: ^2.4.0
-  dddart_json: ^0.9.0
-```
+DDDart is currently Git-only. Use the [Git installation guide](../../docs/GIT_INSTALLATION.md)
+and the complete dependency setup in the [canonical quickstart](../../docs/quickstarts/mysql/README.md).
+Pin all DDDart dependencies and overrides to the same full commit.
 
 ## Quick Start
 
-### 1. Define Your Domain Model
-
-```dart
-import 'package:dddart/dddart.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
-import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
-
-@Serializable()
-@GenerateMysqlRepository(tableName: 'orders')
-class Order extends AggregateRoot<UuidValue> {
-  Order({
-    required UuidValue id,
-    required this.customerId,
-    required this.totalAmount,
-    required this.items,
-  }) : super(id: id);
-
-  final UuidValue customerId;
-  final Money totalAmount;  // Value object (embedded)
-  final List<OrderItem> items;  // Entities (separate table)
-}
-
-@Serializable()
-class OrderItem {
-  OrderItem({
-    required this.productId,
-    required this.quantity,
-    required this.price,
-  });
-
-  final UuidValue productId;
-  final int quantity;
-  final Money price;  // Value object (embedded)
-}
-
-@Serializable()
-class Money {
-  Money({required this.amount, required this.currency});
-  final double amount;
-  final String currency;
-}
-```
-
-### 2. Generate Repository Code
-
-```bash
-dart run build_runner build
-```
-
-### 3. Use the Repository
-
-```dart
-void main() async {
-  // Create connection
-  final connection = MysqlConnection(
-    host: 'localhost',
-    port: 3306,
-    database: 'myapp',
-    user: 'myapp_user',
-    password: 'secure_password',
-  );
-  await connection.open();
-
-  // Create repository
-  final repository = OrderMysqlRepository(connection);
-
-  // Create tables (idempotent - safe to call multiple times)
-  await repository.createTables();
-
-  // Save an order
-  final order = Order(
-    id: UuidValue.generate(),
-    customerId: UuidValue.generate(),
-    totalAmount: Money(amount: 99.99, currency: 'USD'),
-    items: [
-      OrderItem(
-        productId: UuidValue.generate(),
-        quantity: 2,
-        price: Money(amount: 49.99, currency: 'USD'),
-      ),
-    ],
-  );
-  await repository.save(order);
-
-  // Retrieve the order
-  final retrieved = await repository.getById(order.id);
-  print('Order total: ${retrieved.totalAmount.amount}');
-
-  // Delete the order (cascades to items)
-  await repository.deleteById(order.id);
-
-  await connection.close();
-}
-```
+Follow the [complete mysql persistence workflow](../../docs/quickstarts/mysql/README.md).
+It includes an outside-workspace pubspec, every import/model/part, clean generation
+where required, execution, expected output and cleanup.
 
 ## How It Works
 

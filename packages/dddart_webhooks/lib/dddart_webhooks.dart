@@ -1,42 +1,10 @@
-/// Webhook support for DDDart.
+/// dddart_webhooks: supported DDDart application and extension APIs.
 ///
-/// Provides a framework for receiving, verifying, and processing webhooks
-/// with strongly-typed payloads and verification results.
+/// Complete setup and runnable examples:
+/// https://github.com/continuousimagination/dddart/blob/main/docs/QUICKSTARTS.md
 ///
-/// ## Features
-///
-/// - Generic webhook resource handling
-/// - Pluggable signature verification
-/// - Strongly-typed verification results
-/// - Flexible payload deserialization
-/// - Integration with dddart_http HttpServer
-///
-/// ## Usage
-///
-/// ```dart
-/// import 'package:dddart_webhooks/dddart_webhooks.dart';
-///
-/// // Create a custom verifier
-/// class MyWebhookVerifier extends WebhookVerifier<MyVerificationResult> {
-///   @override
-///   Future<MyVerificationResult> verify(Request request, String body) async {
-///     // Implement verification logic
-///   }
-/// }
-///
-/// // Register webhook with HttpServer
-/// final webhook = WebhookResource<MyPayload, MyVerificationResult>(
-///   path: '/webhooks/my-service',
-///   verifier: MyWebhookVerifier(),
-///   deserializer: (body) => MyPayload.fromJson(jsonDecode(body)),
-///   handler: (payload, verification) async {
-///     // Handle webhook
-///     return Response.ok('Received');
-///   },
-/// );
-///
-/// server.registerWebhook(webhook);
-/// ```
+/// Supported imports and extension contracts:
+/// https://github.com/continuousimagination/dddart/blob/main/docs/PUBLIC_API.md
 library dddart_webhooks;
 
 export 'src/webhook_deserializers.dart';

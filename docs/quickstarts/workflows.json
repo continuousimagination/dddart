@@ -1,0 +1,275 @@
+{
+  "schemaVersion": 1,
+  "revision": "56607ac8d3913b8e896ac03f8ecff58473d62ce2",
+  "sdk": "3.13.7",
+  "workflows": [
+    {
+      "name": "core",
+      "packages": [
+        "dddart"
+      ],
+      "allowedLocalPackages": [
+        "dddart"
+      ],
+      "service": "none",
+      "generation": false,
+      "files": [
+        {
+          "source": "bin/main.dart",
+          "destination": "bin/main.dart"
+        },
+        {
+          "source": "pubspec.yaml.txt",
+          "destination": "pubspec.yaml"
+        }
+      ],
+      "runs": [
+        {
+          "path": "bin/main.dart",
+          "stdout": "Sam: order placed = true\n"
+        }
+      ]
+    },
+    {
+      "name": "json",
+      "packages": [
+        "dddart",
+        "dddart_json",
+        "dddart_serialization"
+      ],
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_json",
+        "dddart_serialization"
+      ],
+      "service": "none",
+      "generation": true,
+      "files": [
+        {
+          "source": "bin/configuration.dart",
+          "destination": "bin/configuration.dart"
+        },
+        {
+          "source": "bin/identity.dart",
+          "destination": "bin/identity.dart"
+        },
+        {
+          "source": "bin/main.dart",
+          "destination": "bin/main.dart"
+        },
+        {
+          "source": "lib/reservation.dart",
+          "destination": "lib/reservation.dart"
+        },
+        {
+          "source": "pubspec.yaml.txt",
+          "destination": "pubspec.yaml"
+        }
+      ],
+      "runs": [
+        {
+          "path": "bin/main.dart",
+          "stdout": "Sam\ntrue\ntrue\n"
+        },
+        {
+          "path": "bin/configuration.dart",
+          "stdout": "Sam\ntrue\nSam\nSam\n"
+        },
+        {
+          "path": "bin/identity.dart",
+          "stdout": "true\nissue.v1\n"
+        }
+      ]
+    },
+    {
+      "name": "sqlite",
+      "packages": [
+        "dddart",
+        "dddart_json",
+        "dddart_serialization",
+        "dddart_repository_sqlite"
+      ],
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_json",
+        "dddart_repository_sql",
+        "dddart_repository_sqlite",
+        "dddart_serialization"
+      ],
+      "service": "none",
+      "generation": true,
+      "files": [
+        {
+          "source": "bin/main.dart",
+          "destination": "bin/main.dart"
+        },
+        {
+          "source": "lib/note.dart",
+          "destination": "lib/note.dart"
+        },
+        {
+          "source": "pubspec.yaml.txt",
+          "destination": "pubspec.yaml"
+        }
+      ],
+      "runs": [
+        {
+          "path": "bin/main.dart",
+          "stdout": "hello: persisted\n"
+        }
+      ]
+    },
+    {
+      "name": "mysql",
+      "packages": [
+        "dddart",
+        "dddart_json",
+        "dddart_serialization",
+        "dddart_repository_mysql"
+      ],
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_json",
+        "dddart_repository_mysql",
+        "dddart_repository_sql",
+        "dddart_serialization"
+      ],
+      "service": "mysql",
+      "generation": true,
+      "files": [
+        {
+          "source": "bin/main.dart",
+          "destination": "bin/main.dart"
+        },
+        {
+          "source": "lib/note.dart",
+          "destination": "lib/note.dart"
+        },
+        {
+          "source": "pubspec.yaml.txt",
+          "destination": "pubspec.yaml"
+        }
+      ],
+      "runs": [
+        {
+          "path": "bin/main.dart",
+          "stdout": "hello: persisted\n"
+        }
+      ]
+    },
+    {
+      "name": "mongodb",
+      "packages": [
+        "dddart",
+        "dddart_json",
+        "dddart_serialization",
+        "dddart_repository_mongodb"
+      ],
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_json",
+        "dddart_repository_mongodb",
+        "dddart_serialization"
+      ],
+      "service": "mongodb",
+      "generation": true,
+      "files": [
+        {
+          "source": "bin/main.dart",
+          "destination": "bin/main.dart"
+        },
+        {
+          "source": "lib/note.dart",
+          "destination": "lib/note.dart"
+        },
+        {
+          "source": "pubspec.yaml.txt",
+          "destination": "pubspec.yaml"
+        }
+      ],
+      "runs": [
+        {
+          "path": "bin/main.dart",
+          "stdout": "hello: persisted\n"
+        }
+      ]
+    },
+    {
+      "name": "dynamodb",
+      "packages": [
+        "dddart",
+        "dddart_json",
+        "dddart_serialization",
+        "dddart_repository_dynamodb"
+      ],
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_json",
+        "dddart_repository_dynamodb",
+        "dddart_serialization"
+      ],
+      "service": "dynamodb",
+      "generation": true,
+      "files": [
+        {
+          "source": "bin/main.dart",
+          "destination": "bin/main.dart"
+        },
+        {
+          "source": "lib/note.dart",
+          "destination": "lib/note.dart"
+        },
+        {
+          "source": "pubspec.yaml.txt",
+          "destination": "pubspec.yaml"
+        }
+      ],
+      "runs": [
+        {
+          "path": "bin/main.dart",
+          "stdout": "hello: persisted\n"
+        }
+      ]
+    },
+    {
+      "name": "rest",
+      "packages": [
+        "dddart",
+        "dddart_json",
+        "dddart_serialization",
+        "dddart_rest",
+        "dddart_repository_rest"
+      ],
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_json",
+        "dddart_repository_rest",
+        "dddart_rest",
+        "dddart_rest_client",
+        "dddart_serialization"
+      ],
+      "service": "none",
+      "generation": true,
+      "files": [
+        {
+          "source": "bin/main.dart",
+          "destination": "bin/main.dart"
+        },
+        {
+          "source": "lib/note.dart",
+          "destination": "lib/note.dart"
+        },
+        {
+          "source": "pubspec.yaml.txt",
+          "destination": "pubspec.yaml"
+        }
+      ],
+      "runs": [
+        {
+          "path": "bin/main.dart",
+          "stdout": "200: public hello\n"
+        }
+      ]
+    }
+  ]
+}

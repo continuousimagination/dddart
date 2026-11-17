@@ -1,7 +1,10 @@
-/// DDDart JSON - JSON serialization support for DDDart objects.
+/// dddart_json: supported DDDart application and extension APIs.
 ///
-/// This library provides JSON serialization capabilities for DDDart aggregate roots
-/// and value objects through generated serializer service classes.
+/// Complete setup and runnable examples:
+/// https://github.com/continuousimagination/dddart/blob/main/docs/quickstarts/json/README.md
+///
+/// Supported imports and extension contracts:
+/// https://github.com/continuousimagination/dddart/blob/main/docs/PUBLIC_API.md
 library dddart_json;
 
 // Export JSON serializer interface

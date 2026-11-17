@@ -5,6 +5,12 @@ section: Connect the pieces
 order: 30
 ---
 
+Code outside an explicitly named complete workflow is an **illustrative fragment**
+that assumes the surrounding application models and setup. Use the
+[complete quickstarts](https://github.com/continuousimagination/dddart/blob/main/docs/QUICKSTARTS.md)
+for copyable manifests, named files, generation commands, expected output and cleanup.
+
+
 An event records something meaningful that happened: an order was placed, a player joined, a document was approved. Those names should work in a product conversation as well as in a Dart class.
 
 DDDart separates three concerns: raising a fact inside an aggregate, accepting its publication, and delivering it to interested consumers. The domain event stays the same across those boundaries. Their timing and guarantees do not.
@@ -98,7 +104,7 @@ EventRegistry orderEvents() => EventRegistry()
   );
 ```
 
-Generated JSON serializers can be registered with `registerSerializer` instead. The generator also supports `@DistributedEvent('order.placed.v1')` to keep the wire key independent of a Dart class rename. See the [event registry guide](https://github.com/continuousimagination/dddart/blob/b4aacf0671873e729a1a390dc2bb609b80c723e5/packages/dddart_events_distributed/README.md) for generated registration setup.
+Generated JSON serializers can be registered with `registerSerializer` instead. The generator also supports `@DistributedEvent('order.placed.v1')` to keep the wire key independent of a Dart class rename. See the [event registry guide](https://github.com/continuousimagination/dddart/blob/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_events_distributed/README.md) for generated registration setup.
 
 For application-defined aggregate identities, supply the same `IdentityCodecRegistry` used by your serializers and repositories. Unknown identity kinds do not receive an implicit runtime-name encoding.
 
@@ -202,4 +208,4 @@ The same service can be injected into [native AppSync/Lambda handlers](/dddart/d
 
 Both supported transports implement `AggregateEventTransport` and use the same `AggregateEventClient` watches and `EventPublisher` integration. The [finite HTTP-only example](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_events_distributed/example/http_polling.dart) runs without an AppSync dependency or AWS setup.
 
-For complete server composition, access rotation, budgets, and lifecycle behavior, read the [detailed distributed-events reference](https://github.com/continuousimagination/dddart/blob/main/docs/DISTRIBUTED_EVENTS.md). The [native invocation example](https://github.com/continuousimagination/dddart/blob/b4aacf0671873e729a1a390dc2bb609b80c723e5/packages/dddart_events_appsync/example/native_invocation.dart) runs locally without deploying AWS resources.
+For complete server composition, access rotation, budgets, and lifecycle behavior, read the [detailed distributed-events reference](https://github.com/continuousimagination/dddart/blob/main/docs/DISTRIBUTED_EVENTS.md). The [native invocation example](https://github.com/continuousimagination/dddart/blob/56607ac8d3913b8e896ac03f8ecff58473d62ce2/packages/dddart_events_appsync/example/native_invocation.dart) runs locally without deploying AWS resources.

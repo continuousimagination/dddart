@@ -7,25 +7,32 @@ order: 20
 
 ## Install the current pre-release
 
-The dddart packages are currently installed from Git. The examples in this guide use the same immutable revision, `b4aacf0671873e729a1a390dc2bb609b80c723e5`, so they do not silently change when the repository advances. Core, generation, and example checks for these guides used Dart 3.9.4. Flutter applications use their bundled Dart SDK.
+The dddart packages are currently installed from Git. The examples in this guide use the same immutable revision, `56607ac8d3913b8e896ac03f8ecff58473d62ce2`, so they do not silently change when the repository advances. Core, generation, and example checks for these guides used Dart 3.13.7. Flutter applications use their bundled Dart SDK.
 
 Create a small Dart application:
 
 ```bash
-dart create -t console dddart_starter
-cd dddart_starter
+mkdir dddart_core_quickstart
+cd dddart_core_quickstart
+mkdir bin
 ```
 
-Add this entry to your `pubspec.yaml` under `dependencies`:
+Save this complete manifest as `pubspec.yaml`:
 
+<!-- dddart-source: docs/quickstarts/core/pubspec.yaml.txt -->
 ```yaml
+name: dddart_core_quickstart
+publish_to: none
+environment:
+  sdk: '>=3.13.7 <4.0.0'
 dependencies:
   dddart:
     git:
       url: https://github.com/continuousimagination/dddart.git
-      ref: b4aacf0671873e729a1a390dc2bb609b80c723e5
+      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
       path: packages/dddart
 ```
+<!-- /dddart-source -->
 
 Then resolve the dependency:
 
@@ -37,8 +44,9 @@ Use `flutter pub get` in a Flutter project. Commit your application's `pubspec.l
 
 ## Model one useful action
 
-Save the following complete program as `bin/orders.dart`. It defines an order, records the fact that it was placed, and stores the order through a repository interface.
+Save the following complete program as `bin/main.dart`. It defines an order, records the fact that it was placed, and stores the order through a repository interface.
 
+<!-- dddart-source: docs/quickstarts/core/bin/main.dart -->
 ```dart
 import 'package:dddart/dddart.dart';
 
@@ -83,11 +91,12 @@ Future<void> main() async {
   await bus.close();
 }
 ```
+<!-- /dddart-source -->
 
 Run it:
 
 ```bash
-dart run bin/orders.dart
+dart run bin/main.dart
 ```
 
 The program prints `Sam: order placed = true`. Calling `place()` twice fails the domain rule. The event has the same typed aggregate identity used by the repository.
@@ -113,14 +122,14 @@ For JSON generation, add direct Git entries for `dddart_serialization` and `ddda
 
 Some adapters still declare sibling dddart dependencies as hosted packages. Until publication, those need same-revision Git `dependency_overrides` in the **consuming application's root pubspec**. Adding a direct Git dependency alone does not change a transitive hosted dependency's source.
 
-The [complete override fragment](/dddart/downloads/git-dependencies.yaml) lists all 17 dddart packages pinned to the revision used here. Copy its `dependency_overrides` section into your root pubspec, and add the packages your own code imports under `dependencies` as shown in the fragment. The fragment is configuration to merge into your existing pubspec, not a complete application manifest. Keep all dddart refs aligned when updating.
+The [complete override fragment](/dddart/downloads/git-dependencies.yaml) lists all 18 dddart packages pinned to the revision used here. Copy its `dependency_overrides` section into your root pubspec, and add the packages your own code imports under `dependencies` as shown in the fragment. The fragment is configuration to merge into your existing pubspec, not a complete application manifest. Keep all dddart refs aligned when updating.
 
 For working inside this repository instead, use the root Dart workspace:
 
 ```bash
 git clone https://github.com/continuousimagination/dddart.git
 cd dddart
-git checkout b4aacf0671873e729a1a390dc2bb609b80c723e5
+git checkout 56607ac8d3913b8e896ac03f8ecff58473d62ce2
 dart pub get
 ```
 
