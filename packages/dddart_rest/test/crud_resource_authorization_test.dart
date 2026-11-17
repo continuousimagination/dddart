@@ -413,7 +413,8 @@ void main() {
         CrudOperation.query: AccessPolicy.custom(
           Policy(
             (context) => const AuthorizationResult.allow(
-                scope: UnrestrictedQueryScope()),
+              scope: UnrestrictedQueryScope(),
+            ),
           ),
         ),
       },
