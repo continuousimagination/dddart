@@ -15,12 +15,12 @@ class AggregateEventWatch {
   }
   final AggregateEventClient _client;
   final _WatchState _state;
-  final _events = StreamController<DomainEvent<Identity>>.broadcast();
+  final _events = StreamController<DomainEvent<Identity, Identity>>.broadcast();
   final _signals = StreamController<EventWatchStatus>.broadcast();
   bool _closed = false;
 
   /// Events from this logical aggregate only, including retained recovery.
-  Stream<DomainEvent<Identity>> get events => _events.stream;
+  Stream<DomainEvent<Identity, Identity>> get events => _events.stream;
 
   /// Access revocation, explicit resync requirements and lifecycle transitions.
   Stream<EventWatchStatus> get signals => _signals.stream;
@@ -52,7 +52,7 @@ class AggregateEventClient {
   AggregateEventClient({
     required this.transport,
     required this.registry,
-    required String Function(DomainEvent<Identity>) aggregateKind,
+    required String Function(DomainEvent<Identity, Identity>) aggregateKind,
     Duration? interval,
     this.maxWatches = 100,
     this.maxSeenPerWatch = 4096,
@@ -453,5 +453,5 @@ class _WatchState {
   EventWatchStatus status = EventWatchStatus.connecting;
   final ready = Completer<void>();
   final Set<AggregateEventWatch> leases = {};
-  final seen = <UuidValue>{};
+  final seen = <Identity>{};
 }

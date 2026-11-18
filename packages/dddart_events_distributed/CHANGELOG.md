@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+
+- Breaking: use independently typed DomainEvent<A, E>/StoredEvent<A, E>, tagged event IDs and version 2 envelopes. Support custom identities in registries, history, replay deduplication and channel rotation. Version 1 records require migration; see the shared distributed event guide.
 - Remove the legacy timestamp-based EventBusClient, EventBusServer,
   EventHttpEndpoints, EventRepository and InMemoryEventRepository APIs, exports,
   support code and obsolete example sketches. No compatibility aliases remain.

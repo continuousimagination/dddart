@@ -2,22 +2,22 @@ import 'package:dddart/dddart.dart';
 import 'package:test/test.dart';
 
 // Concrete test event for testing DomainEvent base class
-class TestDomainEvent extends DomainEvent<UuidValue> {
+class TestDomainEvent extends DomainEvent<UuidValue, UuidValue> {
   TestDomainEvent({
     required super.aggregateId,
     required this.data,
-    super.eventId,
+    UuidValue? eventId,
     super.occurredAt,
     super.context,
-  });
+  }) : super(eventId: eventId ?? UuidValue.generate());
   final String data;
 }
 
-class AnotherTestEvent extends DomainEvent<UuidValue> {
+class AnotherTestEvent extends DomainEvent<UuidValue, UuidValue> {
   AnotherTestEvent({
     required super.aggregateId,
     required this.value,
-  });
+  }) : super(eventId: UuidValue.generate());
   final int value;
 }
 
@@ -34,7 +34,7 @@ void main() {
         expect(event.aggregateId, equals(aggregateId));
       });
 
-      test('auto-generates eventId when not provided', () {
+      test('concrete UUID event generates its own ID when not provided', () {
         final event = TestDomainEvent(
           aggregateId: UuidValue.generate(),
           data: 'test data',

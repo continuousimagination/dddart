@@ -3,37 +3,37 @@ import 'package:dddart/dddart.dart';
 import 'package:test/test.dart';
 
 // Test domain events
-class TestEvent extends DomainEvent<UuidValue> {
+class TestEvent extends DomainEvent<UuidValue, UuidValue> {
   TestEvent({
     required super.aggregateId,
     required this.message,
-  });
+  }) : super(eventId: UuidValue.generate());
   final String message;
 }
 
-class OrderCreatedEvent extends DomainEvent<UuidValue> {
+class OrderCreatedEvent extends DomainEvent<UuidValue, UuidValue> {
   OrderCreatedEvent({
     required UuidValue orderId,
     required this.customerId,
     required this.itemCount,
-  }) : super(aggregateId: orderId);
+  }) : super(eventId: UuidValue.generate(), aggregateId: orderId);
   final String customerId;
   final int itemCount;
 }
 
-class OrderConfirmedEvent extends DomainEvent<UuidValue> {
+class OrderConfirmedEvent extends DomainEvent<UuidValue, UuidValue> {
   OrderConfirmedEvent({
     required UuidValue orderId,
     required this.confirmedAt,
-  }) : super(aggregateId: orderId);
+  }) : super(eventId: UuidValue.generate(), aggregateId: orderId);
   final DateTime confirmedAt;
 }
 
-class PaymentProcessedEvent extends DomainEvent<UuidValue> {
+class PaymentProcessedEvent extends DomainEvent<UuidValue, UuidValue> {
   PaymentProcessedEvent({
     required UuidValue orderId,
     required this.amount,
-  }) : super(aggregateId: orderId);
+  }) : super(eventId: UuidValue.generate(), aggregateId: orderId);
   final double amount;
 }
 
@@ -206,12 +206,14 @@ void main() {
 
     test('Complete event flow from aggregate to multiple listeners', () async {
       final order = TestOrder(customerId: 'customer-123');
-      final listener1Events = <DomainEvent<UuidValue>>[];
-      final listener2Events = <DomainEvent<UuidValue>>[];
-      final listener3Events = <DomainEvent<UuidValue>>[];
+      final listener1Events = <DomainEvent<UuidValue, UuidValue>>[];
+      final listener2Events = <DomainEvent<UuidValue, UuidValue>>[];
+      final listener3Events = <DomainEvent<UuidValue, UuidValue>>[];
 
       // Set up multiple listeners
-      eventBus.on<DomainEvent<UuidValue>>().listen(listener1Events.add);
+      eventBus
+          .on<DomainEvent<UuidValue, UuidValue>>()
+          .listen(listener1Events.add);
       eventBus.on<OrderCreatedEvent>().listen(listener2Events.add);
       eventBus.on<OrderConfirmedEvent>().listen(listener3Events.add);
 
@@ -244,10 +246,10 @@ void main() {
 
     test('Event ordering is preserved across multiple operations', () async {
       final order = TestOrder(customerId: 'customer-456');
-      final receivedEvents = <DomainEvent<UuidValue>>[];
+      final receivedEvents = <DomainEvent<UuidValue, UuidValue>>[];
       final eventTypes = <String>[];
 
-      eventBus.on<DomainEvent<UuidValue>>().listen((event) {
+      eventBus.on<DomainEvent<UuidValue, UuidValue>>().listen((event) {
         receivedEvents.add(event);
         eventTypes.add(event.runtimeType.toString());
       });
@@ -282,9 +284,9 @@ void main() {
       final order1 = TestOrder(customerId: 'customer-1');
       final order2 = TestOrder(customerId: 'customer-2');
       final order3 = TestOrder(customerId: 'customer-3');
-      final allEvents = <DomainEvent<UuidValue>>[];
+      final allEvents = <DomainEvent<UuidValue, UuidValue>>[];
 
-      eventBus.on<DomainEvent<UuidValue>>().listen(allEvents.add);
+      eventBus.on<DomainEvent<UuidValue, UuidValue>>().listen(allEvents.add);
 
       // Multiple aggregates perform operations
       order1.create(2);
@@ -348,13 +350,13 @@ void main() {
     test('Complex event flow with multiple event types and listeners',
         () async {
       final order = TestOrder(customerId: 'customer-complex');
-      final allEvents = <DomainEvent<UuidValue>>[];
+      final allEvents = <DomainEvent<UuidValue, UuidValue>>[];
       final createdEvents = <OrderCreatedEvent>[];
       final confirmedEvents = <OrderConfirmedEvent>[];
       final paymentEvents = <PaymentProcessedEvent>[];
 
       // Set up type-specific listeners
-      eventBus.on<DomainEvent<UuidValue>>().listen(allEvents.add);
+      eventBus.on<DomainEvent<UuidValue, UuidValue>>().listen(allEvents.add);
       eventBus.on<OrderCreatedEvent>().listen(createdEvents.add);
       eventBus.on<OrderConfirmedEvent>().listen(confirmedEvents.add);
       eventBus.on<PaymentProcessedEvent>().listen(paymentEvents.add);

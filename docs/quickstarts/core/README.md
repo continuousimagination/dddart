@@ -24,8 +24,9 @@ Save this file as `bin/main.dart`:
 ```dart
 import 'package:dddart/dddart.dart';
 
-class OrderPlaced extends DomainEvent<UuidValue> {
-  OrderPlaced({required super.aggregateId});
+class OrderPlaced extends DomainEvent<UuidValue, UuidValue> {
+  OrderPlaced({required super.aggregateId})
+      : super(eventId: UuidValue.generate());
 }
 
 class Order extends AggregateRoot<UuidValue> {

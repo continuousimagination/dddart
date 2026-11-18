@@ -63,7 +63,7 @@ void main() {
       }),
     );
     addTearDown(connection.dispose);
-    final published = <DomainEvent<Identity>>[];
+    final published = <DomainEvent<Identity, Identity>>[];
     final repository = TestUserRestRepository(
       connection,
       eventPublisher: _Publisher((event) async {
@@ -111,13 +111,15 @@ void main() {
   });
 }
 
-class _Changed extends DomainEvent<UuidValue> {
-  _Changed(UuidValue id) : super(aggregateId: id);
+class _Changed extends DomainEvent<UuidValue, UuidValue> {
+  _Changed(UuidValue id)
+      : super(eventId: UuidValue.generate(), aggregateId: id);
 }
 
 class _Publisher implements EventPublisher {
   _Publisher(this.callback);
-  final Future<bool> Function(DomainEvent<Identity>) callback;
+  final Future<bool> Function(DomainEvent<Identity, Identity>) callback;
   @override
-  Future<bool> publish(DomainEvent<Identity> event) => callback(event);
+  Future<bool> publish(DomainEvent<Identity, Identity> event) =>
+      callback(event);
 }

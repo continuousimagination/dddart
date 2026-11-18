@@ -1,25 +1,29 @@
 import 'package:dddart/dddart.dart';
 import 'package:dddart_events_appsync/dddart_events_appsync.dart';
 import 'package:dddart_events_distributed/dddart_events_distributed.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
 
-class Changed extends DomainEvent<UuidValue> {
+class Changed extends DomainEvent<UuidValue, ExternalEventId> {
   Changed({
     required super.aggregateId,
     this.label = 'changed',
-    super.eventId,
+    ExternalEventId? eventId,
     super.occurredAt,
     super.context,
-  });
+  }) : super(
+          eventId:
+              eventId ?? ExternalEventId('evt_${UuidValue.generate().uuid}'),
+        );
   factory Changed.fromJson(Map<String, dynamic> json) => Changed(
         aggregateId: UuidValue.fromString(json['aggregateId'] as String),
-        eventId: UuidValue.fromString(json['eventId'] as String),
+        eventId: ExternalEventId(json['eventId'] as String),
         occurredAt: DateTime.parse(json['occurredAt'] as String),
         context: Map<String, dynamic>.from(json['context'] as Map),
         label: json['label'] as String,
       );
   final String label;
   Map<String, dynamic> toJson() => {
-        'eventId': eventId.uuid,
+        'eventId': eventId.value,
         'aggregateId': aggregateId.uuid,
         'occurredAt': occurredAt.toIso8601String(),
         'context': context,
@@ -53,9 +57,17 @@ class EventFixture {
       },
     );
   }
-  final registry = EventRegistry();
-  final history = InMemoryAggregateEventRepository();
-  final channels = InMemoryEventChannelRepository();
+  final registry = EventRegistry(
+    identityCodecs: IdentityCodecRegistry()
+      ..register<ExternalEventId>(
+        'external-event',
+        const ExternalEventIdCodec(),
+      ),
+  );
+  late final history =
+      InMemoryAggregateEventRepository(identityCodecs: registry.identityCodecs);
+  late final channels =
+      InMemoryEventChannelRepository(identityCodecs: registry.identityCodecs);
   final policy = TestPolicy();
   late final AggregateEventService<Map<String, dynamic>> service;
   final broadcasts = <(EventChannel, RecordedEvent)>[];
@@ -106,11 +118,11 @@ class EventFixture {
   EventEnvelope envelope(
     AggregateReference<Identity> reference, {
     String label = 'changed',
-    UuidValue? id,
+    ExternalEventId? id,
   }) =>
       EventEnvelope(
         aggregate: reference,
-        event: StoredEvent<Identity>.fromDomainEvent(
+        event: StoredEvent<Identity, Identity>.fromDomainEvent(
           Changed(
             aggregateId: reference.id as UuidValue,
             label: label,
@@ -154,4 +166,23 @@ class TestPolicy implements AggregateEventPolicy<Map<String, dynamic>> {
   ) async =>
       principal.userId == 'alice' &&
       await canSubscribe(principal, envelope.aggregate);
+}
+
+class ExternalEventId extends Identity {
+  const ExternalEventId(this.value);
+  final String value;
+  @override
+  List<Object?> get props => [value];
+}
+
+class ExternalEventIdCodec implements IdentityCodec<ExternalEventId> {
+  const ExternalEventIdCodec();
+  @override
+  Object toJson(ExternalEventId id) => id.value;
+  @override
+  ExternalEventId fromJson(Object? value) => ExternalEventId(value! as String);
+  @override
+  String toKey(ExternalEventId id) => id.value;
+  @override
+  ExternalEventId fromKey(String value) => ExternalEventId(value);
 }

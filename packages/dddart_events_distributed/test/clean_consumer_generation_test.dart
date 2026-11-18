@@ -56,8 +56,8 @@ class RemoteCodec implements IdentityCodec<RemoteId> {
 }
 @Serializable()
 @DistributedEvent('remote.issue.opened.v1')
-class RemoteIssueOpened extends DomainEvent<RemoteId> {
-  RemoteIssueOpened({required super.aggregateId,required this.title,super.eventId,super.occurredAt,super.context});
+class RemoteIssueOpened extends DomainEvent<RemoteId, RemoteId> {
+  RemoteIssueOpened({required super.aggregateId,required this.title,required super.eventId,super.occurredAt,super.context});
   final String title;
 }
 '''
@@ -74,9 +74,9 @@ import 'package:clean_event_consumer/events.dart';
 Future<void> main() async {
   final identities=IdentityCodecRegistry()..register<RemoteId>('remote',RemoteCodec());
   final registry=createGeneratedEventRegistry(identityCodecs:identities);
-  final event=RemoteIssueOpened(aggregateId:const RemoteId('Repo/IssueA %2F, café'),title:'created',context:{'tenantId':'one'});
-  final stored=StoredEvent<RemoteId>.fromDomainEvent(event,registry:registry);
-  final restored=StoredEvent<RemoteId>.fromJson(stored.toJson(),identityCodecs:identities).restore(registry) as RemoteIssueOpened;
+  final event=RemoteIssueOpened(aggregateId:const RemoteId('Repo/IssueA %2F, café'),title:'created',eventId:const RemoteId('evt_0042'),context:{'tenantId':'one'});
+  final stored=StoredEvent<RemoteId, RemoteId>.fromDomainEvent(event,registry:registry);
+  final restored=StoredEvent<RemoteId, RemoteId>.fromJson(stored.toJson(),identityCodecs:identities).restore(registry) as RemoteIssueOpened;
   if(restored.aggregateId!=event.aggregateId || restored.eventId!=event.eventId || restored.title!=event.title || restored.context['tenantId']!='one' || stored.eventType!='remote.issue.opened.v1') throw StateError('Lost event data');
   final AggregateEventTransport transport=HttpAggregateEventTransport(
     baseUrl:Uri.parse('http://127.0.0.1:1/events'),wire:AggregateEventWire(identities),tokenProvider:() async => null);
@@ -112,7 +112,7 @@ Future<void> main() async {
 import 'package:dddart/dddart.dart';
 import 'events.dart';
 void wrongIdentity() {
-  RemoteIssueOpened(aggregateId:UuidValue.generate(),title:'wrong');
+  RemoteIssueOpened(aggregateId:UuidValue.generate(),eventId:UuidValue.generate(),title:'wrong');
 }
 ''');
       final negative =
@@ -126,8 +126,8 @@ void wrongIdentity() {
       input.writeAsStringSync('''
 $source
 @Serializable()
-class ErasedEvent extends DomainEvent<Identity> {
-  ErasedEvent({required super.aggregateId,super.eventId,super.occurredAt,super.context});
+class ErasedEvent extends DomainEvent<RemoteId, Identity> {
+  ErasedEvent({required super.aggregateId,UuidValue? eventId,super.occurredAt,super.context}) : super(eventId: eventId ?? UuidValue.generate());
 }
 ''');
       final erased = await _dart(
@@ -140,8 +140,8 @@ class ErasedEvent extends DomainEvent<Identity> {
 $source
 @Serializable()
 @DistributedEvent('remote.issue.opened.v1')
-class OtherEvent extends DomainEvent<UuidValue> {
-  OtherEvent({required super.aggregateId,super.eventId,super.occurredAt,super.context});
+class OtherEvent extends DomainEvent<UuidValue, UuidValue> {
+  OtherEvent({required super.aggregateId,UuidValue? eventId,super.occurredAt,super.context}) : super(eventId: eventId ?? UuidValue.generate());
 }
 ''');
       final duplicate = await _dart(

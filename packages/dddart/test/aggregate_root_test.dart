@@ -15,14 +15,14 @@ class TestAggregateRoot extends AggregateRoot<UuidValue> {
 }
 
 // Test domain event for testing event collection
-class TestDomainEvent extends DomainEvent<UuidValue> {
+class TestDomainEvent extends DomainEvent<UuidValue, UuidValue> {
   TestDomainEvent({
     required super.aggregateId,
     required this.data,
-    super.eventId,
+    UuidValue? eventId,
     super.occurredAt,
     super.context,
-  });
+  }) : super(eventId: eventId ?? UuidValue.generate());
   final String data;
 }
 

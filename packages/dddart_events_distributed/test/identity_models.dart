@@ -91,37 +91,52 @@ IdentityCodecRegistry issueIdentityCodecs() => IdentityCodecRegistry()
 
 @Serializable()
 @DistributedEvent('issue.native.opened.v1')
-class NativeIssueOpened extends DomainEvent<NativeId> {
+class NativeIssueOpened extends DomainEvent<NativeId, UuidValue> {
   NativeIssueOpened({
     required super.aggregateId,
     required this.title,
-    super.eventId,
+    UuidValue? eventId,
     super.occurredAt,
     super.context,
-  });
+  }) : super(eventId: eventId ?? UuidValue.generate());
   final String title;
 }
 
 @Serializable()
 @DistributedEvent('issue.scoped.opened.v1')
-class ScopedIssueOpened extends DomainEvent<ScopedId> {
+class ScopedIssueOpened extends DomainEvent<ScopedId, UuidValue> {
   ScopedIssueOpened({
     required super.aggregateId,
     required this.title,
-    super.eventId,
+    UuidValue? eventId,
     super.occurredAt,
     super.context,
-  });
+  }) : super(eventId: eventId ?? UuidValue.generate());
   final String title;
 }
 
 @Serializable()
 @DistributedEvent('uuid.changed.v1')
-class StockChanged extends DomainEvent<UuidValue> {
+class StockChanged extends DomainEvent<UuidValue, UuidValue> {
   StockChanged({
     required super.aggregateId,
-    super.eventId,
+    UuidValue? eventId,
+    super.occurredAt,
+    super.context,
+  }) : super(eventId: eventId ?? UuidValue.generate());
+}
+
+/// Imported occurrence whose source and sequence are assigned externally.
+@Serializable()
+@DistributedEvent('issue.imported.changed.v1')
+class ImportedIssueChanged extends DomainEvent<NativeId, ScopedId> {
+  ImportedIssueChanged({
+    required super.aggregateId,
+    required super.eventId,
+    required this.title,
     super.occurredAt,
     super.context,
   });
+
+  final String title;
 }

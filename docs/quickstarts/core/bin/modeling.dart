@@ -16,14 +16,14 @@ class SeatCount extends Value {
   List<Object?> get props => [value];
 }
 
-class ReservationConfirmed extends DomainEvent<UuidValue> {
+class ReservationConfirmed extends DomainEvent<UuidValue, UuidValue> {
   ReservationConfirmed({
     required super.aggregateId,
     required this.guestName,
-    super.eventId,
+    UuidValue? eventId,
     super.occurredAt,
     super.context,
-  });
+  }) : super(eventId: eventId ?? UuidValue.generate());
 
   final String guestName;
 }

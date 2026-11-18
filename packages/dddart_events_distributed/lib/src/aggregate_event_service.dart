@@ -81,7 +81,7 @@ abstract interface class EventChannelRepository {
   /// Rotates once for an occurrence, rejecting conflicting trigger-ID reuse.
   Future<EventChannelRotation> rotate(
     AggregateReference<Identity> aggregate,
-    UuidValue triggerId,
+    Identity triggerId,
   );
 }
 
@@ -94,7 +94,7 @@ class InMemoryEventChannelRepository implements EventChannelRepository {
   /// Explicit scoped identity codecs.
   final IdentityCodecRegistry identityCodecs;
   final Map<String, EventChannel> _channels = {};
-  final Map<UuidValue, EventChannelRotation> _rotations = {};
+  final Map<Identity, EventChannelRotation> _rotations = {};
 
   @override
   Future<EventChannel> resolve(AggregateReference<Identity> aggregate) async =>
@@ -114,7 +114,7 @@ class InMemoryEventChannelRepository implements EventChannelRepository {
   @override
   Future<EventChannelRotation> rotate(
     AggregateReference<Identity> aggregate,
-    UuidValue triggerId,
+    Identity triggerId,
   ) async {
     final previous = _rotations[triggerId];
     if (previous != null) {
@@ -182,7 +182,7 @@ class AggregateEventService<C> {
   final EventBus? localEventBus;
 
   /// Application processing awaited within the invocation; handlers tolerate duplicates.
-  final Future<void> Function(DomainEvent<Identity>)? onEvent;
+  final Future<void> Function(DomainEvent<Identity, Identity>)? onEvent;
 
   /// Optional live transport; must complete before the invocation returns.
   final Future<void> Function(EventChannel, RecordedEvent)? broadcast;
@@ -191,7 +191,7 @@ class AggregateEventService<C> {
   final Future<void> Function(EventChannel)? refresh;
 
   /// Explicit registration of access-changing event kinds; no field fingerprint.
-  final bool Function(DomainEvent<Identity>)? rotatesAccess;
+  final bool Function(DomainEvent<Identity, Identity>)? rotatesAccess;
 
   /// Operational logger.
   final Logger logger;
@@ -267,7 +267,7 @@ class EnvelopeEventPublisher implements EventPublisher {
   /// Adapts domain events to a separate explicit publication contract.
   EnvelopeEventPublisher({
     required EventRegistry registry,
-    required String Function(DomainEvent<Identity>) aggregateKind,
+    required String Function(DomainEvent<Identity, Identity>) aggregateKind,
     required Future<void> Function(EventEnvelope) send,
     EventRetryPolicy? policy,
     Logger? logger,
@@ -281,7 +281,7 @@ class EnvelopeEventPublisher implements EventPublisher {
             kind: aggregateKind(event),
             id: event.aggregateId,
           ),
-          event: StoredEvent<Identity>.fromDomainEvent(
+          event: StoredEvent<Identity, Identity>.fromDomainEvent(
             event,
             registry: registry,
           ),
@@ -291,7 +291,7 @@ class EnvelopeEventPublisher implements EventPublisher {
   }
   late final RetryingEventPublisher _publisher;
   @override
-  Future<bool> publish(DomainEvent<Identity> event) =>
+  Future<bool> publish(DomainEvent<Identity, Identity> event) =>
       _publisher.publish(event);
 }
 

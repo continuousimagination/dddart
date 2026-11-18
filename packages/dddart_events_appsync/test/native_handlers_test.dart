@@ -205,7 +205,7 @@ void main() {
     expect(output[0]['id'], 'aws-0');
     expect(
       output[0]['payload']['record']['envelope']['event']['id'],
-      envelope.id.uuid,
+      fixture.wire.identities.toTaggedJson(envelope.id),
     );
     expect(output[1], {'id': 'aws-1', 'error': 'FORBIDDEN'});
     expect((await fixture.history.head(reference)).position, 1);

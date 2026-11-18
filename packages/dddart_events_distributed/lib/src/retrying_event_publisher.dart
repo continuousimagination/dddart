@@ -64,14 +64,14 @@ class EventRetryPolicy {
 /// Retries transient publication failures and logs final failure in one place.
 ///
 /// The send callback must complete only after durable acceptance. It preserves the
-/// supplied event UUID and reject conflicting retries. A timeout bounds waiting,
+/// supplied event identity and reject conflicting retries. A timeout bounds waiting,
 /// not remote execution: transports must cancel their own requests when possible,
 /// and late/uncertain acceptance must remain safe to retry with the same UUID.
 /// No unbounded background worker or consumer-processing acknowledgment is used.
 class RetryingEventPublisher implements EventPublisher {
   /// Configures a transport callback and shared retry/logging policy.
   RetryingEventPublisher({
-    required Future<void> Function(DomainEvent<Identity>) send,
+    required Future<void> Function(DomainEvent<Identity, Identity>) send,
     EventRetryPolicy? policy,
     Logger? logger,
     Future<void> Function(Duration)? delay,
@@ -82,7 +82,7 @@ class RetryingEventPublisher implements EventPublisher {
         _delay = delay ?? Future<void>.delayed,
         _random = random ?? Random();
 
-  final Future<void> Function(DomainEvent<Identity>) _send;
+  final Future<void> Function(DomainEvent<Identity, Identity>) _send;
   final Future<void> Function(Duration) _delay;
   final Random _random;
 
@@ -93,7 +93,7 @@ class RetryingEventPublisher implements EventPublisher {
   final Logger logger;
 
   @override
-  Future<bool> publish(DomainEvent<Identity> event) async {
+  Future<bool> publish(DomainEvent<Identity, Identity> event) async {
     final watch = Stopwatch()..start();
     var backoff = policy.initialDelay;
     for (var attempt = 1; attempt <= policy.maxAttempts; attempt++) {
@@ -163,7 +163,7 @@ class RetryingEventPublisher implements EventPublisher {
               error.type == RepositoryExceptionType.timeout));
 
   void _failed(
-    DomainEvent<Identity> event,
+    DomainEvent<Identity, Identity> event,
     int attempts,
     Object error, [
     StackTrace? stackTrace,

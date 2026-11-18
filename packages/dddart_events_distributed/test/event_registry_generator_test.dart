@@ -21,7 +21,8 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 100));
     });
 
-    test('should scan for @Serializable DomainEvent<UuidValue> subclasses',
+    test(
+        'should scan for @Serializable DomainEvent<UuidValue, UuidValue> subclasses',
         () async {
       final library = await resolveSource(
         '''
@@ -31,11 +32,11 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 @Serializable()
-class UserCreatedEvent extends DomainEvent<UuidValue> {
+class UserCreatedEvent extends DomainEvent<UuidValue, UuidValue> {
   UserCreatedEvent({
     required super.aggregateId,
     required this.email,
-  });
+  }) : super(eventId: UuidValue.generate());
   
   final String email;
   
@@ -48,11 +49,11 @@ class UserCreatedEvent extends DomainEvent<UuidValue> {
 }
 
 @Serializable()
-class OrderPlacedEvent extends DomainEvent<UuidValue> {
+class OrderPlacedEvent extends DomainEvent<UuidValue, UuidValue> {
   OrderPlacedEvent({
     required super.aggregateId,
     required this.amount,
-  });
+  }) : super(eventId: UuidValue.generate());
   
   final double amount;
   
@@ -95,8 +96,8 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 @Serializable()
-class TestEvent extends DomainEvent<UuidValue> {
-  TestEvent({required super.aggregateId});
+class TestEvent extends DomainEvent<UuidValue, UuidValue> {
+  TestEvent({required super.aggregateId}) : super(eventId: UuidValue.generate());
   
   static TestEvent fromJson(Map<String, dynamic> json) {
     return TestEvent(
@@ -136,8 +137,8 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 @Serializable()
-class EventA extends DomainEvent<UuidValue> {
-  EventA({required super.aggregateId});
+class EventA extends DomainEvent<UuidValue, UuidValue> {
+  EventA({required super.aggregateId}) : super(eventId: UuidValue.generate());
   static EventA fromJson(Map<String, dynamic> json) {
     return EventA(
       aggregateId: UuidValue.fromString(json['aggregateId'] as String),
@@ -146,8 +147,8 @@ class EventA extends DomainEvent<UuidValue> {
 }
 
 @Serializable()
-class EventB extends DomainEvent<UuidValue> {
-  EventB({required super.aggregateId});
+class EventB extends DomainEvent<UuidValue, UuidValue> {
+  EventB({required super.aggregateId}) : super(eventId: UuidValue.generate());
   static EventB fromJson(Map<String, dynamic> json) {
     return EventB(
       aggregateId: UuidValue.fromString(json['aggregateId'] as String),
@@ -156,8 +157,8 @@ class EventB extends DomainEvent<UuidValue> {
 }
 
 @Serializable()
-class EventC extends DomainEvent<UuidValue> {
-  EventC({required super.aggregateId});
+class EventC extends DomainEvent<UuidValue, UuidValue> {
+  EventC({required super.aggregateId}) : super(eventId: UuidValue.generate());
   static EventC fromJson(Map<String, dynamic> json) {
     return EventC(
       aggregateId: UuidValue.fromString(json['aggregateId'] as String),
@@ -183,7 +184,7 @@ class EventC extends DomainEvent<UuidValue> {
     });
 
     test(
-        'should ignore @Serializable classes that do not extend DomainEvent<UuidValue>',
+        'should ignore @Serializable classes that do not extend DomainEvent<UuidValue, UuidValue>',
         () async {
       final library = await resolveSource(
         '''
@@ -199,8 +200,8 @@ class NotAnEvent {
 }
 
 @Serializable()
-class MyEvent extends DomainEvent<UuidValue> {
-  MyEvent({required super.aggregateId});
+class MyEvent extends DomainEvent<UuidValue, UuidValue> {
+  MyEvent({required super.aggregateId}) : super(eventId: UuidValue.generate());
   static MyEvent fromJson(Map<String, dynamic> json) {
     return MyEvent(
       aggregateId: UuidValue.fromString(json['aggregateId'] as String),
@@ -236,8 +237,8 @@ class NotAnEvent {
   final String value;
 }
 
-class MyEvent extends DomainEvent<UuidValue> {
-  MyEvent({required super.aggregateId});
+class MyEvent extends DomainEvent<UuidValue, UuidValue> {
+  MyEvent({required super.aggregateId}) : super(eventId: UuidValue.generate());
 }
 ''',
         (resolver) async => (await resolver.findLibraryByName('test'))!,
@@ -260,8 +261,8 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 @Serializable()
-class TestEvent extends DomainEvent<UuidValue> {
-  TestEvent({required super.aggregateId});
+class TestEvent extends DomainEvent<UuidValue, UuidValue> {
+  TestEvent({required super.aggregateId}) : super(eventId: UuidValue.generate());
   static TestEvent fromJson(Map<String, dynamic> json) {
     return TestEvent(
       aggregateId: UuidValue.fromString(json['aggregateId'] as String),
@@ -295,8 +296,8 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 @Serializable()
-class ZebraEvent extends DomainEvent<UuidValue> {
-  ZebraEvent({required super.aggregateId});
+class ZebraEvent extends DomainEvent<UuidValue, UuidValue> {
+  ZebraEvent({required super.aggregateId}) : super(eventId: UuidValue.generate());
   static ZebraEvent fromJson(Map<String, dynamic> json) {
     return ZebraEvent(
       aggregateId: UuidValue.fromString(json['aggregateId'] as String),
@@ -305,8 +306,8 @@ class ZebraEvent extends DomainEvent<UuidValue> {
 }
 
 @Serializable()
-class AppleEvent extends DomainEvent<UuidValue> {
-  AppleEvent({required super.aggregateId});
+class AppleEvent extends DomainEvent<UuidValue, UuidValue> {
+  AppleEvent({required super.aggregateId}) : super(eventId: UuidValue.generate());
   static AppleEvent fromJson(Map<String, dynamic> json) {
     return AppleEvent(
       aggregateId: UuidValue.fromString(json['aggregateId'] as String),
@@ -315,8 +316,8 @@ class AppleEvent extends DomainEvent<UuidValue> {
 }
 
 @Serializable()
-class MangoEvent extends DomainEvent<UuidValue> {
-  MangoEvent({required super.aggregateId});
+class MangoEvent extends DomainEvent<UuidValue, UuidValue> {
+  MangoEvent({required super.aggregateId}) : super(eventId: UuidValue.generate());
   static MangoEvent fromJson(Map<String, dynamic> json) {
     return MangoEvent(
       aggregateId: UuidValue.fromString(json['aggregateId'] as String),
@@ -352,8 +353,8 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 @Serializable()
-class TestEvent extends DomainEvent<UuidValue> {
-  TestEvent({required super.aggregateId});
+class TestEvent extends DomainEvent<UuidValue, UuidValue> {
+  TestEvent({required super.aggregateId}) : super(eventId: UuidValue.generate());
   static TestEvent fromJson(Map<String, dynamic> json) {
     return TestEvent(
       aggregateId: UuidValue.fromString(json['aggregateId'] as String),

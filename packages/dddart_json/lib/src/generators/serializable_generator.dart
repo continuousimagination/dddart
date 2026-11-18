@@ -180,9 +180,10 @@ class SerializableGenerator extends GeneratorForAnnotation<Serializable> {
             (classType == ClassType.event ? _domainEventType : _entityType)
                 .isExactly(type.element),
       );
-      identityType = entity.typeArguments.single;
-      if (identityType is! InterfaceType ||
-          _identityType.isExactly(identityType.element)) {
+      identityType = entity.typeArguments.first;
+      if (entity.typeArguments.any((identity) =>
+          identity is! InterfaceType ||
+          _identityType.isExactly(identity.element))) {
         throw InvalidGenerationSourceError(
           'Class $className must specify a concrete identity type. Use UuidValue or an explicit Identity subtype.',
           element: classElement,

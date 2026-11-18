@@ -31,11 +31,12 @@ class _Codec implements IdentityCodec<EventNativeId> {
   EventNativeId fromKey(String value) => EventNativeId(value);
 }
 
-abstract class _EventBase<I extends Identity> extends DomainEvent<I> {
+abstract class _EventBase<I extends Identity, E extends Identity>
+    extends DomainEvent<I, E> {
   _EventBase({
     required super.aggregateId,
     required this.label,
-    super.eventId,
+    required super.eventId,
     super.occurredAt,
     super.context,
   });
@@ -43,24 +44,24 @@ abstract class _EventBase<I extends Identity> extends DomainEvent<I> {
 }
 
 @Serializable()
-class NativeEvent extends _EventBase<EventNativeId> {
+class NativeEvent extends _EventBase<EventNativeId, EventNativeId> {
   NativeEvent({
     required super.aggregateId,
     required super.label,
-    super.eventId,
+    required super.eventId,
     super.occurredAt,
     super.context,
   });
 }
 
 @Serializable()
-class UuidEvent extends DomainEvent<UuidValue> {
+class UuidEvent extends DomainEvent<UuidValue, UuidValue> {
   UuidEvent({
     required super.aggregateId,
-    super.eventId,
+    UuidValue? eventId,
     super.occurredAt,
     super.context,
-  });
+  }) : super(eventId: eventId ?? UuidValue.generate());
 }
 
 void main() {
@@ -71,6 +72,7 @@ void main() {
     final serializer = NativeEventJsonSerializer.withIdentityCodecs(codecs);
     final event = NativeEvent(
       aggregateId: const EventNativeId('Repo/IssueA %, café'),
+      eventId: const EventNativeId('evt_0042'),
       label: 'created',
       occurredAt: DateTime.utc(2026),
       context: {
@@ -81,6 +83,7 @@ void main() {
     final restored = serializer.deserialize(serializer.serialize(event));
     expect(restored.aggregateId, event.aggregateId);
     expect(restored.eventId, event.eventId);
+    expect(serializer.toJson(event)['eventId'], {'native': 'evt_0042'});
     expect(restored.occurredAt, event.occurredAt);
     expect(restored.context, event.context);
     expect(restored.label, event.label);

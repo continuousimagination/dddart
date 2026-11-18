@@ -87,10 +87,11 @@ class EventHistoryExpired implements Exception {
 ///
 /// Implementations must atomically expose committed positions and records. A
 /// counter allocated before a delayed record insertion does not meet this
-/// contract. Append retries with the same retained UUID/content are idempotent;
-/// conflicting UUID reuse is rejected. This does not imply ordered live delivery.
+/// contract. Append retries with the same retained identity/content are
+/// idempotent; conflicting identity reuse is rejected. This does not imply
+/// ordered live delivery.
 abstract interface class AggregateEventRepository
-    implements Repository<EventEnvelope, UuidValue> {
+    implements Repository<EventEnvelope, Identity> {
   /// Configured history window; the default implementation uses seven days.
   Duration get retention;
 

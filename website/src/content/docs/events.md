@@ -6,8 +6,14 @@ order: 30
 ---
 
 An event names something the domain has done, such as `ReservationConfirmed`.
-Give it the concrete aggregate ID. Its independent occurrence ID stays the same
-when an infrastructure operation retries delivery.
+Declare both identity types with `DomainEvent<A, E>`: `A` is the aggregate ID
+and `E` is the event occurrence ID. The base constructor requires both IDs.
+A concrete event can generate its own UUID or require an externally assigned ID.
+The occurrence ID stays the same when restoring an event or retrying delivery.
+Include the source in an external identity if its value is only unique within
+that source. See the [reservation example](/dddart/docs/modeling/) for explicit
+UUID generation and the [typed identity example](https://github.com/continuousimagination/dddart/blob/main/packages/dddart/IDENTITY_GUIDE.md#use-a-scoped-identity)
+for an event with an external source and sequence number.
 
 ## Deliver locally
 

@@ -13,3 +13,7 @@
   separate trusted IAM relay and an optional authenticated HTTP bridge.
 - CloudFormation, backend SigV4 publisher, complete Dart custom-runtime example,
   opt-in live smoke entrypoint and local protocol/security fixtures.
+
+## Unreleased
+
+- Support independently typed event IDs and version 2 publication envelopes across native handlers, retries and WebSocket recovery. Physical channel and protocol request IDs remain UUIDs.

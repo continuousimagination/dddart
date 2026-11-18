@@ -1,33 +1,34 @@
 import 'package:dddart/src/identity.dart';
-import 'package:dddart/src/uuid_value.dart';
 
 /// Base class for domain events in the DDD framework.
 ///
 /// A domain event represents something significant that happened in the domain.
 /// Events are immutable and contain metadata for traceability and filtering.
-abstract class DomainEvent<I extends Identity> {
+/// [A] identifies the aggregate; [E] independently identifies the occurrence.
+/// Event identities must include any source scope needed to avoid collisions.
+abstract class DomainEvent<A extends Identity, E extends Identity> {
   /// Creates a new domain event.
   ///
   /// [aggregateId] is required and identifies the aggregate that raised the event.
-  /// [eventId] is optional and will be auto-generated if not provided.
+  /// [eventId] is required. The caller owns generation or preserves an external
+  /// identity, and must reuse it when restoring or retrying the same occurrence.
   /// [occurredAt] is optional and will default to the current time if not provided.
   /// [context] is optional and defaults to an empty map.
   DomainEvent({
     required this.aggregateId,
-    UuidValue? eventId,
+    required this.eventId,
     DateTime? occurredAt,
     this.context = const {},
-  })  : eventId = eventId ?? UuidValue.generate(),
-        occurredAt = occurredAt ?? DateTime.now();
+  }) : occurredAt = occurredAt ?? DateTime.now();
 
   /// Unique identifier for this event instance.
-  final UuidValue eventId;
+  final E eventId;
 
   /// Timestamp when the event occurred.
   final DateTime occurredAt;
 
   /// Identifier of the aggregate that raised this event.
-  final I aggregateId;
+  final A aggregateId;
 
   /// Additional context data for filtering and metadata.
   /// This map can contain arbitrary key-value pairs that provide
@@ -42,7 +43,7 @@ abstract class DomainEvent<I extends Identity> {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is DomainEvent<Identity> && other.eventId == eventId;
+    return other is DomainEvent<Identity, Identity> && other.eventId == eventId;
   }
 
   @override

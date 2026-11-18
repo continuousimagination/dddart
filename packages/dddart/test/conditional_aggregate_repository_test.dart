@@ -19,14 +19,14 @@ class NativeId extends Identity {
   List<Object?> get props => [scope, value];
 }
 
-class _Changed<I extends Identity> extends DomainEvent<I> {
-  _Changed(I id) : super(aggregateId: id);
+class _Changed<I extends Identity> extends DomainEvent<I, UuidValue> {
+  _Changed(I id) : super(eventId: UuidValue.generate(), aggregateId: id);
 }
 
 class _Publisher implements EventPublisher {
-  final events = <DomainEvent<Identity>>[];
+  final events = <DomainEvent<Identity, Identity>>[];
   @override
-  Future<bool> publish(DomainEvent<Identity> event) async {
+  Future<bool> publish(DomainEvent<Identity, Identity> event) async {
     events.add(event);
     return true;
   }

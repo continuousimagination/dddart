@@ -6,10 +6,12 @@ numbers in different repositories must not collapse to the same identity.
 `UuidValue` supplies UUID creation/validation, not an implicit fallback for an
 externally identified entity.
 
-`Entity<I>`, `AggregateRoot<I>`, `Repository<T, I>` and `DomainEvent<I>` retain the
-concrete identity. Both entity and aggregate constructors require `id:`.
+`Entity<I>`, `AggregateRoot<I>` and `Repository<T, I>` retain the concrete identity.
+`DomainEvent<A, E>` independently retains its aggregate and occurrence identities. Both entity and aggregate constructors require `id:`.
 A domain constructor may explicitly choose `UuidValue.generate()`.
-Event occurrence IDs remain UUIDs independently of their aggregate's identity.
+The event base constructor also requires `eventId:`. A concrete event can generate
+a UUID or preserve an external ID. Include source scope when needed for uniqueness
+across the events handled by an application.
 
 ## Use a scoped identity
 
@@ -36,6 +38,19 @@ class Issue extends AggregateRoot<IssueId> {
   final String title;
 }
 
+class DeliveryId extends Identity {
+  const DeliveryId(this.source, this.sequence);
+  final String source;
+  final int sequence;
+
+  @override
+  List<Object?> get props => [source, sequence];
+}
+
+class IssueImported extends DomainEvent<IssueId, DeliveryId> {
+  IssueImported({required super.aggregateId, required super.eventId});
+}
+
 Future<void> main() async {
   final Repository<Issue, IssueId> issues =
       InMemoryRepository<Issue, IssueId>();
@@ -46,6 +61,12 @@ Future<void> main() async {
   await issues.save(issue);
   final loaded = await issues.getById(const IssueId('team/booking', 12));
   print(loaded.title);
+  final imported = IssueImported(
+    aggregateId: loaded.id,
+    eventId: const DeliveryId('tracker', 42),
+  );
+  loaded.raiseEvent(imported);
+  print('${imported.eventId.source}:${imported.eventId.sequence}');
 }
 ```
 <!-- /dddart-source -->

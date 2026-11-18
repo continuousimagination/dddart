@@ -34,7 +34,7 @@ void main() {
       final checkpoint = watch.checkpoint;
       expect(watch.status, EventWatchStatus.active);
       expect(denied.status, EventWatchStatus.revoked);
-      final received = <DomainEvent<Identity>>[];
+      final received = <DomainEvent<Identity, Identity>>[];
       watch.events.listen(received.add);
       await fixture.accept(reference, label: 'missed');
       fixture.failingAction = action;
@@ -254,7 +254,7 @@ void main() {
     expect(watch.checkpoint, isNot(checkpoint));
     await watch.close();
     final resumed = client.watch(reference, checkpoint: checkpoint);
-    final replay = <DomainEvent<Identity>>[];
+    final replay = <DomainEvent<Identity, Identity>>[];
     resumed.events.listen(replay.add);
     await client.synchronize();
     await Future<void>.delayed(Duration.zero);
@@ -274,7 +274,7 @@ void main() {
     final second = alice.watch(reference);
     await alice.synchronize();
     await first.close();
-    final received = <DomainEvent<Identity>>[];
+    final received = <DomainEvent<Identity, Identity>>[];
     second.events.listen(received.add);
     await fixture.accept(reference);
     await alice.synchronize();
@@ -358,7 +358,7 @@ void main() {
     );
     final references = List.generate(3, (_) => fixture.reference('document'));
     final client = fixture.client('alice');
-    final received = <UuidValue>[];
+    final received = <Identity>[];
     final watches = references.map((reference) {
       fixture.allow(reference, ['alice']);
       final watch = client.watch(reference);
@@ -616,7 +616,7 @@ class _Fixture {
         _Changed(aggregateId: reference.id as UuidValue, label: label);
     return EventEnvelope(
       aggregate: reference,
-      event: StoredEvent<Identity>(
+      event: StoredEvent<Identity, Identity>(
         id: event.eventId,
         createdAt: event.occurredAt,
         aggregateId: reference.id,
@@ -740,14 +740,14 @@ class _Policy implements AggregateEventPolicy<String> {
           await canSubscribe(principal, envelope.aggregate));
 }
 
-class _Changed extends DomainEvent<UuidValue> {
+class _Changed extends DomainEvent<UuidValue, UuidValue> {
   _Changed({
     required super.aggregateId,
     required this.label,
-    super.eventId,
+    UuidValue? eventId,
     super.occurredAt,
     super.context,
-  });
+  }) : super(eventId: eventId ?? UuidValue.generate());
   final String label;
   Map<String, dynamic> toJson() => {
         'eventId': eventId.uuid,

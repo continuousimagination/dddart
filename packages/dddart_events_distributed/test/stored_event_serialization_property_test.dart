@@ -1,4 +1,4 @@
-/// Property-based tests for StoredEvent<Identity> serialization.
+/// Property-based tests for StoredEvent<Identity, Identity> serialization.
 ///
 /// **Feature: distributed-events, Property 2: Serialization preserves event
 /// data**
@@ -16,19 +16,19 @@ import 'package:test/test.dart';
 void main() {
   group('Property 2: Serialization preserves event data', () {
     test(
-      'should preserve all StoredEvent<Identity> fields through toJson/fromJson cycles',
+      'should preserve all StoredEvent<Identity, Identity> fields through toJson/fromJson cycles',
       () {
         final random = Random(42);
 
         for (var i = 0; i < 100; i++) {
-          // Generate random StoredEvent<Identity>
+          // Generate random StoredEvent<Identity, Identity>
           final storedEvent = _generateRandomStoredEvent(random);
 
           // Serialize to JSON
           final json = storedEvent.toJson();
 
           // Deserialize from JSON
-          final deserialized = StoredEvent<Identity>.fromJson(json);
+          final deserialized = StoredEvent<Identity, Identity>.fromJson(json);
 
           // Verify all fields are preserved
           expect(
@@ -86,7 +86,7 @@ void main() {
           final includeTenantId = random.nextBool();
           final includeSessionId = random.nextBool();
 
-          final storedEvent = StoredEvent<Identity>(
+          final storedEvent = StoredEvent<Identity, Identity>(
             id: UuidValue.generate(),
             createdAt: DateTime.now(),
             aggregateId: UuidValue.generate(),
@@ -100,7 +100,7 @@ void main() {
 
           // Serialize and deserialize
           final json = storedEvent.toJson();
-          final deserialized = StoredEvent<Identity>.fromJson(json);
+          final deserialized = StoredEvent<Identity, Identity>.fromJson(json);
 
           // Verify nullable fields are preserved correctly
           expect(
@@ -125,7 +125,7 @@ void main() {
     );
 
     test(
-      'should preserve StoredEvent<Identity> created from DomainEvent<UuidValue>',
+      'should preserve StoredEvent<Identity, Identity> created from DomainEvent<UuidValue, UuidValue>',
       () {
         final random = Random(45);
 
@@ -133,22 +133,22 @@ void main() {
           // Generate random test event
           final testEvent = _generateRandomTestEvent(random);
 
-          // Create StoredEvent<Identity> from DomainEvent<UuidValue>
-          final storedEvent = StoredEvent<Identity>.fromDomainEvent(
+          // Create StoredEvent<Identity, Identity> from DomainEvent<UuidValue, UuidValue>
+          final storedEvent = StoredEvent<Identity, Identity>.fromDomainEvent(
             testEvent,
             registry: _testRegistry(),
           );
 
           // Serialize and deserialize
           final json = storedEvent.toJson();
-          final deserialized = StoredEvent<Identity>.fromJson(json);
+          final deserialized = StoredEvent<Identity, Identity>.fromJson(json);
 
           // Verify event data is preserved
           expect(
             deserialized.id,
             equals(testEvent.eventId),
             reason:
-                'Iteration $i: eventId should become StoredEvent<Identity> id',
+                'Iteration $i: eventId should become StoredEvent<Identity, Identity> id',
           );
           expect(
             deserialized.createdAt.millisecondsSinceEpoch,
@@ -219,7 +219,7 @@ void main() {
         for (var i = 0; i < edgeCases.length; i++) {
           final (description, userId, tenantId, eventJson) = edgeCases[i];
 
-          final storedEvent = StoredEvent<Identity>(
+          final storedEvent = StoredEvent<Identity, Identity>(
             id: UuidValue.generate(),
             createdAt: DateTime.now(),
             aggregateId: UuidValue.generate(),
@@ -231,7 +231,7 @@ void main() {
 
           // Serialize and deserialize
           final json = storedEvent.toJson();
-          final deserialized = StoredEvent<Identity>.fromJson(json);
+          final deserialized = StoredEvent<Identity, Identity>.fromJson(json);
 
           // Verify edge cases are handled
           expect(
@@ -257,13 +257,13 @@ void main() {
 
 // Generator functions
 
-/// Generates a random StoredEvent<Identity> with various field values.
-StoredEvent<Identity> _generateRandomStoredEvent(Random random) {
+/// Generates a random StoredEvent<Identity, Identity> with various field values.
+StoredEvent<Identity, Identity> _generateRandomStoredEvent(Random random) {
   final includeUserId = random.nextBool();
   final includeTenantId = random.nextBool();
   final includeSessionId = random.nextBool();
 
-  return StoredEvent<Identity>(
+  return StoredEvent<Identity, Identity>(
     id: UuidValue.generate(),
     createdAt: _generateRandomDateTime(random),
     aggregateId: UuidValue.generate(),
@@ -318,7 +318,7 @@ DateTime _generateRandomDateTime(Random random) {
   return DateTime(year, month, day, hour, minute, second, millisecond);
 }
 
-/// Generates a random test DomainEvent<UuidValue>.
+/// Generates a random test DomainEvent<UuidValue, UuidValue>.
 TestDomainEvent _generateRandomTestEvent(Random random) {
   final includeUserId = random.nextBool();
   final includeTenantId = random.nextBool();
@@ -344,15 +344,15 @@ TestDomainEvent _generateRandomTestEvent(Random random) {
   );
 }
 
-/// Test DomainEvent<UuidValue> for property testing.
-class TestDomainEvent extends DomainEvent<UuidValue> {
+/// Test DomainEvent<UuidValue, UuidValue> for property testing.
+class TestDomainEvent extends DomainEvent<UuidValue, UuidValue> {
   TestDomainEvent({
     required super.aggregateId,
     required this.data,
-    super.eventId,
+    UuidValue? eventId,
     super.occurredAt,
     super.context,
-  });
+  }) : super(eventId: eventId ?? UuidValue.generate());
 
   final String data;
 

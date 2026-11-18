@@ -24,7 +24,7 @@ class EventBus {
   /// to the event's type or any of its supertypes.
   ///
   /// [event] The domain event to publish.
-  void publish(DomainEvent<Identity> event) {
+  void publish(DomainEvent<Identity, Identity> event) {
     _dispatch(event, originated: true);
   }
 
@@ -34,11 +34,14 @@ class EventBus {
   /// subscribers still receive the event through [on], while forwarding and
   /// persistence bridges listening through [onPublished] do not re-originate it.
   /// Origin is delivery metadata, never a field in the domain event payload.
-  void deliver(DomainEvent<Identity> event) {
+  void deliver(DomainEvent<Identity, Identity> event) {
     _dispatch(event, originated: false);
   }
 
-  void _dispatch(DomainEvent<Identity> event, {required bool originated}) {
+  void _dispatch(
+    DomainEvent<Identity, Identity> event, {
+    required bool originated,
+  }) {
     if (_controller.isClosed) {
       throw StateError('Cannot publish event: EventBus is closed');
     }
@@ -54,7 +57,7 @@ class EventBus {
   /// Multiple subscriptions can be created for the same or different event types.
   ///
   /// Type parameter [T] must extend [DomainEvent].
-  Stream<T> on<T extends DomainEvent<Identity>>() {
+  Stream<T> on<T extends DomainEvent<Identity, Identity>>() {
     return _events<T>(originatedOnly: false);
   }
 
@@ -62,11 +65,11 @@ class EventBus {
   ///
   /// Infrastructure bridges use this to avoid forwarding remote deliveries.
   /// Application event handlers normally use [on] to see both kinds of delivery.
-  Stream<T> onPublished<T extends DomainEvent<Identity>>() {
+  Stream<T> onPublished<T extends DomainEvent<Identity, Identity>>() {
     return _events<T>(originatedOnly: true);
   }
 
-  Stream<T> _events<T extends DomainEvent<Identity>>({
+  Stream<T> _events<T extends DomainEvent<Identity, Identity>>({
     required bool originatedOnly,
   }) {
     logger.fine('Creating subscription for event type: $T');
@@ -106,6 +109,6 @@ class EventBus {
 class _EventDelivery {
   _EventDelivery(this.event, {required this.originated});
 
-  final DomainEvent<Identity> event;
+  final DomainEvent<Identity, Identity> event;
   final bool originated;
 }

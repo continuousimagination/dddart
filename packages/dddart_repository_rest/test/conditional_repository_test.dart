@@ -239,14 +239,14 @@ void main() {
   });
 }
 
-class Changed extends DomainEvent<UuidValue> {
-  Changed(UuidValue id) : super(aggregateId: id);
+class Changed extends DomainEvent<UuidValue, UuidValue> {
+  Changed(UuidValue id) : super(eventId: UuidValue.generate(), aggregateId: id);
 }
 
 class Publisher implements EventPublisher {
-  final events = <DomainEvent<Identity>>[];
+  final events = <DomainEvent<Identity, Identity>>[];
   @override
-  Future<bool> publish(DomainEvent<Identity> event) async {
+  Future<bool> publish(DomainEvent<Identity, Identity> event) async {
     events.add(event);
     return true;
   }

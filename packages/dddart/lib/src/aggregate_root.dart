@@ -28,7 +28,7 @@ abstract class AggregateRoot<I extends Identity> extends Entity<I> {
   /// significant happens that other parts of the system need to know about.
   /// Events are collected but not automatically published, allowing for
   /// transaction boundaries and batch publishing.
-  void raiseEvent(DomainEvent<I> event) {
+  void raiseEvent(DomainEvent<I, Identity> event) {
     _uncommittedEvents.add(_PendingEvent(event));
   }
 
@@ -37,7 +37,7 @@ abstract class AggregateRoot<I extends Identity> extends Entity<I> {
   /// These are events that have been raised but not yet published.
   /// This method is typically called by infrastructure code to retrieve
   /// events for publishing to an event bus or message broker.
-  List<DomainEvent<I>> getUncommittedEvents() {
+  List<DomainEvent<I, Identity>> getUncommittedEvents() {
     return List.unmodifiable(_uncommittedEvents.map((entry) => entry.event));
   }
 
@@ -84,14 +84,15 @@ class PendingEventBatch<I extends Identity> {
   final Set<_PendingEvent<I>> _acknowledged = {};
 
   /// Events present when the batch was captured, in raise order.
-  final List<DomainEvent<I>> events;
+  final List<DomainEvent<I, Identity>> events;
 
   /// Acknowledges one captured occurrence of this exact event instance.
   ///
   /// This is idempotent after all captured occurrences of the instance have been
-  /// acknowledged. A separately raised event with the same UUID is not matched.
+  /// acknowledged. A separately raised event with the same event identity is
+  /// not matched.
   /// Throws [ArgumentError] when the event was not present in this batch.
-  void acknowledge(DomainEvent<I> event) {
+  void acknowledge(DomainEvent<I, Identity> event) {
     for (final entry in _entries) {
       if (identical(entry.event, event) && !_acknowledged.contains(entry)) {
         _remove(entry);
@@ -115,5 +116,5 @@ class PendingEventBatch<I extends Identity> {
 class _PendingEvent<I extends Identity> {
   _PendingEvent(this.event);
 
-  final DomainEvent<I> event;
+  final DomainEvent<I, Identity> event;
 }

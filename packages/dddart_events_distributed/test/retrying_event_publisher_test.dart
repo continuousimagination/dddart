@@ -25,7 +25,7 @@ void main() {
       'transient attempts preserve the exact occurrence and use shared backoff',
       () async {
     final event = _Event(UuidValue.generate());
-    final attempts = <DomainEvent<Identity>>[];
+    final attempts = <DomainEvent<Identity, Identity>>[];
     final delays = <Duration>[];
     final publisher = RetryingEventPublisher(
       policy: EventRetryPolicy(jitter: 0),
@@ -163,6 +163,6 @@ class _Aggregate extends AggregateRoot<UuidValue> {
   _Aggregate() : super(id: UuidValue.generate());
 }
 
-class _Event extends DomainEvent<UuidValue> {
-  _Event(UuidValue id) : super(aggregateId: id);
+class _Event extends DomainEvent<UuidValue, UuidValue> {
+  _Event(UuidValue id) : super(eventId: UuidValue.generate(), aggregateId: id);
 }

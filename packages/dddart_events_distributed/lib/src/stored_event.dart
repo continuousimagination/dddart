@@ -4,11 +4,12 @@ import 'package:dddart/dddart.dart';
 import 'package:dddart_events_distributed/src/event_registry.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
-/// UUID event record with a separately typed aggregate reference.
+/// Event record with independently typed aggregate and occurrence identities.
 ///
-/// Mixed stores use StoredEvent<Identity>. JSON explicitly tags the aggregate
-/// identity kind; old records with bare UUID strings require migration.
-class StoredEvent<I extends Identity> extends AggregateRoot<UuidValue> {
+/// Mixed stores use StoredEvent<Identity, Identity>. JSON explicitly tags both
+/// identity kinds; old records with bare UUID event IDs require migration.
+class StoredEvent<A extends Identity, E extends Identity>
+    extends AggregateRoot<E> {
   /// Creates a stored record with common authorization metadata.
   StoredEvent({
     required super.id,
@@ -26,10 +27,10 @@ class StoredEvent<I extends Identity> extends AggregateRoot<UuidValue> {
 
   /// Stores an event through its explicitly registered serializer and key.
   factory StoredEvent.fromDomainEvent(
-    DomainEvent<I> event, {
+    DomainEvent<A, E> event, {
     required EventRegistry registry,
   }) =>
-      StoredEvent<I>(
+      StoredEvent<A, E>(
         id: event.eventId,
         createdAt: event.occurredAt,
         aggregateId: event.aggregateId,
@@ -48,13 +49,19 @@ class StoredEvent<I extends Identity> extends AggregateRoot<UuidValue> {
   }) {
     final codecs = identityCodecs ?? IdentityCodecRegistry();
     final identity = codecs.fromTaggedJson(json['aggregateId']);
-    if (identity is! I) {
+    if (identity is! A) {
       throw const DeserializationException(
         'Stored aggregate identity kind mismatch',
       );
     }
-    return StoredEvent<I>(
-      id: UuidValue.fromString(json['id'] as String),
+    final eventId = codecs.fromTaggedJson(json['id']);
+    if (eventId is! E) {
+      throw const DeserializationException(
+        'Stored event identity kind mismatch',
+      );
+    }
+    return StoredEvent<A, E>(
+      id: eventId,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: json['updatedAt'] != null
           ? DateTime.parse(json['updatedAt'] as String)
@@ -71,8 +78,8 @@ class StoredEvent<I extends Identity> extends AggregateRoot<UuidValue> {
 
   final IdentityCodecRegistry _identityCodecs;
 
-  /// Concrete aggregate reference; it is independent of this record's UUID ID.
-  final I aggregateId;
+  /// Concrete aggregate reference; it is independent of this record's event ID.
+  final A aggregateId;
 
   /// Explicitly registered stable event discriminator.
   final String eventType;
@@ -90,7 +97,7 @@ class StoredEvent<I extends Identity> extends AggregateRoot<UuidValue> {
   final String? sessionId;
 
   /// Reconstructs and verifies payload metadata against this envelope.
-  DomainEvent<Identity> restore(EventRegistry registry) {
+  DomainEvent<Identity, Identity> restore(EventRegistry registry) {
     final event = registry.decode(
       eventType,
       jsonDecode(eventJson) as Map<String, dynamic>,
@@ -105,16 +112,19 @@ class StoredEvent<I extends Identity> extends AggregateRoot<UuidValue> {
     return event;
   }
 
-  /// Serializes the envelope with a stable aggregate identity tag.
-  Map<String, dynamic> toJson() => {
-        'id': id.uuid,
-        'createdAt': createdAt.toIso8601String(),
-        'updatedAt': updatedAt.toIso8601String(),
-        'aggregateId': _identityCodecs.toTaggedJson(aggregateId),
-        'eventType': eventType,
-        'eventJson': eventJson,
-        if (userId != null) 'userId': userId,
-        if (tenantId != null) 'tenantId': tenantId,
-        if (sessionId != null) 'sessionId': sessionId,
-      };
+  /// Serializes the envelope with explicit aggregate and event identity tags.
+  Map<String, dynamic> toJson({IdentityCodecRegistry? identityCodecs}) {
+    final codecs = identityCodecs ?? _identityCodecs;
+    return {
+      'id': codecs.toTaggedJson(id),
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+      'aggregateId': codecs.toTaggedJson(aggregateId),
+      'eventType': eventType,
+      'eventJson': eventJson,
+      if (userId != null) 'userId': userId,
+      if (tenantId != null) 'tenantId': tenantId,
+      if (sessionId != null) 'sessionId': sessionId,
+    };
+  }
 }
