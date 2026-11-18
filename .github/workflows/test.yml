@@ -161,6 +161,10 @@ jobs:
           dart tool/validation/validate.dart consumer
           "${{ matrix.name }}"
 
+      - name: Validate documented service quickstart
+        if: matrix.name == 'dddart_repository_mongodb'
+        run: bash tool/documentation/validate.sh all --service-kind=mongo
+
   dynamodb-packages:
     needs: inventory
     runs-on: ubuntu-latest
@@ -203,6 +207,10 @@ jobs:
         run: >-
           dart tool/validation/validate.dart consumer
           "${{ matrix.name }}"
+
+      - name: Validate documented service quickstart
+        if: matrix.name == 'dddart_repository_dynamodb'
+        run: bash tool/documentation/validate.sh all --service-kind=dynamodb
 
   mysql-packages:
     needs: inventory
@@ -255,6 +263,10 @@ jobs:
         run: >-
           dart tool/validation/validate.dart consumer
           "${{ matrix.name }}"
+
+      - name: Validate documented service quickstart
+        if: matrix.name == 'dddart_repository_mysql'
+        run: bash tool/documentation/validate.sh all --service-kind=mysql
 
   examples:
     needs: inventory
@@ -416,3 +428,28 @@ jobs:
         run: >-
           dart tool/validation/validate.dart example
           "${{ matrix.name }}" --mode=ci
+
+  documentation:
+    needs: inventory
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: 3.13.7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.15.0
+      - name: Resolve workspace tooling
+        run: dart pub get
+      - name: Check Bash validation syntax
+        run: |
+          bash -n tool/documentation/common.sh
+          bash -n tool/documentation/validate.sh
+          bash -n tool/documentation/self_test.sh
+      - name: Check published source and API classifications
+        run: bash tool/documentation/validate.sh check
+      - name: Exercise documentation failure detection
+        run: bash tool/documentation/self_test.sh
+      - name: Run isolated documented workflows and portable JS checks
+        run: bash tool/documentation/validate.sh all --service-kind=none

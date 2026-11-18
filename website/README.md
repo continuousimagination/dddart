@@ -1,69 +1,43 @@
-# dddart website
+# Develop the DDDart website
 
-The public homepage and documentation are built with Astro and published to
-https://continuousimagination.github.io/dddart/ by GitHub Pages. Source lives in
-this repository; no separate website repository or hosting subscription is needed.
+The [public documentation](https://continuousimagination.github.io/dddart/) is
+built with Astro and served by GitHub Pages. The Node constraint and site
+dependencies are in [package.json](package.json).
 
-## Work locally
+## Preview and test
 
-Use Node 24.15 or later in the Node 24 line:
+From this directory:
 
-```bash
-cd website
+```sh
 npm ci
 ASTRO_TELEMETRY_DISABLED=1 npm run dev
-```
-
-Open the printed local URL with `/dddart/` as the path. The site is generated HTML,
-with JavaScript only for navigation, search, code tabs, and copying snippets.
-Fonts, styles, search data, and assets are served with the site; there are no
-external analytics or account services.
-
-```bash
 ASTRO_TELEMETRY_DISABLED=1 npm run check
-ASTRO_TELEMETRY_DISABLED=1 npm run preview
 ```
 
-`check` builds the entire site and checks internal routes, assets, fragment links,
-metadata, the search index, and repository source references. It checks the public
-`/dddart/` base path rather than assuming root hosting.
+Follow the printed local URL under `/dddart/`. Use `npm run preview` for the
+built site. The check builds the site, verifies links, anchors, metadata,
+assets and search data, and runs the site checker regression tests. It uses
+Bash, jq and `xmllint` (on Ubuntu, install `libxml2-utils`).
+[Documentation validation](../tool/documentation/README.md) checks that Dart
+examples still work.
 
-## Edit documentation
+## Edit a guide
 
-Pages live in `src/content/docs/*.md`. Each has a title, description, section,
-and numeric order in frontmatter. Navigation, on-page headings, search data, and
-the sitemap derive from these pages. The top-level order is in `src/lib/site.ts`.
+Guides are in [src/content/docs](src/content/docs/). Use the title as the
+navigation label; frontmatter also declares a description, section, and
+order. The layout supplies the page title, so start body headings at h2.
+Use site links rooted at `/dddart/`.
 
-Use absolute site links such as `/dddart/docs/events/` and descriptive link labels.
-The layout supplies the page's h1; start content headings at h2. Mark incomplete
-composition fragments clearly and state their prerequisites. Do not present a
-source-only or external-service example as a verified standalone program.
-
-The initial guides target library revision
-`b4aacf0671873e729a1a390dc2bb609b80c723e5`. Update source references, the installation
-revision, `public/downloads/git-dependencies.yaml`, and the relevant example checks
-together when the library changes. The repository's legacy package README examples
-are not always current; use implementation and active example fixtures to verify APIs.
+Keep the site focused on how to use DDDart. Link to the repository's
+[complete quickstarts](../docs/QUICKSTARTS.md) for setup and to package guides
+for adapter-specific details. Publish inline Dart through the checked source
+inclusion format. The [core example pubspec](../docs/quickstarts/core/pubspec.yaml.txt)
+supplies the Git revision for the standalone workflows.
 
 ## Publish
 
-`.github/workflows/pages.yml` builds and checks website pull requests. Changes under
-`website/` or the Pages workflow deploy automatically after reaching `main`.
-The Website workflow also supports manual dispatch. Only `website/dist` is uploaded.
-Pull requests have read-only permissions and do not deploy. The deploy job alone
-receives Pages and OpenID Connect write permissions.
-
-Pages uses **GitHub Actions** as its build source, with HTTPS enforced. Actions was
-disabled repository-wide when this site was prepared. With the repository owner's
-approval, Actions is now enabled and the pre-existing Dart `Test` workflow remains
-disabled, preserving that workflow's prior effective state. Re-enable the test
-workflow separately if desired.
-
-## Verification scope
-
-The initial docs were developed by reviewing all public package families and their
-implementations, examples, tests, and validation inventory. Standalone core,
-configuration, JSON, and SQLite snippets were extracted and exercised; representative
-client compositions were compiled to JavaScript. The public example catalog records
-the scope and distinguishes local verification from live provider/device testing.
-No live AWS or Slack resources are needed for the website build.
+The [Website workflow](../.github/workflows/pages.yml) builds and checks the
+site when its inputs change. It deploys from `main` to GitHub Pages. The
+[Documentation workflow](../.github/workflows/documentation.yml) checks guides
+throughout the repository. See [Actions](https://github.com/continuousimagination/dddart/actions)
+for current runs.

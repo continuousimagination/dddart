@@ -28,20 +28,6 @@ typedef ApplicationClaimsLoader<TClaims> = Future<TClaims?> Function(
 /// Uses callback functions to serialize/deserialize claims. For convenience,
 /// you can use generated extension methods by annotating claims classes with
 /// @JwtSerializable().
-///
-/// Example:
-/// ```dart
-/// final authHandler = JwtAuthHandler<UserClaims, RefreshToken>(
-///   secret: 'your-secret-key',
-///   refreshTokenRepository: refreshTokenRepo,
-///   refreshTokenLifecycle: const StandardRefreshTokenLifecycle(),
-///   claimsLoader: (userId) => loadCurrentClaims(userId),
-///   parseClaimsFromJson: (json) => UserClaims.fromJson(json),
-///   claimsToJson: (claims) => claims.toJson(),
-///   issuer: 'https://api.example.com',
-///   audience: 'my-app',
-/// );
-/// ```
 class JwtAuthHandler<TClaims, TRefreshToken extends RefreshToken>
     extends TokenAuthenticationHandler<TClaims> {
   /// Creates a JWT authentication handler
@@ -103,14 +89,6 @@ class JwtAuthHandler<TClaims, TRefreshToken extends RefreshToken>
   ///
   /// Loads the user's current application claims, generates a JWT access token
   /// and a random refresh token, and stores the refresh token in the repository.
-  ///
-  /// Example:
-  /// ```dart
-  /// final tokens = await authHandler.issueTokens(
-  ///   'user123',
-  ///   deviceInfo: 'CLI v1.0',
-  /// );
-  /// ```
   Future<Tokens> issueTokens(
     String userId, {
     String? deviceInfo,
@@ -148,11 +126,6 @@ class JwtAuthHandler<TClaims, TRefreshToken extends RefreshToken>
   /// Looks up the refresh token in the repository, validates it's not expired
   /// or revoked, reloads the user's current application claims, and issues a
   /// new access token. The existing opaque refresh token is returned unchanged.
-  ///
-  /// Example:
-  /// ```dart
-  /// final newTokens = await authHandler.refresh('refresh-token-string');
-  /// ```
   Future<Tokens> refresh(String refreshTokenString) async {
     // Look up refresh token in repository
     final refreshToken =
@@ -186,11 +159,6 @@ class JwtAuthHandler<TClaims, TRefreshToken extends RefreshToken>
   ///
   /// Marks the refresh token as revoked in the repository, preventing it
   /// from being used to obtain new access tokens.
-  ///
-  /// Example:
-  /// ```dart
-  /// await authHandler.revoke('refresh-token-string');
-  /// ```
   Future<void> revoke(String refreshTokenString) async {
     final refreshToken =
         await refreshTokenRepository.findByToken(refreshTokenString);

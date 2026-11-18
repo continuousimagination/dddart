@@ -8,15 +8,6 @@ import 'package:shelf/shelf.dart';
 /// ensuring consistent error responses across all authentication endpoints.
 /// All error messages are sanitized to prevent leakage of sensitive information
 /// such as signing secrets, expected signatures, or internal system details.
-///
-/// Example:
-/// ```dart
-/// try {
-///   // Authentication logic
-/// } catch (e) {
-///   return AuthErrorMapper.mapToResponse(e);
-/// }
-/// ```
 class AuthErrorMapper {
   /// Maps an exception to an appropriate HTTP response
   ///

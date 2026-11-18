@@ -14,16 +14,6 @@ class JoinBuilder {
   /// Creates a query that loads the aggregate root and all its related
   /// entities using JOIN clauses. Uses LEFT JOIN for nullable relationships
   /// to ensure the root is returned even if related entities don't exist.
-  ///
-  /// Example:
-  /// ```dart
-  /// final query = builder.buildLoadQuery(orderTable, schema, dialect);
-  /// // Returns:
-  /// // SELECT orders.*, order_items.*
-  /// // FROM orders
-  /// // LEFT JOIN order_items ON order_items.order_id = orders.id
-  /// // WHERE orders.id = ?
-  /// ```
   String buildLoadQuery(
     TableDefinition rootTable,
     Map<Type, TableDefinition> schema,
@@ -74,18 +64,6 @@ class JoinBuilder {
   /// Analyzes the table's foreign keys to determine which tables need to be
   /// joined. Uses LEFT JOIN for nullable relationships to ensure the parent
   /// row is returned even if child rows don't exist.
-  ///
-  /// Example:
-  /// ```dart
-  /// final joins = builder.buildJoinClauses(orderTable, schema, dialect);
-  /// // Returns: [
-  /// //   JoinClause(
-  /// //     type: JoinType.left,
-  /// //     table: 'order_items',
-  /// //     onCondition: 'order_items.order_id = orders.id',
-  /// //   ),
-  /// // ]
-  /// ```
   List<JoinClause> buildJoinClauses(
     TableDefinition table,
     Map<Type, TableDefinition> schema,

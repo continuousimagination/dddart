@@ -1,0 +1,49 @@
+name: dddart_mongodb_quickstart
+publish_to: none
+environment:
+  sdk: '>=3.13.7 <4.0.0'
+dependencies:
+  dddart:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
+      path: packages/dddart
+  dddart_json:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
+      path: packages/dddart_json
+  dddart_serialization:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
+      path: packages/dddart_serialization
+  dddart_repository_mongodb:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
+      path: packages/dddart_repository_mongodb
+  mongo_dart: ^0.10.0
+dev_dependencies:
+  build_runner: ^2.4.0
+dependency_overrides:
+  dddart:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
+      path: packages/dddart
+  dddart_json:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
+      path: packages/dddart_json
+  dddart_repository_mongodb:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
+      path: packages/dddart_repository_mongodb
+  dddart_serialization:
+    git:
+      url: https://github.com/continuousimagination/dddart.git
+      ref: 56607ac8d3913b8e896ac03f8ecff58473d62ce2
+      path: packages/dddart_serialization

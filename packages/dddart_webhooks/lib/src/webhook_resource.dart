@@ -38,93 +38,12 @@ final _log = Logger('WebhookResource');
 ///   [onDeserializationError])
 /// - **Handler Exception**: Returns 500 Internal Server Error
 ///
-/// ## Usage Examples
-///
-/// ### JSON Webhook with Custom Verifier
-///
-/// ```dart
-/// final webhook = WebhookResource<MyEvent, MyVerification>(
-///   path: '/webhooks/events',
-///   verifier: MyWebhookVerifier(secret: 'my-secret'),
-///   deserializer: (body) => WebhookDeserializers.json(
-///     body,
-///     MyEvent.fromJson,
-///   ),
-///   handler: (event, verification) async {
-///     print('Received event: ${event.type}');
-///     print('From user: ${verification.userId}');
-///     return Response.ok('Event processed');
-///   },
-/// );
-///
-/// server.registerWebhook(webhook);
-/// ```
-///
-/// ### Form-Encoded Webhook
-///
-/// ```dart
-/// final webhook = WebhookResource<SlackSlashCommand, SlackVerification>(
-///   path: '/webhooks/slack/commands',
-///   verifier: SlackWebhookVerifier(signingSecret: slackSecret),
-///   deserializer: (body) => WebhookDeserializers.form(
-///     body,
-///     SlackSlashCommand.fromForm,
-///   ),
-///   handler: (command, verification) async {
-///     print('Command: ${command.command}');
-///     print('Team: ${verification.teamId}');
-///     return Response.ok('Command received');
-///   },
-/// );
-/// ```
-///
-/// ### Raw String Webhook
-///
-/// ```dart
-/// final webhook = WebhookResource<String, MyVerification>(
-///   path: '/webhooks/raw',
-///   verifier: MyWebhookVerifier(secret: 'my-secret'),
-///   // No deserializer - raw body passed to handler
-///   handler: (body, verification) async {
-///     print('Raw body: $body');
-///     return Response.ok('Received');
-///   },
-/// );
-/// ```
-///
-/// ### Custom Deserialization Error Handling
-///
-/// ```dart
-/// final webhook = WebhookResource<MyEvent, MyVerification>(
-///   path: '/webhooks/events',
-///   verifier: MyWebhookVerifier(secret: 'my-secret'),
-///   deserializer: (body) => MyEvent.fromJson(jsonDecode(body)),
-///   handler: (event, verification) async {
-///     return Response.ok('Processed');
-///   },
-///   onDeserializationError: (body, error) async {
-///     // Log the error with the raw body for debugging
-///     _log.severe('Failed to deserialize webhook', error);
-///     _log.fine('Raw body: $body');
-///
-///     // Return custom error response
-///     return Response(
-///       400,
-///       body: jsonEncode({
-///         'error': 'Invalid payload format',
-///       }),
-///       headers: {'Content-Type': 'application/json'},
-///     );
-///   },
-/// );
-/// ```
-///
 /// ## Security Considerations
 ///
 /// - Always use HTTPS in production to prevent man-in-the-middle attacks
 /// - Store signing secrets securely (environment variables, secret managers)
 /// - Implement proper signature verification in your [WebhookVerifier]
-/// - Validate timestamps to prevent replay attacks
+/// - Bound past/future timestamps and deduplicate requests when required
 /// - Use constant-time comparison for signatures to prevent timing attacks
 ///
 /// See also:
@@ -179,7 +98,8 @@ class WebhookResource<TPayload,
   /// the format (JSON, form-encoded, XML, etc.) and converting to `TPayload`.
   ///
   /// If null and `TPayload` is String, raw body is passed to handler.
-  /// If null and `TPayload` is not String, compilation will fail.
+  /// If omitted for a non-String payload, the runtime cast can fail and is
+  /// handled as a deserialization error.
   final TPayload Function(String body)? deserializer;
 
   /// Optional error handler for deserialization failures.

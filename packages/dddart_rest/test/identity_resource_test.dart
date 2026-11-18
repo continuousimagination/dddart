@@ -13,12 +13,13 @@ class _Serializer extends TestJsonSerializer<NativeIssue> {
   _Serializer(this.codecs);
   final IdentityCodecRegistry codecs;
   @override
-  String serialize(NativeIssue issue, [dynamic config]) => jsonEncode({
+  String serialize(NativeIssue issue, [SerializationConfig? config]) =>
+      jsonEncode({
         'id': codecs.toJson<NativeId>(issue.id),
         'title': issue.title,
       });
   @override
-  NativeIssue deserialize(String data, [dynamic config]) {
+  NativeIssue deserialize(String data, [SerializationConfig? config]) {
     final json = jsonDecode(data) as Map<String, dynamic>;
     return NativeIssue(
       id: codecs.fromJson<NativeId>(json['id']),

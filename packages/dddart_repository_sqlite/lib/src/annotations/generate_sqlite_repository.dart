@@ -2,15 +2,6 @@
 ///
 /// This annotation is used to mark aggregate root classes for which
 /// a SQLite repository implementation should be generated.
-///
-/// Example:
-/// ```dart
-/// @Serializable()
-/// @GenerateSqliteRepository()
-/// class Order extends AggregateRoot<UuidValue> {
-///   // ...
-/// }
-/// ```
 library;
 
 /// Annotation to generate a SQLite repository for an aggregate root.

@@ -63,27 +63,9 @@ void main() async {
     InternetAddress.anyIPv4,
     8080,
   );
-  print('✅ Slack interactive message webhook server started');
-  print('');
-  print('Server listening on http://localhost:8080');
-  print('Webhook endpoint: http://localhost:8080/slack/interactive');
-  print('');
-  print('📝 Setup Instructions:');
-  print('');
-  print('1. Go to https://api.slack.com/apps');
-  print('2. Select your app (or create a new one)');
-  print('3. Go to "Interactivity & Shortcuts" in the sidebar');
-  print('4. Enable Interactivity');
-  print('5. Set Request URL to: http://localhost:8080/slack/interactive');
-  print('   (Use ngrok or similar for local testing)');
-  print('');
-  print('💡 For local testing with Slack:');
-  print('   ngrok http 8080');
-  print('   Then use the ngrok URL in Slack app configuration');
-  print('');
-  print('📤 To test, send a message with buttons using a slash command');
-  print('   or the Slack API to post a message with interactive components');
-  print('');
+  print('Listening on http://localhost:${server.port}/slack/interactive');
+  print('Set the Request URL for Slack interactivity to your public HTTPS '
+      'address followed by /slack/interactive.');
   print('Press Ctrl+C to stop');
 
   // Keep server running
@@ -95,12 +77,12 @@ void main() async {
 /// Handler for verified Slack interactive messages
 Future<Response> _handleInteractiveMessage(
   SlackInteractivePayload payload,
-  SlackVerificationResult verification,
+  SlackVerificationResult _,
 ) async {
   print('Received Slack interactive message:');
   print('  Type: ${payload.type}');
   print('  User: ${payload.user['name']} (${payload.user['id']})');
-  print('  Team: ${verification.teamId}');
+  print('  Team: ${payload.team['id']}');
 
   // Process different interaction types
   switch (payload.type) {

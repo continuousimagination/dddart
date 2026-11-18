@@ -1,54 +1,64 @@
 # dddart_events_appsync
 
-Optional AWS AppSync Events transport and native Lambda adapters for DDDart's
-aggregate-watch API. It uses AppSync Events directly; no GraphQL schema, Flutter,
-Amplify, mandatory Cognito, or mobile AWS keys are required. See the complete
-[distributed events and deployment guide](../../docs/DISTRIBUTED_EVENTS.md).
+Add live AWS AppSync Events delivery to the
+[shared aggregate event client](../../docs/DISTRIBUTED_EVENTS.md). The same
+application can use HTTP polling independently of this package.
 
-Compose `AppSyncEventTransport` with `AggregateEventClient`. Supply the existing
-application token callback to both the HTTP control transport and AppSync
-authorization. HTTP control handles authenticated membership resolution, publish
-routing and retained catch-up; one AppSync WebSocket multiplexes live watches.
+## Connect a client
 
-`watch(reference)` starts at the current server head. Persist its opaque
-`checkpoint` to resume that particular reference. A watch's `events` stream stays
-stable across channel changes; `signals` reports `revoked` or `resyncRequired`.
-The application reloads aggregate state explicitly after resynchronization is
-required. `pause()` stops periodic work and closes live sockets; `resume()` obtains
-current credentials, reauthorizes and recovers history. Live transports reconcile
-once per minute by default, compared with the HTTP-only five-second default.
+Compose `AppSyncEventTransport` with `AggregateEventClient`. Give the HTTP
+control transport and AppSync authorization a callback that supplies the
+current application token. HTTP is used for watch resolution, catch-up, and
+publication targets; one AppSync WebSocket carries live events for all watches.
 
-`client.publisher` is the same `EventPublisher` used by generated repository saves.
-Client publication resolves a target using publish rights, separately from
-subscribe rights. Retrying publication preserves the occurrence UUID. Payloads
-are complete event envelopes, independently of public aggregate CRUD JSON.
+The [native invocation example](example/native_invocation.dart) runs locally.
+For a configured deployment, the [smoke client](example/aws_smoke.dart) shows
+the endpoint and transport setup. Follow the [deployment guide](DEPLOY.md) to
+run it with a sample stack and an authorized test aggregate.
 
-Server code injects `AggregateEventService` into `AppSyncEventHandlers`. Its
-`authorize`, `onSubscribe` and `onPublish` methods implement their distinct AWS
-contracts and await durable processing. Register access-changing event types with
-the service's `rotatesAccess` callback. Use `AppSyncHttpPublisher` for trusted IAM
-relay/control and `AppSyncIamAuthorization` with current server credentials.
-`AppSyncHttpBridge` is an optional backend-only HMAC-authenticated HTTP bridge;
-direct Lambda integration needs no HTTP listener.
+The transport reconnects with bounded backoff, manages keepalives, and
+reauthorizes connections and subscriptions. Live messages do not advance the
+history checkpoint. Periodic HTTP catch-up handles missed frames; bounded
+occurrence-ID deduplication handles overlap. See the
+[watch lifecycle](../../docs/DISTRIBUTED_EVENTS.md#watch-and-resume) for
+checkpoints, pause/resume, and cleanup.
 
-The [CloudFormation template](deploy/cloudformation.yaml),
-[Dockerfile](deploy/Dockerfile) and complete
-[Lambda Runtime API entrypoint](example/lambda.dart) implement a deployable
-reference application with DynamoDB-backed ACLs. The sample ACL policy is explicit
-application code; substitute your own authoritative repositories in a real app.
-The template supports custom JWTs and existing Cognito/OIDC providers, creates no
-user pool, and accepts an existing event table. Its HTTP function URL requires
-application Bearer authentication on every route.
+## Compose server handlers
 
-```bash
-# Resolve from the workspace root, then:
-cd packages/dddart_events_appsync
-dart test
-dart run example/native_invocation.dart
-```
+Supply an `AggregateEventService<C>` to `AppSyncEventHandlers<C>`. Its callbacks
+have separate responsibilities:
 
-Protocol tests use a local WebSocket endpoint and real serialized AWS-shaped
-frames. These are not live AWS tests. `example/aws_smoke.dart` is compile-checked
-and runs only after explicit opt-in against an existing configured deployment.
-Deployment, smoke configuration, schema validation and cleanup are documented in
-the repository guide. This package never provisions resources during initialization.
+| Handler | Purpose |
+| --- | --- |
+| `authorize` | Verify a custom token and authorize connect, subscribe, or publish using the verified principal |
+| `onSubscribe` | Validate an exact current channel and current access on a native subscription invocation |
+| `onPublish` | Validate a native publish invocation, process accepted envelopes durably, and return per-item results |
+
+Use the shared verifier for custom JWTs or the verified provider claims on
+native Cognito/OIDC invocations. Do not accept provider claims or handler
+context from a public HTTP request body. Use `AppSyncHttpPublisher` with
+`AppSyncIamAuthorization` to relay committed messages and refresh hints from
+an authorized backend. Limit the injected `trustedRelay` to that backend's
+IAM identity. For an application-owned server that needs an HTTP bridge,
+[`AppSyncHttpBridge`](lib/src/appsync_event_handlers.dart) defines the separate
+HMAC contract; keep its secret on the backend.
+
+## Handle changes in access
+
+Physical channels use a namespace and a random UUID. The server maps them to
+a typed logical aggregate. It rejects wildcard, unknown, and retired channel
+IDs. A physical channel is never a substitute for application policy.
+
+Update authoritative membership before publishing an access change. Register
+the relevant event types with the service's `rotatesAccess` callback. The
+service assigns a fresh channel, stores the result for retained retries, and
+sends a refresh hint to the retired channel. It routes the event payload to
+the new channel. Clients resolve their rights again before joining it. A
+removed subscriber sees `revoked`; other watches continue.
+
+Revocation depends on propagation of the policy change and rotation trigger;
+membership updates and rotation are separate operations. A missed trigger can
+delay revocation, and already delivered messages cannot be recalled.
+
+See the [examples](example/README.md) for local invocation and compile
+checks. These exercises do not deploy to AWS.

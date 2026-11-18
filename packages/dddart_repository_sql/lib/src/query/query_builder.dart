@@ -3,19 +3,9 @@
 /// This class provides utility methods for constructing common SQL queries
 /// (SELECT, INSERT, UPDATE, DELETE) with parameterized placeholders.
 ///
-/// The generated queries use `?` placeholders for parameters to prevent
-/// SQL injection and enable prepared statement optimization.
-///
-/// Example:
-/// ```dart
-/// final builder = QueryBuilder();
-/// final query = builder.buildSelect(
-///   tableName: 'orders',
-///   columns: ['id', 'totalAmount'],
-///   whereClause: 'customerId = ?',
-/// );
-/// // Returns: SELECT id, totalAmount FROM orders WHERE customerId = ?
-/// ```
+/// Bind values through the generated `?` placeholders. Table/column names and
+/// WHERE text are interpolated SQL and must come from trusted application schema;
+/// this builder does not sanitize arbitrary identifiers or SQL fragments.
 class QueryBuilder {
   /// Creates a query builder.
   const QueryBuilder();
@@ -29,27 +19,6 @@ class QueryBuilder {
   /// - [tableName]: The table to select from
   /// - [columns]: Optional list of column names (defaults to `*`)
   /// - [whereClause]: Optional WHERE condition with `?` placeholders
-  ///
-  /// Example:
-  /// ```dart
-  /// // Select all columns
-  /// builder.buildSelect(tableName: 'orders');
-  /// // SELECT * FROM orders
-  ///
-  /// // Select specific columns
-  /// builder.buildSelect(
-  ///   tableName: 'orders',
-  ///   columns: ['id', 'totalAmount'],
-  /// );
-  /// // SELECT id, totalAmount FROM orders
-  ///
-  /// // With WHERE clause
-  /// builder.buildSelect(
-  ///   tableName: 'orders',
-  ///   whereClause: 'customerId = ? AND status = ?',
-  /// );
-  /// // SELECT * FROM orders WHERE customerId = ? AND status = ?
-  /// ```
   String buildSelect({
     required String tableName,
     List<String>? columns,
@@ -82,15 +51,6 @@ class QueryBuilder {
   /// Parameters:
   /// - [tableName]: The table to insert into
   /// - [columns]: List of column names to insert
-  ///
-  /// Example:
-  /// ```dart
-  /// builder.buildInsert(
-  ///   tableName: 'orders',
-  ///   columns: ['id', 'customerId', 'totalAmount'],
-  /// );
-  /// // INSERT INTO orders (id, customerId, totalAmount) VALUES (?, ?, ?)
-  /// ```
   String buildInsert({
     required String tableName,
     required List<String> columns,
@@ -115,16 +75,6 @@ class QueryBuilder {
   /// - [tableName]: The table to update
   /// - [columns]: List of column names to update
   /// - [whereClause]: WHERE condition with `?` placeholders
-  ///
-  /// Example:
-  /// ```dart
-  /// builder.buildUpdate(
-  ///   tableName: 'orders',
-  ///   columns: ['status', 'updatedAt'],
-  ///   whereClause: 'id = ?',
-  /// );
-  /// // UPDATE orders SET status = ?, updatedAt = ? WHERE id = ?
-  /// ```
   String buildUpdate({
     required String tableName,
     required List<String> columns,
@@ -150,22 +100,6 @@ class QueryBuilder {
   /// Parameters:
   /// - [tableName]: The table to delete from
   /// - [whereClause]: WHERE condition with `?` placeholders
-  ///
-  /// Example:
-  /// ```dart
-  /// builder.buildDelete(
-  ///   tableName: 'orders',
-  ///   whereClause: 'id = ?',
-  /// );
-  /// // DELETE FROM orders WHERE id = ?
-  ///
-  /// // Delete with multiple conditions
-  /// builder.buildDelete(
-  ///   tableName: 'orders',
-  ///   whereClause: 'customerId = ? AND status = ?',
-  /// );
-  /// // DELETE FROM orders WHERE customerId = ? AND status = ?
-  /// ```
   String buildDelete({
     required String tableName,
     required String whereClause,

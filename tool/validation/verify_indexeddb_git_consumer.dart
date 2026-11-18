@@ -5,7 +5,7 @@ import 'validation_core.dart';
 
 /// Verifies the core/IndexedDB Git closure at an immutable published revision.
 ///
-/// Run after Worky publishes the candidate, and again at the accepted main SHA.
+/// Run against the exact repository commit that the application will install.
 Future<void> main(List<String> arguments) async {
   if (arguments.isEmpty ||
       arguments.length > 2 ||

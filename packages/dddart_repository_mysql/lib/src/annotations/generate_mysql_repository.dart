@@ -2,15 +2,6 @@
 ///
 /// This annotation is used to mark aggregate root classes for which
 /// a MySQL repository implementation should be generated.
-///
-/// Example:
-/// ```dart
-/// @Serializable()
-/// @GenerateMysqlRepository()
-/// class Order extends AggregateRoot<UuidValue> {
-///   // ...
-/// }
-/// ```
 library;
 
 /// Annotation to generate a MySQL repository for an aggregate root.

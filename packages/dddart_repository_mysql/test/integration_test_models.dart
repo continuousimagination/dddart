@@ -12,7 +12,7 @@ part 'integration_test_models.g.dart';
 
 /// A migration probe whose table is deliberately provisioned with the old type.
 @Serializable()
-@GenerateMysqlRepository(tableName: 'worky_legacy_identity')
+@GenerateMysqlRepository(tableName: 'fixture_incompatible_identity')
 class LegacyIdentity extends AggregateRoot<UuidValue> {
   /// Creates the migration probe.
   LegacyIdentity({UuidValue? id, super.createdAt, super.updatedAt})
@@ -503,7 +503,7 @@ abstract interface class NativeIssueRepository
 /// Native primary keys, embedded identities and entity collections.
 @Serializable()
 @GenerateMysqlRepository(
-  tableName: 'worky_native_issues',
+  tableName: 'fixture_native_issues',
   implements: NativeIssueRepository,
 )
 class NativeIssue extends SqlIssueBase<NativeId, NativeComment> {
@@ -527,7 +527,7 @@ class NativeIssue extends SqlIssueBase<NativeId, NativeComment> {
 
 /// Scoped primary/foreign keys and collection parents.
 @Serializable()
-@GenerateMysqlRepository(tableName: 'worky_scoped_issues')
+@GenerateMysqlRepository(tableName: 'fixture_scoped_issues')
 class ScopedIssue extends SqlIssueBase<ScopedId, ScopedComment> {
   /// Creates a scoped issue.
   ScopedIssue({

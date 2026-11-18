@@ -1,31 +1,20 @@
-# Distributed event examples
+# dddart_events_distributed examples
 
-From the workspace root:
+Watch one aggregate over HTTP, publish an event, and wait for it to reach the listener. The example supplies a loopback server and local credentials.
 
-```bash
-dart pub get
-dart run packages/dddart_events_distributed/example/http_polling.dart
-dart tool/validation/validate.dart example dddart_events_distributed_example
-```
+From the root of a DDDart checkout, run the following with the [example pubspec](pubspec.yaml).
 
-`http_polling.dart` is a finite HTTP-only publish/watch example. It uses the shared
-`AggregateEventTransport`, `AggregateEventClient` and `EventPublisher` contracts,
-with an ephemeral loopback server, explicit local fixture authentication and
-in-memory history/channel repositories. It prints the received counter value and
-closes its resources. It requires no AppSync dependency, AWS account or database.
-
-`custom_stored_event_json_example.dart` independently demonstrates generated JSON
-for a concrete `StoredEvent` subtype. Its input is `lib/custom_stored_event.dart`;
-`build.yaml` enables the JSON builder and disables the registry builder because
-this example declares no domain event to register. The validation lane generates,
-analyzes and runs the example. Generate manually before running it directly:
-
-```bash
+```sh
 cd packages/dddart_events_distributed/example
-dart run build_runner build --delete-conflicting-outputs
-dart run custom_stored_event_json_example.dart
+dart pub get
+dart run http_polling.dart
 ```
 
-For optional live transport, reuse the [AppSync examples](../../dddart_events_appsync/example/)
-and [protocol fixtures](../../dddart_events_appsync/test/websocket_protocol_test.dart).
-The same application client/publisher APIs work with either transport.
+For the custom stored event, first run `dart run build_runner build --delete-conflicting-outputs` in this example directory.
+
+## Choose a program
+
+| Program | How it runs | What it shows |
+| --- | --- | --- |
+| [custom_stored_event_json_example.dart](custom_stored_event_json_example.dart) | Local run | Round-trip a custom stored event with generated JSON. |
+| [http_polling.dart](http_polling.dart) | Local run | Publish and receive an aggregate event through the HTTP polling transport. |

@@ -31,29 +31,31 @@ class RefreshTokenJsonSerializer implements JsonSerializer<RefreshToken> {
   Map<String, dynamic> toJson(RefreshToken instance,
       [SerializationConfig? config]) {
     final effectiveConfig = config ?? _defaultConfig;
-    final json = <String, dynamic>{
-      SerializationUtils.applyFieldRename('id', effectiveConfig.fieldRename):
-          const UuidIdentityCodec().toJson(instance.id),
-      SerializationUtils.applyFieldRename(
-              'createdAt', effectiveConfig.fieldRename):
-          instance.createdAt.toIso8601String(),
-      SerializationUtils.applyFieldRename(
-              'updatedAt', effectiveConfig.fieldRename):
-          instance.updatedAt.toIso8601String(),
-      if (instance.deviceInfo != null || effectiveConfig.includeNullFields)
+    return JsonSerializer.encodeValue(() {
+      final json = <String, dynamic>{
+        SerializationUtils.applyFieldRename('id', effectiveConfig.fieldRename):
+            const UuidIdentityCodec().toJson(instance.id),
         SerializationUtils.applyFieldRename(
-            'deviceInfo', effectiveConfig.fieldRename): instance.deviceInfo,
-      SerializationUtils.applyFieldRename(
-              'expiresAt', effectiveConfig.fieldRename):
-          instance.expiresAt.toIso8601String(),
-      SerializationUtils.applyFieldRename(
-          'revoked', effectiveConfig.fieldRename): instance.revoked,
-      SerializationUtils.applyFieldRename('token', effectiveConfig.fieldRename):
-          instance.token,
-      SerializationUtils.applyFieldRename(
-          'userId', effectiveConfig.fieldRename): instance.userId,
-    };
-    return json;
+                'createdAt', effectiveConfig.fieldRename):
+            instance.createdAt.toIso8601String(),
+        SerializationUtils.applyFieldRename(
+                'updatedAt', effectiveConfig.fieldRename):
+            instance.updatedAt.toIso8601String(),
+        if (instance.deviceInfo != null || effectiveConfig.includeNullFields)
+          SerializationUtils.applyFieldRename(
+              'deviceInfo', effectiveConfig.fieldRename): instance.deviceInfo,
+        SerializationUtils.applyFieldRename(
+                'expiresAt', effectiveConfig.fieldRename):
+            instance.expiresAt.toIso8601String(),
+        SerializationUtils.applyFieldRename(
+            'revoked', effectiveConfig.fieldRename): instance.revoked,
+        SerializationUtils.applyFieldRename(
+            'token', effectiveConfig.fieldRename): instance.token,
+        SerializationUtils.applyFieldRename(
+            'userId', effectiveConfig.fieldRename): instance.userId,
+      };
+      return json;
+    }, expectedType: 'RefreshToken');
   }
 
   @override
@@ -71,69 +73,82 @@ class RefreshTokenJsonSerializer implements JsonSerializer<RefreshToken> {
         expectedType: 'RefreshToken',
       );
     }
-    try {
-      return RefreshToken(
-        deviceInfo: json[SerializationUtils.applyFieldRename(
-                    'deviceInfo', effectiveConfig.fieldRename)] !=
-                null
-            ? json[SerializationUtils.applyFieldRename(
-                'deviceInfo', effectiveConfig.fieldRename)] as String
-            : null,
-        expiresAt: DateTime.parse(json[SerializationUtils.applyFieldRename(
-            'expiresAt', effectiveConfig.fieldRename)] as String),
-        revoked: json[SerializationUtils.applyFieldRename(
-            'revoked', effectiveConfig.fieldRename)] as bool,
-        token: json[SerializationUtils.applyFieldRename(
-            'token', effectiveConfig.fieldRename)] as String,
-        userId: json[SerializationUtils.applyFieldRename(
-            'userId', effectiveConfig.fieldRename)] as String,
-        id: const UuidIdentityCodec().fromJson(json[
-            SerializationUtils.applyFieldRename(
-                'id', effectiveConfig.fieldRename)]),
-        createdAt: json[SerializationUtils.applyFieldRename(
-                    'createdAt', effectiveConfig.fieldRename)] !=
-                null
-            ? DateTime.parse(json[SerializationUtils.applyFieldRename(
-                'createdAt', effectiveConfig.fieldRename)] as String)
-            : DateTime.now(),
-        updatedAt: json[SerializationUtils.applyFieldRename(
-                    'updatedAt', effectiveConfig.fieldRename)] !=
-                null
-            ? DateTime.parse(json[SerializationUtils.applyFieldRename(
-                'updatedAt', effectiveConfig.fieldRename)] as String)
-            : DateTime.now(),
-      );
-    } catch (e) {
-      throw DeserializationException(
-        'Failed to deserialize RefreshToken: $e',
-        expectedType: 'RefreshToken',
-      );
-    }
-  }
-
-  @override
-  String serialize(RefreshToken object, [dynamic config]) {
-    return jsonEncode(toJson(object, config as SerializationConfig?));
-  }
-
-  @override
-  RefreshToken deserialize(String data, [dynamic config]) {
-    try {
-      final json = jsonDecode(data);
-      if (json is! Map<String, dynamic>) {
-        throw DeserializationException(
-          'Expected JSON object but got ${json.runtimeType}',
+    return RefreshToken(
+      deviceInfo: JsonSerializer.readValue(
+          () => json[SerializationUtils.applyFieldRename(
+                      'deviceInfo', effectiveConfig.fieldRename)] !=
+                  null
+              ? json[SerializationUtils.applyFieldRename(
+                  'deviceInfo', effectiveConfig.fieldRename)] as String
+              : null,
           expectedType: 'RefreshToken',
-        );
-      }
-      return fromJson(json, config as SerializationConfig?);
-    } catch (e) {
-      if (e is DeserializationException) rethrow;
-      throw DeserializationException(
-        'Failed to deserialize JSON: $e',
-        expectedType: 'RefreshToken',
-      );
-    }
+          field: 'deviceInfo',
+          message: 'Failed to deserialize RefreshToken'),
+      expiresAt: JsonSerializer.readValue(
+          () => DateTime.parse(json[SerializationUtils.applyFieldRename(
+              'expiresAt', effectiveConfig.fieldRename)] as String),
+          expectedType: 'RefreshToken',
+          field: 'expiresAt',
+          message: 'Failed to deserialize RefreshToken'),
+      revoked: JsonSerializer.readValue(
+          () => json[SerializationUtils.applyFieldRename(
+              'revoked', effectiveConfig.fieldRename)] as bool,
+          expectedType: 'RefreshToken',
+          field: 'revoked',
+          message: 'Failed to deserialize RefreshToken'),
+      token: JsonSerializer.readValue(
+          () => json[SerializationUtils.applyFieldRename(
+              'token', effectiveConfig.fieldRename)] as String,
+          expectedType: 'RefreshToken',
+          field: 'token',
+          message: 'Failed to deserialize RefreshToken'),
+      userId: JsonSerializer.readValue(
+          () => json[SerializationUtils.applyFieldRename(
+              'userId', effectiveConfig.fieldRename)] as String,
+          expectedType: 'RefreshToken',
+          field: 'userId',
+          message: 'Failed to deserialize RefreshToken'),
+      id: JsonSerializer.readValue(
+          () => const UuidIdentityCodec().fromJson(json[
+              SerializationUtils.applyFieldRename(
+                  'id', effectiveConfig.fieldRename)]),
+          expectedType: 'RefreshToken',
+          field: 'id',
+          message: 'Failed to deserialize RefreshToken'),
+      createdAt: JsonSerializer.readValue(
+          () => json[SerializationUtils.applyFieldRename(
+                      'createdAt', effectiveConfig.fieldRename)] !=
+                  null
+              ? DateTime.parse(json[SerializationUtils.applyFieldRename(
+                  'createdAt', effectiveConfig.fieldRename)] as String)
+              : DateTime.now(),
+          expectedType: 'RefreshToken',
+          field: 'createdAt',
+          message: 'Failed to deserialize RefreshToken'),
+      updatedAt: JsonSerializer.readValue(
+          () => json[SerializationUtils.applyFieldRename(
+                      'updatedAt', effectiveConfig.fieldRename)] !=
+                  null
+              ? DateTime.parse(json[SerializationUtils.applyFieldRename(
+                  'updatedAt', effectiveConfig.fieldRename)] as String)
+              : DateTime.now(),
+          expectedType: 'RefreshToken',
+          field: 'updatedAt',
+          message: 'Failed to deserialize RefreshToken'),
+    );
+  }
+
+  @override
+  String serialize(RefreshToken object, [SerializationConfig? config]) {
+    return JsonSerializer.encodeValue(() => jsonEncode(toJson(object, config)),
+        expectedType: 'RefreshToken');
+  }
+
+  @override
+  RefreshToken deserialize(String data, [SerializationConfig? config]) {
+    final json = JsonSerializer.readValue(() => jsonDecode(data),
+        expectedType: 'RefreshToken', message: 'Failed to deserialize JSON');
+    return fromJson(json, config);
   }
 
   /// Convenience method for static access with default configuration

@@ -17,7 +17,7 @@ Future<(Db, Db, Future<void> Function())> openDatabases() async {
   await a.open();
   await b.open();
   await a.runCommand({
-    'create': 'worky_native_identities',
+    'create': 'fixture_native_identities',
     'collation': {'locale': 'en', 'strength': 2},
   });
   return (
@@ -221,7 +221,7 @@ void main() {
     final (a, b, close) = await openDatabases();
     addTearDown(close);
     await a
-        .collection('worky_native_identities')
+        .collection('fixture_native_identities')
         .createIndex(keys: {'label': 1}, unique: true);
     final publisher = RecordingPublisher();
     final repository = NativeIssueMongoRepository(
@@ -251,7 +251,7 @@ void main() {
     final (a, b, close) = await openDatabases();
     addTearDown(close);
     await a.runCommand({
-      'collMod': 'worky_native_identities',
+      'collMod': 'fixture_native_identities',
       'validator': {
         'label': {r'$ne': '99'},
       },

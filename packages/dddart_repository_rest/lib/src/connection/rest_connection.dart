@@ -10,46 +10,10 @@ import 'package:http/http.dart' as http;
 /// This class encapsulates the configuration needed to communicate with
 /// a REST API, including the base URL and optional authentication.
 ///
-/// ## Basic Usage (No Authentication)
-///
-/// ```dart
-/// final connection = RestConnection(
-///   baseUrl: 'https://api.example.com',
-/// );
-///
-/// final userRepo = UserRestRepository(connection);
-/// // Use repository...
-///
-/// connection.dispose(); // Clean up when done
-/// ```
-///
-/// ## With Authentication
-///
-/// ```dart
-/// final authProvider = DeviceFlowAuthProvider(
-///   clientId: 'your-client-id',
-///   authorizationEndpoint: 'https://auth.example.com/authorize',
-///   tokenEndpoint: 'https://auth.example.com/token',
-/// );
-///
-/// final connection = RestConnection(
-///   baseUrl: 'https://api.example.com',
-///   authProvider: authProvider,
-/// );
-/// ```
-///
 /// ## Connection Sharing
 ///
 /// Multiple repositories can share the same connection to reuse the
-/// HTTP client and authentication state:
-///
-/// ```dart
-/// final connection = RestConnection(baseUrl: 'https://api.example.com');
-///
-/// final userRepo = UserRestRepository(connection);
-/// final orderRepo = OrderRestRepository(connection);
-/// // Both repositories share the same HTTP client
-/// ```
+/// HTTP client and authentication state.
 class RestConnection {
   /// Creates a REST connection.
   ///

@@ -12,12 +12,12 @@ const canonical = new URL(Astro.url.pathname.replace(/\/404\/$/, '/404.html'), A
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#141d28" />
-    <title>{title === 'dddart' ? 'dddart — Your domain. Pure Dart.' : `${title} · dddart`}</title>
+    <title>{title === 'dddart' ? 'DDDart · Domain-driven design in Dart' : `${title} · dddart`}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
     <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content={title === 'dddart' ? 'dddart — Your domain. Pure Dart.' : `${title} · dddart`} />
+    <meta property="og:title" content={title === 'dddart' ? 'DDDart · Domain-driven design in Dart' : `${title} · dddart`} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
     <meta name="color-scheme" content="light" />
@@ -39,8 +39,7 @@ const canonical = new URL(Astro.url.pathname.replace(/\/404\/$/, '/404.html'), A
     </header>
     <slot />
     <footer class="site-footer">
-      <div class="footer-inner"><div><Brand /><p>A shared language. A world of possibilities.</p></div><div class="footer-links"><a href={doc('philosophy')}>Why dddart</a><a href={doc('examples')}>Examples</a><a href={`${repo}/blob/main/packages/dddart/LICENSE`}>MIT license</a><a href={repo}>Made in the open ↗</a></div></div>
-      <div class="footer-bottom"><span>Domain-driven design, in Dart.</span><span>Built for people who build things.</span></div>
+      <div class="footer-inner"><Brand /><div class="footer-links"><a href={doc('philosophy')}>Why dddart</a><a href={doc('examples')}>Examples</a><a href={`${repo}/blob/main/packages/dddart/LICENSE`}>MIT license</a><a href={repo}>GitHub ↗</a></div></div>
     </footer>
     <dialog class="search-dialog" aria-label="Search documentation" data-search-index={`${base}search-index.json`}>
       <form method="dialog"><label class="sr-only" for="docs-search">Search documentation</label><input id="docs-search" type="search" placeholder="Search guides, concepts, and packages…" autocomplete="off" /><button aria-label="Close search">Esc</button></form>

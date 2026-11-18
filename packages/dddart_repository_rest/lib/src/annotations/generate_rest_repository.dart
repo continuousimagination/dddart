@@ -3,19 +3,6 @@
 /// This annotation marks aggregate root classes for code generation of
 /// repository implementations that communicate with REST APIs via HTTP.
 ///
-/// ## Basic Usage
-///
-/// ```dart
-/// @Serializable()
-/// @GenerateRestRepository(resourcePath: '/users')
-/// class User extends AggregateRoot<UuidValue> {
-///   final String firstName;
-///   final String lastName;
-///
-///   User({required this.firstName, required this.lastName}) : super(id: UuidValue.generate());
-/// }
-/// ```
-///
 /// ## Resource Path
 ///
 /// The [resourcePath] parameter specifies the URL path segment for the
@@ -27,29 +14,7 @@
 ///
 /// The [implements] parameter allows you to specify a custom repository
 /// interface with domain-specific query methods. When provided, the
-/// generator creates an abstract base class that you must extend:
-///
-/// ```dart
-/// abstract interface class UserRepository implements Repository<User, UuidValue> {
-///   Future<User?> findByEmail(String email);
-/// }
-///
-/// @Serializable()
-/// @GenerateRestRepository(implements: UserRepository)
-/// class User extends AggregateRoot<UuidValue> {
-///   final String email;
-///   User({required this.email}) : super(id: UuidValue.generate());
-/// }
-///
-/// class UserRestRepository extends UserRestRepositoryBase {
-///   UserRestRepository(super.connection);
-///
-///   @override
-///   Future<User?> findByEmail(String email) async {
-///     // Custom implementation using _connection, _serializer, etc.
-///   }
-/// }
-/// ```
+/// generator creates an abstract base class that you must extend.
 class GenerateRestRepository {
   /// Creates a REST repository generation annotation.
   ///

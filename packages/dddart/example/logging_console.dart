@@ -64,10 +64,11 @@ Future<void> _demonstrateEventBusLogging() async {
   );
 
   // Publish the event (logs at FINE level)
-  for (final event in user.getUncommittedEvents()) {
+  final userBatch = user.captureUncommittedEvents();
+  for (final event in userBatch.events) {
     eventBus.publish(event);
   }
-  user.markEventsAsCommitted();
+  user.markEventsAsCommitted(batch: userBatch);
 
   // Give the stream time to process
   await Future.delayed(Duration(milliseconds: 50));
@@ -93,7 +94,7 @@ Future<void> _demonstrateRepositoryLogging() async {
     fullName: 'Repository Demo User',
     organizationId: 'org-repo',
   );
-  user.markEventsAsCommitted();
+  // This logging-only repository demo does not publish pending events.
 
   // Save operation (logs at FINE level)
   await repository.save(user);

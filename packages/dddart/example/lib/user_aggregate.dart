@@ -40,9 +40,6 @@ class UserAggregate extends AggregateRoot<UuidValue> {
   /// Factory method to register a new user.
   ///
   /// This method creates a new user aggregate and raises a UserRegisteredEvent.
-  /// This is the proper way to create a user in a domain-driven design,
-  /// as it captures the business intent and allows other parts of the system
-  /// to react to the registration.
   factory UserAggregate.register({
     required String email,
     required String fullName,
@@ -81,9 +78,7 @@ class UserAggregate extends AggregateRoot<UuidValue> {
     }
 
     _emailVerified = true;
-
-    // In a real application, you might raise an EmailVerifiedEvent here
-    // raiseEvent(EmailVerifiedEvent(userId: id.value, email: email));
+    touch();
   }
 
   /// Deactivates the user account.
@@ -95,9 +90,7 @@ class UserAggregate extends AggregateRoot<UuidValue> {
     }
 
     _isActive = false;
-
-    // In a real application, you might raise a UserDeactivatedEvent here
-    // raiseEvent(UserDeactivatedEvent(userId: id.value, reason: reason));
+    touch();
   }
 
   @override

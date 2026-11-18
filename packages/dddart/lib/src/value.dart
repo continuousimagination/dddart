@@ -18,20 +18,6 @@ import 'package:meta/meta.dart';
 /// - Use const constructors when possible
 /// - Override [props] to return all property values that define equality
 ///
-/// ## Example
-///
-/// ```dart
-/// class Money extends Value {
-///   const Money(this.amount, this.currency);
-///
-///   final double amount;
-///   final String currency;
-///
-///   @override
-///   List<Object?> get props => [amount, currency];
-/// }
-/// ```
-///
 /// ## Benefits
 ///
 /// - **Eliminates boilerplate**: No need to implement `operator ==`, `hashCode`, or `toString`

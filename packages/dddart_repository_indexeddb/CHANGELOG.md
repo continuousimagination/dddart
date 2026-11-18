@@ -1,3 +1,8 @@
+# Changelog
+
+> Historical record; it may describe retired APIs. For current usage, start at
+> [the documentation index](../../docs/README.md).
+
 ## Unreleased
 
 - Add adapter-local conditional cancellation: prevent dispatch or return an

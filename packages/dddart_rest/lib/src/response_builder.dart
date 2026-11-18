@@ -22,15 +22,6 @@ class ResponseBuilder<T extends AggregateRoot<Identity>> {
   /// - [etag]: Optional ETag response validator
   ///
   /// Returns: A [Response] with status 200 and serialized body
-  ///
-  /// Example:
-  /// ```dart
-  /// final response = responseBuilder.ok(
-  ///   user,
-  ///   jsonSerializer,
-  ///   etag: '"2024-01-15T10:30:00.000Z"',
-  /// );
-  /// ```
   Response ok(
     T aggregate,
     JsonSerializer<T> serializer, {
@@ -56,15 +47,6 @@ class ResponseBuilder<T extends AggregateRoot<Identity>> {
   /// - [etag]: Optional ETag response validator
   ///
   /// Returns: A [Response] with status 201 and serialized body
-  ///
-  /// Example:
-  /// ```dart
-  /// final response = responseBuilder.created(
-  ///   newUser,
-  ///   jsonSerializer,
-  ///   etag: '"2024-01-15T10:30:00.000Z"',
-  /// );
-  /// ```
   Response created(
     T aggregate,
     JsonSerializer<T> serializer, {
@@ -93,15 +75,6 @@ class ResponseBuilder<T extends AggregateRoot<Identity>> {
   /// - [totalCount]: Optional total count of all matching items (for pagination)
   ///
   /// Returns: A [Response] with status 200, JSON array body, and optional X-Total-Count header
-  ///
-  /// Example:
-  /// ```dart
-  /// final response = responseBuilder.okList(
-  ///   users,
-  ///   jsonSerializer,
-  ///   totalCount: 150,
-  /// );
-  /// ```
   Response okList(
     List<T> aggregates,
     JsonSerializer<T> serializer, {
@@ -126,11 +99,6 @@ class ResponseBuilder<T extends AggregateRoot<Identity>> {
   /// DELETE operations.
   ///
   /// Returns: A [Response] with status 204 and no body
-  ///
-  /// Example:
-  /// ```dart
-  /// final response = responseBuilder.noContent();
-  /// ```
   Response noContent() {
     return Response(204);
   }
@@ -144,13 +112,6 @@ class ResponseBuilder<T extends AggregateRoot<Identity>> {
   /// - [message]: Human-readable explanation of the bad request
   ///
   /// Returns: A [Response] with status 400 and RFC 7807 formatted JSON body
-  ///
-  /// Example:
-  /// ```dart
-  /// final response = responseBuilder.badRequest(
-  ///   'Cannot combine multiple query parameters',
-  /// );
-  /// ```
   Response badRequest(String message) {
     return Response(
       400,
@@ -201,13 +162,6 @@ class ResponseBuilder<T extends AggregateRoot<Identity>> {
   /// - [message]: Human-readable explanation of what was not found
   ///
   /// Returns: A [Response] with status 404 and RFC 7807 formatted JSON body
-  ///
-  /// Example:
-  /// ```dart
-  /// final response = responseBuilder.notFound(
-  ///   'User with ID 123e4567-... not found',
-  /// );
-  /// ```
   Response notFound(String message) {
     return Response(
       404,
@@ -234,13 +188,6 @@ class ResponseBuilder<T extends AggregateRoot<Identity>> {
   /// - [message]: Human-readable explanation of the authentication failure
   ///
   /// Returns: A [Response] with status 401 and RFC 7807 formatted JSON body
-  ///
-  /// Example:
-  /// ```dart
-  /// final response = responseBuilder.unauthorized(
-  ///   'Token has expired',
-  /// );
-  /// ```
   Response unauthorized(String message) {
     return Response(
       401,

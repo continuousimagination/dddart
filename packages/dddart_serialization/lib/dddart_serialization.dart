@@ -1,11 +1,10 @@
-/// Serialization framework for DDDart.
+/// dddart_serialization: supported DDDart application and extension APIs.
 ///
-/// This package provides the base framework for implementing serialization
-/// in DDDart applications. It includes the @Serializable annotation,
-/// common utilities, configuration classes, and base classes for building
-/// format-specific serializers.
+/// Complete setup and runnable examples:
+/// https://github.com/continuousimagination/dddart/blob/main/docs/quickstarts/json/README.md
 ///
-/// For JSON serialization, use the `dddart_json` package.
+/// Supported imports and extension contracts:
+/// https://github.com/continuousimagination/dddart/blob/main/docs/PUBLIC_API.md
 library dddart_serialization;
 
 export 'src/identity_codec.dart';

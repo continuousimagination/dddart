@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/dddart_rest.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:shelf/shelf.dart';
 
 import 'json_serializer_test_support.dart';
@@ -54,7 +55,8 @@ class Claims {
 
 class DocumentSerializer extends TestJsonSerializer<Document> {
   @override
-  String serialize(Document value, [dynamic config]) => jsonEncode({
+  String serialize(Document value, [SerializationConfig? config]) =>
+      jsonEncode({
         'id': value.id.uuid,
         'createdAt': value.createdAt.toIso8601String(),
         'updatedAt': value.updatedAt.toIso8601String(),
@@ -66,7 +68,7 @@ class DocumentSerializer extends TestJsonSerializer<Document> {
         'tags': value.tags,
       });
   @override
-  Document deserialize(String data, [dynamic config]) {
+  Document deserialize(String data, [SerializationConfig? config]) {
     final json = jsonDecode(data) as Map<String, dynamic>;
     return Document(
       id: UuidValue.fromString(json['id'] as String),
@@ -217,7 +219,7 @@ class RecordingPublisher implements EventPublisher {
 class EventSerializer extends DocumentSerializer {
   final candidates = <Document>[];
   @override
-  Document deserialize(String data, [dynamic config]) {
+  Document deserialize(String data, [SerializationConfig? config]) {
     final value = super.deserialize(data, config);
     value.raiseEvent(DocumentChanged(value.id));
     candidates.add(value);

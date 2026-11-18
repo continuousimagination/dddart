@@ -1,3 +1,6 @@
+> Historical record; it may describe retired APIs. For current usage, start at
+> [the documentation index](../../docs/README.md).
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
@@ -16,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Breaking SQL storage migration: UUID identity keys retain exact text bytes,
   including case, rather than normalize into 16-byte values.
 
-## [0.9.0] - 2025-01-XX
+## [0.9.0]
 
 ### Added
 

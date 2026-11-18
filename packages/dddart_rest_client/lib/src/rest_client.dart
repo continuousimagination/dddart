@@ -3,10 +3,11 @@ import 'dart:convert';
 import 'package:dddart_rest_client/src/auth_provider.dart';
 import 'package:http/http.dart' as http;
 
-/// HTTP client with automatic authentication
+/// HTTP client that adds a bearer token to each request.
 ///
-/// Extends [http.Client] and automatically includes access tokens
-/// from an [AuthProvider] in all requests.
+/// [AuthProvider.getIdToken] supplies the token. For a device-flow provider
+/// the access token itself is the JWT. Use an ordinary [http.Client] for
+/// anonymous requests.
 class RestClient extends http.BaseClient {
   /// Creates a REST client
   ///
@@ -47,13 +48,6 @@ class RestClient extends http.BaseClient {
   // Convenience methods that take path strings instead of full URIs
 
   /// GET request with automatic auth using path string
-  ///
-  /// Automatically includes access token in Authorization header.
-  ///
-  /// Example:
-  /// ```dart
-  /// final response = await client.getPath('/users/123');
-  /// ```
   Future<http.Response> getPath(
     String path, {
     Map<String, String>? headers,
@@ -63,16 +57,7 @@ class RestClient extends http.BaseClient {
 
   /// POST request with automatic auth using path string
   ///
-  /// Automatically includes access token in Authorization header.
   /// If [body] is provided, it will be JSON-encoded.
-  ///
-  /// Example:
-  /// ```dart
-  /// final response = await client.postPath(
-  ///   '/users',
-  ///   body: {'name': 'Alice', 'email': 'alice@example.com'},
-  /// );
-  /// ```
   Future<http.Response> postPath(
     String path, {
     Object? body,
@@ -91,16 +76,7 @@ class RestClient extends http.BaseClient {
 
   /// PUT request with automatic auth using path string
   ///
-  /// Automatically includes access token in Authorization header.
   /// If [body] is provided, it will be JSON-encoded.
-  ///
-  /// Example:
-  /// ```dart
-  /// final response = await client.putPath(
-  ///   '/users/123',
-  ///   body: {'name': 'Alice Updated'},
-  /// );
-  /// ```
   Future<http.Response> putPath(
     String path, {
     Object? body,
@@ -118,13 +94,6 @@ class RestClient extends http.BaseClient {
   }
 
   /// DELETE request with automatic auth using path string
-  ///
-  /// Automatically includes access token in Authorization header.
-  ///
-  /// Example:
-  /// ```dart
-  /// final response = await client.deletePath('/users/123');
-  /// ```
   Future<http.Response> deletePath(
     String path, {
     Map<String, String>? headers,
@@ -134,16 +103,7 @@ class RestClient extends http.BaseClient {
 
   /// PATCH request with automatic auth using path string
   ///
-  /// Automatically includes access token in Authorization header.
   /// If [body] is provided, it will be JSON-encoded.
-  ///
-  /// Example:
-  /// ```dart
-  /// final response = await client.patchPath(
-  ///   '/users/123',
-  ///   body: {'email': 'newemail@example.com'},
-  /// );
-  /// ```
   Future<http.Response> patchPath(
     String path, {
     Object? body,

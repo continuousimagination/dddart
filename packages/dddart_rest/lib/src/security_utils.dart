@@ -18,14 +18,6 @@ class SecurityUtils {
   /// - [b]: Second string to compare
   ///
   /// Returns: true if strings are equal, false otherwise
-  ///
-  /// Example:
-  /// ```dart
-  /// final isValid = SecurityUtils.constantTimeCompare(
-  ///   providedSignature,
-  ///   expectedSignature,
-  /// );
-  /// ```
   static bool constantTimeCompare(String a, String b) {
     // Convert strings to bytes for comparison
     final bytesA = utf8.encode(a);
@@ -59,14 +51,6 @@ class SecurityUtils {
   /// - [clockSkewTolerance]: Tolerance for clock skew (default: 5 minutes)
   ///
   /// Returns: true if timestamp is valid, false otherwise
-  ///
-  /// Example:
-  /// ```dart
-  /// final isValid = SecurityUtils.validateTimestampAge(
-  ///   deviceCode.createdAt,
-  ///   maxAge: Duration(minutes: 10),
-  /// );
-  /// ```
   static bool validateTimestampAge(
     DateTime timestamp, {
     Duration maxAge = const Duration(minutes: 10),
@@ -100,14 +84,6 @@ class SecurityUtils {
   /// - [maxAge]: Maximum age for the device code (default: 10 minutes)
   ///
   /// Returns: true if device code is valid, false otherwise
-  ///
-  /// Example:
-  /// ```dart
-  /// final isValid = SecurityUtils.validateDeviceCodeAge(
-  ///   deviceCode.createdAt,
-  ///   deviceCode.expiresAt,
-  /// );
-  /// ```
   static bool validateDeviceCodeAge(
     DateTime createdAt,
     DateTime expiresAt, {
@@ -134,11 +110,6 @@ class SecurityUtils {
   /// - [length]: Length of the random string in bytes (default: 32)
   ///
   /// Returns: Base64-encoded random string
-  ///
-  /// Example:
-  /// ```dart
-  /// final token = SecurityUtils.generateSecureRandom(32);
-  /// ```
   static String generateSecureRandom([int length = 32]) {
     final random = Random.secure();
     final bytes = List<int>.generate(

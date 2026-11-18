@@ -189,6 +189,30 @@ void main() {
       expect(File('${libDirectory.path}/model.g.dart').existsSync(), isTrue);
       await _expectDartSuccess(fixture, ['analyze', '--fatal-infos']);
       await _expectDartSuccess(fixture, ['run', 'bin/main.dart']);
+      File('${fixture.path}/bin/wrong_config.dart').writeAsStringSync("""
+import 'package:dddart_json_clean_consumer/model.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
+void main() {
+  final generated = ConsumerAggregateJsonSerializer();
+  final Serializer<ConsumerAggregate, SerializationConfig> generic = generated;
+  generated.serialize(ConsumerAggregate(name: 'invalid'), 'wrong config');
+  generic.deserialize('{}', 'wrong config');
+  generated.toJson(ConsumerAggregate(name: 'invalid'), 'wrong config');
+  ConsumerAggregateJsonSerializer.decode({}, 'wrong config');
+}
+""");
+      final rejected = await Process.run(
+        Platform.resolvedExecutable,
+        ['analyze', 'bin/wrong_config.dart'],
+        workingDirectory: fixture.path,
+      );
+      final diagnostic = '${rejected.stdout}\n${rejected.stderr}';
+      expect(rejected.exitCode, isNot(0), reason: diagnostic);
+      expect(
+        'argument_type_not_assignable'.allMatches(diagnostic).length,
+        4,
+        reason: diagnostic,
+      );
     },
     timeout: const Timeout(Duration(minutes: 2)),
   );

@@ -198,7 +198,7 @@ abstract class IssueBase<I extends Identity> extends AggregateRoot<I> {
 
 /// A native-ID aggregate for persistence tests.
 @Serializable()
-@GenerateMongoRepository(collectionName: 'worky_native_identities')
+@GenerateMongoRepository(collectionName: 'fixture_native_identities')
 class NativeIssue extends IssueBase<NativeId> {
   /// Creates the issue.
   NativeIssue({
@@ -226,7 +226,7 @@ abstract interface class ScopedIssueRepository
 /// A scoped-ID aggregate with a custom generated repository interface.
 @Serializable()
 @GenerateMongoRepository(
-  collectionName: 'worky_scoped_identities',
+  collectionName: 'fixture_scoped_identities',
   implements: ScopedIssueRepository,
 )
 class ScopedIssue extends IssueBase<ScopedId> {

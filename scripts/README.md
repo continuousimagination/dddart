@@ -1,125 +1,80 @@
-# Scripts
+# Develop and test DDDart
 
-This directory contains utility scripts for the DDDart project.
+Run `dart pub get` from the repository root. Use the SDK constraint in the
+[root pubspec](../pubspec.yaml). Make changes in the relevant package under
+`packages/`, update regressions and examples with the code, then run the
+checks for the affected packages.
 
-## Available Scripts
+## Package and example checks
 
-### `test-all.sh`
+Run these commands from the repository root:
 
-Runs the workspace-derived validation policy and is used by the pre-push hook.
-The policy is shared with CI through
-[`tool/validation/inventory.json`](../tool/validation/inventory.json); package
-lists must not be duplicated in this script or in the workflow.
-
-**Usage:**
-```bash
-./scripts/test-all.sh
-
-# Run the same complete gate locally with MongoDB, DynamoDB Local and MySQL:
-./scripts/test-all.sh --with-services
-```
-
-**What it does:**
-
-- verifies that every root workspace member is either an intended public package
-  or has a justified exemption;
-- analyzes, format-checks, and self-tests the shared validation tooling;
-- verifies native IndexedDB isolation and receipt replay across independently
-  loaded same-origin Chrome tabs, matching the adapter's CI lane;
-- isolates nested Git and Pub subprocesses from repository-local environment
-  variables exported by hooks, so fixture repositories cannot affect the
-  caller's index or configuration;
-- checks each public package's frozen local dependency closure;
-- verifies each package's explicit `generation: required|none` policy against
-  its manifest and generated-part topology, then runs required generation in
-  inventory order;
-- rejects stale, duplicate, or unclassified external-service test tags by
-  comparing the inventory with `dart_test.yaml` and test metadata;
-- analyzes, format-checks, and tests all 18 intended public packages;
-- excludes MongoDB, DynamoDB, and MySQL service tests locally according to the
-  explicit policy (CI runs each adapter only with its package-scoped service);
-- runs `dart pub publish --dry-run` for packages whose metadata does not set
-  `publish_to: none`;
-- creates a temporary consumer for every intended public package by extracting
-  Pub's own archive file set (including nested `.pubignore` semantics), confines
-  local path overrides to that fixture, and proves its resolved dddart
-  dependency graph contains exactly the smallest allowed closure;
-- discovers every `packages/*/example` directory and matches it against the
-  shared runnable/illustrative/legacy inventory;
-- resolves each example from its declared workspace or standalone context,
-  proves its smallest local dependency closure, regenerates declared outputs
-  from clean state, analyzes its source with a local analysis configuration,
-  compiles every supported entrypoint, and runs finite local entrypoints;
-- compiles external-service examples locally. CI derives example matrices from
-  the same inventory and runs the MongoDB, DynamoDB, and MySQL lanes with their
-  provisioned services. Slack entrypoints remain compile-only because they need
-  real credentials and inbound requests.
-
-### Validation tool
-
-The root validator can also run focused lanes:
-
-```bash
-# Inventory drift, closure policy, and exemption checks
+```sh
+# Validate coverage and dependency policy.
 dart tool/validation/validate.dart check
+dart tool/validation/self_test.dart
 
-# Full or service-scoped CI matrices derived from that inventory
-dart tool/validation/validate.dart matrix
-dart tool/validation/validate.dart matrix --service-kind=mysql
-
-# Full or service-scoped example matrices from the same inventory
-dart tool/validation/validate.dart example-matrix
-dart tool/validation/validate.dart example-matrix --service-kind=dynamodb
-
-# One integrated package lane
+# Check one package or example.
 dart tool/validation/validate.dart package dddart_json --mode=local
+dart tool/validation/validate.dart example dddart_json_example --mode=local
 
-# One outside-workspace minimal consumer
+# Test an isolated consumer of the package archive.
 dart tool/validation/validate.dart consumer dddart_repository_mysql
 
-# One example or all examples; local mode does not assume external services
-dart tool/validation/validate.dart example dddart_json_example --mode=local
-dart tool/validation/validate.dart examples --mode=local
-
-# Fast policy and dependency-boundary regression tests
-dart tool/validation/self_test.dart
+# Run the full local gate, including native Chrome.
+./scripts/test-all.sh
 ```
 
-### Immutable IndexedDB Git consumer
+The [shared inventory](../tool/validation/inventory.json) lists package
+closures, generation rules, sample programs, and services. Package checks
+regenerate required parts before analysis and tests, then check package
+contents and isolated consumer resolution. The example lane uses its own
+pubspec, generates the needed parts, analyzes and compiles its programs, and
+runs entries marked for execution. Keep the inventory and the example's program
+table in sync when adding or changing an entry. Do not edit generated parts.
 
-```bash
+Use `--mode=local` to run without the test databases: it excludes the tagged
+service tests and compiles the service examples. Use `--mode=ci` for a package
+or example whose required service is running; a missing service fails the
+lane. Run `./scripts/test-all.sh --with-services` for all required lanes.
+Start disposable databases using the matching [MySQL](../docs/quickstarts/mysql/README.md),
+[MongoDB](../docs/quickstarts/mongodb/README.md), or
+[DynamoDB Local](../docs/quickstarts/dynamodb/README.md) setup. Keep test
+storage separate from application data. The SQLite adapter needs its native
+shared library but no database server.
+
+The CI matrices come from `validate.dart matrix` and
+`validate.dart example-matrix`. Use the
+[Actions page](https://github.com/continuousimagination/dddart/actions) to see
+which workflows are enabled and their results. To install the optional
+pre-push hook for the local gate, run `./scripts/setup-hooks.sh`.
+
+## Browser validation
+
+Install Chrome for browser checks. Set `CHROME_EXECUTABLE` if needed. The
+IndexedDB package's `dart test -p vm` lane exercises its memory/failure
+contracts; `dart test -p chrome` exercises native IndexedDB. Run those commands
+from the [adapter package](../packages/dddart_repository_indexeddb/).
+
+From the repository root, run the separate-tab harness and public Git consumer:
+
+```sh
+dart packages/dddart_repository_indexeddb/tool/verify_cross_tab.dart
 dart tool/validation/verify_indexeddb_git_consumer.dart <full-commit-sha>
 ```
 
-Creates an outside-workspace consumer without dependency overrides, verifies
-core/serialization/adapter Git lockfile revisions, and runs typed memory and
-native Chrome contracts. The IndexedDB package gate itself also requires Chrome
-through its `dart_test.yaml` platforms. Set `CHROME_EXECUTABLE` when needed.
-Run browser lanes sequentially on thread-constrained development hosts.
+The harness launches Chrome headlessly with a temporary profile and two
+same-origin top-level pages. It checks competing writes, uniqueness, and
+receipt replay after reopening. Its JSON output is a test artifact; keep it
+with the run. The Git consumer checks the lockfile revision and runs the typed
+VM and Chrome contracts outside the workspace. Use the actual commit the
+application will install.
 
-### `setup-hooks.sh`
+## Documentation
 
-Installs git hooks for the repository. Run this after cloning the repository.
-
-**Usage:**
-```bash
-./scripts/setup-hooks.sh
-```
-
-**What it does:**
-- Installs the pre-push hook at `.git/hooks/pre-push`
-- The hook automatically runs `test-all.sh` before every push
-- Prevents pushing code that would fail CI
-
-## Git Hooks
-
-### Pre-Push Hook
-
-The pre-push hook runs automatically before every `git push` to catch issues before they reach CI.
-
-**To skip the hook (not recommended):**
-```bash
-git push --no-verify
-```
-
-**Note:** The hook itself is not committed to git (it lives in `.git/hooks/`), but the logic is in the versioned `test-all.sh` script. This ensures the hook behavior is consistent across all developers and can be updated through git.
+Follow the [documentation checks](../tool/documentation/README.md) when editing
+guides, public Dartdoc, or the source of an example. See
+[website development](../website/README.md) for the site build and preview.
+Use Bash for repository orchestration and standard tools such as jq and
+`xmllint` for structured data. Existing Dart tests and the website application
+keep their existing languages.

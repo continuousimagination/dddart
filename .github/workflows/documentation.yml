@@ -1,0 +1,30 @@
+name: Documentation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: documentation-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Check Bash syntax
+        run: |
+          bash -n tool/documentation/common.sh
+          bash -n tool/documentation/validate.sh
+          bash -n tool/documentation/self_test.sh
+          bash -n website/scripts/check-site.sh
+          bash -n website/scripts/check-site-self-test.sh
+      - name: Check all documentation surfaces and sources
+        run: bash tool/documentation/validate.sh check

@@ -1,34 +1,11 @@
-/// Slack webhook implementation for DDDart.
+/// dddart_webhooks_slack: supported DDDart application and extension APIs.
 ///
-/// Provides [SlackWebhookVerifier] for verifying Slack webhook signatures
-/// using HMAC-SHA256 and [SlackVerificationResult] for strongly-typed
-/// verification results with Slack-specific metadata.
+/// Complete setup and runnable examples:
+/// https://github.com/continuousimagination/dddart/blob/main/docs/QUICKSTARTS.md
 ///
-/// Example:
-/// ```dart
-/// import 'package:dddart_webhooks_slack/dddart_webhooks_slack.dart';
-///
-/// final verifier = SlackWebhookVerifier(
-///   signingSecret: 'your-slack-signing-secret',
-/// );
-///
-/// final webhook = WebhookResource<SlackSlashCommand, SlackVerificationResult>(
-///   path: '/slack/commands',
-///   verifier: verifier,
-///   deserializer: (body) => WebhookDeserializers.form(
-///     body,
-///     SlackSlashCommand.fromForm,
-///   ),
-///   handler: (command, verification) async {
-///     // Handle slash command
-///     return Response.ok('Command received!');
-///   },
-/// );
-/// ```
+/// Supported imports and extension contracts:
+/// https://github.com/continuousimagination/dddart/blob/main/docs/PUBLIC_API.md
 library dddart_webhooks_slack;
-
-import 'package:dddart_webhooks_slack/dddart_webhooks_slack.dart'
-    show SlackVerificationResult, SlackWebhookVerifier;
 
 export 'src/slack_slash_command.dart';
 export 'src/slack_verification_result.dart';

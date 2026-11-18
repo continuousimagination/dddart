@@ -462,7 +462,7 @@ abstract interface class NativeIssueRepository
 /// Native primary keys, embedded identities and entity collections.
 @Serializable()
 @GenerateSqliteRepository(
-  tableName: 'worky_native_issues',
+  tableName: 'fixture_native_issues',
   implements: NativeIssueRepository,
 )
 class NativeIssue extends SqlIssueBase<NativeId, NativeComment> {
@@ -486,7 +486,7 @@ class NativeIssue extends SqlIssueBase<NativeId, NativeComment> {
 
 /// Scoped primary/foreign keys and collection parents.
 @Serializable()
-@GenerateSqliteRepository(tableName: 'worky_scoped_issues')
+@GenerateSqliteRepository(tableName: 'fixture_scoped_issues')
 class ScopedIssue extends SqlIssueBase<ScopedId, ScopedComment> {
   /// Creates a scoped issue.
   ScopedIssue({

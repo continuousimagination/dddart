@@ -1,3 +1,6 @@
+> Historical record; it may describe retired APIs. For current usage, start at
+> [the documentation index](../../docs/README.md).
+
 # Changelog
 
 ## 0.1.0 — Unreleased

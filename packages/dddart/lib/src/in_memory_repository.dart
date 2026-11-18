@@ -6,101 +6,15 @@ import 'package:dddart/src/repository_exception.dart';
 import 'package:dddart/src/save_with_events.dart';
 import 'package:logging/logging.dart';
 
-/// In-memory implementation of [Repository] for testing purposes.
+/// Stores aggregates of type [T] by their [Identity] in a map owned by this instance.
 ///
-/// Stores aggregate roots in a Map keyed by their ID. This implementation
-/// is useful for unit tests and prototyping, but should not be used in
-/// production as data is not persisted and will be lost when the application
-/// terminates.
+/// A read returns the same object that was saved. Mutating it changes what a
+/// later read observes, even before another save. Use this repository for a
+/// local example or test that can work with shared references. Its contents
+/// disappear when the process exits.
 ///
-/// The [InMemoryRepository] provides a simple, fast implementation that
-/// requires no external dependencies or setup, making it ideal for:
-/// * Unit testing domain logic
-/// * Integration testing without database setup
-/// * Rapid prototyping and development
-/// * Learning and experimentation
-///
-/// ## Type Parameter
-///
-/// * [T] - The aggregate root type managed by this repository. Must extend
-///   [AggregateRoot].
-/// * [I] - The aggregate identity type used as the in-memory map key.
-///
-/// ## Usage Example
-///
-/// ```dart
-/// // Create a repository for User aggregates
-/// final userRepository = InMemoryRepository<User, UuidValue>();
-///
-/// // Save a user
-/// final user = User(name: 'John Doe', email: 'john@example.com');
-/// await userRepository.save(user);
-///
-/// // Retrieve the user
-/// final retrieved = await userRepository.getById(user.id);
-/// print('Found: ${retrieved.name}');
-///
-/// // Update the user
-/// retrieved.updateEmail('newemail@example.com');
-/// await userRepository.save(retrieved);
-///
-/// // Delete the user
-/// await userRepository.deleteById(user.id);
-///
-/// // Clean up for next test
-/// userRepository.clear();
-/// ```
-///
-/// ## Testing Utilities
-///
-/// The [InMemoryRepository] includes additional utility methods for testing:
-///
-/// ```dart
-/// test('repository operations', () async {
-///   final repository = InMemoryRepository<User, UuidValue>();
-///
-///   // Add test data
-///   final user1 = User(name: 'Alice');
-///   final user2 = User(name: 'Bob');
-///   await repository.save(user1);
-///   await repository.save(user2);
-///
-///   // Verify all users are stored
-///   final allUsers = await repository.getAll();
-///   expect(allUsers, hasLength(2));
-///
-///   // Clean up after test
-///   repository.clear();
-///   expect(await repository.getAll(), isEmpty);
-/// });
-/// ```
-///
-/// ## Thread Safety
-///
-/// This implementation is not thread-safe. If you need concurrent access,
-/// consider using appropriate synchronization mechanisms or a different
-/// repository implementation designed for concurrent use.
-///
-/// ## Storage Isolation
-///
-/// Each instance of [InMemoryRepository] maintains its own independent storage.
-/// Different instances do not share data, even for the same aggregate type:
-///
-/// ```dart
-/// final repo1 = InMemoryRepository<User, UuidValue>();
-/// final repo2 = InMemoryRepository<User, UuidValue>();
-///
-/// final user = User(name: 'Alice');
-/// await repo1.save(user);
-///
-/// // repo2 does not have access to user
-/// expect(() => repo2.getById(user.id), throwsA(isA<RepositoryException>()));
-/// ```
-///
-/// See also:
-/// * [Repository] - The base repository interface
-/// * [AggregateRoot] - The base class for aggregate roots
-/// * [RepositoryException] - Exception thrown by repository operations
+/// A missing ID throws [RepositoryException]. Use [getAll] to inspect stored
+/// objects and [clear] to reset the store between tests.
 class InMemoryRepository<T extends AggregateRoot<I>, I extends Identity>
     implements Repository<T, I> {
   /// Creates instance-local storage with optional originated-event publication.
@@ -176,20 +90,6 @@ class InMemoryRepository<T extends AggregateRoot<I>, I extends Identity>
   /// This method removes all stored aggregates, resetting the repository
   /// to an empty state. It is particularly useful for test cleanup to
   /// ensure tests start with a clean slate.
-  ///
-  /// Example:
-  /// ```dart
-  /// test('user operations', () async {
-  ///   final repository = InMemoryRepository<User, UuidValue>();
-  ///
-  ///   // Perform test operations
-  ///   await repository.save(User(name: 'Test User'));
-  ///
-  ///   // Clean up
-  ///   repository.clear();
-  ///   expect(await repository.getAll(), isEmpty);
-  /// });
-  /// ```
   void clear() {
     _storage.clear();
   }
@@ -207,19 +107,6 @@ class InMemoryRepository<T extends AggregateRoot<I>, I extends Identity>
   ///
   /// Note: The returned list is unmodifiable. Attempting to modify it will
   /// throw an [UnsupportedError].
-  ///
-  /// Example:
-  /// ```dart
-  /// final repository = InMemoryRepository<User, UuidValue>();
-  /// await repository.save(User(name: 'Alice'));
-  /// await repository.save(User(name: 'Bob'));
-  ///
-  /// final allUsers = await repository.getAll();
-  /// print('Total users: ${allUsers.length}');
-  /// for (final user in allUsers) {
-  ///   print('User: ${user.name}');
-  /// }
-  /// ```
   Future<List<T>> getAll() async {
     return List.unmodifiable(_storage.values);
   }

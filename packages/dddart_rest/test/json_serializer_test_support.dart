@@ -1,11 +1,12 @@
 import 'dart:convert';
 
 import 'package:dddart_json/dddart_json.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
 
 /// Adapts simple string-based test serializers to the JSON-specific contract.
 abstract class TestJsonSerializer<T> implements JsonSerializer<T> {
   @override
-  Map<String, dynamic> toJson(T object, [dynamic config]) {
+  Map<String, dynamic> toJson(T object, [SerializationConfig? config]) {
     final value = jsonDecode(serialize(object, config));
     if (value is! Map<String, dynamic>) {
       throw FormatException(
@@ -16,7 +17,7 @@ abstract class TestJsonSerializer<T> implements JsonSerializer<T> {
   }
 
   @override
-  T fromJson(dynamic json, [dynamic config]) {
+  T fromJson(dynamic json, [SerializationConfig? config]) {
     return deserialize(jsonEncode(json), config);
   }
 }

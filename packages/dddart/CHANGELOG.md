@@ -1,9 +1,13 @@
+# Changelog
+
+> Historical record; it may describe retired APIs. For current usage, start at
+> [the documentation index](../../docs/README.md).
+
 ## Unreleased
 
 - Export the portable conditional repository capability with concrete aggregate
   identity types, atomic mutation requests, revision tokens and durable receipts.
 
-# Changelog
 
 All notable changes to this project will be documented in this file.
 

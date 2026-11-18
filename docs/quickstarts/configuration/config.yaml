@@ -1,0 +1,7 @@
+server:
+  host: 127.0.0.1
+  port: 8080
+logging:
+  verbose: false
+allowed_origins:
+  - https://example.com

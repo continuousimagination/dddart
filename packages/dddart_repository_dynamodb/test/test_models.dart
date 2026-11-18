@@ -197,7 +197,7 @@ abstract class IssueBase<I extends Identity> extends AggregateRoot<I> {
 
 /// A native-ID aggregate for persistence tests.
 @Serializable()
-@GenerateDynamoRepository(tableName: 'worky_native_identities')
+@GenerateDynamoRepository(tableName: 'fixture_native_identities')
 class NativeIssue extends IssueBase<NativeId> {
   /// Creates the issue.
   NativeIssue({
@@ -225,7 +225,7 @@ abstract interface class ScopedIssueRepository
 /// A scoped-ID aggregate with a custom generated repository interface.
 @Serializable()
 @GenerateDynamoRepository(
-  tableName: 'worky_scoped_identities',
+  tableName: 'fixture_scoped_identities',
   implements: ScopedIssueRepository,
 )
 class ScopedIssue extends IssueBase<ScopedId> {

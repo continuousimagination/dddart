@@ -1,7 +1,10 @@
-/// Client library for dddart_rest APIs with automatic authentication
+/// dddart_rest_client: supported DDDart application and extension APIs.
 ///
-/// Provides HTTP client with automatic token management, device flow
-/// authentication, and support for both self-hosted and OAuth providers.
+/// Complete setup and runnable examples:
+/// https://github.com/continuousimagination/dddart/blob/main/docs/quickstarts/rest/README.md
+///
+/// Supported imports and extension contracts:
+/// https://github.com/continuousimagination/dddart/blob/main/docs/PUBLIC_API.md
 library dddart_rest_client;
 
 export 'src/auth_provider.dart';

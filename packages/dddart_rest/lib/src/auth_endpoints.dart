@@ -17,22 +17,6 @@ import 'package:uuid/uuid.dart';
 /// This class creates HTTP endpoints for login, refresh, logout, and device
 /// flow authentication. It works with [JwtAuthHandler] to issue and validate
 /// tokens.
-///
-/// Example:
-/// ```dart
-/// final authEndpoints = AuthEndpoints<UserClaims, RefreshToken, DeviceCode>(
-///   authHandler: jwtAuthHandler,
-///   deviceCodeRepository: deviceCodeRepo,
-///   deviceCodeLifecycle: const StandardDeviceCodeLifecycle(),
-///   userValidator: (username, password) async {
-///     // Validate credentials and return user ID
-///     if (username == 'admin' && password == 'secret') {
-///       return 'user123';
-///     }
-///     return null;
-///   },
-/// );
-/// ```
 class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
     TDeviceCode extends DeviceCode> {
   /// Creates authentication endpoints

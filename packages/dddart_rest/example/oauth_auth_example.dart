@@ -17,8 +17,10 @@
 
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/dddart_rest.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:shelf/shelf.dart';
 
 import 'lib/json_serializer_support.dart';
@@ -75,7 +77,7 @@ class CognitoClaims {
 // Simple serializer for User
 class UserSerializer extends ExampleJsonSerializer<User> {
   @override
-  User deserialize(String data, [dynamic config]) {
+  User deserialize(String data, [SerializationConfig? config]) {
     final json = jsonDecode(data) as Map<String, dynamic>;
     return User(
       id: UuidValue.fromString(json['id'] as String),
@@ -87,7 +89,7 @@ class UserSerializer extends ExampleJsonSerializer<User> {
   }
 
   @override
-  String serialize(User aggregate, [dynamic config]) {
+  String serialize(User aggregate, [SerializationConfig? config]) {
     return jsonEncode({
       'id': aggregate.id.toString(),
       'email': aggregate.email,
@@ -189,7 +191,8 @@ void main() async {
   server.addRoute('GET', '/health', (Request request) async {
     return Response.ok(
       jsonEncode(
-          {'status': 'healthy', 'timestamp': DateTime.now().toIso8601String()}),
+        {'status': 'healthy', 'timestamp': DateTime.now().toIso8601String()},
+      ),
       headers: {'Content-Type': 'application/json'},
     );
   });
@@ -201,7 +204,8 @@ void main() async {
   print('No login endpoints - users authenticate through Cognito.\n');
   print('To test:');
   print(
-      '1. Get a JWT from Cognito (use AWS Amplify, Cognito SDK, or device flow)');
+    '1. Get a JWT from Cognito (use the configured Cognito authorization-code login flow)',
+  );
   print('2. Make requests with the JWT:\n');
   print('curl http://localhost:8080/users?me \\');
   print('  -H "Authorization: Bearer <cognito_jwt_token>"');

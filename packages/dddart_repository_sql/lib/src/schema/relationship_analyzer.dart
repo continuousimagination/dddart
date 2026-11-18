@@ -14,14 +14,6 @@ import 'package:dddart_repository_sql/src/schema/identity_type.dart';
 /// The analyzer uses depth-first search to traverse the object graph and
 /// produces a topologically sorted list of types where dependencies appear
 /// before the types that depend on them.
-///
-/// Example:
-/// ```dart
-/// final analyzer = RelationshipAnalyzer();
-/// final types = analyzer.analyzeAggregate(orderClass);
-/// // Returns: [Money, Address, OrderItem, Order]
-/// // (value objects and entities before aggregate root)
-/// ```
 class RelationshipAnalyzer {
   /// Creates a relationship analyzer.
   const RelationshipAnalyzer();
@@ -40,13 +32,6 @@ class RelationshipAnalyzer {
   /// Handles circular references by detecting cycles and breaking them to
   /// avoid infinite loops. When a cycle is detected, the analyzer skips
   /// revisiting the type.
-  ///
-  /// Example:
-  /// ```dart
-  /// // Given: Order -> OrderItem -> Money
-  /// final types = analyzer.analyzeAggregate(orderClass);
-  /// // Returns: [Money, OrderItem, Order]
-  /// ```
   ///
   /// Returns a list of [ClassElement]s in dependency order.
   List<ClassElement> analyzeAggregate(ClassElement aggregateRoot) {
@@ -97,13 +82,6 @@ class RelationshipAnalyzer {
   /// - One-to-One: Foreign key column in this table
   /// - One-to-Many: Separate table with foreign key back to parent
   /// - Many-to-One: Foreign key column in child table
-  ///
-  /// Example:
-  /// ```dart
-  /// // Order has List<OrderItem> items
-  /// final type = analyzer.getRelationshipType(itemsField);
-  /// // Returns: RelationshipType.oneToMany
-  /// ```
   RelationshipType getRelationshipType(FieldElement field) {
     final fieldType = field.type;
 
@@ -130,16 +108,6 @@ class RelationshipAnalyzer {
   /// In the SQL schema, value objects are **embedded** into their parent tables
   /// with prefixed column names rather than getting their own tables.
   ///
-  /// Example:
-  /// ```dart
-  /// class Money extends Value {
-  ///   final double amount;
-  ///   final String currency;
-  /// }
-  /// // isValueObject(Money) returns true
-  /// // Money fields are embedded: totalAmount_amount, totalAmount_currency
-  /// ```
-  ///
   /// Returns `true` if [element] extends `Value`.
   bool isValueObject(ClassElement element) {
     return !IdentityTypeAnalysis.isIdentity(element.thisType) &&
@@ -157,16 +125,6 @@ class RelationshipAnalyzer {
   /// Note: `AggregateRoot` extends `Entity`, so this returns `true` for
   /// both entities and aggregate roots.
   ///
-  /// Example:
-  /// ```dart
-  /// class OrderItem extends Entity<UuidValue> {
-  ///   final UuidValue productId;
-  ///   final int quantity;
-  /// }
-  /// // isEntity(OrderItem) returns true
-  /// // OrderItem gets its own table: order_items
-  /// ```
-  ///
   /// Returns `true` if [element] extends `Entity` or `AggregateRoot`.
   bool isEntity(ClassElement element) {
     return _extendsClass(element, 'Entity');
@@ -182,15 +140,6 @@ class RelationshipAnalyzer {
   /// - Aggregate roots get their own tables
   /// - Entities within the aggregate have foreign keys with CASCADE DELETE
   /// - References to other aggregates are just UUID columns (no foreign keys)
-  ///
-  /// Example:
-  /// ```dart
-  /// class Order extends AggregateRoot<UuidValue> {
-  ///   final List<OrderItem> items; // Entities within aggregate
-  ///   final UuidValue customerId;  // Reference to another aggregate
-  /// }
-  /// // isAggregateRoot(Order) returns true
-  /// ```
   ///
   /// Returns `true` if [element] extends `AggregateRoot`.
   bool isAggregateRoot(ClassElement element) {
@@ -277,14 +226,6 @@ class RelationshipAnalyzer {
   /// Determines if a field is a collection type.
   ///
   /// Returns `true` if the field is a List, Set, or Map.
-  ///
-  /// Example:
-  /// ```dart
-  /// // For field: List<int> favoriteNumbers
-  /// analyzer.isCollection(field); // true
-  /// // For field: String name
-  /// analyzer.isCollection(field); // false
-  /// ```
   bool isCollection(FieldElement field) {
     final type = field.type;
     return type.isDartCoreList || type.isDartCoreSet || type.isDartCoreMap;
@@ -293,14 +234,6 @@ class RelationshipAnalyzer {
   /// Gets the collection kind (List, Set, Map).
   ///
   /// Returns the kind of collection, or `null` if not a collection.
-  ///
-  /// Example:
-  /// ```dart
-  /// // For field: List<int> favoriteNumbers
-  /// analyzer.getCollectionKind(field.type); // CollectionKind.list
-  /// // For field: Set<String> tags
-  /// analyzer.getCollectionKind(field.type); // CollectionKind.set
-  /// ```
   CollectionKind? getCollectionKind(DartType type) {
     if (type.isDartCoreList) {
       return CollectionKind.list;
@@ -316,14 +249,6 @@ class RelationshipAnalyzer {
   ///
   /// Returns the type argument T from a List<T> or Set<T> type.
   /// Returns `null` if the type is not a List or Set, or has no type arguments.
-  ///
-  /// Example:
-  /// ```dart
-  /// // For type: List<int>
-  /// analyzer.getElementType(listType); // int type
-  /// // For type: Set<String>
-  /// analyzer.getElementType(setType); // String type
-  /// ```
   DartType? getElementType(DartType collectionType) {
     if (collectionType is InterfaceType) {
       if (collectionType.isDartCoreList || collectionType.isDartCoreSet) {
@@ -340,13 +265,6 @@ class RelationshipAnalyzer {
   ///
   /// Returns a tuple of (keyType, valueType) from a Map<K, V> type.
   /// Returns `(null, null)` if the type is not a Map or has insufficient type arguments.
-  ///
-  /// Example:
-  /// ```dart
-  /// // For type: Map<String, int>
-  /// final (keyType, valueType) = analyzer.getMapTypes(mapType);
-  /// // keyType is String, valueType is int
-  /// ```
   (DartType?, DartType?) getMapTypes(DartType mapType) {
     if (mapType is InterfaceType && mapType.isDartCoreMap) {
       final typeArgs = mapType.typeArguments;

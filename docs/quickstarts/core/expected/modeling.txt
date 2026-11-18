@@ -1,0 +1,2 @@
+Sam: 2 seats, confirmed: true
+ReservationConfirmed

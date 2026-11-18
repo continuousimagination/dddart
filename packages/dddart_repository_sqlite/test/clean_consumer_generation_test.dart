@@ -42,6 +42,15 @@ dependency_overrides:
 ''');
 
       final libDirectory = Directory('${fixture.path}/lib')..createSync();
+      // A separate build-time extension import remains available to consumers.
+      File('${libDirectory.path}/extension.dart').writeAsStringSync("""
+import 'package:dddart_repository_sql/generator.dart';
+import 'package:dddart_repository_sqlite/dddart_repository_sqlite.dart';
+final schema = SchemaGenerator(const SqliteDialect());
+final types = TypeMapper();
+final relationships = RelationshipAnalyzer();
+""");
+
       File('${libDirectory.path}/model.dart').writeAsStringSync(
         '''
 import 'dart:convert';
@@ -227,8 +236,39 @@ void main() {}
         expect(diagnostic, contains('NativeIdentity'), reason: diagnostic);
         expect(diagnostic, contains("can't be assigned"), reason: diagnostic);
       }
+      for (final symbol in [
+        'GraphTraverser',
+        'SchemaGenerator',
+        'TypeMapper',
+        'SqliteRepositoryGenerator',
+        'sqliteRepositoryBuilder',
+      ]) {
+        File('${fixture.path}/bin/private_api.dart').writeAsStringSync("""
+import 'package:dddart_repository_sql/dddart_repository_sql.dart';
+import 'package:dddart_repository_sqlite/dddart_repository_sqlite.dart';
+void main() { print($symbol); }
+""");
+        final rejected = await Process.run(
+          Platform.resolvedExecutable,
+          [
+            'compile',
+            'kernel',
+            'bin/private_api.dart',
+            '-o',
+            'build/private.dill',
+          ],
+          workingDirectory: fixture.path,
+        );
+        final diagnostic = '${rejected.stdout}\n${rejected.stderr}';
+        expect(rejected.exitCode, isNot(0), reason: diagnostic);
+        expect(
+          diagnostic,
+          contains("Undefined name '$symbol'"),
+          reason: diagnostic,
+        );
+      }
     },
-    timeout: const Timeout(Duration(minutes: 3)),
+    timeout: const Timeout(Duration(minutes: 5)),
   );
 }
 

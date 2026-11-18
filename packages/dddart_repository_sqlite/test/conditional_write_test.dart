@@ -162,7 +162,7 @@ void main() {
       await first.save(item);
       final before = await first.getVersioned(item.id);
       await a.execute(
-        "CREATE TRIGGER fail_child BEFORE INSERT ON worky_native_issues_comments WHEN NEW.message = '99' BEGIN SELECT RAISE(ABORT, 'injected child failure'); END",
+        "CREATE TRIGGER fail_child BEFORE INSERT ON fixture_native_issues_comments WHEN NEW.message = '99' BEGIN SELECT RAISE(ABORT, 'injected child failure'); END",
       );
       final proposed = native(99, item.id)..raiseEvent(Changed(item.id));
       await expectLater(

@@ -11,8 +11,10 @@
 
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:dddart/dddart.dart';
 import 'package:dddart_rest/dddart_rest.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
 import 'package:shelf/shelf.dart';
 
 import 'lib/json_serializer_support.dart';
@@ -61,13 +63,14 @@ class UserClaims {
 }
 
 Document snapshotDocument(Document value) => Document(
-    id: value.id,
-    createdAt: value.createdAt,
-    updatedAt: value.updatedAt,
-    title: value.title,
-    content: value.content,
-    ownerId: value.ownerId,
-    isPublic: value.isPublic);
+      id: value.id,
+      createdAt: value.createdAt,
+      updatedAt: value.updatedAt,
+      title: value.title,
+      content: value.content,
+      ownerId: value.ownerId,
+      isPublic: value.isPublic,
+    );
 
 // This example needs atomic revision checks for ownership-based writes.
 class DocumentRepository
@@ -81,8 +84,10 @@ class DocumentRepository
   }
 
   @override
-  Future<String> saveConditional(Document value,
-      {required ExpectedRevision expected}) async {
+  Future<String> saveConditional(
+    Document value, {
+    required ExpectedRevision expected,
+  }) async {
     final revision = await super.saveConditional(value, expected: expected);
     _ids.add(value.id);
     return revision;
@@ -95,8 +100,10 @@ class DocumentRepository
   }
 
   @override
-  Future<void> deleteConditional(UuidValue id,
-      {required ExpectedRevision expected}) async {
+  Future<void> deleteConditional(
+    UuidValue id, {
+    required ExpectedRevision expected,
+  }) async {
     await super.deleteConditional(id, expected: expected);
     _ids.remove(id);
   }
@@ -118,7 +125,8 @@ class DocumentAuthorizationHandler
     implements AuthorizationHandler<Document, UuidValue, UserClaims> {
   @override
   Future<AuthorizationResult> authorize(
-      AuthorizationContext<Document, UuidValue, UserClaims> context) async {
+    AuthorizationContext<Document, UuidValue, UserClaims> context,
+  ) async {
     final claims = context.caller.claims;
     bool owns(Document document) =>
         claims != null && (claims.isAdmin || document.ownerId == claims.userId);
@@ -141,26 +149,31 @@ class DocumentAuthorizationHandler
 }
 
 Future<QueryResult<Document>> documentQuery(
-    Repository<Document, UuidValue> repo,
-    Map<String, String> filters,
-    int skip,
-    int take,
-    AuthorizedQuery<UserClaims> authorization) async {
+  Repository<Document, UuidValue> repo,
+  Map<String, String> filters,
+  int skip,
+  int take,
+  AuthorizedQuery<UserClaims> authorization,
+) async {
   final scope = authorization.scope as DocumentScope;
   final visible = (await (repo as DocumentRepository).all())
       .where(scope.includes)
-      .where((document) =>
-          !filters.containsKey('ownerId') ||
-          document.ownerId == filters['ownerId'])
+      .where(
+        (document) =>
+            !filters.containsKey('ownerId') ||
+            document.ownerId == filters['ownerId'],
+      )
       .toList();
-  return QueryResult(visible.skip(skip).take(take).toList(),
-      totalCount: visible.length);
+  return QueryResult(
+    visible.skip(skip).take(take).toList(),
+    totalCount: visible.length,
+  );
 }
 
 // Simple serializer for Document
 class DocumentSerializer extends ExampleJsonSerializer<Document> {
   @override
-  Document deserialize(String data, [dynamic config]) {
+  Document deserialize(String data, [SerializationConfig? config]) {
     final json = jsonDecode(data) as Map<String, dynamic>;
     return Document(
       id: UuidValue.fromString(json['id'] as String),
@@ -172,7 +185,7 @@ class DocumentSerializer extends ExampleJsonSerializer<Document> {
   }
 
   @override
-  String serialize(Document aggregate, [dynamic config]) {
+  String serialize(Document aggregate, [SerializationConfig? config]) {
     return jsonEncode({
       'id': aggregate.id.toString(),
       'title': aggregate.title,
@@ -271,8 +284,10 @@ void main() async {
       serializer: DocumentSerializer(),
       authorizationSnapshot: snapshotDocument,
       authenticationHandler: authHandler,
-      defaultPolicy: AccessPolicy.custom(authzHandler,
-          authentication: AuthenticationRequirement.required),
+      defaultPolicy: AccessPolicy.custom(
+        authzHandler,
+        authentication: AuthenticationRequirement.required,
+      ),
       operationPolicies: {
         CrudOperation.read: AccessPolicy.custom(authzHandler),
         CrudOperation.query: AccessPolicy.custom(authzHandler),

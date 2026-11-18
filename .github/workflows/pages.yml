@@ -5,11 +5,15 @@ on:
     branches: [main]
     paths:
       - 'website/**'
+      - 'docs/quickstarts/**'
+      - 'tool/documentation/common.sh'
       - '.github/workflows/pages.yml'
   pull_request:
     branches: [main]
     paths:
       - 'website/**'
+      - 'docs/quickstarts/**'
+      - 'tool/documentation/common.sh'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
@@ -33,6 +37,8 @@ jobs:
         working-directory: website
     steps:
       - uses: actions/checkout@v6
+      - name: Install HTML validation tool
+        run: sudo apt-get update && sudo apt-get install -y libxml2-utils
       - uses: actions/setup-node@v6
         with:
           node-version: '24'

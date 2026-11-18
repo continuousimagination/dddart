@@ -1,3 +1,6 @@
+> Historical record; it may describe retired APIs. For current usage, start at
+> [the documentation index](../../docs/README.md).
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
@@ -173,5 +176,3 @@ See `future-enhancements.md` for planned features:
 - Pagination support for large event sets
 - Exponential backoff retry logic
 - Event compression for large payloads
-
-[0.1.0]: https://github.com/your-org/dddart/releases/tag/dddart_events_distributed-v0.1.0

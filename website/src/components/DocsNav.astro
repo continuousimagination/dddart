@@ -1,7 +1,9 @@
 ---
-import { doc, sections, navTitles } from '../lib/site';
+import type { CollectionEntry } from 'astro:content';
+import { doc, sections } from '../lib/site';
+interface Props { entries: CollectionEntry<'docs'>[]; current: string; }
 const { entries, current } = Astro.props;
 ---
 <nav aria-label="Documentation">
-  {sections.map(section => <div class="docs-nav-group"><h2>{section}</h2><ul>{entries.filter((entry: any) => entry.data.section === section).map((entry: any) => <li><a href={doc(entry.id)} aria-current={current === entry.id ? 'page' : undefined}>{navTitles[entry.id] ?? entry.data.title}</a></li>)}</ul></div>)}
+  {sections.map(section => <div class="docs-nav-group"><h2>{section}</h2><ul>{entries.filter(entry => entry.data.section === section).map(entry => <li><a href={doc(entry.id)} aria-current={current === entry.id ? 'page' : undefined}>{entry.data.title}</a></li>)}</ul></div>)}
 </nav>

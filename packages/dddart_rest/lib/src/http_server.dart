@@ -11,14 +11,6 @@ import 'package:shelf_router/shelf_router.dart';
 /// HttpServer allows registering multiple CrudResource instances and
 /// automatically creates routes for all CRUD operations. It handles
 /// starting and stopping the underlying shelf server.
-///
-/// Example:
-/// ```dart
-/// final server = HttpServer(port: 8080);
-/// server.registerResource(userResource);
-/// server.registerResource(productResource);
-/// await server.start();
-/// ```
 class HttpServer {
   /// Creates an HttpServer with the specified port
   ///
@@ -49,12 +41,6 @@ class HttpServer {
   /// `['http://localhost:3000', 'https://example.com']`.
   ///
   /// Must be called before [start].
-  ///
-  /// Example:
-  /// ```dart
-  /// server.allowOrigins(['http://localhost:3000']);
-  /// await server.start();
-  /// ```
   void allowOrigins(List<String> origins) {
     _allowedOrigins.addAll(origins);
   }
@@ -66,15 +52,6 @@ class HttpServer {
   ///
   /// Parameters:
   /// - [resource]: The CrudResource instance to register
-  ///
-  /// Example:
-  /// ```dart
-  /// server.registerResource(CrudResource<User, UuidValue, void>(
-  ///   path: '/users',
-  ///   repository: userRepository,
-  ///   serializer: jsonSerializer,
-  /// ));
-  /// ```
   void registerResource(CrudResource resource) {
     _resources.add(resource);
   }
@@ -88,18 +65,6 @@ class HttpServer {
   /// - [method]: HTTP method (GET, POST, PUT, DELETE, etc.)
   /// - [path]: The route path (e.g., '/webhooks/slack')
   /// - [handler]: The request handler function
-  ///
-  /// Example:
-  /// ```dart
-  /// // Add a webhook endpoint
-  /// final webhook = WebhookResource<MyPayload, MyVerification>(...);
-  /// server.addRoute('POST', '/webhooks/events', webhook.handleRequest);
-  ///
-  /// // Add a health check endpoint
-  /// server.addRoute('GET', '/health', (request) async {
-  ///   return Response.ok('OK');
-  /// });
-  /// ```
   void addRoute(
     String method,
     String path,
@@ -115,12 +80,6 @@ class HttpServer {
   /// the configured port.
   ///
   /// Throws [StateError] if the server is already running.
-  ///
-  /// Example:
-  /// ```dart
-  /// await server.start();
-  /// print('Server running on http://localhost:${server.port}');
-  /// ```
   Future<void> start() async {
     if (_shelfServer != null) {
       throw StateError('Server is already running');
@@ -219,12 +178,6 @@ class HttpServer {
   /// Closes the underlying shelf server and cleans up resources.
   ///
   /// Throws [StateError] if the server is not running.
-  ///
-  /// Example:
-  /// ```dart
-  /// await server.stop();
-  /// print('Server stopped');
-  /// ```
   Future<void> stop() async {
     if (_shelfServer == null) {
       throw StateError('Server is not running');

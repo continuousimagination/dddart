@@ -1,0 +1,413 @@
+{
+  "schemaVersion": 1,
+  "workflows": [
+    {
+      "name": "core",
+      "packages": [
+        "dddart"
+      ],
+      "allowedLocalPackages": [
+        "dddart"
+      ],
+      "service": "none",
+      "generation": false,
+      "files": [
+        {
+          "source": "bin/main.dart",
+          "destination": "bin/main.dart"
+        },
+        {
+          "source": "pubspec.yaml.txt",
+          "destination": "pubspec.yaml"
+        },
+        {
+          "source": "bin/repository.dart",
+          "destination": "bin/repository.dart"
+        },
+        {
+          "source": "bin/contracts.dart",
+          "destination": "bin/contracts.dart"
+        },
+        {
+          "source": "bin/modeling.dart",
+          "destination": "bin/modeling.dart"
+        },
+        {
+          "source": "bin/identity.dart",
+          "destination": "bin/identity.dart"
+        }
+      ],
+      "runs": [
+        {
+          "path": "bin/main.dart",
+          "stdoutFile": "expected/main.txt"
+        },
+        {
+          "path": "bin/repository.dart",
+          "stdoutFile": "expected/repository.txt"
+        },
+        {
+          "path": "bin/contracts.dart",
+          "stdoutFile": "expected/contracts.txt"
+        },
+        {
+          "path": "bin/modeling.dart",
+          "stdoutFile": "expected/modeling.txt"
+        },
+        {
+          "path": "bin/identity.dart",
+          "stdoutFile": "expected/identity.txt"
+        }
+      ],
+      "commandsFiles": [
+        "commands.sh",
+        "guide_commands.sh"
+      ],
+      "javascript": [
+        "bin/main.dart"
+      ]
+    },
+    {
+      "name": "json",
+      "packages": [
+        "dddart",
+        "dddart_json",
+        "dddart_serialization"
+      ],
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_json",
+        "dddart_serialization"
+      ],
+      "service": "none",
+      "generation": true,
+      "files": [
+        {
+          "source": "bin/configuration.dart",
+          "destination": "bin/configuration.dart"
+        },
+        {
+          "source": "bin/identity.dart",
+          "destination": "bin/identity.dart"
+        },
+        {
+          "source": "bin/main.dart",
+          "destination": "bin/main.dart"
+        },
+        {
+          "source": "lib/reservation.dart",
+          "destination": "lib/reservation.dart"
+        },
+        {
+          "source": "pubspec.yaml.txt",
+          "destination": "pubspec.yaml"
+        }
+      ],
+      "runs": [
+        {
+          "path": "bin/main.dart",
+          "stdoutFile": "expected/main.txt"
+        },
+        {
+          "path": "bin/configuration.dart",
+          "stdoutFile": "expected/configuration.txt"
+        },
+        {
+          "path": "bin/identity.dart",
+          "stdoutFile": "expected/identity.txt"
+        }
+      ],
+      "commandsFiles": [
+        "commands.sh",
+        "guide_commands.sh"
+      ],
+      "javascript": [
+        "bin/main.dart"
+      ]
+    },
+    {
+      "name": "sqlite",
+      "packages": [
+        "dddart",
+        "dddart_json",
+        "dddart_serialization",
+        "dddart_repository_sqlite"
+      ],
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_json",
+        "dddart_repository_sql",
+        "dddart_repository_sqlite",
+        "dddart_serialization"
+      ],
+      "service": "none",
+      "generation": true,
+      "files": [
+        {
+          "source": "bin/main.dart",
+          "destination": "bin/main.dart"
+        },
+        {
+          "source": "lib/note.dart",
+          "destination": "lib/note.dart"
+        },
+        {
+          "source": "pubspec.yaml.txt",
+          "destination": "pubspec.yaml"
+        }
+      ],
+      "runs": [
+        {
+          "path": "bin/main.dart",
+          "stdoutFile": "expected/main.txt"
+        }
+      ],
+      "commandsFiles": [
+        "commands.sh"
+      ]
+    },
+    {
+      "name": "mysql",
+      "packages": [
+        "dddart",
+        "dddart_json",
+        "dddart_serialization",
+        "dddart_repository_mysql"
+      ],
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_json",
+        "dddart_repository_mysql",
+        "dddart_repository_sql",
+        "dddart_serialization"
+      ],
+      "service": "mysql",
+      "generation": true,
+      "files": [
+        {
+          "source": "bin/main.dart",
+          "destination": "bin/main.dart"
+        },
+        {
+          "source": "lib/note.dart",
+          "destination": "lib/note.dart"
+        },
+        {
+          "source": "pubspec.yaml.txt",
+          "destination": "pubspec.yaml"
+        }
+      ],
+      "runs": [
+        {
+          "path": "bin/main.dart",
+          "stdoutFile": "expected/main.txt"
+        }
+      ],
+      "commandsFiles": [
+        "commands.sh"
+      ]
+    },
+    {
+      "name": "mongodb",
+      "packages": [
+        "dddart",
+        "dddart_json",
+        "dddart_serialization",
+        "dddart_repository_mongodb"
+      ],
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_json",
+        "dddart_repository_mongodb",
+        "dddart_serialization"
+      ],
+      "service": "mongodb",
+      "generation": true,
+      "files": [
+        {
+          "source": "bin/main.dart",
+          "destination": "bin/main.dart"
+        },
+        {
+          "source": "lib/note.dart",
+          "destination": "lib/note.dart"
+        },
+        {
+          "source": "pubspec.yaml.txt",
+          "destination": "pubspec.yaml"
+        }
+      ],
+      "runs": [
+        {
+          "path": "bin/main.dart",
+          "stdoutFile": "expected/main.txt"
+        }
+      ],
+      "commandsFiles": [
+        "commands.sh"
+      ]
+    },
+    {
+      "name": "dynamodb",
+      "packages": [
+        "dddart",
+        "dddart_json",
+        "dddart_serialization",
+        "dddart_repository_dynamodb"
+      ],
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_json",
+        "dddart_repository_dynamodb",
+        "dddart_serialization"
+      ],
+      "service": "dynamodb",
+      "generation": true,
+      "files": [
+        {
+          "source": "bin/main.dart",
+          "destination": "bin/main.dart"
+        },
+        {
+          "source": "lib/note.dart",
+          "destination": "lib/note.dart"
+        },
+        {
+          "source": "pubspec.yaml.txt",
+          "destination": "pubspec.yaml"
+        }
+      ],
+      "runs": [
+        {
+          "path": "bin/main.dart",
+          "stdoutFile": "expected/main.txt"
+        }
+      ],
+      "commandsFiles": [
+        "commands.sh"
+      ]
+    },
+    {
+      "name": "rest",
+      "packages": [
+        "dddart",
+        "dddart_json",
+        "dddart_serialization",
+        "dddart_rest",
+        "dddart_repository_rest"
+      ],
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_json",
+        "dddart_repository_rest",
+        "dddart_rest",
+        "dddart_rest_client",
+        "dddart_serialization"
+      ],
+      "service": "none",
+      "generation": true,
+      "files": [
+        {
+          "source": "bin/main.dart",
+          "destination": "bin/main.dart"
+        },
+        {
+          "source": "lib/note.dart",
+          "destination": "lib/note.dart"
+        },
+        {
+          "source": "pubspec.yaml.txt",
+          "destination": "pubspec.yaml"
+        }
+      ],
+      "runs": [
+        {
+          "path": "bin/main.dart",
+          "stdoutFile": "expected/main.txt"
+        }
+      ],
+      "commandsFiles": [
+        "commands.sh"
+      ]
+    },
+    {
+      "name": "configuration",
+      "packages": [
+        "dddart_config"
+      ],
+      "allowedLocalPackages": [
+        "dddart_config"
+      ],
+      "service": "none",
+      "generation": false,
+      "files": [
+        {
+          "source": "pubspec.yaml.txt",
+          "destination": "pubspec.yaml"
+        },
+        {
+          "source": "bin/configuration.dart",
+          "destination": "bin/configuration.dart"
+        },
+        {
+          "source": "bin/provider.dart",
+          "destination": "bin/provider.dart"
+        },
+        {
+          "source": "config.yaml",
+          "destination": "config.yaml"
+        }
+      ],
+      "runs": [
+        {
+          "path": "bin/configuration.dart",
+          "stdoutFile": "expected/configuration.txt"
+        },
+        {
+          "path": "bin/provider.dart",
+          "stdoutFile": "expected/provider.txt"
+        }
+      ],
+      "commandsFiles": [
+        "commands.sh",
+        "guide_commands.sh"
+      ]
+    },
+    {
+      "name": "slack_server",
+      "packages": [
+        "dddart_rest",
+        "dddart_webhooks",
+        "dddart_webhooks_slack"
+      ],
+      "allowedLocalPackages": [
+        "dddart",
+        "dddart_json",
+        "dddart_rest",
+        "dddart_serialization",
+        "dddart_webhooks",
+        "dddart_webhooks_slack"
+      ],
+      "service": "none",
+      "generation": false,
+      "files": [
+        {
+          "source": "pubspec.yaml.txt",
+          "destination": "pubspec.yaml"
+        },
+        {
+          "source": "bin/main.dart",
+          "destination": "bin/main.dart"
+        }
+      ],
+      "runs": [],
+      "compile": [
+        "bin/main.dart"
+      ],
+      "coverage": "Compile-only: requires SLACK_SIGNING_SECRET, a configured sender, and an application-owned long-running server.",
+      "commandsFiles": [
+        "commands.sh"
+      ]
+    }
+  ]
+}
