@@ -100,14 +100,14 @@ class DemoPolicy implements AggregateEventPolicy<String> {
 
 /// Handwritten codec keeps this example runnable without generated files.
 /// Applications can also use @Serializable and @DistributedEvent registrations.
-class CounterChanged extends DomainEvent<UuidValue> {
+class CounterChanged extends DomainEvent<UuidValue, UuidValue> {
   CounterChanged({
     required super.aggregateId,
     required this.value,
-    super.eventId,
+    UuidValue? eventId,
     super.occurredAt,
     super.context,
-  });
+  }) : super(eventId: eventId ?? UuidValue.generate());
   final int value;
 
   Map<String, dynamic> toJson() => {

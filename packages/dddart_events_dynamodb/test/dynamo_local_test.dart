@@ -10,6 +10,8 @@ import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';
 import 'package:http/http.dart' as http;
 import 'package:test/test.dart';
 
+import 'event_identity.dart';
+
 void main() {
   late DynamoDB client;
   late String table;
@@ -19,12 +21,13 @@ void main() {
       DynamoAggregateEventRepository(
         client: database ?? client,
         tableName: table,
+        identityCodecs: eventIdentityCodecs(),
         clock: () => now,
       );
-  EventEnvelope event({UuidValue? id, String body = '{"value":1}'}) =>
+  EventEnvelope event({Identity? id, String body = '{"value":1}'}) =>
       EventEnvelope(
         aggregate: aggregate,
-        event: StoredEvent<Identity>(
+        event: StoredEvent<Identity, Identity>(
           id: id ?? UuidValue.generate(),
           aggregateId: aggregate.id,
           eventType: 'changed.v1',
@@ -59,6 +62,64 @@ void main() {
   tearDown(() async {
     await client.deleteTable(tableName: table);
     client.close();
+  });
+
+  test(
+      'external IDs preserve kind and source across durable retries and rotations',
+      () async {
+    final uuid = UuidValue.generate();
+    final ids = <Identity>[
+      uuid,
+      ExternalEventId('source/A', uuid.uuid),
+      ExternalEventId('source/B', uuid.uuid),
+      const ExternalEventId('source/Acme %, café', 'evt_42'),
+    ];
+    final start = await repository().head(aggregate);
+    for (final id in ids) {
+      final envelope = event(id: id);
+      final accepted = await repository().append(envelope);
+      expect(
+        (await repository().append(event(id: id))).position,
+        accepted.position,
+      );
+      expect((await repository().getById(id)).id, id);
+    }
+    expect(
+      (await repository().read(aggregate, after: start))
+          .events
+          .map((record) => record.envelope.id),
+      ids,
+    );
+    await expectLater(
+      repository().append(event(id: ids.last, body: '{"value":2}')),
+      throwsA(isA<RepositoryException>()),
+    );
+    DynamoEventChannelRepository channels() => DynamoEventChannelRepository(
+          client: client,
+          tableName: table,
+          identityCodecs: eventIdentityCodecs(),
+          clock: () => now,
+        );
+    final rotated = await channels().rotate(aggregate, ids.last);
+    expect(
+      (await channels().rotate(
+        aggregate,
+        const ExternalEventId('source/Acme %, café', 'evt_42'),
+      ))
+          .current
+          .id,
+      rotated.current.id,
+    );
+    expect(
+      (await channels().rotate(aggregate, ids.first)).current.id,
+      isNot(rotated.current.id),
+    );
+    await repository().deleteById(ids.last);
+    await expectLater(
+      repository().getById(ids.last),
+      throwsA(isA<RepositoryException>()),
+    );
+    expect((await repository().getById(uuid)).id, uuid);
   });
 
   test(

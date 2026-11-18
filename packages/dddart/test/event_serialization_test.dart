@@ -3,15 +3,16 @@ import 'package:dddart/dddart.dart';
 import 'package:test/test.dart';
 
 // Test domain events for serialization testing
-class UserRegisteredEvent extends DomainEvent<UuidValue> {
+class UserRegisteredEvent extends DomainEvent<UuidValue, UuidValue> {
   UserRegisteredEvent({
     required UuidValue userId,
     required this.email,
     required this.organizationId,
     required this.fullName,
-    super.eventId,
+    UuidValue? eventId,
     super.occurredAt,
   }) : super(
+          eventId: eventId ?? UuidValue.generate(),
           aggregateId: userId,
           context: {
             'organizationId': organizationId,
@@ -51,16 +52,17 @@ class UserRegisteredEvent extends DomainEvent<UuidValue> {
   }
 }
 
-class OrderPlacedEvent extends DomainEvent<UuidValue> {
+class OrderPlacedEvent extends DomainEvent<UuidValue, UuidValue> {
   OrderPlacedEvent({
     required UuidValue orderId,
     required this.customerId,
     required this.totalAmount,
     required this.currency,
     required this.itemCount,
-    super.eventId,
+    UuidValue? eventId,
     super.occurredAt,
   }) : super(
+          eventId: eventId ?? UuidValue.generate(),
           aggregateId: orderId,
           context: {
             'customerId': customerId,

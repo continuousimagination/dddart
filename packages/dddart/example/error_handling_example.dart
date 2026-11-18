@@ -290,7 +290,7 @@ class SimpleLogger {
 
 // Example events
 
-class OrderPlacedEvent extends DomainEvent<UuidValue> {
+class OrderPlacedEvent extends DomainEvent<UuidValue, UuidValue> {
   final String customerId;
   final double totalAmount;
   final String currency;
@@ -303,6 +303,7 @@ class OrderPlacedEvent extends DomainEvent<UuidValue> {
     required this.currency,
     required this.itemCount,
   }) : super(
+          eventId: UuidValue.generate(),
           aggregateId: orderId,
           context: {
             'customerId': customerId,
@@ -311,7 +312,8 @@ class OrderPlacedEvent extends DomainEvent<UuidValue> {
         );
 }
 
-class InventoryReservationFailedEvent extends DomainEvent<UuidValue> {
+class InventoryReservationFailedEvent
+    extends DomainEvent<UuidValue, UuidValue> {
   final UuidValue orderId;
   final String reason;
   final OrderPlacedEvent originalEvent;
@@ -321,6 +323,7 @@ class InventoryReservationFailedEvent extends DomainEvent<UuidValue> {
     required this.reason,
     required this.originalEvent,
   }) : super(
+          eventId: UuidValue.generate(),
           aggregateId: orderId,
           context: {
             'reason': reason,

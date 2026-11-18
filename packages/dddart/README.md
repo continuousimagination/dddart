@@ -11,7 +11,7 @@ an event. Import the [core library](lib/dddart.dart) as `package:dddart/dddart.d
 | `Value` | Represent immutable domain data whose equality comes from its properties |
 | `Entity<I>` and `AggregateRoot<I>` | Model an object with an explicit, stable [identity](IDENTITY_GUIDE.md); an aggregate owns a consistency boundary |
 | `Repository<T, I>` | Load, save, and delete an aggregate; add application queries on a separate interface |
-| `DomainEvent<I>` and `EventBus` | Record [domain events](DOMAIN_EVENTS_GUIDE.md) and notify in-process listeners |
+| `DomainEvent<A, E>` and `EventBus` | Record [domain events](DOMAIN_EVENTS_GUIDE.md) and notify in-process listeners |
 
 Use an in-memory repository for a prototype or a test where retaining object
 references is appropriate. To persist data or prevent lost updates, see the

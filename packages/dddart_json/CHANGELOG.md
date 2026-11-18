@@ -20,3 +20,7 @@ All notable changes to `dddart_json` will be documented in this file.
   regenerate serializers after adopting the typed core API.
 - Initial prerelease of JSON serializer generation for dddart aggregate roots,
   entities, and values.
+
+## Unreleased
+
+- Breaking: generate serializers for both concrete identity types in DomainEvent<A, E>; preserve custom event IDs through inherited generic fields and reject erased identity types.

@@ -4,7 +4,7 @@ import 'package:dddart/dddart.dart';
 ///
 /// This event signals that an order has been created and is ready for processing.
 /// It can trigger inventory updates, payment processing, and shipping workflows.
-class OrderPlacedEvent extends DomainEvent<UuidValue> {
+class OrderPlacedEvent extends DomainEvent<UuidValue, UuidValue> {
   /// The customer who placed the order.
   final String customerId;
 
@@ -31,6 +31,7 @@ class OrderPlacedEvent extends DomainEvent<UuidValue> {
     required this.currency,
     required this.itemCount,
   }) : super(
+          eventId: UuidValue.generate(),
           aggregateId: orderId,
           context: {
             'customerId': customerId,

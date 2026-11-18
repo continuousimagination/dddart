@@ -32,7 +32,7 @@ class InMemoryAggregateEventRepository implements AggregateEventRepository {
   /// Explicit codecs shared with event serializers and aggregate references.
   final IdentityCodecRegistry identityCodecs;
   final DateTime Function() _clock;
-  final Map<UuidValue, _Entry> _entries = {};
+  final Map<Identity, _Entry> _entries = {};
   final Map<String, List<_Entry>> _streams = {};
   final Map<String, int> _heads = {};
   final Map<String, int> _deletedThrough = {};
@@ -67,7 +67,7 @@ class InMemoryAggregateEventRepository implements AggregateEventRepository {
   }
 
   @override
-  Future<EventEnvelope> getById(UuidValue id) async {
+  Future<EventEnvelope> getById(Identity id) async {
     _expire(_clock().toUtc());
     final entry = _entries[id];
     if (entry == null) throw _notFound();
@@ -75,7 +75,7 @@ class InMemoryAggregateEventRepository implements AggregateEventRepository {
   }
 
   @override
-  Future<void> deleteById(UuidValue id) async {
+  Future<void> deleteById(Identity id) async {
     _expire(_clock().toUtc());
     final entry = _entries[id];
     if (entry == null) throw _notFound();
@@ -204,7 +204,7 @@ class InMemoryAggregateEventRepository implements AggregateEventRepository {
 class _Entry {
   _Entry(this.id, this.streamKey, this.position, this.ingestedAt, this.wire);
 
-  final UuidValue id;
+  final Identity id;
   final String streamKey;
   final int position;
   final DateTime ingestedAt;

@@ -9,3 +9,7 @@
   idempotent occurrence IDs, pagination and expiration/floor recovery semantics.
 - Durable random channel resolution and idempotent event-driven rotation.
 - Injected DynamoDB clients, DynamoDB Local integration tests and a finite example.
+
+## Unreleased
+
+- Breaking: event lookup and rotation keys use registered identity-kind/canonical-key tuples. Preserve custom event identities across persistence and retries; reject oversized keys before IO. Migrate retained envelopes, lookup keys and digests together.

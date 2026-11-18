@@ -1,10 +1,30 @@
 # Domain events and safe publication
 
-A domain event describes a completed domain action. Extend `DomainEvent<I>` with
-the aggregate's concrete identity type. The event's occurrence ID remains a UUID.
+A domain event describes a completed domain action. Extend `DomainEvent<A, E>`
+with the aggregate's identity type first and the event occurrence's identity type
+second. Both types extend `Identity`, and the base constructor requires both
+`aggregateId` and `eventId`. A concrete event may generate a UUID itself or require
+an externally assigned identity. Preserve that identity when restoring or retrying
+the occurrence; include source scope when IDs are only unique within a provider.
 Keep event fields and context values immutable and avoid secrets in event payloads.
 An aggregate raises events during business operations; raising does not persist or
 publish them.
+
+## Migrating event identities
+
+Replace `DomainEvent<I>` with `DomainEvent<I, UuidValue>` for existing UUID events.
+A constructor that previously forwarded optional `super.eventId` can instead take
+`UuidValue? eventId` and pass `eventId: eventId ?? UuidValue.generate()` to `super`.
+Alternatively, require `super.eventId` and let callers supply it. There is no UUID
+convenience base class. The [reservation example](../../docs/quickstarts/core/bin/modeling.dart)
+shows generation in a concrete constructor; the [typed identity example](../../docs/quickstarts/core/bin/identity.dart)
+shows an imported occurrence with a required source-scoped ID.
+
+`AggregateRoot<A>` retains one type parameter and collects
+`DomainEvent<A, Identity>`. Event buses and publishers accept
+`DomainEvent<Identity, Identity>`; concrete event listeners retain both types.
+An event's equality uses its occurrence identity, including the identity kind and
+scope. A storage adapter may keep a separate physical row key.
 
 ## Run a complete example
 

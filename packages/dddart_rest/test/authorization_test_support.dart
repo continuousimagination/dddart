@@ -203,14 +203,15 @@ Request request(
       body: document == null ? null : DocumentSerializer().serialize(document),
     );
 
-class DocumentChanged extends DomainEvent<UuidValue> {
-  DocumentChanged(UuidValue id) : super(aggregateId: id);
+class DocumentChanged extends DomainEvent<UuidValue, UuidValue> {
+  DocumentChanged(UuidValue id)
+      : super(eventId: UuidValue.generate(), aggregateId: id);
 }
 
 class RecordingPublisher implements EventPublisher {
-  final events = <DomainEvent<Identity>>[];
+  final events = <DomainEvent<Identity, Identity>>[];
   @override
-  Future<bool> publish(DomainEvent<Identity> event) async {
+  Future<bool> publish(DomainEvent<Identity, Identity> event) async {
     events.add(event);
     return true;
   }

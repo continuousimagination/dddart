@@ -31,13 +31,14 @@ class EventRegistryGenerator extends Generator {
                   .isExactly(type.element))) {
         final eventType = element.allSupertypes.firstWhere((type) =>
             const TypeChecker.fromRuntime(DomainEvent).isExactly(type.element));
-        final identity = eventType.typeArguments.single;
+        final identities = eventType.typeArguments;
         if (element.typeParameters.isNotEmpty ||
-            identity is! InterfaceType ||
-            const TypeChecker.fromRuntime(Identity)
-                .isExactly(identity.element)) {
+            identities.any((identity) =>
+                identity is! InterfaceType ||
+                const TypeChecker.fromRuntime(Identity)
+                    .isExactly(identity.element))) {
           throw InvalidGenerationSourceError(
-              'Distributed events require a concrete aggregate identity type.',
+              'Distributed events require concrete aggregate and event identity types.',
               element: element);
         }
         events.add(element);

@@ -63,15 +63,16 @@ class Probe extends AggregateRoot<UuidValue> {
   Probe() : super(id: UuidValue.generate());
 }
 
-class Changed extends DomainEvent<UuidValue> {
-  Changed() : super(aggregateId: UuidValue.generate());
+class Changed extends DomainEvent<UuidValue, UuidValue> {
+  Changed()
+      : super(eventId: UuidValue.generate(), aggregateId: UuidValue.generate());
 }
 
 class ProbePublisher implements EventPublisher {
   ProbePublisher(this.onPublish);
   final void Function() onPublish;
   @override
-  Future<bool> publish(DomainEvent<Identity> event) async {
+  Future<bool> publish(DomainEvent<Identity, Identity> event) async {
     onPublish();
     return true;
   }

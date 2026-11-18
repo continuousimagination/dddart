@@ -9,6 +9,8 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:test/test.dart';
 
+import 'event_identity.dart';
+
 void main() {
   test(
       'position, payload and occurrence are committed in one guarded transaction',
@@ -36,7 +38,7 @@ void main() {
         AggregateReference(kind: 'game', id: UuidValue.generate());
     final envelope = EventEnvelope(
       aggregate: aggregate,
-      event: StoredEvent<Identity>(
+      event: StoredEvent<Identity, Identity>(
         id: UuidValue.generate(),
         createdAt: DateTime.now().toUtc(),
         aggregateId: aggregate.id,
@@ -58,7 +60,7 @@ void main() {
     expect((transaction[1] as Map)['Put']['Item']['position']['N'], '1');
     expect(
       (transaction.last as Map)['Put']['Item']['pk']['S'],
-      'e#${envelope.id.uuid}',
+      'e#${jsonEncode(['uuid', (envelope.id as UuidValue).uuid])}',
     );
     expect(
       requests
@@ -66,6 +68,82 @@ void main() {
           .every((request) => request['ConsistentRead'] == true),
       isTrue,
     );
+  });
+
+  test(
+      'event keys preserve codec kind and source and reject oversized keys before IO',
+      () async {
+    final requests = <Map<String, dynamic>>[];
+    final httpClient = MockClient((request) async {
+      requests.add(jsonDecode(request.body) as Map<String, dynamic>);
+      return http.Response('{}', 200);
+    });
+    final sdk = DynamoDB(
+      region: 'us-east-1',
+      credentials: AwsClientCredentials(accessKey: 'test', secretKey: 'test'),
+      client: httpClient,
+    );
+    addTearDown(() {
+      sdk.close();
+      httpClient.close();
+    });
+    final codecs = eventIdentityCodecs();
+    final store = DynamoAggregateEventRepository(
+      client: sdk,
+      tableName: 'test_events',
+      identityCodecs: codecs,
+    );
+    final aggregate =
+        AggregateReference(kind: 'game', id: UuidValue.generate());
+    EventEnvelope envelope(Identity id) => EventEnvelope(
+          aggregate: aggregate,
+          event: StoredEvent<Identity, Identity>(
+            id: id,
+            aggregateId: aggregate.id,
+            createdAt: DateTime.utc(2026),
+            eventType: 'changed',
+            eventJson: '{}',
+          ),
+        );
+    final uuid = UuidValue.generate();
+    final ids = <Identity>[
+      uuid,
+      ExternalEventId('source/A', uuid.uuid),
+      ExternalEventId('source/B', uuid.uuid),
+      const ExternalEventId('source/Acme %, café', 'evt_42'),
+    ];
+    for (final id in ids) {
+      await store.append(envelope(id));
+    }
+    final keys = requests
+        .where((request) => request.containsKey('TransactItems'))
+        .map(
+          (request) =>
+              (request['TransactItems'] as List).last['Put']['Item']['pk']['S'],
+        )
+        .toList();
+    expect(keys.toSet(), hasLength(ids.length));
+    for (var i = 0; i < ids.length; i++) {
+      final tagged = codecs.toTaggedKey(ids[i]);
+      expect(
+        jsonDecode((keys[i] as String).substring(2)),
+        [tagged['type'], tagged['key']],
+      );
+    }
+    final count = requests.length;
+    await expectLater(
+      store.append(
+        envelope(ExternalEventId('source', List.filled(1100, 'é').join())),
+      ),
+      throwsA(
+        isA<RepositoryException>().having(
+          (error) => error.type,
+          'type',
+          RepositoryExceptionType.constraint,
+        ),
+      ),
+    );
+    expect(requests, hasLength(count));
   });
 
   test('a DynamoDB byte-limited page never jumps over an unreturned record',
@@ -76,7 +154,7 @@ void main() {
     final now = DateTime.now().toUtc();
     final envelope = EventEnvelope(
       aggregate: aggregate,
-      event: StoredEvent<Identity>(
+      event: StoredEvent<Identity, Identity>(
         id: UuidValue.generate(),
         createdAt: now,
         aggregateId: aggregate.id,

@@ -29,8 +29,12 @@ class _Issue<I extends Identity> extends AggregateRoot<I> {
   _Issue({required super.id});
 }
 
-class _Raised<I extends Identity> extends DomainEvent<I> {
-  _Raised({required super.aggregateId});
+class _Raised<I extends Identity> extends DomainEvent<I, UuidValue> {
+  _Raised({required super.aggregateId}) : super(eventId: UuidValue.generate());
+}
+
+class _Imported extends DomainEvent<_IssueId, _ScopedIssueId> {
+  _Imported({required super.aggregateId, required super.eventId});
 }
 
 class _UuidAggregate extends AggregateRoot<UuidValue> {
@@ -54,6 +58,37 @@ void main() {
     expect(identities, hasLength(2));
     expect(const _IssueId('IssueA'), isNot(const _IssueId('issuea')));
     expect(const _IssueId('different'), isNot(id));
+  });
+
+  test('external event identities retain scope through batches and the bus',
+      () async {
+    final issue = _Issue(id: const _IssueId('github-123'));
+    final event = _Imported(
+      aggregateId: issue.id,
+      eventId: const _ScopedIssueId('source/A', 42),
+    );
+    final retry = _Imported(
+      aggregateId: issue.id,
+      eventId: const _ScopedIssueId('source/A', 42),
+    );
+    final other = _Imported(
+      aggregateId: issue.id,
+      eventId: const _ScopedIssueId('source/B', 42),
+    );
+    expect(event, retry);
+    expect(event.hashCode, retry.hashCode);
+    expect(event, isNot(other));
+    issue.raiseEvent(event);
+    issue.raiseEvent(_Raised(aggregateId: issue.id));
+    final batch = issue.captureUncommittedEvents();
+    expect(batch.events.first.eventId, event.eventId);
+    final bus = EventBus();
+    final received = bus.on<_Imported>().first;
+    bus.publish(batch.events.first);
+    expect(await received, same(event));
+    batch.acknowledge(event);
+    expect(issue.getUncommittedEvents(), hasLength(1));
+    await bus.close();
   });
 
   test('native string identity flows through aggregate, repository and event',
@@ -164,7 +199,8 @@ class OtherId extends Identity {
 class Issue extends AggregateRoot<IssueId> { Issue({required super.id}); }
 class UuidRecord extends Entity<UuidValue> { UuidRecord({required super.id}); }
 class UuidAggregate extends AggregateRoot<UuidValue> { UuidAggregate({required super.id}); }
-class OtherEvent extends DomainEvent<OtherId> { OtherEvent({required super.aggregateId}); }
+class ExplicitEvent extends DomainEvent<IssueId, OtherId> { ExplicitEvent({required super.aggregateId, required super.eventId}); }
+class OtherEvent extends DomainEvent<OtherId, UuidValue> { OtherEvent({required super.aggregateId}) : super(eventId: UuidValue.generate()); }
 ''';
         Future<ProcessResult> compile(
           String statement, {
@@ -225,6 +261,8 @@ final Map<IssueId, String> revisions = result.revisions;
           'ConditionalCommit<Issue, OtherId>(operationId: UuidValue.generate(), mutations: []);',
           "void wrong(ConditionalRepository<Issue, IssueId> r) { r.getVersioned(const OtherId('wrong')); }",
           "CommitResult<IssueId>(operationId: UuidValue.generate(), payloadDigest: 'd', decision: CommitDecision.committed, revisions: {const OtherId('wrong'): 'v'});",
+          "ExplicitEvent(aggregateId: const IssueId('native'));",
+          "ExplicitEvent(aggregateId: const IssueId('native'), eventId: UuidValue.generate());",
           'UuidRecord();',
           'UuidAggregate();',
           "UuidRecord(id: const IssueId('wrong'));",
@@ -238,6 +276,16 @@ final Map<IssueId, String> revisions = result.revisions;
             reason: statement,
           );
         }
+        final missingEventId = await compile(
+          '',
+          extraDeclarations:
+              "class MissingEventId extends DomainEvent<IssueId, OtherId> { MissingEventId() : super(aggregateId: const IssueId('native')); }",
+        );
+        expect(missingEventId.exitCode, isNot(0));
+        expect(
+          '${missingEventId.stdout}${missingEventId.stderr}',
+          contains('eventId'),
+        );
         for (final base in ['Entity<UuidValue>', 'AggregateRoot<UuidValue>']) {
           final negative = await compile(
             'MissingIdentity();',

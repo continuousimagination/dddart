@@ -35,14 +35,14 @@ class SeatCount extends Value {
   List<Object?> get props => [value];
 }
 
-class ReservationConfirmed extends DomainEvent<UuidValue> {
+class ReservationConfirmed extends DomainEvent<UuidValue, UuidValue> {
   ReservationConfirmed({
     required super.aggregateId,
     required this.guestName,
-    super.eventId,
+    UuidValue? eventId,
     super.occurredAt,
     super.context,
-  });
+  }) : super(eventId: eventId ?? UuidValue.generate());
 
   final String guestName;
 }
@@ -92,6 +92,13 @@ Future<void> main() async {
 }
 ```
 <!-- /dddart-source -->
+
+`DomainEvent<UuidValue, UuidValue>` uses UUIDs for both the aggregate reference
+and the event occurrence. The parameters are independent: a custom aggregate ID
+can be paired with a UUID event ID, or either can use another `Identity` subtype.
+`ReservationConfirmed` explicitly generates its event ID when none is supplied;
+the `DomainEvent` base constructor requires it. Passing an existing ID preserves
+the occurrence when restoring the event.
 
 The value's equality comes from `props`; keep those properties immutable.
 The aggregate keeps its identity while its state changes. `confirm()`

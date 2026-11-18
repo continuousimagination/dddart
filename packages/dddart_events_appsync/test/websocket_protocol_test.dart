@@ -53,7 +53,7 @@ void main() {
       final game = fixture.reference();
       final watch = client.watch(game);
       await watch.ready;
-      final received = <DomainEvent<Identity>>[];
+      final received = <DomainEvent<Identity, Identity>>[];
       watch.events.listen(received.add);
       final record = await fixture.history.append(fixture.envelope(game));
       server.broadcast(
@@ -79,7 +79,7 @@ void main() {
     final headers = server.connectionHeaders.single;
     expect(headers['host'], 'example.appsync-api.test');
     expect(headers['Authorization'], 'valid:alice');
-    final received = <UuidValue>[];
+    final received = <Identity>[];
     first.events.listen((event) => received.add(event.eventId));
     final a = await fixture.history.append(fixture.envelope(game));
     final b = await fixture.history.append(fixture.envelope(game));
@@ -166,7 +166,7 @@ void main() {
     expect(
       server.published
           .map((value) => ((value['envelope'] as Map)['event'] as Map)['id']),
-      everyElement(event.eventId.uuid),
+      everyElement(fixture.wire.identities.toTaggedJson(event.eventId)),
     );
     expect((await fixture.history.head(game)).position, 1);
   });

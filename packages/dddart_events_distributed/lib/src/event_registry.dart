@@ -16,7 +16,7 @@ class DistributedEvent {
 
 /// Instance-local, explicitly registered event and aggregate identity codecs.
 class EventRegistry {
-  /// Creates a registry with stock UUID aggregate identity support.
+  /// Creates a registry with stock UUID identity support.
   EventRegistry({IdentityCodecRegistry? identityCodecs})
       : identityCodecs = identityCodecs ?? IdentityCodecRegistry();
 
@@ -29,7 +29,7 @@ class EventRegistry {
   ///
   /// Callbacks must preserve eventId, occurredAt, aggregateId and context as well
   /// as application fields. No implicit dynamic toJson fallback is used.
-  void register<E extends DomainEvent<Identity>>(
+  void register<E extends DomainEvent<Identity, Identity>>(
     String key, {
     required Map<String, dynamic> Function(E) encode,
     required E Function(Map<String, dynamic>) decode,
@@ -51,7 +51,7 @@ class EventRegistry {
   }
 
   /// Registers an existing JSON serializer rather than duplicating its logic.
-  void registerSerializer<E extends DomainEvent<Identity>>(
+  void registerSerializer<E extends DomainEvent<Identity, Identity>>(
     String key,
     JsonSerializer<E> serializer,
   ) =>
@@ -60,17 +60,18 @@ class EventRegistry {
   /// Whether this stable event kind can be reconstructed.
   bool containsKey(String key) => _keys.containsKey(key);
 
-  _EventEntry _entry(DomainEvent<Identity> event) =>
+  _EventEntry _entry(DomainEvent<Identity, Identity> event) =>
       _types[event.runtimeType] ??
       (throw const SerializationException('No event codec registered'));
 
   /// The explicitly registered wire key for a concrete event kind.
-  String keyFor(DomainEvent<Identity> event) => _entry(event).key;
+  String keyFor(DomainEvent<Identity, Identity> event) => _entry(event).key;
 
   /// Encodes only through a registered callback and verifies base metadata.
-  Map<String, dynamic> encode(DomainEvent<Identity> event) {
-    // Fail before storage/transport if its aggregate kind cannot be represented.
+  Map<String, dynamic> encode(DomainEvent<Identity, Identity> event) {
+    // Fail before storage/transport if either identity kind cannot be represented.
     identityCodecs.toTaggedJson(event.aggregateId);
+    identityCodecs.toTaggedJson(event.eventId);
     final entry = _entry(event);
     try {
       final json = entry.encode(event);
@@ -89,7 +90,10 @@ class EventRegistry {
   }
 
   /// Reconstructs the registered event type and validates its identity codec.
-  DomainEvent<Identity> decode(String key, Map<String, dynamic> json) {
+  DomainEvent<Identity, Identity> decode(
+    String key,
+    Map<String, dynamic> json,
+  ) {
     final entry = _keys[key];
     if (entry == null) {
       throw const DeserializationException('Unknown event codec key');
@@ -98,6 +102,7 @@ class EventRegistry {
       final event = entry.decode(json);
       _verify(entry, event);
       identityCodecs.toTaggedJson(event.aggregateId);
+      identityCodecs.toTaggedJson(event.eventId);
       return event;
     } catch (_) {
       throw const DeserializationException(
@@ -106,7 +111,10 @@ class EventRegistry {
     }
   }
 
-  static void _verify(_EventEntry entry, DomainEvent<Identity> event) {
+  static void _verify(
+    _EventEntry entry,
+    DomainEvent<Identity, Identity> event,
+  ) {
     if (event.runtimeType != entry.type) {
       throw const DeserializationException(
         'Event codec returned a different kind',
@@ -124,13 +132,13 @@ class _EventEntry {
   });
   final String key;
   final Type type;
-  final Map<String, dynamic> Function(DomainEvent<Identity>) encode;
-  final DomainEvent<Identity> Function(Map<String, dynamic>) decode;
+  final Map<String, dynamic> Function(DomainEvent<Identity, Identity>) encode;
+  final DomainEvent<Identity, Identity> Function(Map<String, dynamic>) decode;
 }
 
 class _EventMetadata extends Value {
   const _EventMetadata(this.event);
-  final DomainEvent<Identity> event;
+  final DomainEvent<Identity, Identity> event;
   @override
   List<Object?> get props =>
       [event.eventId, event.aggregateId, event.occurredAt, event.context];

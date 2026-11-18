@@ -5,6 +5,8 @@
 
 ## Unreleased
 
+
+- Breaking: DomainEvent<A, E> independently types aggregate and event IDs. The base constructor requires eventId; concrete events own generation. AggregateRoot keeps one type parameter and accepts any event identity kind.
 - Export the portable conditional repository capability with concrete aggregate
   identity types, atomic mutation requests, revision tokens and durable receipts.
 

@@ -3,14 +3,14 @@ import 'dart:convert';
 import 'package:dddart/dddart.dart';
 
 /// A handwritten event format for a system that receives JSON text.
-class OrderPlaced extends DomainEvent<UuidValue> {
+class OrderPlaced extends DomainEvent<UuidValue, UuidValue> {
   OrderPlaced({
     required super.aggregateId,
     required this.itemCount,
-    super.eventId,
+    UuidValue? eventId,
     super.occurredAt,
     super.context,
-  });
+  }) : super(eventId: eventId ?? UuidValue.generate());
 
   final int itemCount;
 

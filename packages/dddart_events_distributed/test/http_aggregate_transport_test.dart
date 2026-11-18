@@ -23,15 +23,21 @@ void main() {
       () async {
     final bus = EventBus();
     addTearDown(bus.close);
-    final published = <DomainEvent<Identity>>[];
-    final delivered = <DomainEvent<Identity>>[];
-    final local =
-        bus.onPublished<DomainEvent<Identity>>().listen(published.add);
-    final all = bus.on<DomainEvent<Identity>>().listen(delivered.add);
+    final published = <DomainEvent<Identity, Identity>>[];
+    final delivered = <DomainEvent<Identity, Identity>>[];
+    final local = bus
+        .onPublished<DomainEvent<Identity, Identity>>()
+        .listen(published.add);
+    final all = bus.on<DomainEvent<Identity, Identity>>().listen(delivered.add);
     addTearDown(local.cancel);
     addTearDown(all.cancel);
     final client = fixture.client(bus: bus);
-    final events = <DomainEvent<Identity>>[
+    final events = <DomainEvent<Identity, Identity>>[
+      ImportedIssueChanged(
+        aggregateId: const NativeId('remote'),
+        eventId: const ScopedId('external/source %, café', 42),
+        title: 'imported',
+      ),
       NativeIssueOpened(
         aggregateId: const NativeId('Repo/IssueA %, café'),
         title: 'native',
@@ -50,12 +56,12 @@ void main() {
     final watches =
         events.map((event) => client.watch(fixture.reference(event))).toList();
     await Future.wait(watches.map((watch) => watch.ready));
-    final received = <DomainEvent<Identity>>[];
+    final received = <DomainEvent<Identity, Identity>>[];
     for (final watch in watches) {
       final subscription = watch.events.listen(received.add);
       addTearDown(subscription.cancel);
     }
-    // The first response fails after acceptance. A retry must reuse the UUID.
+    // The first response fails after acceptance. A retry must reuse the event identity.
     fixture.failAfterAcceptance = true;
     final publisher = client.publisher;
     for (final event in events) {
@@ -65,12 +71,13 @@ void main() {
     await client.synchronize();
     await Future<void>.delayed(Duration.zero);
     expect(fixture.publicationIds, [
-      events[0].eventId.uuid,
-      events[0].eventId.uuid,
-      events[1].eventId.uuid,
+      events[0].eventId,
+      events[0].eventId,
+      events[1].eventId,
+      events[2].eventId,
     ]);
-    expect(received, hasLength(2));
-    expect(delivered, hasLength(2));
+    expect(received, hasLength(3));
+    expect(delivered, hasLength(3));
     expect(published, isEmpty);
     for (var i = 0; i < events.length; i++) {
       final actual =
@@ -88,7 +95,7 @@ void main() {
     bus.publish(StockChanged(aggregateId: UuidValue.generate()));
     await Future<void>.delayed(Duration.zero);
     expect(published, hasLength(1));
-    expect(fixture.publicationIds, hasLength(3));
+    expect(fixture.publicationIds, hasLength(4));
   });
 
   test('bounded publication retries refresh credentials and stop on denial',
@@ -100,7 +107,7 @@ void main() {
     );
     fixture.forcedPublishStatus = 503;
     expect(await client.publisher.publish(event), isFalse);
-    expect(fixture.publicationIds, List.filled(3, event.eventId.uuid));
+    expect(fixture.publicationIds, List.filled(3, event.eventId));
     expect((await fixture.history.head(fixture.reference(event))).position, 0);
     fixture.forcedPublishStatus = null;
     fixture.token = 'bob';
@@ -245,7 +252,7 @@ class _HttpFixture implements AggregateEventPolicy<String> {
   late io.HttpServer server;
   final clients = <AggregateEventClient>[];
   final rawClient = http.Client();
-  final publicationIds = <String>[];
+  final publicationIds = <Identity>[];
   final credentials = <String?>[];
   String? token = 'alice';
   bool policyThrows = false;
@@ -253,11 +260,17 @@ class _HttpFixture implements AggregateEventPolicy<String> {
   int? forcedPublishStatus;
   Uri get baseUrl => Uri.parse('http://127.0.0.1:${server.port}/events');
 
-  AggregateReference<Identity> reference(DomainEvent<Identity> event) =>
+  AggregateReference<Identity> reference(
+    DomainEvent<Identity, Identity> event,
+  ) =>
       AggregateReference(kind: 'issue', id: event.aggregateId);
-  EventEnvelope envelope(DomainEvent<Identity> event) => EventEnvelope(
+  EventEnvelope envelope(DomainEvent<Identity, Identity> event) =>
+      EventEnvelope(
         aggregate: reference(event),
-        event: StoredEvent<Identity>.fromDomainEvent(event, registry: registry),
+        event: StoredEvent<Identity, Identity>.fromDomainEvent(
+          event,
+          registry: registry,
+        ),
       );
   Future<void> start() async {
     server = await shelf_io.serve(
@@ -267,8 +280,11 @@ class _HttpFixture implements AggregateEventPolicy<String> {
         final action = request.url.pathSegments.last;
         if (action == 'publish') {
           final body = await request.readAsString();
-          publicationIds
-              .add(((jsonDecode(body) as Map)['event'] as Map)['id'] as String);
+          publicationIds.add(
+            registry.identityCodecs.fromTaggedJson(
+              ((jsonDecode(body) as Map)['event'] as Map)['id'],
+            ),
+          );
           request = request.change(body: body);
           if (forcedPublishStatus != null) {
             return shelf.Response(forcedPublishStatus!);

@@ -9,7 +9,7 @@ import 'package:dddart_serialization/dddart_serialization.dart';
 ///
 /// This is an event repository record and publication contract. It must never be
 /// appended to an aggregate's public REST JSON or serialized pending-event list.
-class EventEnvelope extends AggregateRoot<UuidValue> {
+class EventEnvelope extends AggregateRoot<Identity> {
   /// Associates one event occurrence with its logical aggregate stream.
   EventEnvelope({required this.aggregate, required this.event})
       : super(
@@ -27,7 +27,7 @@ class EventEnvelope extends AggregateRoot<UuidValue> {
     Map<String, dynamic> json, {
     required IdentityCodecRegistry identityCodecs,
   }) {
-    if (json['version'] != 1) {
+    if (json['version'] != 2) {
       throw const DeserializationException(
         'Unsupported event envelope version',
       );
@@ -37,7 +37,7 @@ class EventEnvelope extends AggregateRoot<UuidValue> {
         Map<String, dynamic>.from(json['aggregate'] as Map),
         identityCodecs: identityCodecs,
       ),
-      event: StoredEvent<Identity>.fromJson(
+      event: StoredEvent<Identity, Identity>.fromJson(
         Map<String, dynamic>.from(json['event'] as Map),
         identityCodecs: identityCodecs,
       ),
@@ -48,7 +48,7 @@ class EventEnvelope extends AggregateRoot<UuidValue> {
   final AggregateReference<Identity> aggregate;
 
   /// Existing registered event body and occurrence/authorization metadata.
-  final StoredEvent<Identity> event;
+  final StoredEvent<Identity, Identity> event;
 
   /// Canonical occurrence content for idempotent acceptance across transports.
   /// JSON object order is irrelevant; application string values are preserved.
@@ -66,9 +66,9 @@ class EventEnvelope extends AggregateRoot<UuidValue> {
 
   /// Encodes only the explicit event-publication contract.
   Map<String, dynamic> toJson(IdentityCodecRegistry identityCodecs) => {
-        'version': 1,
+        'version': 2,
         'aggregate': aggregate.toJson(identityCodecs),
-        'event': event.toJson(),
+        'event': event.toJson(identityCodecs: identityCodecs),
       };
 }
 

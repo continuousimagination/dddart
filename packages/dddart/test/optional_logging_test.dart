@@ -12,14 +12,14 @@ class TestUser extends AggregateRoot<UuidValue> {
   final String name;
 }
 
-class UserRegisteredEvent extends DomainEvent<UuidValue> {
+class UserRegisteredEvent extends DomainEvent<UuidValue, UuidValue> {
   UserRegisteredEvent({
     required super.aggregateId,
     required this.userName,
-    super.eventId,
+    UuidValue? eventId,
     super.occurredAt,
     super.context,
-  });
+  }) : super(eventId: eventId ?? UuidValue.generate());
   final String userName;
 }
 

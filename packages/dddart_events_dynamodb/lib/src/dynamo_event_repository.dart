@@ -46,7 +46,8 @@ class DynamoAggregateEventRepository implements AggregateEventRepository {
     final digest = sha256.convert(utf8.encode(encoded)).toString();
     for (var attempt = 0; attempt < 24; attempt++) {
       final now = _store.now();
-      final existing = await _store.get('e#${envelope.id.uuid}', 'id');
+      final existing =
+          await _store.get('e#${_store.occurrenceKey(envelope.id)}', 'id');
       if (existing.isNotEmpty &&
           _store.number(existing, 'expiresAt') >
               now.millisecondsSinceEpoch ~/ 1000) {
@@ -108,7 +109,7 @@ class DynamoAggregateEventRepository implements AggregateEventRepository {
                 tableName: _store.table,
                 item: {
                   ...record,
-                  ..._store.key('e#${envelope.id.uuid}', 'id'),
+                  ..._store.key('e#${_store.occurrenceKey(envelope.id)}', 'id'),
                 },
                 conditionExpression:
                     'attribute_not_exists(pk) OR expiresAt <= :now',
@@ -142,8 +143,8 @@ class DynamoAggregateEventRepository implements AggregateEventRepository {
   }
 
   @override
-  Future<EventEnvelope> getById(UuidValue id) async {
-    final item = await _store.get('e#${id.uuid}', 'id');
+  Future<EventEnvelope> getById(Identity id) async {
+    final item = await _store.get('e#${_store.occurrenceKey(id)}', 'id');
     if (item.isEmpty ||
         _store.number(item, 'expiresAt') <=
             _store.now().millisecondsSinceEpoch ~/ 1000) {
@@ -235,8 +236,8 @@ class DynamoAggregateEventRepository implements AggregateEventRepository {
   }
 
   @override
-  Future<void> deleteById(UuidValue id) async {
-    final item = await _store.get('e#${id.uuid}', 'id');
+  Future<void> deleteById(Identity id) async {
+    final item = await _store.get('e#${_store.occurrenceKey(id)}', 'id');
     if (item.isEmpty) throw _notFound();
     final record = _store.record(item);
     final aggregate = record.envelope.aggregate;
@@ -256,7 +257,7 @@ class DynamoAggregateEventRepository implements AggregateEventRepository {
             TransactWriteItem(
               delete: Delete(
                 tableName: _store.table,
-                key: _store.key('e#${id.uuid}', 'id'),
+                key: _store.key('e#${_store.occurrenceKey(id)}', 'id'),
                 conditionExpression:
                     '#position = :position AND digest = :digest AND logical = :logical',
                 expressionAttributeNames: {
@@ -420,10 +421,11 @@ class DynamoEventChannelRepository implements EventChannelRepository {
   @override
   Future<EventChannelRotation> rotate(
     AggregateReference<Identity> aggregate,
-    UuidValue triggerId,
+    Identity triggerId,
   ) async {
     for (var attempt = 0; attempt < 24; attempt++) {
-      final previous = await _store.get('r#${triggerId.uuid}', 'rotation');
+      final previous =
+          await _store.get('r#${_store.occurrenceKey(triggerId)}', 'rotation');
       if (previous.isNotEmpty &&
           _store.number(previous, 'expiresAt') >
               _store.now().millisecondsSinceEpoch ~/ 1000) {
@@ -477,7 +479,10 @@ class DynamoEventChannelRepository implements EventChannelRepository {
                 tableName: _store.table,
                 item: {
                   ...data,
-                  ..._store.key('r#${triggerId.uuid}', 'rotation'),
+                  ..._store.key(
+                    'r#${_store.occurrenceKey(triggerId)}',
+                    'rotation',
+                  ),
                   'previous': AttributeValue(s: before.id.uuid),
                   'expiresAt': AttributeValue(
                     n: '${now.add(rotationRetention).millisecondsSinceEpoch ~/ 1000}',
@@ -519,6 +524,19 @@ class _Store {
       {'pk': AttributeValue(s: pk), 'sk': AttributeValue(s: sk)};
   String stream(AggregateReference<Identity> aggregate) =>
       's#${sha256.convert(utf8.encode(aggregate.toKey(codecs)))}';
+  // Preserve the registered identity kind and canonical key without hashing.
+  String occurrenceKey(Identity id) {
+    final tagged = codecs.toTaggedKey(id);
+    final key = jsonEncode([tagged['type'], tagged['key']]);
+    if (utf8.encode(key).length + 2 > 2048) {
+      throw const RepositoryException(
+        'Event identity exceeds DynamoDB partition key size',
+        type: RepositoryExceptionType.constraint,
+      );
+    }
+    return key;
+  }
+
   String position(int position) => 'p#${position.toString().padLeft(20, '0')}';
   int number(Map<String, AttributeValue> item, String key) =>
       int.parse(item[key]?.n ?? '0');

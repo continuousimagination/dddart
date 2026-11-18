@@ -12,6 +12,6 @@ abstract interface class EventPublisher {
   /// Publishes an event, preserving its occurrence ID across attempts.
   ///
   /// Returns false after a logged publication failure. An uncertain remote
-  /// outcome may still have accepted the event; retry with the same UUID.
-  Future<bool> publish(DomainEvent<Identity> event);
+  /// outcome may still have accepted the event; retry with the same identity.
+  Future<bool> publish(DomainEvent<Identity, Identity> event);
 }

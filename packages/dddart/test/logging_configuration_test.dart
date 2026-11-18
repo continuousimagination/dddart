@@ -4,11 +4,11 @@ import 'package:logging/logging.dart';
 import 'package:test/test.dart';
 
 // Test event for EventBus logging
-class ConfigTestEvent extends DomainEvent<UuidValue> {
+class ConfigTestEvent extends DomainEvent<UuidValue, UuidValue> {
   ConfigTestEvent({
     required super.aggregateId,
     required this.message,
-  });
+  }) : super(eventId: UuidValue.generate());
   final String message;
 }
 

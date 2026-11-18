@@ -23,7 +23,7 @@ Add direct dependencies on core, serialization, JSON, this package, and
 [clean consumer generation test](test/clean_consumer_generation_test.dart)
 for a complete manifest and event library.
 
-1. Define a concrete `@Serializable()` event extending `DomainEvent<I>`.
+1. Define a concrete `@Serializable()` event extending `DomainEvent<A, E>`.
    Expose the base constructor parameters `aggregateId`, `eventId`,
    `occurredAt`, and `context` by name so the serializer can reconstruct it.
 2. Import the public libraries for core, serialization, JSON, and distributed
@@ -35,7 +35,7 @@ for a complete manifest and event library.
 5. Call `createGeneratedEventRegistry(identityCodecs: identities)`. Use the
    same identity registry on the sending and receiving sides. Register custom
    [identity codecs](../../docs/SERIALIZATION.md#defaults-and-composition)
-   when the event uses a non-UUID identity.
+   when either the aggregate or the event uses a non-UUID identity.
 
 Alternatively, use `events.registerSerializer<E>(key, serializer)` for a
 handwritten serializer, or set typed encode/decode callbacks with
@@ -43,7 +43,7 @@ handwritten serializer, or set typed encode/decode callbacks with
 
 ## Store custom event records
 
-An application can extend `StoredEvent<I>` and generate JSON for that concrete
+An application can extend `StoredEvent<A, E>` and generate JSON for that concrete
 class. That JSON is independent of the tagged event record used by the
 transport. Shared event endpoints accept `EventEnvelope`. See the
 [custom record example](example/custom_stored_event_json_example.dart) for

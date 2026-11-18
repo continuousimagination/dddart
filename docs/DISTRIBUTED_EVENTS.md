@@ -17,7 +17,7 @@ transport is required for the [local event bus](../packages/dddart/DOMAIN_EVENTS
   context. Follow [registry generation](../packages/dddart_events_distributed/README.md#generate-event-serializers-and-registrations)
   or see the [manual registry](../packages/dddart_events_distributed/example/http_polling.dart).
 - Send an `EventEnvelope` containing the logical reference and a
-  `StoredEvent<Identity>`. The event's aggregate ID must agree with the
+  `StoredEvent<Identity, Identity>`. The event's aggregate ID must agree with the
   reference. This is a separate wire contract from aggregate CRUD JSON.
 
 ## Publish after persistence
@@ -89,3 +89,25 @@ on the server, await the service or repository call before returning. A retry
 may re-invoke event processing even when the store deduplicates the durable
 record. The [AppSync deployment guide](../packages/dddart_events_appsync/DEPLOY.md)
 covers the optional live relay and native handlers.
+
+## Event identity migration
+
+`DomainEvent<A, E>` and `StoredEvent<A, E>` independently type the aggregate and
+event identities. The event base constructor requires `eventId`; generation
+belongs to the concrete event or its caller. Register codecs for both concrete
+identity kinds. The generated registry rejects erased or open identity types.
+
+Publication envelopes use version **2**. `event.id` is now a tagged identity
+(`type` and `value`), matching the existing aggregate identity encoding.
+Version 1 envelopes and stored records with bare UUID event IDs are rejected.
+Upgrade producers and consumers together. Migrate retained records by wrapping
+the existing event UUID as a tagged `uuid` identity and setting the envelope version
+to 2; preserve the payload's event ID and all occurrence metadata. If history is
+instead retired, clients must reload aggregate state and obtain fresh checkpoints.
+
+The DynamoDB adapter also changes event lookup and rotation keys to include the
+registered identity kind and canonical key. Migrate those keys and recompute
+stored canonical-content digests alongside envelope records before resuming
+traffic; changing only the envelope version is insufficient. Keep stream heads,
+positions, recovery floors and current channel mappings consistent. Physical
+channel IDs remain generated UUIDs and are independent of event IDs.

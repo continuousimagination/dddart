@@ -46,8 +46,9 @@ class Counter extends AggregateRoot<UuidValue> {
   }
 }
 
-class CounterChanged extends DomainEvent<UuidValue> {
-  CounterChanged({required super.aggregateId, required this.value});
+class CounterChanged extends DomainEvent<UuidValue, UuidValue> {
+  CounterChanged({required super.aggregateId, required this.value})
+      : super(eventId: UuidValue.generate());
   final int value;
 }
 
@@ -55,11 +56,11 @@ class CounterChanged extends DomainEvent<UuidValue> {
 class DemoPublisher implements EventPublisher {
   final started = Completer<void>();
   final release = Completer<void>();
-  final seen = <DomainEvent<Identity>>[];
+  final seen = <DomainEvent<Identity, Identity>>[];
   bool accept = true;
 
   @override
-  Future<bool> publish(DomainEvent<Identity> event) async {
+  Future<bool> publish(DomainEvent<Identity, Identity> event) async {
     seen.add(event);
     if (!started.isCompleted) started.complete();
     await release.future;

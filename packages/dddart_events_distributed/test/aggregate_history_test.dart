@@ -24,14 +24,14 @@ void main() {
 
   EventEnvelope envelope(
     AggregateReference<Identity> aggregate, {
-    UuidValue? id,
+    Identity? id,
     DateTime? occurredAt,
     String body = '{"value":1}',
     String eventType = 'changed.v1',
   }) =>
       EventEnvelope(
         aggregate: aggregate,
-        event: StoredEvent<Identity>(
+        event: StoredEvent<Identity, Identity>(
           id: id ?? UuidValue.generate(),
           createdAt: occurredAt ?? DateTime.utc(2000),
           aggregateId: aggregate.id,
@@ -40,6 +40,53 @@ void main() {
           identityCodecs: identities,
         ),
       );
+
+  test('custom occurrence scopes survive replay, lookup, deletion and rotation',
+      () async {
+    final start = await repository.head(game);
+    const firstId = _ScopedId('provider/A', 'event/42 %, café');
+    const secondId = _ScopedId('provider/B', 'event/42 %, café');
+    final first = envelope(game, id: firstId);
+    final second = envelope(game, id: secondId);
+    final accepted = await repository.append(first);
+    expect(
+      (await repository.append(envelope(game, id: firstId))).position,
+      accepted.position,
+    );
+    await repository.append(second);
+    expect((await repository.getById(firstId)).id, firstId);
+    expect(
+      (await repository.read(game, after: start))
+          .events
+          .map((record) => record.envelope.id),
+      [firstId, secondId],
+    );
+    await expectLater(
+      repository.append(envelope(game, id: firstId, body: '{"value":2}')),
+      throwsA(isA<RepositoryException>()),
+    );
+    final channels = InMemoryEventChannelRepository(identityCodecs: identities);
+    final rotated = await channels.rotate(game, firstId);
+    expect(
+      (await channels.rotate(
+        game,
+        const _ScopedId('provider/A', 'event/42 %, café'),
+      ))
+          .current
+          .id,
+      rotated.current.id,
+    );
+    expect(
+      (await channels.rotate(game, secondId)).current.id,
+      isNot(rotated.current.id),
+    );
+    await repository.deleteById(firstId);
+    await expectLater(
+      repository.getById(firstId),
+      throwsA(isA<RepositoryException>()),
+    );
+    expect((await repository.getById(secondId)).id, secondId);
+  });
 
   test('logical references preserve kind, identity kind, case and scope', () {
     final refs = [
@@ -103,7 +150,7 @@ void main() {
     await Future.wait(input.map(repository.append));
 
     var checkpoint = start;
-    final ids = <UuidValue>[];
+    final ids = <Identity>[];
     final positions = <int>[];
     var hasMore = true;
     do {
@@ -302,6 +349,14 @@ void main() {
     );
     expect(restored.aggregate, game);
     expect(restored.id, record.id);
+    expect(record.toJson(identities)['version'], 2);
+    expect(
+      () => EventEnvelope.fromJson(
+        {...record.toJson(identities), 'version': 1},
+        identityCodecs: identities,
+      ),
+      throwsA(isA<DeserializationException>()),
+    );
     expect(restored.event.eventJson, record.event.eventJson);
     expect(
       () => EventEnvelope(

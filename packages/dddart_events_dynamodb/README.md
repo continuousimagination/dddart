@@ -18,18 +18,26 @@ The table uses string `pk`/`sk` keys and numeric `expiresAt` TTL. No index is re
 | --- | --- |
 | `s#<sha256(logical)>` / `head` | Durable committed head, full logical key and recovery floor |
 | Same stream partition / `p#<20-digit-position>` | Envelope, digest, ingestion time/position, TTL |
-| `e#<occurrence-uuid>` / `id` | Retained global UUID lookup and canonical content digest |
+| `e#<identity-tuple>` / `id` | Retained occurrence identity lookup and canonical content digest |
 | `m#s#<sha256(logical)>` / `state` | Durable current channel mapping |
 | `c#<channel-uuid>` / `current` | Reverse current-channel lookup |
-| `r#<trigger-uuid>` / `rotation` | Idempotent previous/current rotation result and TTL |
+| `r#<identity-tuple>` / `rotation` | Idempotent previous/current rotation result and TTL |
 
-Append atomically updates the head and writes both record/UUID lookup with
+Append atomically updates the head and writes both record/identity lookup with
 conditional transactions. Uncertain successful requests can be retried safely;
-conflicting UUID content is rejected. Reads use consistent aggregate-partition
+conflicting occurrence content is rejected. Reads use consistent aggregate-partition
 queries and preserve progress at DynamoDB byte/page boundaries. The stored full
 logical key detects digest collisions. Normal reads/appends/resolution do not
 scan the table. Explicit `deleteOlderThan` is an administrative maintenance scan;
 deletion advances a durable recovery floor.
+
+Event and rotation keys encode a JSON tuple of the registered identity kind and
+canonical codec key. Source scope and case remain significant; UUIDs and custom
+IDs with the same text do not collide. Keys exceeding the DynamoDB partition-key
+byte limit are rejected before IO. Supply the same identity registry to history,
+channel repositories, event serializers and transports. See the
+[event identity migration](../../docs/DISTRIBUTED_EVENTS.md#event-identity-migration)
+for the breaking envelope and lookup-key changes.
 
 ## Retention and recovery
 

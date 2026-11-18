@@ -10,7 +10,7 @@ void main() {
     final aggregate = _Aggregate();
     final event = _Event(aggregate.id);
     aggregate.raiseEvent(event);
-    final calls = <DomainEvent<Identity>>[];
+    final calls = <DomainEvent<Identity, Identity>>[];
     final repository = InMemoryRepository<_Aggregate, UuidValue>(
       eventPublisher: _Publisher((event) async {
         calls.add(event);
@@ -30,7 +30,7 @@ void main() {
     aggregate.raiseEvent(first);
     final persisted = Completer<void>();
     final accepted = Completer<bool>();
-    final calls = <DomainEvent<Identity>>[];
+    final calls = <DomainEvent<Identity, Identity>>[];
     final publisher = _Publisher((event) {
       calls.add(event);
       return accepted.future;
@@ -114,7 +114,7 @@ void main() {
       await subscription.cancel();
       Logger.root.level = previousLevel;
     });
-    final calls = <DomainEvent<Identity>>[];
+    final calls = <DomainEvent<Identity, Identity>>[];
     var fail = true;
     final repository = EventPublishingRepository<_Aggregate, UuidValue>(
       repository: InMemoryRepository<_Aggregate, UuidValue>(),
@@ -161,15 +161,16 @@ class _Aggregate extends AggregateRoot<UuidValue> {
   _Aggregate() : super(id: UuidValue.generate());
 }
 
-class _Event extends DomainEvent<UuidValue> {
-  _Event(UuidValue id) : super(aggregateId: id);
+class _Event extends DomainEvent<UuidValue, UuidValue> {
+  _Event(UuidValue id) : super(eventId: UuidValue.generate(), aggregateId: id);
 }
 
 class _Publisher implements EventPublisher {
   _Publisher(this.callback);
 
-  final Future<bool> Function(DomainEvent<Identity>) callback;
+  final Future<bool> Function(DomainEvent<Identity, Identity>) callback;
 
   @override
-  Future<bool> publish(DomainEvent<Identity> event) => callback(event);
+  Future<bool> publish(DomainEvent<Identity, Identity> event) =>
+      callback(event);
 }
