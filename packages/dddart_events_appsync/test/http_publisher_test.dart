@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:dddart/dddart.dart';
 import 'package:dddart_events_appsync/dddart_events_appsync.dart';
 import 'package:dddart_events_distributed/dddart_events_distributed.dart';
 import 'package:http/http.dart' as http;
@@ -107,6 +106,6 @@ void main() {
       publisher.refresh(channel),
       throwsA(isA<EventPublicationException>()),
     );
-    expect(record.envelope.id, isA<UuidValue>());
+    expect(record.envelope.id, isA<ExternalEventId>());
   });
 }

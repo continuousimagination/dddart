@@ -18,8 +18,9 @@ class ExternalEventIdCodec implements IdentityCodec<ExternalEventId> {
   @override
   ExternalEventId fromJson(Object? value) {
     final parts = value! as List;
-    if (parts.length != 2)
+    if (parts.length != 2) {
       throw const FormatException('Expected source and ID');
+    }
     return ExternalEventId(parts[0] as String, parts[1] as String);
   }
 
