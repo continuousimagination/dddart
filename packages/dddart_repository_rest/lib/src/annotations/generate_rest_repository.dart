@@ -3,10 +3,6 @@
 /// This annotation marks aggregate root classes for code generation of
 /// repository implementations that communicate with REST APIs via HTTP.
 ///
-/// ## Basic Usage
-///
-/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_rest/README.md).
-///
 /// ## Resource Path
 ///
 /// The [resourcePath] parameter specifies the URL path segment for the
@@ -18,9 +14,7 @@
 ///
 /// The [implements] parameter allows you to specify a custom repository
 /// interface with domain-specific query methods. When provided, the
-/// generator creates an abstract base class that you must extend:
-///
-/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_rest/README.md).
+/// generator creates an abstract base class that you must extend.
 class GenerateRestRepository {
   /// Creates a REST repository generation annotation.
   ///

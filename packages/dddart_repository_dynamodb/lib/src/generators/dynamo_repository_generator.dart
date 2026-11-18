@@ -442,8 +442,6 @@ class DynamoRepositoryGenerator
   /// create the table with the appropriate schema.
   ///
   /// Throws [RepositoryException] if table creation fails.
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_dynamodb/README.md).
   Future<void> createTable() async {
     try {
       await _connection.client.createTable(
@@ -471,8 +469,6 @@ class DynamoRepositoryGenerator
   ///
   /// This command can be executed in a terminal to create the table
   /// using the AWS CLI.
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_dynamodb/README.md).
   static String getCreateTableCommand(String tableName) {
     return \'\'\'
 aws dynamodb create-table \\\\
@@ -487,8 +483,6 @@ aws dynamodb create-table \\\\
   ///
   /// This template can be included in a CloudFormation stack to
   /// provision the table as infrastructure as code.
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_dynamodb/README.md).
   static String getCloudFormationTemplate(String tableName) {
     final logicalId = _cloudFormationLogicalId(tableName);
     return \'\'\'

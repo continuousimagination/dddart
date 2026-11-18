@@ -21,10 +21,6 @@ import 'package:shelf/shelf.dart';
 /// 2. Create a verifier class extending [WebhookVerifier]
 /// 3. Implement the [verify] method with your signature validation logic
 ///
-/// ## Example
-///
-/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_webhooks/README.md).
-///
 /// ## Security Considerations
 ///
 /// When implementing a custom verifier:
@@ -66,9 +62,5 @@ abstract class WebhookVerifier<T extends WebhookVerificationResult> {
   /// 4. Compare signatures using constant-time comparison
   /// 5. Bound past/future timestamps and deduplicate requests when required
   /// 6. Extract and return provider-specific metadata
-  ///
-  /// ## Example
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_webhooks/README.md).
   Future<T> verify(Request request, String body);
 }

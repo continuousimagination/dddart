@@ -94,14 +94,12 @@ Run these commands in the application directory:
 <!-- dddart-source: docs/quickstarts/json/commands.sh -->
 ```sh
 dart pub get
-dart run build_runner clean
 dart run build_runner build --delete-conflicting-outputs
-dart analyze --fatal-infos
 dart run bin/main.dart
 ```
 <!-- /dddart-source -->
 
-The program prints the restored guest name and verifies the ID and seat count:
+The program prints the serialized guest name and checks the ID and seat count:
 
 <!-- dddart-source: docs/quickstarts/json/expected/main.txt -->
 ```text
@@ -111,7 +109,13 @@ true
 ```
 <!-- /dddart-source -->
 
-## Try naming and null options
+That completes the round trip. Use the serializer’s map methods inside a JSON
+object and its string methods when sending a complete message.
+
+## Adapt the wire format
+
+<details>
+<summary>Use snake_case keys or include null fields</summary>
 
 Save this file as `bin/configuration.dart`. It uses the generated reservation
 serializer above to show naming and null behavior:
@@ -146,7 +150,23 @@ void main() {
 ```
 <!-- /dddart-source -->
 
-## Try a custom identity
+Run `dart run bin/configuration.dart`.
+
+Expected configuration output:
+
+<!-- dddart-source: docs/quickstarts/json/expected/configuration.txt -->
+```text
+Sam
+true
+Sam
+Sam
+```
+<!-- /dddart-source -->
+
+</details>
+
+<details>
+<summary>Represent an ID made of more than one field</summary>
 
 Save this file as `bin/identity.dart`. It registers a scoped ID codec,
 round-trips the canonical key, and shows the tagged JSON type:
@@ -214,25 +234,7 @@ void main() {
 ```
 <!-- /dddart-source -->
 
-Run both programs from the application directory:
-
-<!-- dddart-source: docs/quickstarts/json/guide_commands.sh -->
-```sh
-dart run bin/configuration.dart
-dart run bin/identity.dart
-```
-<!-- /dddart-source -->
-
-Expected configuration output:
-
-<!-- dddart-source: docs/quickstarts/json/expected/configuration.txt -->
-```text
-Sam
-true
-Sam
-Sam
-```
-<!-- /dddart-source -->
+Run `dart run bin/identity.dart`.
 
 Expected identity output:
 
@@ -243,6 +245,6 @@ issue.v1
 ```
 <!-- /dddart-source -->
 
-Delete the temporary application directory when finished. See the
-[serialization contract](../../SERIALIZATION.md) for precedence and error
-behavior.
+</details>
+
+See the [serialization contract](../../SERIALIZATION.md) for precedence and error behavior.

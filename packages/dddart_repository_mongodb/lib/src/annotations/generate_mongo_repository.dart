@@ -1,56 +1,24 @@
-/// Annotation to mark aggregate roots for MongoDB repository generation.
+/// Generates a MongoDB repository for a serializable aggregate with a concrete identity.
 ///
-/// This annotation triggers code generation that creates a MongoDB repository
-/// implementation for the annotated aggregate root class. The generated
-/// repository implements the `Repository<T, UuidValue>` interface from the dddart package
-/// and uses the aggregate's JSON serializer from dddart_json for persistence.
+/// Add this annotation and `@Serializable()` to the aggregate that owns the
+/// generated part. Set [collectionName] to control where instances are stored.
+/// For example, the default name for `UserProfile` is `user_profile`.
 ///
-/// ## Requirements
-///
-/// The annotated class must:
-/// - Extend `AggregateRoot` from the dddart package
-/// - Be annotated with `@Serializable()` from dddart_serialization
-///
-/// ## Basic Usage (Concrete Repository)
-///
-/// When used without a custom interface, generates a concrete repository class
-/// that can be instantiated directly:
-///
-/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_mongodb/README.md).
-///
-/// ## Custom Interface (Abstract Base Repository)
-///
-/// When a custom interface is specified that contains methods beyond the base
-/// `Repository<T, UuidValue>` interface, an abstract base class is generated. The
-/// developer must extend this base class and implement the custom methods:
-///
-/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_mongodb/README.md).
-///
-/// ## Collection Naming
-///
-/// If [collectionName] is not provided, the collection name defaults to the
-/// aggregate class name converted to snake_case. For example:
-/// - `User` → `users`
-/// - `OrderItem` → `order_items`
-/// - `UserProfile` → `user_profiles`
-///
-/// ## Implementation Swapping
-///
-/// By defining a custom interface, you can swap repository implementations
-/// for different environments:
-///
-/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_mongodb/README.md).
+/// Supply a repository interface in [implements] to declare application queries.
+/// If it adds methods beyond CRUD, the generator provides an abstract base.
+/// Extend it in the aggregate's library to implement those methods. See the
+/// [custom query example](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_mongodb/example/custom_interface_example.dart).
 class GenerateMongoRepository {
   /// Creates a GenerateMongoRepository annotation.
   ///
   /// [collectionName] - Optional custom collection name. If not provided,
   /// the aggregate class name will be converted to snake_case.
-  /// For example, `UserProfile` becomes `user_profiles`.
+  /// For example, `UserProfile` becomes `user_profile`.
   ///
   /// [implements] - Optional custom repository interface. If provided and
-  /// the interface contains custom methods beyond `Repository<T, UuidValue>`, an abstract
+  /// the interface contains custom methods beyond `Repository<T, I>`, an abstract
   /// base class will be generated requiring the developer to implement
-  /// custom methods. If the interface only contains base `Repository<T, UuidValue>`
+  /// custom methods. If the interface only contains base `Repository<T, I>`
   /// methods, a concrete class will be generated.
   const GenerateMongoRepository({
     this.collectionName,
@@ -68,10 +36,10 @@ class GenerateMongoRepository {
 
   /// The custom repository interface to implement.
   ///
-  /// If null, generates a concrete class implementing `Repository<T, UuidValue>`.
+  /// If null, generates a concrete class implementing `Repository<T, I>`.
   ///
   /// If provided:
-  /// - Interface contains only base `Repository<T, UuidValue>` methods → generates
+  /// - Interface contains only base `Repository<T, I>` methods → generates
   ///   concrete class implementing the interface
   /// - Interface contains custom methods → generates abstract base class
   ///   with concrete implementations of base methods and abstract

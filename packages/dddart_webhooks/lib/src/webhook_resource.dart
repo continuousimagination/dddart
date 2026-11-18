@@ -38,10 +38,6 @@ final _log = Logger('WebhookResource');
 ///   [onDeserializationError])
 /// - **Handler Exception**: Returns 500 Internal Server Error
 ///
-/// ## Usage Examples
-///
-/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_webhooks/README.md).
-///
 /// ## Security Considerations
 ///
 /// - Always use HTTPS in production to prevent man-in-the-middle attacks

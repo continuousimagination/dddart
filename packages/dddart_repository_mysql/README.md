@@ -49,7 +49,4 @@ The optional publisher runs only after confirmed outer commit and lock release.
 uncertain results, permissions and retry boundaries. Storage errors are mapped
 to `RepositoryException`; inspect its type and cause rather than message text.
 
-Use the [development checks](../../scripts/README.md#package-and-example-checks)
-to exercise this adapter against a disposable MySQL service.
-
-See the [public library](lib/dddart_repository_mysql.dart) and [example programs](example/README.md).
+The [MySQL examples](example/README.md) show how to configure a connection, persist an order, and query by customer.

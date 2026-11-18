@@ -22,8 +22,6 @@ class ResponseBuilder<T extends AggregateRoot<Identity>> {
   /// - [etag]: Optional ETag response validator
   ///
   /// Returns: A [Response] with status 200 and serialized body
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md).
   Response ok(
     T aggregate,
     JsonSerializer<T> serializer, {
@@ -49,8 +47,6 @@ class ResponseBuilder<T extends AggregateRoot<Identity>> {
   /// - [etag]: Optional ETag response validator
   ///
   /// Returns: A [Response] with status 201 and serialized body
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md).
   Response created(
     T aggregate,
     JsonSerializer<T> serializer, {
@@ -79,8 +75,6 @@ class ResponseBuilder<T extends AggregateRoot<Identity>> {
   /// - [totalCount]: Optional total count of all matching items (for pagination)
   ///
   /// Returns: A [Response] with status 200, JSON array body, and optional X-Total-Count header
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md).
   Response okList(
     List<T> aggregates,
     JsonSerializer<T> serializer, {
@@ -105,8 +99,6 @@ class ResponseBuilder<T extends AggregateRoot<Identity>> {
   /// DELETE operations.
   ///
   /// Returns: A [Response] with status 204 and no body
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md).
   Response noContent() {
     return Response(204);
   }
@@ -120,8 +112,6 @@ class ResponseBuilder<T extends AggregateRoot<Identity>> {
   /// - [message]: Human-readable explanation of the bad request
   ///
   /// Returns: A [Response] with status 400 and RFC 7807 formatted JSON body
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md).
   Response badRequest(String message) {
     return Response(
       400,
@@ -172,8 +162,6 @@ class ResponseBuilder<T extends AggregateRoot<Identity>> {
   /// - [message]: Human-readable explanation of what was not found
   ///
   /// Returns: A [Response] with status 404 and RFC 7807 formatted JSON body
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md).
   Response notFound(String message) {
     return Response(
       404,
@@ -200,8 +188,6 @@ class ResponseBuilder<T extends AggregateRoot<Identity>> {
   /// - [message]: Human-readable explanation of the authentication failure
   ///
   /// Returns: A [Response] with status 401 and RFC 7807 formatted JSON body
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md).
   Response unauthorized(String message) {
     return Response(
       401,

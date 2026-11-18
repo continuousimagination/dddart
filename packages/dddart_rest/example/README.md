@@ -1,27 +1,23 @@
 # dddart_rest examples
 
-Start with the finite public leaderboard and ETag examples. The server examples need a client or configured identity provider to exercise their routes. See the [package guide](../README.md) for its API.
+Read a public leaderboard and see what happens when an anonymous caller tries to write a score. The program starts and stops its own local server.
 
-## Run from a checkout
-
-Resolve the workspace, then run this lane from the repository root. It uses
-the [example pubspec](pubspec.yaml) for dependencies and generation.
+From the root of a DDDart checkout, run the following with the [example pubspec](pubspec.yaml).
 
 ```sh
+cd packages/dddart_rest/example
 dart pub get
-dart tool/validation/validate.dart example dddart_rest_example --mode=ci
+dart run public_leaderboard_example.dart
 ```
 
-## Programs
+## Choose a program
 
 | Program | How it runs | What it shows |
 | --- | --- | --- |
-| [authorization_example.dart](authorization_example.dart) | Compile only | Long-running HTTP server; compile validation avoids binding a shared port. |
-| [custom_routes_example.dart](custom_routes_example.dart) | Compile only | Long-running HTTP server; compile validation avoids binding a shared port. |
-| [etag_concurrency_example.dart](etag_concurrency_example.dart) | Local run | Self-contained HTTP concurrency regression uses an ephemeral loopback port and closes its server. |
-| [main.dart](main.dart) | Compile only | Long-running HTTP server; compile validation avoids binding a shared port. |
-| [oauth_auth_example.dart](oauth_auth_example.dart) | Compile only | Requires user-supplied OAuth/OIDC configuration and tokens. |
-| [public_leaderboard_example.dart](public_leaderboard_example.dart) | Local run | Finite local HTTP demonstration of public leaderboard reads, protected writes, scoped private documents and unconfigured public CRUD; no external credentials. |
-| [self_hosted_auth_example.dart](self_hosted_auth_example.dart) | Compile only | Long-running authenticated HTTP server; compile validation avoids binding a shared port. |
-
-Compile-only programs need the configuration or running server indicated above.
+| [authorization_example.dart](authorization_example.dart) | Configured integration | Restrict access by resource ownership. |
+| [custom_routes_example.dart](custom_routes_example.dart) | Configured integration | Serve custom Shelf routes alongside CRUD routes. |
+| [etag_concurrency_example.dart](etag_concurrency_example.dart) | Local run | Detect a stale update when two HTTP clients edit the same record. |
+| [main.dart](main.dart) | Configured integration | Serve an aggregate through CRUD endpoints. |
+| [oauth_auth_example.dart](oauth_auth_example.dart) | Configured integration | Validate tokens with your OAuth/OIDC provider. |
+| [public_leaderboard_example.dart](public_leaderboard_example.dart) | Local run | Allow anonymous reads and authorize writes on the same leaderboard. |
+| [self_hosted_auth_example.dart](self_hosted_auth_example.dart) | Configured integration | Run a device-flow server with in-memory credentials. |

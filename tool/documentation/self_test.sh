@@ -101,8 +101,11 @@ fresh
 printf '\n[Missing](https://github.com/continuousimagination/dddart/blob/main/docs/README.md#gone)\n' >> "$CASE/README.md"
 check_failure 'broken local anchor' 'broken repository URL anchors fail'
 fresh
-replace tool/validation/inventory.json 'Finite detached revision-read' 'Changed detached revision-read'
-check_failure 'sample coverage table differs' 'sample execution claims cannot drift'
+replace tool/validation/inventory.json 'Handle a stale revision' 'Ignore a stale revision'
+check_failure 'sample listing differs' 'sample execution claims cannot drift'
+fresh
+replace packages/dddart/example/README.md 'dart run events_example.dart' 'dart run missing.dart'
+check_failure 'show how to run an inventoried program' 'sample guides launch an existing entrypoint'
 fresh
 replace packages/dddart/CHANGELOG.md '> Historical record; it may describe retired APIs. For current usage, start at' 'Removed notice'
 check_failure 'historical document lacks' 'historical exemptions require a visible notice'

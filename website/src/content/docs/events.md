@@ -32,10 +32,6 @@ It sends one envelope to a loopback server and receives it through the shared
 codecs on both sides. The server authorizes publication and subscription
 separately for the logical aggregate.
 
-The same client can use [AppSync live delivery](/dddart/docs/integrations/#add-live-events-with-appsync)
-instead of polling for each new event. Both use retained history for recovery.
-The backend controls authorized channels and event acceptance.
-
 ## Recover and handle duplicates
 
 A fresh watch starts at the history head. Set it up before the initial
@@ -49,3 +45,14 @@ effects must only happen once. A successful aggregate write, durable event
 acceptance, and completed listener work are separate milestones. The
 [distributed events guide](https://github.com/continuousimagination/dddart/blob/main/docs/DISTRIBUTED_EVENTS.md)
 covers checkpoints, retries, and server policy in detail.
+
+## Add live delivery with AppSync
+
+Keep the same aggregate client. Supply an `AppSyncEventTransport` to receive
+live messages over a WebSocket. Both transports use retained history for
+catch-up. Follow the [AppSync guide](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_events_appsync/README.md)
+for token handling, a local handler example, and deployment instructions.
+
+When multiple server processes need to share history and channel mappings, use
+the [DynamoDB event store](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_events_dynamodb/README.md).
+Clients keep their watch checkpoints and connect through the event API.

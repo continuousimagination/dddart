@@ -20,7 +20,9 @@ tool settings in their manifests. Link to those files from the guides.
   output can use the same format.
 - Record how each sample runs in the
   [shared validation inventory](../validation/inventory.json). Its example
-  README lists the corresponding programs and their requirements. Put
+  README starts with a command to run one program from the checkout. Describe
+  what readers can do with each example and any service it needs. Keep CI
+  instructions in the contributor guides. Put
   standalone file names, commands, required services, and expected output in
   [workflows.json](../../docs/quickstarts/workflows.json).
 
@@ -59,7 +61,7 @@ Resolve dependencies with `dart pub get` and check the example pubspecs and
 
 The default mode stages each DDDart dependency from a Pub archive, then
 executes the example in a fresh application directory. It resolves dependencies,
-runs generation and analysis where required, checks output, and removes the
+runs the guide’s commands, analyzes the finished app, checks output, and removes the
 temporary files. In Git mode the example uses its actual manifest and verifies
 the resolved lockfile revision. The
 [core example pubspec](../../docs/quickstarts/core/pubspec.yaml.txt) pins the

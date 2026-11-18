@@ -17,8 +17,6 @@ import 'package:uuid/uuid.dart';
 /// This class creates HTTP endpoints for login, refresh, logout, and device
 /// flow authentication. It works with [JwtAuthHandler] to issue and validate
 /// tokens.
-///
-/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md).
 class AuthEndpoints<TClaims, TRefreshToken extends RefreshToken,
     TDeviceCode extends DeviceCode> {
   /// Creates authentication endpoints

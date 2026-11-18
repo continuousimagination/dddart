@@ -36,29 +36,19 @@ void main() async {
   // Start server
   final server = await shelf_io.serve(
     router.call,
-    InternetAddress.anyIPv4,
+    InternetAddress.loopbackIPv4,
     8080,
   );
   print('Server listening on http://localhost:${server.port}');
   print('');
-  print('Test the webhook with:');
-  print('');
-  print('# User created event');
-  print('curl -X POST http://localhost:8080/webhooks/events \\');
-  print('  -H "Content-Type: application/json" \\');
-  print('  -H "X-Signature: <computed-signature>" \\');
-  print(
-    '  -d \'{"type": "user.created", "data": {"id": "123", "name": "Alice"}}\'',
-  );
-  print('');
-  print('# Order placed event');
-  print('curl -X POST http://localhost:8080/webhooks/events \\');
-  print('  -H "Content-Type: application/json" \\');
-  print('  -H "X-Signature: <computed-signature>" \\');
-  print(
-    '  -d \'{"type": "order.placed", "data": {"orderId": "456", "total": 99.99}}\'',
-  );
-  print('');
+  print(r'''Send a signed request from another terminal:
+body='{"type":"user.created","data":{"id":"123","name":"Alice"}}'
+signature=$(printf %s "$body" | openssl dgst -sha256 -hmac 'json-secret' | awk '{print $NF}')
+curl -sS http://127.0.0.1:8080/webhooks/events \
+  -H 'Content-Type: application/json' \
+  -H "X-Signature: $signature" \
+  --data-binary "$body"
+''');
   print('Press Ctrl+C to stop');
 
   // Keep server running

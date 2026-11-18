@@ -41,8 +41,4 @@ optional and separate from storage preconditions. Browser use also requires
 application CORS, callback and credential-storage choices; native auth providers
 do not become browser-compatible by being used through an HTTP repository.
 
-[Examples](example/README.md) compile configured remote-server demonstrations.
-The standalone quickstart actually runs a local public server and generated client
-without credentials. No remote deployment is contacted by that check.
-
-See the [public library](lib/dddart_repository_rest.dart) and [example programs](example/README.md).
+For custom query routes and a client with credentials, see the [package examples](example/README.md).

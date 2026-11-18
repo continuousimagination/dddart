@@ -7,8 +7,6 @@ import 'package:dddart_serialization/src/serialization_config.dart';
 ///
 /// Configuration can be provided at the annotation level as defaults,
 /// and overridden at serialization time for flexibility.
-///
-/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_serialization/README.md).
 class Serializable {
   /// Creates a Serializable annotation.
   const Serializable({

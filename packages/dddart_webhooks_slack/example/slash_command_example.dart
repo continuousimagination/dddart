@@ -55,28 +55,9 @@ void main() async {
     InternetAddress.anyIPv4,
     8080,
   );
-  print('✅ Slack slash command webhook server started');
-  print('');
-  print('Server listening on http://localhost:8080');
-  print('Webhook endpoint: http://localhost:8080/slack/commands');
-  print('');
-  print('📝 Setup Instructions:');
-  print('');
-  print('1. Go to https://api.slack.com/apps');
-  print('2. Select your app (or create a new one)');
-  print('3. Go to "Slash Commands" in the sidebar');
-  print('4. Click "Create New Command"');
-  print('5. Set Request URL to: http://localhost:8080/slack/commands');
-  print('   (Use ngrok or similar for local testing)');
-  print('6. Create commands like:');
-  print('   - /weather - Get weather information');
-  print('   - /help - Show available commands');
-  print('   - /status - Check system status');
-  print('');
-  print('💡 For local testing with Slack:');
-  print('   ngrok http 8080');
-  print('   Then use the ngrok URL in Slack app configuration');
-  print('');
+  print('Listening on http://localhost:${server.port}/slack/commands');
+  print('Set the Request URL for your slash command to your public HTTPS '
+      'address followed by /slack/commands.');
   print('Press Ctrl+C to stop');
 
   // Keep server running
@@ -88,13 +69,13 @@ void main() async {
 /// Handler for verified Slack slash commands
 Future<Response> _handleSlashCommand(
   SlackSlashCommand command,
-  SlackVerificationResult verification,
+  SlackVerificationResult _,
 ) async {
   print('Received Slack slash command:');
   print('  Command: ${command.command}');
   print('  Text: ${command.text}');
   print('  User: ${command.userName} (${command.userId})');
-  print('  Team: ${verification.teamId}');
+  print('  Team: ${command.teamId}');
   print('  Channel: ${command.channelId}');
 
   // Process command and generate response

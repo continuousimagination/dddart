@@ -58,7 +58,7 @@ program. Use the SQLite adapter in a native Dart or Flutter process.
 
 The generator implements CRUD. For a domain query, define an interface with
 the method you need, then implement the method on the generated base. The
-[custom repository example](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sqlite/example/custom_repository_example.dart)
+[custom repository example](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sqlite/example/lib/custom_user_repository_impl.dart)
 shows the handwritten query and how it shares the model's Dart library and
 generated part. Use parameters for input values, and define ordering and
 bounds as part of the application query.

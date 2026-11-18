@@ -18,8 +18,6 @@ import 'package:dddart_repository_sql/src/schema/identity_type.dart';
 /// | bool      | INTEGER           | TINYINT(1)       |
 /// | DateTime  | TEXT              | DATETIME         |
 /// | UuidValue | BLOB (UTF-8 key)  | VARBINARY(1024)  |
-///
-/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
 class TypeMapper {
   /// Creates a type mapper.
   const TypeMapper();
@@ -45,8 +43,6 @@ class TypeMapper {
   /// Non-primitive types (custom classes) require special handling:
   /// - Value objects are embedded with prefixed columns
   /// - Entities get foreign key columns
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   String? getSqlType(String dartType, SqlDialect dialect) {
     switch (dartType) {
       case 'String':
@@ -71,8 +67,6 @@ class TypeMapper {
   /// In Dart, nullable types are denoted with a `?` suffix.
   /// This method detects that suffix to determine nullability.
   ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
-  ///
   /// Returns `true` if [dartType] ends with `?`.
   bool isNullable(String dartType) {
     return dartType.endsWith('?');
@@ -82,8 +76,6 @@ class TypeMapper {
   ///
   /// Strips the `?` suffix from nullable type names to get
   /// the base type name.
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   ///
   /// Returns the type name without the `?` suffix.
   String removeNullable(String dartType) {

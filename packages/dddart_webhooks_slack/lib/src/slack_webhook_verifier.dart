@@ -18,8 +18,6 @@ import 'package:shelf/shelf.dart';
 /// HMAC-SHA256(signing_secret, "v0:{timestamp}:{body}")
 /// ```
 ///
-/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_webhooks_slack/README.md).
-///
 /// Security considerations:
 /// - Always use HTTPS in production to protect the signing secret
 /// - Store the signing secret securely (environment variables, secret manager)

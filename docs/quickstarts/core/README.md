@@ -1,7 +1,8 @@
 # Core model and local events
 
-Save an order and react to its domain event in one Dart process. This example
-needs no database or generator.
+An order can be placed once. Give the order a `place()` method that enforces
+that rule, save it in memory, and listen for `OrderPlaced`. You only need the
+Dart SDK and access to fetch the dependencies.
 
 ## Set up the application
 
@@ -71,7 +72,6 @@ Future<void> main() async {
 <!-- dddart-source: docs/quickstarts/core/commands.sh -->
 ```sh
 dart pub get
-dart analyze --fatal-infos
 dart run bin/main.dart
 ```
 <!-- /dddart-source -->
@@ -84,28 +84,18 @@ Sam: order placed = true
 ```
 <!-- /dddart-source -->
 
-The order records an event before saving. The program publishes it after the
-save, acknowledges the captured batch, and waits for the listener before
-closing its bus. The in-memory repository keeps object references and loses
-its data when the process ends.
+The listener receives the ID of the saved order. That is how it knows which
+order to load. The program subscribes before placing the order because the
+local bus only delivers events to active listeners.
 
-## Try the other core programs
+Try adding a second `order.place();` immediately after the first. Run the
+program again. The order throws `StateError` before anything is saved.
+Remove the extra call to restore the successful run.
 
-Copy the named files from the
-[modeling](https://continuousimagination.github.io/dddart/docs/modeling/),
-[shared contracts](https://continuousimagination.github.io/dddart/docs/contracts/),
-and [repositories](https://continuousimagination.github.io/dddart/docs/repositories/)
-guides into `bin`, then run:
+## Where to go next
 
-<!-- dddart-source: docs/quickstarts/core/guide_commands.sh -->
-```sh
-dart run bin/repository.dart
-dart run bin/contracts.dart
-dart run bin/modeling.dart
-dart run bin/identity.dart
-```
-<!-- /dddart-source -->
-
-Delete the temporary application directory when finished. Use the
-[example index](../../QUICKSTARTS.md) to choose a serializer, persistent
-repository, or integration.
+- To put a rule on a value, such as a positive seat count, follow
+  [Model a domain](https://continuousimagination.github.io/dddart/docs/modeling/) using this same application.
+- To keep data after the program exits, try the [SQLite quickstart](../sqlite/README.md).
+- For the reasoning behind capture, save, publish, and acknowledge, read the
+  [domain event guide](../../../packages/dddart/DOMAIN_EVENTS_GUIDE.md).

@@ -10,8 +10,6 @@ import 'package:dddart_repository_sql/src/schema/type_mapper.dart';
 ///
 /// This class is responsible for converting [TableDefinition] objects
 /// into SQL CREATE TABLE statements using a specific [SqlDialect].
-///
-/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
 class SchemaGenerator {
   /// Creates a schema generator with the specified dialect.
   ///
@@ -29,8 +27,6 @@ class SchemaGenerator {
   /// - Primary key constraints
   /// - Foreign key constraints with cascade actions
   /// - Uses CREATE TABLE IF NOT EXISTS for idempotency
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   String generateCreateTable(TableDefinition table) {
     return dialect.createTableIfNotExists(table);
   }
@@ -106,8 +102,6 @@ class SchemaGenerator {
   /// For Map<primitive, primitive>:
   /// - Includes map_key column
   /// - UNIQUE constraint on (parent_id, map_key)
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   TableDefinition generatePrimitiveCollectionTable({
     required String parentTable,
     required String fieldName,
@@ -221,8 +215,6 @@ class SchemaGenerator {
   /// - Includes map_key column
   /// - UNIQUE constraint on (parent_id, map_key)
   /// - Flattens all value object fields
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   TableDefinition generateValueObjectCollectionTable({
     required String parentTable,
     required String fieldName,
@@ -313,8 +305,6 @@ class SchemaGenerator {
   /// Extracts all fields from a value object class and creates
   /// column definitions for each field. This is used when embedding
   /// value objects into junction tables.
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   List<ColumnDefinition> _flattenValueObjectFields(
     ClassElement valueObjectClass,
     TypeMapper typeMapper,
@@ -365,8 +355,6 @@ class SchemaGenerator {
   ///
   /// Note: This method generates the table structure. The actual entity
   /// fields are added by the repository generator based on the entity class.
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   TableDefinition generateEntityCollectionTable({
     required String parentTable,
     required String fieldName,
@@ -449,8 +437,6 @@ class SchemaGenerator {
   }
 
   /// Converts a camelCase string to snake_case.
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   String _toSnakeCase(String camelCase) {
     return camelCase.replaceAllMapped(
       RegExp('[A-Z]'),

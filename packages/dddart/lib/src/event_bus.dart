@@ -9,9 +9,6 @@ import 'package:logging/logging.dart';
 /// The EventBus provides a simple publish/subscribe mechanism for domain events
 /// within a single application instance. It uses Dart's StreamController for
 /// efficient, type-safe event distribution.
-///
-/// Example usage:
-/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart/README.md).
 class EventBus {
   /// Creates a local bus with an optional application-provided logger.
   EventBus({Logger? logger}) : logger = logger ?? Logger('dddart.eventbus');
@@ -57,8 +54,6 @@ class EventBus {
   /// Multiple subscriptions can be created for the same or different event types.
   ///
   /// Type parameter [T] must extend [DomainEvent].
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart/README.md).
   Stream<T> on<T extends DomainEvent<Identity>>() {
     return _events<T>(originatedOnly: false);
   }

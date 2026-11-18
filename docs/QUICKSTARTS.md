@@ -9,7 +9,7 @@ directory outside the DDDart checkout. The guide links to the example
 | Model an aggregate and publish a local event | [Core](quickstarts/core/README.md) | Dart |
 | Generate a JSON serializer for a model | [JSON](quickstarts/json/README.md) | Dart and the builders in the example pubspec |
 | Layer environment variables over a YAML file | [Configuration](quickstarts/configuration/README.md) | Native Dart |
-| Store aggregates in a local file or memory | [SQLite](quickstarts/sqlite/README.md) | Native Dart and the SQLite library |
+| Try SQL persistence without a server | [SQLite](quickstarts/sqlite/README.md) | Native Dart and the SQLite library |
 | Store aggregates on a SQL server | [MySQL](quickstarts/mysql/README.md) | Disposable MySQL database |
 | Store aggregates in collections | [MongoDB](quickstarts/mongodb/README.md) | Disposable MongoDB database |
 | Store aggregates in DynamoDB | [DynamoDB Local](quickstarts/dynamodb/README.md) | DynamoDB Local; no AWS account |
@@ -31,7 +31,4 @@ compile each one and what it needs.
 | Persist event history | [DynamoDB history example](../packages/dddart_events_dynamodb/example/README.md) |
 | Receive events from other webhook senders | [Webhook examples](../packages/dddart_webhooks/example/README.md) |
 
-For more examples, follow the links in the
-[package and adapter guide](CAPABILITIES.md). Use the
-[documentation validation guide](../tool/documentation/README.md) when changing
-a quickstart or its source files.
+For platform requirements and other integrations, use the [package and adapter guide](CAPABILITIES.md).

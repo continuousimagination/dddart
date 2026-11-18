@@ -13,8 +13,8 @@ identity codec on both sides.
 ## Run a public server and client
 
 The [HTTP quickstart](https://github.com/continuousimagination/dddart/blob/main/docs/quickstarts/rest/README.md)
-starts a local server, saves and reads a note through a generated client, and
-closes both. Follow it to get the exact files and commands. It needs no login
+seeds a note in memory, serves it on a loopback port, and reads it both with an
+ordinary HTTP request and through a generated repository. Follow it to get the exact files and commands. It needs no login
 or token. If an existing host owns the listener, compose
 `HttpServer.buildHandler()` into that host.
 

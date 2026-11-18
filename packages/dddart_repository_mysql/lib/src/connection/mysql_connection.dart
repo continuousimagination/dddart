@@ -14,8 +14,6 @@ import 'package:mysql_client/mysql_client.dart';
 ///
 /// Manages the lifecycle of one MySQL database connection and provides methods
 /// for executing queries and transactions.
-///
-/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_mysql/README.md).
 class MysqlConnection implements SqlConnection {
   /// Creates a MySQL connection with the specified configuration.
   MysqlConnection({

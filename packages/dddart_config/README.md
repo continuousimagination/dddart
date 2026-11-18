@@ -8,11 +8,11 @@ explicit absence/null semantics and startup validation.
 
 ## Setup and examples
 
-The standalone workflow supplies the Git manifest, YAML, environment override,
-custom provider, commands and exact output. The [repository examples](example/README.md)
-also cover reloading, sections, underscore normalization and validation.
-Environment and YAML-file providers use native process/filesystem IO. A custom
-provider's portability does not make those supplied providers browser-compatible.
+Follow the [quickstart](../../docs/quickstarts/configuration/README.md) to override a YAML setting
+with an environment variable. For a service that reloads settings or checks
+required keys at startup, see the [package examples](example/README.md).
+The built-in file and environment providers need native IO. For a browser,
+supply a provider that reads from a source available there.
 
 ## Provider precedence
 

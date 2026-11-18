@@ -16,7 +16,7 @@ exported declarations are supported at the public entrypoint.
 | dddart_json | JsonSerializer | Handwritten JSON serializers; generated serializer constructors and methods |
 | dddart_config | Layered Configuration, standard providers and errors | ConfigProvider, lookup and requirement contracts |
 | dddart_rest | CRUD/resources, optional access policies, caller/context/results, tokens and auth endpoints | Auth/authorization handlers, query scopes/handlers, response/error mappers, lifecycle repository and credential hooks |
-| dddart_rest_client | RestClient, optional authentication, credential stores and OAuth flows | AuthProvider, OAuthCallbackStrategy and stores |
+| dddart_rest_client | Authenticated RestClient, credential stores and OAuth flows | AuthProvider, OAuthCallbackStrategy and stores |
 | dddart_repository_sql | SQL connection/dialect, table values, mapping and query utilities | SqlConnection/coordinator, SqlDialect, ObjectMapper, QueryBuilder, JoinBuilder; runtime schema values used by these contracts |
 | dddart_repository_sqlite | Annotation, SQLite connection/dialect, generated repositories | Generated custom repository base classes; connection/dialect implementations |
 | dddart_repository_mysql | Annotation, MySQL connection/dialect, generated repositories | Generated custom repository base classes; connection/dialect implementations |
@@ -50,10 +50,10 @@ use annotations and run build_runner; they never instantiate generators.
 
 ## Export inventory
 
-The following list records every public entrypoint and its explicit exports.
-It is intentionally module-level: every public symbol in each module belongs to
-the category above, including generated-code support helpers. A new entrypoint
-or export requires review of this inventory.
+Use the library names below as import paths prefixed with `package:`. For
+example, import `package:dddart/dddart.dart` for domain models. The bullets
+under each library show what it exports. Applications can use those types
+through the library itself.
 
 ### `dddart/dddart.dart`
 

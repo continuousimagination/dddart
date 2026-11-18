@@ -36,20 +36,21 @@ void main() async {
   // Start server
   final server = await shelf_io.serve(
     router.call,
-    InternetAddress.anyIPv4,
+    InternetAddress.loopbackIPv4,
     8080,
   );
   print('Server listening on http://localhost:${server.port}');
   print('');
-  print('Test the webhook with:');
-  print('');
-  print('curl -X POST http://localhost:8080/webhooks/custom \\');
-  print('  -H "Content-Type: application/json" \\');
-  print('  -H "X-Webhook-Signature: <computed-signature>" \\');
-  print('  -H "X-Webhook-Timestamp: <unix-timestamp>" \\');
-  print('  -H "X-User-Id: user-123" \\');
-  print('  -d \'{"event": "user.created", "userId": "123"}\'');
-  print('');
+  print(r'''Send a signed request from another terminal:
+body='{"event":"user.created","userId":"123"}'
+timestamp=$(date +%s)
+signature=$(printf %s "$timestamp:$body" | openssl dgst -sha256 -hmac 'my-secret-key' | awk '{print $NF}')
+curl -sS http://127.0.0.1:8080/webhooks/custom \
+  -H 'Content-Type: application/json' \
+  -H "X-Webhook-Signature: $signature" \
+  -H "X-Webhook-Timestamp: $timestamp" \
+  --data-binary "$body"
+''');
   print('Press Ctrl+C to stop');
 
   // Keep server running

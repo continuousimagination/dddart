@@ -11,7 +11,7 @@ package, a local event bus, and no external services.
 
 ## Set up the application
 
-Create an empty directory with a `bin` subdirectory. Copy the
+With the Dart SDK installed, create an empty application directory outside the DDDart checkout and a `bin` subdirectory inside it. Copy the
 [core example pubspec](https://github.com/continuousimagination/dddart/blob/main/docs/quickstarts/core/pubspec.yaml.txt)
 into the application as `pubspec.yaml`. Run `dart pub get` in that directory.
 For an existing app, see the
@@ -76,11 +76,14 @@ Sam: order placed = true
 ```
 <!-- /dddart-source -->
 
-`Order.place()` owns the business rule and records a pending event. The
-program captures that event before awaiting the save. It publishes the
-captured batch once the save succeeds, acknowledges it, awaits a listener,
-and closes the bus. The in-memory repository keeps object references and
-loses its data when the process ends.
+The listener subscribes before the order is placed. `place()` records the
+event on the order. Saving and publishing are separate steps so a failed save
+cannot announce a successful order. When the listener receives the event, it
+uses the order ID to load the saved state. The data lasts for this run.
+
+**Try the rule.** Add a second `order.place();` immediately after the first
+and run again. The order rejects the second call before the program reaches
+`save`. Remove it to return to the successful run.
 
 ## Choose your next step
 

@@ -9,8 +9,6 @@ import 'package:jose/jose.dart';
 /// verifying JWT signatures.
 ///
 /// Generic over [TClaims] to support strongly-typed custom claims.
-///
-/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md).
 class OAuthJwtAuthHandler<TClaims> extends TokenAuthenticationHandler<TClaims> {
   /// Creates an OAuth JWT authentication handler
   OAuthJwtAuthHandler({

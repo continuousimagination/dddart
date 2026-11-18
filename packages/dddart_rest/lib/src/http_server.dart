@@ -11,8 +11,6 @@ import 'package:shelf_router/shelf_router.dart';
 /// HttpServer allows registering multiple CrudResource instances and
 /// automatically creates routes for all CRUD operations. It handles
 /// starting and stopping the underlying shelf server.
-///
-/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md).
 class HttpServer {
   /// Creates an HttpServer with the specified port
   ///
@@ -43,8 +41,6 @@ class HttpServer {
   /// `['http://localhost:3000', 'https://example.com']`.
   ///
   /// Must be called before [start].
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md).
   void allowOrigins(List<String> origins) {
     _allowedOrigins.addAll(origins);
   }
@@ -56,8 +52,6 @@ class HttpServer {
   ///
   /// Parameters:
   /// - [resource]: The CrudResource instance to register
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md).
   void registerResource(CrudResource resource) {
     _resources.add(resource);
   }
@@ -71,8 +65,6 @@ class HttpServer {
   /// - [method]: HTTP method (GET, POST, PUT, DELETE, etc.)
   /// - [path]: The route path (e.g., '/webhooks/slack')
   /// - [handler]: The request handler function
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md).
   void addRoute(
     String method,
     String path,
@@ -88,8 +80,6 @@ class HttpServer {
   /// the configured port.
   ///
   /// Throws [StateError] if the server is already running.
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md).
   Future<void> start() async {
     if (_shelfServer != null) {
       throw StateError('Server is already running');
@@ -188,8 +178,6 @@ class HttpServer {
   /// Closes the underlying shelf server and cleans up resources.
   ///
   /// Throws [StateError] if the server is not running.
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md).
   Future<void> stop() async {
     if (_shelfServer == null) {
       throw StateError('Server is not running');

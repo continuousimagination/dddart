@@ -1,26 +1,24 @@
 # dddart examples
 
-Build and query domain objects, react to events, or try a revision check locally. See the [package guide](../README.md) for its API.
+Start here to see an aggregate raise an event and a listener react in the same process.
 
-## Run from a checkout
-
-Resolve the workspace, then run this lane from the repository root. It uses
-the [example pubspec](pubspec.yaml) for dependencies and generation.
+From the root of a DDDart checkout, run the following with the [example pubspec](pubspec.yaml).
 
 ```sh
+cd packages/dddart/example
 dart pub get
-dart tool/validation/validate.dart example dddart_events_example --mode=ci
+dart run events_example.dart
 ```
 
-## Programs
+## Choose a program
 
 | Program | How it runs | What it shows |
 | --- | --- | --- |
-| [conditional_writes.dart](conditional_writes.dart) | Local run | Finite detached revision-read, confirmed conflict and deliberate retry demonstration. |
-| [error_handling_example.dart](error_handling_example.dart) | Local run | Finite in-process domain-event error-handling demonstration. |
-| [event_serialization_example.dart](event_serialization_example.dart) | Local run | Finite manual domain-event serialization demonstration. |
-| [events_example.dart](events_example.dart) | Local run | Finite in-process domain-event demonstration. |
-| [logging_console.dart](logging_console.dart) | Local run | Finite console logging demonstration. |
-| [logging_file.dart](logging_file.dart) | Local run | Finite logging demonstration isolated in a system temporary directory. |
-| [logging_hierarchical.dart](logging_hierarchical.dart) | Local run | Finite hierarchical logging demonstration. |
-| [event_publication.dart](event_publication.dart) | Local run | Finite assertions for captured pending events, rejection and accepted retry. |
+| [conditional_writes.dart](conditional_writes.dart) | Local run | Handle a stale revision by reloading and reapplying an edit. |
+| [error_handling_example.dart](error_handling_example.dart) | Local run | Handle a failure in an event listener. |
+| [event_serialization_example.dart](event_serialization_example.dart) | Local run | Serialize and reconstruct a domain event by hand. |
+| [events_example.dart](events_example.dart) | Local run | Raise an event and subscribe to its type. |
+| [logging_console.dart](logging_console.dart) | Local run | Send framework logs to the console. |
+| [logging_file.dart](logging_file.dart) | Local run | Write log records to a temporary file. |
+| [logging_hierarchical.dart](logging_hierarchical.dart) | Local run | Choose different log levels for individual components. |
+| [event_publication.dart](event_publication.dart) | Local run | Keep rejected events pending and acknowledge a successful retry. |

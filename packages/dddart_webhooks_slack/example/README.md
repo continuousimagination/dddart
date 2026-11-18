@@ -1,22 +1,18 @@
 # dddart_webhooks_slack examples
 
-Compile locally. To receive Slack requests, configure a Slack app, signing secret, and callback URL as described in the [package guide](../README.md). See the [package guide](../README.md) for its API.
+Set `SLACK_SIGNING_SECRET` in the server environment. Configure Slack with a publicly reachable HTTPS callback ending in `/slack/commands`, or start with the [compile-only Slack quickstart](../../../docs/quickstarts/slack_server/README.md).
 
-## Run from a checkout
-
-Resolve the workspace, then run this lane from the repository root. It uses
-the [example pubspec](pubspec.yaml) for dependencies and generation.
+From the root of a DDDart checkout, run the following with the [example pubspec](pubspec.yaml).
 
 ```sh
+cd packages/dddart_webhooks_slack/example
 dart pub get
-dart tool/validation/validate.dart example dddart_webhooks_slack_example --mode=ci
+dart run slash_command_example.dart
 ```
 
-## Programs
+## Choose a program
 
 | Program | How it runs | What it shows |
 | --- | --- | --- |
-| [interactive_message_example.dart](interactive_message_example.dart) | Compile only | Requires Slack signing secrets, interactive requests, and a public callback URL. |
-| [slash_command_example.dart](slash_command_example.dart) | Compile only | Requires Slack signing secrets, slash-command requests, and a public callback URL. |
-
-Compile-only programs need the configuration or running server indicated above.
+| [interactive_message_example.dart](interactive_message_example.dart) | Configured integration | Handle interactive Slack messages at `/slack/interactive`. |
+| [slash_command_example.dart](slash_command_example.dart) | Configured integration | Verify a slash command and send a response at `/slack/commands`. |

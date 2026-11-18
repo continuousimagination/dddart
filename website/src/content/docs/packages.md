@@ -17,9 +17,9 @@ with what the application needs today.
 | Convert between Dart objects and JSON | [Generate JSON](/dddart/docs/serialization/) with `dddart_serialization` and `dddart_json` |
 | Choose a repository for a server, native app, or browser | [Repositories](/dddart/docs/repositories/) |
 | Serve an API with public or protected operations | [HTTP](/dddart/docs/http/) |
-| Publish or recover aggregate events remotely | [Events](/dddart/docs/events/) |
+| Publish or recover aggregate events over HTTP polling or AppSync | [Events](/dddart/docs/events/) |
 | Read settings and supply defaults | [Configuration](/dddart/docs/configuration/) with `dddart_config` |
-| Connect a webhook sender or optional AppSync delivery | [External services](/dddart/docs/integrations/) |
+| Handle a webhook or Slack command | [Receive webhooks](/dddart/docs/integrations/) |
 
 ## Look up supported imports
 

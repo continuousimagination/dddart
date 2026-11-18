@@ -6,8 +6,6 @@
 /// Bind values through the generated `?` placeholders. Table/column names and
 /// WHERE text are interpolated SQL and must come from trusted application schema;
 /// this builder does not sanitize arbitrary identifiers or SQL fragments.
-///
-/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
 class QueryBuilder {
   /// Creates a query builder.
   const QueryBuilder();
@@ -21,8 +19,6 @@ class QueryBuilder {
   /// - [tableName]: The table to select from
   /// - [columns]: Optional list of column names (defaults to `*`)
   /// - [whereClause]: Optional WHERE condition with `?` placeholders
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   String buildSelect({
     required String tableName,
     List<String>? columns,
@@ -55,8 +51,6 @@ class QueryBuilder {
   /// Parameters:
   /// - [tableName]: The table to insert into
   /// - [columns]: List of column names to insert
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   String buildInsert({
     required String tableName,
     required List<String> columns,
@@ -81,8 +75,6 @@ class QueryBuilder {
   /// - [tableName]: The table to update
   /// - [columns]: List of column names to update
   /// - [whereClause]: WHERE condition with `?` placeholders
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   String buildUpdate({
     required String tableName,
     required List<String> columns,
@@ -108,8 +100,6 @@ class QueryBuilder {
   /// Parameters:
   /// - [tableName]: The table to delete from
   /// - [whereClause]: WHERE condition with `?` placeholders
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   String buildDelete({
     required String tableName,
     required String whereClause,

@@ -5,8 +5,6 @@ import 'package:dddart/dddart.dart';
 /// Slack sends slash command data as form-encoded POST requests.
 /// Use the [SlackSlashCommand.fromForm] factory constructor to deserialize
 /// the webhook payload.
-///
-/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_webhooks_slack/README.md).
 class SlackSlashCommand extends Value {
   /// Creates a Slack slash command.
   const SlackSlashCommand({
@@ -25,8 +23,6 @@ class SlackSlashCommand extends Value {
   /// Slack sends slash commands as application/x-www-form-urlencoded POST
   /// requests. This factory constructor parses the form data into a
   /// strongly-typed command object.
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_webhooks_slack/README.md).
   factory SlackSlashCommand.fromForm(Map<String, String> form) {
     return SlackSlashCommand(
       command: form['command']!,

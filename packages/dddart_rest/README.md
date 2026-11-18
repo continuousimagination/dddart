@@ -6,39 +6,14 @@ authentication and per-operation authorization.
 [Public server/client quickstart](../../docs/quickstarts/rest/README.md) ·
 [Complete example programs](example/README.md) · [Public API](lib/dddart_rest.dart)
 
-The quickstart includes the Git manifest, generated model and finite anonymous
-HTTP server/client. It requires no login or token. The examples below demonstrate
-additional policies; installing this package never makes authentication mandatory.
-
-## Typed identity contracts
-
-Use `AggregateRoot<UuidValue>` for UUID models and `Repository<User, UuidValue>`
-for UUID CRUD. Native models extend `AggregateRoot<IssueId>`. Both base
-constructors require an ID; domain constructors can call `UuidValue.generate()`.
-Register explicit `IdentityCodec<IssueId>` implementations in an instance-local
-`IdentityCodecRegistry`; configure the server's `JsonSerializer` and
-`CrudResource<Issue, IssueId, void>` with the same registry. Generated REST
-repositories accept `identityCodecs: registry` and share it with body serialization.
-
-`CrudResource<T, I, TClaims>`, `AuthorizationHandler<T, I, TClaims>` and
-`QueryHandler<T, I, TClaims>` retain concrete identity and claim types. Read and
-delete policies receive persisted aggregates; update policies receive separate
-current and proposed snapshots. Query handlers receive typed caller and scope.
-
-Client paths URI-encode canonical codec keys once. `HttpServer` decodes one
-segment once; direct `CrudResource.handleGetById/handleUpdate/handleDelete`
-callers supply decoded canonical keys. Slash, percent, punctuation and Unicode
-remain data. Empty, malformed UTF-8 and dot-only (`.`/`..`) keys are unsupported
-and fail before client I/O. Invalid/noncanonical server keys yield problem+json
-400; valid missing IDs keep 404. Client 400 and 422 map to repository constraint
-errors. POST validates the final aggregate's key after `preCreate`, rejecting
-unsupported identities with 400 before authorization or persistence. A get
-response with a different typed identity is rejected.
-
-
-RESTful CRUD API framework for DDDart - Provides REST endpoints for aggregate roots with minimal boilerplate.
+Start with the public quickstart to serve a note on a loopback port and read it
+without a token. Add a verifier when an operation needs to know who is calling.
 
 ## Optional access policies
+
+Try the [public leaderboard](example/README.md) to make an anonymous read and
+see a write rejected until a caller has permission. The example uses a local
+verifier and closes its server after the requests.
 
 No verifier or security policy means public CRUD. Installing an
 `authenticationHandler` defaults the resource to `AccessPolicy.authenticated()`.
@@ -108,23 +83,6 @@ policy using stored ownership, explicit owner transfer, public objects and scope
 queries. Treat proposed ownership/tenant fields as untrusted unless server-owned
 normalization has assigned them. Policies must check the stored state first.
 
-### Run the public/protected example
-
-From `packages/dddart_rest/example`, run:
-
-```bash
-dart pub get
-dart run public_leaderboard_example.dart
-```
-
-The example starts an ephemeral local HTTP server, exercises anonymous leaderboard
-reads, authenticated submissions and moderator corrections/deletions, then checks
-public/private document scope and an unconfigured public CRUD resource. It closes
-the server and exits. Its credential verifier uses deterministic local fixtures;
-replace that verifier with JWT/OAuth verification in an application. The policies
-and optional/public operation configuration remain the same. This entrypoint is
-registered in the normal validation inventory and is executed, not just compiled.
-
 ### Read authorization and query scope
 
 Item policy evaluates a detached view of persisted state before the HTTP response
@@ -180,6 +138,31 @@ policy. An authenticated-only policy verifies identity without making an ownersh
 decision; use a custom policy when permissions depend on stored state.
 
 
+## Typed identity contracts
+
+Use `AggregateRoot<UuidValue>` for UUID models and `Repository<User, UuidValue>`
+for UUID CRUD. Native models extend `AggregateRoot<IssueId>`. Both base
+constructors require an ID; domain constructors can call `UuidValue.generate()`.
+Register explicit `IdentityCodec<IssueId>` implementations in an instance-local
+`IdentityCodecRegistry`; configure the server's `JsonSerializer` and
+`CrudResource<Issue, IssueId, void>` with the same registry. Generated REST
+repositories accept `identityCodecs: registry` and share it with body serialization.
+
+`CrudResource<T, I, TClaims>`, `AuthorizationHandler<T, I, TClaims>` and
+`QueryHandler<T, I, TClaims>` retain concrete identity and claim types. Read and
+delete policies receive persisted aggregates; update policies receive separate
+current and proposed snapshots. Query handlers receive typed caller and scope.
+
+Client paths URI-encode canonical codec keys once. `HttpServer` decodes one
+segment once; direct `CrudResource.handleGetById/handleUpdate/handleDelete`
+callers supply decoded canonical keys. Slash, percent, punctuation and Unicode
+remain data. Empty, malformed UTF-8 and dot-only (`.`/`..`) keys are unsupported
+and fail before client I/O. Invalid/noncanonical server keys yield problem+json
+400; valid missing IDs keep 404. Client 400 and 422 map to repository constraint
+errors. POST validates the final aggregate's key after `preCreate`, rejecting
+unsupported identities with 400 before authorization or persistence. A get
+response with a different typed identity is rejected.
+
 ## HTTP and query behavior
 
 `CrudResource<T, I, TClaims>` uses a JsonSerializer and typed repository. Item
@@ -209,7 +192,7 @@ capability; `requirePrecondition` can require them. An unsupported backend canno
 provide compare-and-swap by checking and then saving. Conflicts, unsupported
 capability and uncertain storage outcomes remain distinct; a 412 contains no
 private current body or revision. See [conditional writes](../../docs/CONDITIONAL_WRITES.md)
-and the finite [two-writer HTTP example](example/etag_concurrency_example.dart).
+and the [two-writer HTTP example](example/etag_concurrency_example.dart).
 
 ## Authentication providers and endpoints
 
@@ -237,10 +220,7 @@ skew are explicit configuration. The external provider owns login; DDDart does n
 provision it. [custom_routes_example.dart](example/custom_routes_example.dart)
 shows application routes. Apply authentication deliberately to those handlers.
 
-## Platform and verification
+## Client platforms
 
-The server uses native IO. Browser clients need application CORS and callback/
-storage choices; see [dddart_rest_client](../dddart_rest_client/README.md).
-The [capability matrix](../../docs/CAPABILITIES.md), [examples](example/README.md)
-and [validation commands](../../scripts/README.md) distinguish finite HTTP tests,
-compile-only configured servers and live deployment requirements.
+Run the Shelf server on the Dart VM. For a native or browser client, see the
+[client guide](../dddart_rest_client/README.md) for token providers and credential storage.

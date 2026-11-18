@@ -29,7 +29,8 @@ serializers. [SQL mappings](../dddart_repository_sql/README.md) describe limits.
 
 Custom repository methods belong to an application interface. Generated abstract
 bases and the handwritten subclass share the model library via parts. See
-[custom_repository_example.dart](example/custom_repository_example.dart).
+the [active-user query](example/lib/custom_user_repository_impl.dart) and its
+[runnable example](example/custom_repository_example.dart).
 Declare explicit selection, ordering and bounds; CRUD does not imply getAll.
 
 ## Transactions and conditions
@@ -45,7 +46,4 @@ An optional `eventPublisher` publishes the captured pending batch after confirme
 commit, including an outer transaction's commit. Rollback retains pending events.
 This does not implement a transactional outbox.
 
-[Development checks](../../scripts/README.md#package-and-example-checks) and [examples](example/README.md) cover persistence,
-generation, custom bases, collection limits and independent-connection races.
-
-See the [public library](lib/dddart_repository_sqlite.dart) and [example programs](example/README.md).
+Try the [order example](example/complex_aggregate_example.dart) to see a graph of related objects stored and reloaded together.

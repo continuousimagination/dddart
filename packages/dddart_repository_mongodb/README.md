@@ -51,9 +51,8 @@ uncertain writes blindly. Provision fresh pre-release collections.
 
 ## Deployment boundary
 
-The service tests run MongoDB. A DocumentDB-style URI is not proof of DocumentDB
-feature, TLS or topology compatibility. Verify the actual deployment and trusted
-certificate configuration; do not disable certificate checking as a default.
-Use [development checks](../../scripts/README.md#package-and-example-checks) for the required local service lane.
+Use MongoDB for the [local examples](example/README.md). If the deployment uses
+Amazon DocumentDB, verify the operations, topology, and trusted certificates
+against that service. A compatible connection URI alone cannot establish support.
 
-See the [public library](lib/dddart_repository_mongodb.dart) and [example programs](example/README.md).
+See the [public library](lib/dddart_repository_mongodb.dart).

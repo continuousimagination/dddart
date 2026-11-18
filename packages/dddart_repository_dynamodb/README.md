@@ -53,13 +53,8 @@ These repositories do not provide multi-item receipts, cross-region coordination
 or a transactional outbox. An optional publisher acknowledges captured events
 only after confirmed persistence and acceptance.
 
-## Errors and verification
+## Handle repository errors
 
-`RepositoryException` classifies failures and retains causes where available.
-Use [the example lane](example/README.md) with DynamoDB Local for generation,
-table lifecycle, CRUD, errors and custom reads. Local tests do not certify AWS
-IAM, Global Tables, LocalStack or a deployed service. DocumentDB is a different
-protocol; the [MongoDB adapter](../dddart_repository_mongodb/README.md) has its
-own explicit verification boundary.
-
-See the [public library](lib/dddart_repository_dynamodb.dart) and [example programs](example/README.md).
+Inspect the type and cause on `RepositoryException`. Use the [DynamoDB Local examples](example/README.md)
+to try a missing-record lookup, create local tables, or add an indexed query.
+Configure IAM, indexes, and capacity separately for your AWS deployment.

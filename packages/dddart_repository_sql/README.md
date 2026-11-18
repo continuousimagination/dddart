@@ -73,16 +73,12 @@ See the concrete dialects and generators for exact mappings. There is no generic
 promise that every collection graph, database version or third-party dialect is
 supported. The supplied SQLite adapter is native FFI, not a Web/WASM adapter.
 
-## Concurrency and verification
+## Concurrency
 
 [CONDITIONAL_WRITES.md](../../docs/CONDITIONAL_WRITES.md) defines the narrow
 single-aggregate capability, coherent versioned reads, commit ownership,
 confirmed conflicts and uncertain results. Ordinary CRUD remains available.
 Multi-record receipts and atomic outbox publication are not SQL adapter promises.
 
-Run `dart tool/validation/validate.dart package dddart_repository_sql --mode=ci`
-from the repository root. SQLite/MySQL gates additionally regenerate and compile
-external custom-base consumers; MySQL's CI lane requires its database service.
-The [validation inventory](../../tool/validation/inventory.json) defines these
-lanes. Backend switching is an application data-mapping task, not an automatic
-schema/data migration supplied by this package.
+When changing an application’s backend, plan how its existing data and schema
+map to the new adapter. This package supplies SQL contracts and generators.

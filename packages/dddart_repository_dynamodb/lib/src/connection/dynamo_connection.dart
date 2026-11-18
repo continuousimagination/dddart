@@ -5,8 +5,6 @@ import 'package:aws_dynamodb_api/dynamodb-2012-08-10.dart';
 /// Provides connection lifecycle management and DynamoDB client access.
 /// Supports AWS credentials configuration and custom endpoints for
 /// DynamoDB Local or LocalStack.
-///
-/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_dynamodb/README.md).
 class DynamoConnection {
   /// Creates a [DynamoConnection] with the specified configuration.
   ///
@@ -26,8 +24,6 @@ class DynamoConnection {
   /// and testing. By default, it runs on port 8000.
   ///
   /// [port] - Port number for DynamoDB Local (default: 8000)
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_dynamodb/README.md).
   factory DynamoConnection.local({int port = 8000}) {
     return DynamoConnection(
       region: 'us-east-1',

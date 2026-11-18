@@ -27,6 +27,30 @@ Copy the [example pubspec](pubspec.yaml.txt) into the application as `pubspec.ya
 
 ## Add the application files
 
+Start with the note the application will store. Save as `lib/note.dart`:
+
+<!-- dddart-source: docs/quickstarts/mongodb/lib/note.dart -->
+```dart
+import 'dart:convert';
+
+import 'package:dddart/dddart.dart';
+import 'package:dddart_json/dddart_json.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
+import 'package:dddart_repository_mongodb/dddart_repository_mongodb.dart';
+import 'package:mongo_dart/mongo_dart.dart';
+
+part 'note.g.dart';
+
+@Serializable()
+@GenerateMongoRepository(collectionName: 'quickstart_notes')
+class Note extends AggregateRoot<UuidValue> {
+  Note({required this.text, UuidValue? id, super.createdAt, super.updatedAt})
+      : super(id: id ?? UuidValue.generate());
+  final String text;
+}
+```
+<!-- /dddart-source -->
+
 Save as `bin/main.dart`:
 
 <!-- dddart-source: docs/quickstarts/mongodb/bin/main.dart -->
@@ -56,38 +80,12 @@ Future<void> main() async {
 ```
 <!-- /dddart-source -->
 
-Save as `lib/note.dart`:
-
-<!-- dddart-source: docs/quickstarts/mongodb/lib/note.dart -->
-```dart
-import 'dart:convert';
-
-import 'package:dddart/dddart.dart';
-import 'package:dddart_json/dddart_json.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
-import 'package:dddart_repository_mongodb/dddart_repository_mongodb.dart';
-import 'package:mongo_dart/mongo_dart.dart';
-
-part 'note.g.dart';
-
-@Serializable()
-@GenerateMongoRepository(collectionName: 'quickstart_notes')
-class Note extends AggregateRoot<UuidValue> {
-  Note({required this.text, UuidValue? id, super.createdAt, super.updatedAt})
-      : super(id: id ?? UuidValue.generate());
-  final String text;
-}
-```
-<!-- /dddart-source -->
-
 ## Run the example
 
 <!-- dddart-source: docs/quickstarts/mongodb/commands.sh -->
 ```sh
 dart pub get
-dart run build_runner clean
 dart run build_runner build --delete-conflicting-outputs
-dart analyze --fatal-infos
 dart run bin/main.dart
 ```
 <!-- /dddart-source -->
@@ -100,5 +98,6 @@ hello: persisted
 ```
 <!-- /dddart-source -->
 
-The program finishes and closes its resources. It removes the demo record. Delete the temporary application directory when finished.
-Stop the disposable service with `docker stop dddart-quickstart-mongo`.
+The generated repository reads the note back from MongoDB by ID and then
+deletes the demo document. Stop the database with `docker stop dddart-quickstart-mongo`.
+For queries by fields other than ID, see the [custom MongoDB example](../../../packages/dddart_repository_mongodb/example/custom_interface_example.dart).

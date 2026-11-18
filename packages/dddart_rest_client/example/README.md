@@ -1,21 +1,15 @@
 # dddart_rest_client examples
 
-Use the CLI with a configured device-flow server. Match its URL and client ID to your server, and provide the routes the commands call. See the [public HTTP quickstart](../../../docs/quickstarts/rest/README.md) for an anonymous example. See the [package guide](../README.md) for its API.
+Print the available CLI commands first. To try login, configure the API URL and client ID in the program for your device-flow server.
 
-## Run from a checkout
-
-Resolve the workspace, then run this lane from the repository root. It uses
-the [example pubspec](pubspec.yaml) for dependencies and generation.
+From the root of a DDDart checkout, run the following with the [example pubspec](pubspec.yaml).
 
 ```sh
+cd packages/dddart_rest_client/example
 dart pub get
-dart tool/validation/validate.dart example dddart_rest_client_example --mode=ci
+dart run cli_tool_example.dart help
 ```
 
-## Programs
+The `help` command works locally. `login` and the data commands require the configured server.
 
-| Program | How it runs | What it shows |
-| --- | --- | --- |
-| [cli_tool_example.dart](cli_tool_example.dart) | Compile only | Requires a separately configured authenticated dddart_rest server; validation compiles it without accessing credentials or the network. |
-
-Compile-only programs need the configuration or running server indicated above.
+[cli_tool_example.dart](cli_tool_example.dart) — Log in with device flow, store credentials and call a user API.

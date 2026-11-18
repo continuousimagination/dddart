@@ -27,6 +27,29 @@ Copy the [example pubspec](pubspec.yaml.txt) into the application as `pubspec.ya
 
 ## Add the application files
 
+Start with the note the application will store. Save as `lib/note.dart`:
+
+<!-- dddart-source: docs/quickstarts/dynamodb/lib/note.dart -->
+```dart
+import 'dart:convert';
+
+import 'package:dddart/dddart.dart';
+import 'package:dddart_json/dddart_json.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
+import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';
+
+part 'note.g.dart';
+
+@Serializable()
+@GenerateDynamoRepository(tableName: 'quickstart_notes')
+class Note extends AggregateRoot<UuidValue> {
+  Note({required this.text, UuidValue? id, super.createdAt, super.updatedAt})
+      : super(id: id ?? UuidValue.generate());
+  final String text;
+}
+```
+<!-- /dddart-source -->
+
 Save as `bin/main.dart`:
 
 <!-- dddart-source: docs/quickstarts/dynamodb/bin/main.dart -->
@@ -59,37 +82,12 @@ Future<void> main() async {
 ```
 <!-- /dddart-source -->
 
-Save as `lib/note.dart`:
-
-<!-- dddart-source: docs/quickstarts/dynamodb/lib/note.dart -->
-```dart
-import 'dart:convert';
-
-import 'package:dddart/dddart.dart';
-import 'package:dddart_json/dddart_json.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
-import 'package:dddart_repository_dynamodb/dddart_repository_dynamodb.dart';
-
-part 'note.g.dart';
-
-@Serializable()
-@GenerateDynamoRepository(tableName: 'quickstart_notes')
-class Note extends AggregateRoot<UuidValue> {
-  Note({required this.text, UuidValue? id, super.createdAt, super.updatedAt})
-      : super(id: id ?? UuidValue.generate());
-  final String text;
-}
-```
-<!-- /dddart-source -->
-
 ## Run the example
 
 <!-- dddart-source: docs/quickstarts/dynamodb/commands.sh -->
 ```sh
 dart pub get
-dart run build_runner clean
 dart run build_runner build --delete-conflicting-outputs
-dart analyze --fatal-infos
 dart run bin/main.dart
 ```
 <!-- /dddart-source -->
@@ -102,5 +100,6 @@ hello: persisted
 ```
 <!-- /dddart-source -->
 
-The program finishes and closes its resources. Delete the temporary application directory when finished.
-Stop the disposable service with `docker stop dddart-quickstart-dynamo`.
+The generated repository loads the note by its partition key. The program deletes
+its temporary table when finished. Stop the service with `docker stop dddart-quickstart-dynamo`.
+For a read that needs a secondary index, see the [custom query example](../../../packages/dddart_repository_dynamodb/example/custom_interface_example.dart).

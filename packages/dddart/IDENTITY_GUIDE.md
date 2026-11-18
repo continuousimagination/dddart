@@ -11,9 +11,44 @@ concrete identity. Both entity and aggregate constructors require `id:`.
 A domain constructor may explicitly choose `UuidValue.generate()`.
 Event occurrence IDs remain UUIDs independently of their aggregate's identity.
 
-Use the [modeling guide](https://continuousimagination.github.io/dddart/docs/modeling/)
-to run a scoped identity example. The [JSON quickstart](../../docs/quickstarts/json/README.md)
-adds an explicit codec and generated serialization.
+## Use a scoped identity
+
+In the application from the [core quickstart](../../docs/quickstarts/core/README.md),
+save this file as `bin/identity.dart` and run `dart run bin/identity.dart`.
+The repository finds the issue using a newly constructed ID with the same
+repository name and number.
+
+<!-- dddart-source: docs/quickstarts/core/bin/identity.dart -->
+```dart
+import 'package:dddart/dddart.dart';
+
+class IssueId extends Identity {
+  const IssueId(this.repository, this.number);
+  final String repository;
+  final int number;
+
+  @override
+  List<Object?> get props => [repository, number];
+}
+
+class Issue extends AggregateRoot<IssueId> {
+  Issue({required super.id, required this.title});
+  final String title;
+}
+
+Future<void> main() async {
+  final Repository<Issue, IssueId> issues =
+      InMemoryRepository<Issue, IssueId>();
+  final issue = Issue(
+    id: const IssueId('team/booking', 12),
+    title: 'Explain cancellation rules',
+  );
+  await issues.save(issue);
+  final loaded = await issues.getById(const IssueId('team/booking', 12));
+  print(loaded.title);
+}
+```
+<!-- /dddart-source -->
 
 ## Boundary contracts
 

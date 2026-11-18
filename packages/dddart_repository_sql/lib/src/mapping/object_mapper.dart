@@ -11,8 +11,6 @@ class ObjectMapper {
   ///
   /// Takes a JSON map and flattens any nested maps (representing value objects)
   /// by prefixing their keys with the parent field name.
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   Map<String, Object?> flattenValueObject(
     String prefix,
     Map<String, dynamic> valueObjectJson,
@@ -42,8 +40,6 @@ class ObjectMapper {
   ///
   /// Extracts all columns that start with the given prefix and reconstructs
   /// the original nested JSON structure.
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   Map<String, dynamic> reconstructValueObject(
     String prefix,
     Map<String, Object?> row,

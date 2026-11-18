@@ -16,7 +16,7 @@ const next = entries[current + 1];
 ---
 <Base title={entry.data.title} description={entry.data.description}>
   <div class="docs-shell">
-    <aside class="docs-sidebar"><p class="sidebar-label">THE DDDART FIELD GUIDE</p><DocsNav entries={entries} current={entry.id} /></aside>
+    <aside class="docs-sidebar"><p class="sidebar-label">Guides</p><DocsNav entries={entries} current={entry.id} /></aside>
     <main id="main-content" class="doc-main">
       <details class="mobile-doc-nav"><summary>Browse documentation</summary><DocsNav entries={entries} current={entry.id} /></details>
       <div class="doc-heading"><p class="eyebrow">{entry.data.section}</p><h1>{entry.data.title}</h1><p class="doc-description">{entry.data.description}</p></div>
@@ -24,6 +24,6 @@ const next = entries[current + 1];
       <div class="doc-edit"><a href={`${repo}/edit/main/website/src/content/docs/${entry.id}.md`}>Improve this page ↗</a></div>
       <nav class="doc-pagination" aria-label="Next and previous pages">{previous ? <a href={doc(previous.id)}><span>← Previous</span>{previous.data.title}</a> : <div />}{next && <a href={doc(next.id)}><span>Next →</span>{next.data.title}</a>}</nav>
     </main>
-    <aside class="docs-toc"><nav aria-label="On this page"><p class="sidebar-label">ON THIS PAGE</p><ul>{headings.filter(h => h.depth === 2).map(h => <li><a href={`#${h.slug}`}>{h.text}</a></li>)}</ul></nav><a class="toc-cta" href={doc('examples')}>Learn by building <span>Explore the examples ↗</span></a></aside>
+    <aside class="docs-toc"><nav aria-label="On this page"><p class="sidebar-label">ON THIS PAGE</p><ul>{headings.filter(h => h.depth === 2).map(h => <li><a href={`#${h.slug}`}>{h.text}</a></li>)}</ul></nav></aside>
   </div>
 </Base>

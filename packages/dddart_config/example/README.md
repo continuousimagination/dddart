@@ -1,23 +1,21 @@
 # dddart_config examples
 
-Load and validate settings from YAML, an environment map, or a custom provider. See the [package guide](../README.md) for its API.
+Read typed settings from the supplied YAML file, then override a value through the environment.
 
-## Run from a checkout
-
-Resolve the workspace, then run this lane from the repository root. It uses
-the [example pubspec](pubspec.yaml) for dependencies and generation.
+From the root of a DDDart checkout, run the following with the [example pubspec](pubspec.yaml).
 
 ```sh
+cd packages/dddart_config/example
 dart pub get
-dart tool/validation/validate.dart example dddart_config_example --mode=ci
+dart run basic_usage.dart
 ```
 
-## Programs
+## Choose a program
 
 | Program | How it runs | What it shows |
 | --- | --- | --- |
-| [basic_usage.dart](basic_usage.dart) | Local run | Finite script-relative YAML configuration demonstration. |
-| [reload_example.dart](reload_example.dart) | Local run | Finite reload demonstration using a system temporary file. |
-| [section_access.dart](section_access.dart) | Local run | Finite section-access demonstration. |
-| [underscore_demo.dart](underscore_demo.dart) | Local run | Finite environment-key mapping demonstration. |
-| [validation_example.dart](validation_example.dart) | Local run | Finite configuration-validation demonstration. |
+| [basic_usage.dart](basic_usage.dart) | Local run | Read YAML settings with environment overrides. |
+| [reload_example.dart](reload_example.dart) | Local run | Edit a settings file and reload the running configuration. |
+| [section_access.dart](section_access.dart) | Local run | Read a whole section of nested settings. |
+| [underscore_demo.dart](underscore_demo.dart) | Local run | Map environment variable names to nested keys and literal underscores. |
+| [validation_example.dart](validation_example.dart) | Local run | Check required settings at startup. |

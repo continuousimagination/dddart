@@ -101,53 +101,16 @@ expresses a business action, updates the model, and records
 Keep related rules and child entities behind the aggregate root. Reference
 other aggregates by ID when they have their own lifecycles.
 
-## Use an identity that fits the domain
-
-A UUID works when the application assigns an ID. An issue number in an
-external system can instead be part of a scoped identity. The number alone
-would confuse issues in different repositories. Save this file as
-`bin/identity.dart` and run `dart run bin/identity.dart`:
-
-<!-- dddart-source: docs/quickstarts/core/bin/identity.dart -->
-```dart
-import 'package:dddart/dddart.dart';
-
-class IssueId extends Identity {
-  const IssueId(this.repository, this.number);
-  final String repository;
-  final int number;
-
-  @override
-  List<Object?> get props => [repository, number];
-}
-
-class Issue extends AggregateRoot<IssueId> {
-  Issue({required super.id, required this.title});
-  final String title;
-}
-
-Future<void> main() async {
-  final Repository<Issue, IssueId> issues =
-      InMemoryRepository<Issue, IssueId>();
-  final issue = Issue(
-    id: const IssueId('team/booking', 12),
-    title: 'Explain cancellation rules',
-  );
-  await issues.save(issue);
-  final loaded = await issues.getById(const IssueId('team/booking', 12));
-  print(loaded.title);
-}
-```
-<!-- /dddart-source -->
-
-A typed repository accepts only that identity kind. When a custom identity
-crosses a JSON or persistence boundary, give it a
-[codec](/dddart/docs/serialization/#give-custom-identities-a-codec) that
-round-trips both the scope and number.
-
 ## Test the rule before adding infrastructure
 
 Construct a reservation and call `confirm()` twice. The first call records
 the event; the second rejects the action. That test needs neither a serializer
 nor a database. See [shared contracts](/dddart/docs/contracts/) for the next
 step: loading and saving the model through an application service.
+
+## When an ID already exists
+
+A reservation can generate a UUID. An issue imported from a tracker may already
+have a number that only makes sense in its own repository. In that case, model
+both the repository and number as its identity. The [typed identity example](https://github.com/continuousimagination/dddart/blob/main/packages/dddart/IDENTITY_GUIDE.md#use-a-scoped-identity)
+shows how two independently constructed IDs can look up the same issue.

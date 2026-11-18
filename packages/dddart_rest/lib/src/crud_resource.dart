@@ -19,12 +19,9 @@ import 'package:shelf/shelf.dart';
 /// with request handling logic for standard CRUD operations. Each instance is
 /// configured for a specific aggregate type and can be registered with an HTTP server.
 ///
-/// Generic over [T] (aggregate type) and optional [TClaims] (authentication claims type).
+/// [T] is the aggregate type, [I] its identity, and [TClaims] the claims type.
 /// Authentication and access policy are separate. Explicit public operation overrides
 /// remain anonymous even when a verifier protects other operations.
-///
-/// Example without authentication:
-/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md).
 class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   /// Creates a CrudResource with the specified configuration
   ///
@@ -201,8 +198,6 @@ class CrudResource<T extends AggregateRoot<I>, I extends Identity, TClaims> {
   /// - Setting fields from authentication context (e.g., userId, cognitoSub)
   /// - Adding audit fields (e.g., createdBy)
   /// - Applying default values based on user context
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md).
   final T Function(T aggregate, Caller<TClaims> caller)? preCreate;
 
   /// ResponseBuilder instance for creating HTTP responses

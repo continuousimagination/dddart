@@ -5,8 +5,6 @@ import 'package:mongo_dart/mongo_dart.dart';
 ///
 /// Provides connection lifecycle management and database instance access.
 /// Does not manage connection pooling (handled by mongo_dart internally).
-///
-/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_mongodb/README.md).
 class MongoConnection {
   /// Creates a connection from individual parameters.
   ///
@@ -34,8 +32,6 @@ class MongoConnection {
   /// Accepts MongoDB-format URIs. DocumentDB deployment compatibility is not verified.
   ///
   /// Format: `mongodb://[username:password@]host[:port]/database[?options]`
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_mongodb/README.md).
   factory MongoConnection.fromUri(String uri) {
     final parsedUri = Uri.parse(uri);
 

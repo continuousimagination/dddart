@@ -1,23 +1,19 @@
 # dddart_events_appsync examples
 
-Start with the finite native invocation example. Follow the [deployment guide](../DEPLOY.md) for the optional Lambda and live smoke programs. See the [package guide](../README.md) for its API.
+Try an authorizer and subscription handler locally. The [deployment guide](../DEPLOY.md) covers the Lambda entrypoint and how to exercise an existing AWS deployment.
 
-## Run from a checkout
-
-Resolve the workspace, then run this lane from the repository root. It uses
-the [example pubspec](pubspec.yaml) for dependencies and generation.
+From the root of a DDDart checkout, run the following with the [example pubspec](pubspec.yaml).
 
 ```sh
+cd packages/dddart_events_appsync/example
 dart pub get
-dart tool/validation/validate.dart example dddart_events_appsync_example --mode=ci
+dart run native_invocation.dart
 ```
 
-## Programs
+## Choose a program
 
 | Program | How it runs | What it shows |
 | --- | --- | --- |
-| [native_invocation.dart](native_invocation.dart) | Local run | Finite native invocation with explicit local test authentication. |
-| [lambda.dart](lambda.dart) | Compile only | Complete custom runtime, requiring explicit AWS deployment. |
-| [aws_smoke.dart](aws_smoke.dart) | Compile only | Explicit opt-in smoke against existing AWS resources. |
-
-Compile-only programs need the configuration or running server indicated above.
+| [native_invocation.dart](native_invocation.dart) | Local run | Authorize a local caller and subscribe to its channel. |
+| [lambda.dart](lambda.dart) | Configured integration | Run the event handlers inside a deployed Lambda runtime. |
+| [aws_smoke.dart](aws_smoke.dart) | Configured integration | Exercise publication and subscription against your deployed AWS resources. |

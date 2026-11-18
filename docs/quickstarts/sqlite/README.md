@@ -20,6 +20,29 @@ Copy the [example pubspec](pubspec.yaml.txt) into the application as `pubspec.ya
 
 ## Add the application files
 
+Start with the note the application will store. Save as `lib/note.dart`:
+
+<!-- dddart-source: docs/quickstarts/sqlite/lib/note.dart -->
+```dart
+import 'dart:convert';
+
+import 'package:dddart/dddart.dart';
+import 'package:dddart_json/dddart_json.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
+import 'package:dddart_repository_sqlite/dddart_repository_sqlite.dart';
+
+part 'note.g.dart';
+
+@Serializable()
+@GenerateSqliteRepository(tableName: 'quickstart_notes')
+class Note extends AggregateRoot<UuidValue> {
+  Note({required this.text, UuidValue? id, super.createdAt, super.updatedAt})
+      : super(id: id ?? UuidValue.generate());
+  final String text;
+}
+```
+<!-- /dddart-source -->
+
 Save as `bin/main.dart`:
 
 <!-- dddart-source: docs/quickstarts/sqlite/bin/main.dart -->
@@ -49,37 +72,12 @@ Future<void> main() async {
 ```
 <!-- /dddart-source -->
 
-Save as `lib/note.dart`:
-
-<!-- dddart-source: docs/quickstarts/sqlite/lib/note.dart -->
-```dart
-import 'dart:convert';
-
-import 'package:dddart/dddart.dart';
-import 'package:dddart_json/dddart_json.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
-import 'package:dddart_repository_sqlite/dddart_repository_sqlite.dart';
-
-part 'note.g.dart';
-
-@Serializable()
-@GenerateSqliteRepository(tableName: 'quickstart_notes')
-class Note extends AggregateRoot<UuidValue> {
-  Note({required this.text, UuidValue? id, super.createdAt, super.updatedAt})
-      : super(id: id ?? UuidValue.generate());
-  final String text;
-}
-```
-<!-- /dddart-source -->
-
 ## Run the example
 
 <!-- dddart-source: docs/quickstarts/sqlite/commands.sh -->
 ```sh
 dart pub get
-dart run build_runner clean
 dart run build_runner build --delete-conflicting-outputs
-dart analyze --fatal-infos
 dart run bin/main.dart
 ```
 <!-- /dddart-source -->
@@ -92,4 +90,6 @@ hello: persisted
 ```
 <!-- /dddart-source -->
 
-The program finishes and closes its resources. Delete the temporary application directory when finished.
+The note was loaded by ID from SQLite. This example opens an in-memory database.
+To keep it after the process exits, use `SqliteConnection.file('notes.db')` and
+omit the demo’s `deleteById` call. See the [SQLite guide](../../../packages/dddart_repository_sqlite/README.md).

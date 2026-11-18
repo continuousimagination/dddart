@@ -1,5 +1,12 @@
 # Atomic aggregate writes
 
+Two callers load the same order. The first saves a change. How does the second
+know its copy is stale? Load the aggregate with its revision and include that
+revision in the write. Run the [two-writer example](../packages/dddart/example/conditional_writes.dart)
+to see the conflict and the application’s decision to retry.
+
+## Save one aggregate against its revision
+
 `Repository<T, I>` retains ordinary unconditional CRUD. A repository implementing
 `ConditionalAggregateRepository<T, I>` additionally supplies `getVersioned`,
 `saveConditional` and `deleteConditional`. Use
@@ -31,7 +38,9 @@ have succeeded but its acknowledgment is unknown. Do not blindly retry or report
 confirmed failure/success; reconcile using application state or a stronger receipt
 capability. A revision-only capability does not provide operation receipts.
 
-`ConditionalRepository<T, I>` remains the stronger IndexedDB contract: atomic
+## Commit multiple changes in IndexedDB
+
+`ConditionalRepository<T, I>` provides the IndexedDB contract for atomic
 multi-record commits, unique claims, operation/payload binding, durable receipts
 and uncertain-outcome resolution. Both capabilities share `VersionedRepository`,
 `VersionedAggregate` and `ExpectedRevision`; they do not claim interchangeable
@@ -39,7 +48,8 @@ write guarantees. IndexedDB's prohibition on ordinary CRUD overwriting
 conditionally managed records remains intact. Its conditional delete requires a
 matching token. Use its full commit/receipt workflow for that stronger contract.
 
-Start with the [runnable conditional writes example](../packages/dddart/example/conditional_writes.dart).
+## Exercise the single-aggregate contract locally
+
 `InMemoryConditionalRepository` is a single-isolate reference implementation. Supply
 an explicit deep-copy/codec function; a map of shared mutable domain objects is
 not a detached-snapshot implementation. Multiple repository handles can share an

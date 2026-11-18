@@ -2,10 +2,8 @@
 
 Run a public Shelf API and fetch an aggregate with a generated HTTP repository.
 
-This server demo runs on the Dart VM. It binds an ephemeral loopback port and
-makes one anonymous request. No authentication provider is installed: the route
-is deliberately public. See the [public/protected example](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/example/public_leaderboard_example.dart)
-for per-operation policy overrides.
+The server binds to a temporary loopback port on the Dart VM. Both a plain
+HTTP client and the generated repository can read the same public note.
 
 ## Set up the application
 
@@ -20,6 +18,29 @@ mkdir -p bin lib
 Copy the [example pubspec](pubspec.yaml.txt) into the application as `pubspec.yaml`.
 
 ## Add the application files
+
+Start with the note the application will serve. Save as `lib/note.dart`:
+
+<!-- dddart-source: docs/quickstarts/rest/lib/note.dart -->
+```dart
+import 'dart:convert';
+
+import 'package:dddart/dddart.dart';
+import 'package:dddart_json/dddart_json.dart';
+import 'package:dddart_repository_rest/dddart_repository_rest.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
+
+part 'note.g.dart';
+
+@Serializable()
+@GenerateRestRepository(resourcePath: '/notes')
+class Note extends AggregateRoot<UuidValue> {
+  Note({required this.text, UuidValue? id, super.createdAt, super.updatedAt})
+      : super(id: id ?? UuidValue.generate());
+  final String text;
+}
+```
+<!-- /dddart-source -->
 
 Save as `bin/main.dart`:
 
@@ -73,37 +94,12 @@ Future<void> main() async {
 ```
 <!-- /dddart-source -->
 
-Save as `lib/note.dart`:
-
-<!-- dddart-source: docs/quickstarts/rest/lib/note.dart -->
-```dart
-import 'dart:convert';
-
-import 'package:dddart/dddart.dart';
-import 'package:dddart_json/dddart_json.dart';
-import 'package:dddart_repository_rest/dddart_repository_rest.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
-
-part 'note.g.dart';
-
-@Serializable()
-@GenerateRestRepository(resourcePath: '/notes')
-class Note extends AggregateRoot<UuidValue> {
-  Note({required this.text, UuidValue? id, super.createdAt, super.updatedAt})
-      : super(id: id ?? UuidValue.generate());
-  final String text;
-}
-```
-<!-- /dddart-source -->
-
 ## Run the example
 
 <!-- dddart-source: docs/quickstarts/rest/commands.sh -->
 ```sh
 dart pub get
-dart run build_runner clean
 dart run build_runner build --delete-conflicting-outputs
-dart analyze --fatal-infos
 dart run bin/main.dart
 ```
 <!-- /dddart-source -->
@@ -116,4 +112,5 @@ Expected output:
 ```
 <!-- /dddart-source -->
 
-The program finishes and closes its resources. Delete the temporary application directory when finished.
+Both requests read the same note without a token. To allow anonymous reads and
+protect writes on the same resource, run the [public leaderboard example](../../../packages/dddart_rest/example/README.md).

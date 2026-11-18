@@ -22,9 +22,7 @@ library dddart;
 /// ### Enabling Logging
 ///
 /// Logging is completely optional. To enable it, configure handlers on the
-/// root logger or specific component loggers:
-///
-/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart/README.md).
+/// root logger or specific component loggers.
 ///
 /// ### Log Levels
 ///

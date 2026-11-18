@@ -44,10 +44,4 @@ The [public library](lib/dddart_json.dart) exposes `JsonSerializer`. The
 [build configuration](build.yaml) invokes the internal generator; application
 code uses the imports recorded in the [API inventory](../../docs/PUBLIC_API.md).
 The [repository example](example/README.md) demonstrates nested domain models,
-collections, naming strategies and enum serialization. Its lane generates every
-part from clean source, analyzes, compiles and runs both programs.
-
-[Capabilities](../../docs/CAPABILITIES.md) distinguishes portable JSON models from
-model libraries that import native database adapters. The
-[validation commands](../../scripts/README.md) cover parity, invalid input,
-configuration precedence and outside-workspace generation.
+collections, naming strategies and enum serialization. For browser use, keep native database imports out of the model library.

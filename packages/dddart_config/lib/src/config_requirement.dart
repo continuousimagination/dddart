@@ -29,8 +29,6 @@ enum ConfigType {
 ///
 /// A requirement specifies a configuration key, its expected type,
 /// whether it is required, and an optional custom validator function.
-///
-/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_config/README.md).
 class ConfigRequirement {
   /// Creates a configuration requirement.
   ///
@@ -66,7 +64,5 @@ class ConfigRequirement {
   /// The validator receives the typed value (after type conversion) and
   /// should throw an exception if validation fails. The exception message
   /// will be included in the validation failure report.
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_config/README.md).
   final dynamic Function(dynamic)? validator;
 }

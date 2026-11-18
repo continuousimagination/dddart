@@ -35,7 +35,7 @@ transactions, and backend consistency vary.
 | Package | Use it for | Requirements and limits |
 | --- | --- | --- |
 | dddart_rest | [HTTP resources, optional authentication, and access policies](../packages/dddart_rest/README.md) | Shelf on a native server; define the allowed operations and queries |
-| dddart_rest_client | [HTTP clients and optional credential handling](../packages/dddart_rest_client/README.md) | Built-in IO storage and several interactive flows need a native runtime; supply platform-appropriate callbacks and storage |
+| dddart_rest_client | [Authenticated HTTP clients and credential handling](../packages/dddart_rest_client/README.md) | Built-in IO storage and several interactive flows need a native runtime; supply platform-appropriate callbacks and storage |
 | dddart_events_distributed | [Aggregate publication and watches using HTTP polling](../packages/dddart_events_distributed/README.md) | A server with the shared event service. In-memory history is suitable for a development process, not shared durable history |
 | dddart_events_appsync | [Live delivery on the same aggregate watch interface](../packages/dddart_events_appsync/README.md) | Configured AppSync Events endpoint and server-side authorization |
 | dddart_events_dynamodb | [Durable event history and channel mapping](../packages/dddart_events_dynamodb/README.md) | Server-side DynamoDB access; provision storage separately |

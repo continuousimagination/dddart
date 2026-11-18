@@ -22,6 +22,6 @@ The core library is usable without a database, server, or code generator.
 `FileLogHandler` requires native filesystem access. Configure log levels and
 listeners in the application, and close file sinks and event subscriptions.
 
-Browse the [core examples](example/README.md) for identity, logging, publication,
-and repositories, or the [documentation index](../../docs/README.md) to choose
+Browse the [core examples](example/README.md) for logging, publication,
+and conditional writes, or the [documentation index](../../docs/README.md) to choose
 another package.

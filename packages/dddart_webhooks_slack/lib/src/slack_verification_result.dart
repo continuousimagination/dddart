@@ -4,8 +4,6 @@ import 'package:dddart_webhooks/dddart_webhooks.dart';
 ///
 /// Contains Slack-specific metadata extracted from headers and payload,
 /// including team ID, request timestamp, and request type.
-///
-/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_webhooks_slack/README.md).
 class SlackVerificationResult extends WebhookVerificationResult {
   /// Creates a Slack verification result.
   const SlackVerificationResult({

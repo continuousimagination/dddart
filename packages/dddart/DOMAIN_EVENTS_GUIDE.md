@@ -9,7 +9,7 @@ publish them.
 ## Run a complete example
 
 The [core quickstart](../../docs/quickstarts/core/README.md) includes the model,
-manifest and finite program. The [core samples](example/README.md) cover multiple
+manifest and runnable program. The [core samples](example/README.md) cover multiple
 listeners, event JSON, failures, logging and conditional writes. Distributed
 HTTP polling and AppSync use the [shared transport contract](../../docs/DISTRIBUTED_EVENTS.md).
 

@@ -1,24 +1,23 @@
 # dddart_repository_rest examples
 
-These client programs need a running REST API with the matching resources and query handlers. For a server and a client together, use the [HTTP quickstart](../../../docs/quickstarts/rest/README.md). See the [package guide](../README.md) for its API.
+These clients need an API that serves the matching model. Start a compatible `/users` endpoint on `localhost:8080` before trying basic CRUD. For a self-contained server and client, use the [public HTTP quickstart](../../../docs/quickstarts/rest/README.md).
 
-## Run from a checkout
-
-Resolve the workspace, then run this lane from the repository root. It uses
-the [example pubspec](pubspec.yaml) for dependencies and generation.
+From the root of a DDDart checkout, run the following with the [example pubspec](pubspec.yaml).
 
 ```sh
+cd packages/dddart_repository_rest/example
 dart pub get
-dart tool/validation/validate.dart example dddart_repository_rest_example --mode=ci
+dart run build_runner build --delete-conflicting-outputs
+dart run basic_crud_example.dart
 ```
 
-## Programs
+For the authenticated example, set `EXAMPLE_API_TOKEN` to a token accepted by your server before running `dart run authentication_example.dart`.
+
+## Choose a program
 
 | Program | How it runs | What it shows |
 | --- | --- | --- |
-| [authentication_example.dart](authentication_example.dart) | Compile only | Requires a separately running authenticated REST server. |
-| [basic_crud_example.dart](basic_crud_example.dart) | Compile only | Requires the documented REST server fixture on localhost. |
-| [custom_repository_example.dart](custom_repository_example.dart) | Compile only | Requires custom query routes on a separately running REST server. |
-| [error_handling_example.dart](error_handling_example.dart) | Compile only | Requires a separately running REST server to exercise transport failures. |
-
-Compile-only programs need the configuration or running server indicated above.
+| [authentication_example.dart](authentication_example.dart) | Configured integration | Supply an access token to a protected API. |
+| [basic_crud_example.dart](basic_crud_example.dart) | Configured integration | Save, fetch and delete a user through HTTP. |
+| [custom_repository_example.dart](custom_repository_example.dart) | Configured integration | Find products by category or price through server-side query routes. |
+| [error_handling_example.dart](error_handling_example.dart) | Configured integration | Handle missing resources and connection failures in an HTTP client. |

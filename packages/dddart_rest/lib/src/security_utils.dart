@@ -18,8 +18,6 @@ class SecurityUtils {
   /// - [b]: Second string to compare
   ///
   /// Returns: true if strings are equal, false otherwise
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md).
   static bool constantTimeCompare(String a, String b) {
     // Convert strings to bytes for comparison
     final bytesA = utf8.encode(a);
@@ -53,8 +51,6 @@ class SecurityUtils {
   /// - [clockSkewTolerance]: Tolerance for clock skew (default: 5 minutes)
   ///
   /// Returns: true if timestamp is valid, false otherwise
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md).
   static bool validateTimestampAge(
     DateTime timestamp, {
     Duration maxAge = const Duration(minutes: 10),
@@ -88,8 +84,6 @@ class SecurityUtils {
   /// - [maxAge]: Maximum age for the device code (default: 10 minutes)
   ///
   /// Returns: true if device code is valid, false otherwise
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md).
   static bool validateDeviceCodeAge(
     DateTime createdAt,
     DateTime expiresAt, {
@@ -116,8 +110,6 @@ class SecurityUtils {
   /// - [length]: Length of the random string in bytes (default: 32)
   ///
   /// Returns: Base64-encoded random string
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md).
   static String generateSecureRandom([int length = 32]) {
     final random = Random.secure();
     final bytes = List<int>.generate(

@@ -22,6 +22,10 @@ void main(List<String> args) async {
   }
 
   final command = args[0];
+  if (command == 'help') {
+    _printUsage();
+    return;
+  }
   final cli = UserCLI();
 
   try {
@@ -46,8 +50,6 @@ void main(List<String> args) async {
         await cli.createUser(args[1], args[2]);
       case 'me':
         await cli.getCurrentUser();
-      case 'help':
-        _printUsage();
       default:
         print('Unknown command: $command');
         _printUsage();
@@ -107,6 +109,7 @@ class UserCLI {
       authUrl: authUrl,
       clientId: clientId,
       credentialsPath: credentialsPath,
+      onOutput: print,
     );
 
     client = RestClient(

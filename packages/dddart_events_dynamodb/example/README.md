@@ -1,19 +1,13 @@
 # dddart_events_dynamodb examples
 
-Start [DynamoDB Local](../../../docs/quickstarts/dynamodb/README.md) before running this lane. See the [package guide](../README.md) for its API.
+Start [DynamoDB Local](../../../docs/quickstarts/dynamodb/README.md#start-dynamodb-local). The program creates a temporary table and deletes it when finished.
 
-## Run from a checkout
-
-Resolve the workspace, then run this lane from the repository root. It uses
-the [example pubspec](pubspec.yaml) for dependencies and generation.
+From the root of a DDDart checkout, run the following with the [example pubspec](pubspec.yaml).
 
 ```sh
+cd packages/dddart_events_dynamodb/example
 dart pub get
-dart tool/validation/validate.dart example dddart_events_dynamodb_example --mode=ci
+dart run history.dart
 ```
 
-## Programs
-
-| Program | How it runs | What it shows |
-| --- | --- | --- |
-| [history.dart](history.dart) | Local database | Finite history and rotation against an isolated DynamoDB Local table. |
+[history.dart](history.dart) — Recover an event after a checkpoint and rotate its channel.

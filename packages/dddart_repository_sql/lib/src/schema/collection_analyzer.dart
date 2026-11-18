@@ -8,8 +8,6 @@ import 'package:dddart_repository_sql/src/schema/identity_type.dart';
 /// (List, Set, Map) and their element types. It determines whether collections
 /// contain primitives, value objects, or entities, which affects how they are
 /// stored in the database.
-///
-/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
 class CollectionAnalyzer {
   /// Creates a collection analyzer.
   const CollectionAnalyzer();
@@ -22,8 +20,6 @@ class CollectionAnalyzer {
   /// - Key type for maps
   ///
   /// Returns `null` if the field is not a collection type.
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   CollectionInfo? analyzeCollection(
     FieldElement field, {
     DartType? resolvedType,
@@ -87,8 +83,6 @@ class CollectionAnalyzer {
   /// - `int`, `double`, `String`, `bool`
   /// - `DateTime` (stored as TEXT or DATETIME depending on dialect)
   /// - `UuidValue` (stored as BLOB or BINARY)
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   bool isPrimitiveType(DartType type) {
     if (IdentityTypeAnalysis.isIdentity(type)) return true;
     if (type is! InterfaceType) return false;
@@ -109,8 +103,6 @@ class CollectionAnalyzer {
   ///
   /// Value objects extend the `Value` base class from dddart.
   /// They are embedded into parent tables with prefixed columns.
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   bool isValueObject(ClassElement element) {
     return !IdentityTypeAnalysis.isIdentity(element.thisType) &&
         _extendsClass(element, 'Value');
@@ -123,8 +115,6 @@ class CollectionAnalyzer {
   ///
   /// Note: `AggregateRoot` extends `Entity`, so this returns `true`
   /// for both entities and aggregate roots.
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   bool isEntity(ClassElement element) {
     return _extendsClass(element, 'Entity');
   }
@@ -137,8 +127,6 @@ class CollectionAnalyzer {
   /// - Object collections (e.g., `List<Object>`)
   /// - Value objects as map keys (e.g., `Map<Money, int>`)
   /// - Collections of aggregate roots
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   void validateCollectionType(DartType collectionType) {
     // Check for nested collections
     if (collectionType is InterfaceType) {

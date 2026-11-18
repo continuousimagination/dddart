@@ -1,20 +1,19 @@
 # dddart_json examples
 
-Generate serializers and round-trip aggregate state and enums. See the [package guide](../README.md) for its API.
+Start with an order and inspect how its items and values are represented in JSON.
 
-## Run from a checkout
-
-Resolve the workspace, then run this lane from the repository root. It uses
-the [example pubspec](pubspec.yaml) for dependencies and generation.
+From the root of a DDDart checkout, run the following with the [example pubspec](pubspec.yaml).
 
 ```sh
+cd packages/dddart_json/example
 dart pub get
-dart tool/validation/validate.dart example dddart_json_example --mode=ci
+dart run build_runner build --delete-conflicting-outputs
+dart run serialization_example.dart
 ```
 
-## Programs
+## Choose a program
 
 | Program | How it runs | What it shows |
 | --- | --- | --- |
-| [enum_example_runner.dart](enum_example_runner.dart) | Local run | Finite generated enum round-trip demonstration. |
-| [serialization_example.dart](serialization_example.dart) | Local run | Finite generated aggregate serialization demonstration. |
+| [enum_example_runner.dart](enum_example_runner.dart) | Local run | Preserve enum values through a JSON round trip. |
+| [serialization_example.dart](serialization_example.dart) | Local run | Generate JSON for an order and change how fields are named. |

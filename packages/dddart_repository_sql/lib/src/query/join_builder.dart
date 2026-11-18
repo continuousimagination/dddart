@@ -14,8 +14,6 @@ class JoinBuilder {
   /// Creates a query that loads the aggregate root and all its related
   /// entities using JOIN clauses. Uses LEFT JOIN for nullable relationships
   /// to ensure the root is returned even if related entities don't exist.
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   String buildLoadQuery(
     TableDefinition rootTable,
     Map<Type, TableDefinition> schema,
@@ -66,8 +64,6 @@ class JoinBuilder {
   /// Analyzes the table's foreign keys to determine which tables need to be
   /// joined. Uses LEFT JOIN for nullable relationships to ensure the parent
   /// row is returned even if child rows don't exist.
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   List<JoinClause> buildJoinClauses(
     TableDefinition table,
     Map<Type, TableDefinition> schema,

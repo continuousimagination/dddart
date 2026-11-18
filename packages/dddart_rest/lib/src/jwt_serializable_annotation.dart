@@ -7,8 +7,6 @@ import 'package:meta/meta.dart';
 /// to and from JSON. These helpers are not wired into the handler constructor
 /// automatically; applications must still provide the handler's claims loader,
 /// parser, and serializer callbacks explicitly.
-///
-/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/README.md).
 @immutable
 class JwtSerializable {
   /// Creates a JwtSerializable annotation.

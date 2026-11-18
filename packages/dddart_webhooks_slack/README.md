@@ -5,13 +5,10 @@ Slack request-signature verification and typed slash-command payloads for
 
 ## Complete setup
 
-The [Slack server workflow](../../docs/quickstarts/slack_server/README.md) contains
-the manifest, imports, complete server and compile commands. It expects an
-application-owned `SLACK_SIGNING_SECRET` when actually run. Configure the Slack
-app's request URL and permissions separately; the local check never contacts Slack.
-
-[Repository examples](example/README.md) include slash-command and interactive
-payload handlers. They are compiled, not exercised against a deployed workspace.
+Follow the [Slack quickstart](../../docs/quickstarts/slack_server/README.md)
+to verify a slash command and return a response. It shows where to set
+`SLACK_SIGNING_SECRET` and which HTTPS callback path to register with Slack.
+For button clicks and view submissions, use the [interactive message example](example/README.md).
 
 ## Verification and payloads
 
@@ -38,8 +35,3 @@ Keep the signing secret out of source and logs. Verification failures and
 exceptions use the generic resource's sanitized responses. Applications own
 transport security, request limits, rate controls, retry/deduplication behavior
 and any asynchronous delivery to a response URL.
-
-See the [API source](lib/dddart_webhooks_slack.dart),
-[capability matrix](../../docs/CAPABILITIES.md), and
-[validation commands](../../scripts/README.md). The package tests verify local
-signature/timestamp/payload behavior; they do not certify a live Slack deployment.

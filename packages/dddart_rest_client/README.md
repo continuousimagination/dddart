@@ -1,23 +1,20 @@
 # dddart_rest_client
 
-HTTP client helpers with optional authentication and explicit token-provider lifecycles.
+HTTP client and token providers for making authenticated requests.
 
 [Capability boundaries](../../docs/CAPABILITIES.md) · [Supported imports](../../docs/PUBLIC_API.md)
 
 ## Get started
 
-Run the [HTTP quickstart](../../docs/quickstarts/rest/README.md) for a complete application.
+For a public endpoint, use a plain HTTP client or a generated repository with
+`RestConnection(baseUrl: ...)`. The [public HTTP quickstart](../../docs/quickstarts/rest/README.md)
+shows both calls.
 
-## Public and authenticated requests
-
-[RestClient](lib/src/rest_client.dart) wraps an HTTP client and an optional
-`AuthProvider`. Its path methods resolve against `baseUrl`; JSON bodies are encoded
-by the helpers. Without a provider, requests remain anonymous. With a provider,
-the client obtains a token before sending. Close the client when finished.
-
-Authentication failures are distinct from HTTP status responses. Installing a
-client provider does not define server authorization; public resources and
-per-operation server policies remain supported.
+For an authenticated request, construct [RestClient](lib/src/rest_client.dart)
+with an `AuthProvider`. It calls `getIdToken()` before sending a request and
+sets the bearer header. Its path helpers resolve URLs against `baseUrl` and
+encode JSON bodies. Close the client when finished. The server decides which
+operations a caller can perform.
 
 ## Authentication providers
 
@@ -41,8 +38,4 @@ secrets handling, storage lifecycle and platform-appropriate alternatives. Built
 file storage and localhost/manual callback strategies use native IO; browser and
 mobile callback/storage integrations need their own implementation and tests.
 
-The [CLI example](example/README.md) needs a configured server and interactive
-login. Use the [public HTTP quickstart](../../docs/quickstarts/rest/README.md)
-for a complete anonymous server/client exercise.
-
-See the [public library](lib/dddart_rest_client.dart) and [example programs](example/README.md).
+Use the [CLI example](example/README.md) to try device login with a configured server.

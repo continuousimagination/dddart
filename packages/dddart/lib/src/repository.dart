@@ -4,57 +4,14 @@ import 'package:dddart/src/identity.dart';
 import 'package:dddart/src/in_memory_repository.dart' show InMemoryRepository;
 import 'package:dddart/src/repository_exception.dart';
 
-/// Base interface for repositories that manage aggregate roots.
+/// Loads, saves and deletes [AggregateRoot] objects of type [T] by identity [I].
 ///
-/// Repositories provide a collection-like interface for persisting and
-/// retrieving aggregate roots, abstracting away data access details and
-/// allowing domain logic to remain independent of persistence concerns.
+/// Define a separate interface for domain-specific queries. An application
+/// service that only needs CRUD can take a [Repository] and use the same
+/// code with an [InMemoryRepository] or a persistent adapter.
 ///
-/// The repository pattern encapsulates the logic required to access data
-/// sources and provides a more object-oriented view of the persistence layer.
-/// Repositories mediate between the domain and data mapping layers, acting
-/// like an in-memory collection of aggregate roots.
-///
-/// ## Type Parameter
-///
-/// * [T] - The aggregate root type managed by this repository. Must extend
-///   [AggregateRoot].
-/// * [I] - The concrete identity of [T], accepted by lookup and deletion.
-///
-/// ## Usage Example
-///
-/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart/README.md).
-///
-/// ## Error Handling
-///
-/// All repository methods may throw [RepositoryException] when operations fail.
-/// Specific error scenarios:
-///
-/// * [getById] - Throws [RepositoryException] with type [RepositoryExceptionType.notFound]
-///   when no aggregate with the given ID exists.
-/// * [deleteById] - Throws [RepositoryException] with type [RepositoryExceptionType.notFound]
-///   when no aggregate with the given ID exists.
-/// * [save] - May throw [RepositoryException] with various types depending on the
-///   failure reason (e.g., constraint violations, connection errors).
-///
-/// ## Extension Pattern
-///
-/// The base [Repository] interface provides only core CRUD operations. Extend it
-/// to add domain-specific query methods:
-///
-/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart/README.md).
-///
-/// ## Testing
-///
-/// For testing purposes, use [InMemoryRepository] which provides a simple
-/// in-memory implementation:
-///
-/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart/README.md).
-///
-/// See also:
-/// * [AggregateRoot] - The base class for aggregate roots
-/// * [InMemoryRepository] - An in-memory implementation for testing
-/// * [RepositoryException] - Exception thrown by repository operations
+/// Missing IDs on lookup or deletion throw [RepositoryException] with type
+/// [RepositoryExceptionType.notFound].
 abstract interface class Repository<T extends AggregateRoot<I>,
     I extends Identity> {
   /// Retrieves an aggregate root by its ID.
@@ -67,8 +24,6 @@ abstract interface class Repository<T extends AggregateRoot<I>,
   ///
   /// May throw [RepositoryException] with other types if the operation fails
   /// for other reasons (e.g., connection errors, timeout).
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart/README.md).
   Future<T> getById(I id);
 
   /// Saves an aggregate root to the repository.
@@ -86,8 +41,6 @@ abstract interface class Repository<T extends AggregateRoot<I>,
   /// * [RepositoryExceptionType.connection] - A connection error occurred
   /// * [RepositoryExceptionType.timeout] - The operation timed out
   /// * [RepositoryExceptionType.unknown] - An unexpected error occurred
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart/README.md).
   Future<void> save(T aggregate);
 
   /// Deletes an aggregate root by its ID.
@@ -101,7 +54,5 @@ abstract interface class Repository<T extends AggregateRoot<I>,
   ///
   /// May throw [RepositoryException] with other types if the operation fails
   /// for other reasons (e.g., connection errors, constraint violations).
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart/README.md).
   Future<void> deleteById(I id);
 }

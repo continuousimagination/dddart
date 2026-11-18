@@ -14,8 +14,6 @@ import 'package:dddart_repository_sql/src/schema/identity_type.dart';
 /// The analyzer uses depth-first search to traverse the object graph and
 /// produces a topologically sorted list of types where dependencies appear
 /// before the types that depend on them.
-///
-/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
 class RelationshipAnalyzer {
   /// Creates a relationship analyzer.
   const RelationshipAnalyzer();
@@ -34,8 +32,6 @@ class RelationshipAnalyzer {
   /// Handles circular references by detecting cycles and breaking them to
   /// avoid infinite loops. When a cycle is detected, the analyzer skips
   /// revisiting the type.
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   ///
   /// Returns a list of [ClassElement]s in dependency order.
   List<ClassElement> analyzeAggregate(ClassElement aggregateRoot) {
@@ -86,8 +82,6 @@ class RelationshipAnalyzer {
   /// - One-to-One: Foreign key column in this table
   /// - One-to-Many: Separate table with foreign key back to parent
   /// - Many-to-One: Foreign key column in child table
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   RelationshipType getRelationshipType(FieldElement field) {
     final fieldType = field.type;
 
@@ -114,8 +108,6 @@ class RelationshipAnalyzer {
   /// In the SQL schema, value objects are **embedded** into their parent tables
   /// with prefixed column names rather than getting their own tables.
   ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
-  ///
   /// Returns `true` if [element] extends `Value`.
   bool isValueObject(ClassElement element) {
     return !IdentityTypeAnalysis.isIdentity(element.thisType) &&
@@ -133,8 +125,6 @@ class RelationshipAnalyzer {
   /// Note: `AggregateRoot` extends `Entity`, so this returns `true` for
   /// both entities and aggregate roots.
   ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
-  ///
   /// Returns `true` if [element] extends `Entity` or `AggregateRoot`.
   bool isEntity(ClassElement element) {
     return _extendsClass(element, 'Entity');
@@ -150,8 +140,6 @@ class RelationshipAnalyzer {
   /// - Aggregate roots get their own tables
   /// - Entities within the aggregate have foreign keys with CASCADE DELETE
   /// - References to other aggregates are just UUID columns (no foreign keys)
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   ///
   /// Returns `true` if [element] extends `AggregateRoot`.
   bool isAggregateRoot(ClassElement element) {
@@ -238,8 +226,6 @@ class RelationshipAnalyzer {
   /// Determines if a field is a collection type.
   ///
   /// Returns `true` if the field is a List, Set, or Map.
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   bool isCollection(FieldElement field) {
     final type = field.type;
     return type.isDartCoreList || type.isDartCoreSet || type.isDartCoreMap;
@@ -248,8 +234,6 @@ class RelationshipAnalyzer {
   /// Gets the collection kind (List, Set, Map).
   ///
   /// Returns the kind of collection, or `null` if not a collection.
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   CollectionKind? getCollectionKind(DartType type) {
     if (type.isDartCoreList) {
       return CollectionKind.list;
@@ -265,8 +249,6 @@ class RelationshipAnalyzer {
   ///
   /// Returns the type argument T from a List<T> or Set<T> type.
   /// Returns `null` if the type is not a List or Set, or has no type arguments.
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   DartType? getElementType(DartType collectionType) {
     if (collectionType is InterfaceType) {
       if (collectionType.isDartCoreList || collectionType.isDartCoreSet) {
@@ -283,8 +265,6 @@ class RelationshipAnalyzer {
   ///
   /// Returns a tuple of (keyType, valueType) from a Map<K, V> type.
   /// Returns `(null, null)` if the type is not a Map or has insufficient type arguments.
-  ///
-  /// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_sql/README.md).
   (DartType?, DartType?) getMapTypes(DartType mapType) {
     if (mapType is InterfaceType && mapType.isDartCoreMap) {
       final typeArgs = mapType.typeArguments;

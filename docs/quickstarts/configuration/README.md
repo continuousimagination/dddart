@@ -1,8 +1,11 @@
 # Layered configuration
 
+Use YAML for defaults and override the server port for one run. The program
+checks the settings before a service would start.
+
 ## Set up the application
 
-Create a directory outside the repository and save the files below.
+Create an empty directory outside the repository with a `bin` subdirectory.
 
 Copy the [example pubspec](pubspec.yaml.txt) into the application as `pubspec.yaml`.
 
@@ -44,6 +47,49 @@ void main() {
 ```
 <!-- /dddart-source -->
 
+Save as `config.yaml`:
+
+<!-- dddart-source: docs/quickstarts/configuration/config.yaml -->
+```yaml
+server:
+  host: 127.0.0.1
+  port: 8080
+logging:
+  verbose: false
+allowed_origins:
+  - https://example.com
+```
+<!-- /dddart-source -->
+
+## Run the example
+
+<!-- dddart-source: docs/quickstarts/configuration/commands.sh -->
+```sh
+dart pub get
+BOOKING_SERVER_PORT=9090 dart run bin/configuration.dart
+```
+<!-- /dddart-source -->
+
+Expected output from `bin/configuration.dart`:
+
+<!-- dddart-source: docs/quickstarts/configuration/expected/configuration.txt -->
+```text
+127.0.0.1
+9090
+false
+[https://example.com]
+```
+<!-- /dddart-source -->
+
+The YAML file sets the port to `8080`. The command supplies `9090` through the
+first provider, so the second line changes. Run `dart run bin/configuration.dart`
+without the environment override to see the YAML default.
+
+## Optional: supply settings from memory
+
+Implement a provider when settings come from another source. This one uses a
+Dart map and works without a file.
+
 Save as `bin/provider.dart`:
 
 <!-- dddart-source: docs/quickstarts/configuration/bin/provider.dart -->
@@ -79,46 +125,11 @@ void main() {
 ```
 <!-- /dddart-source -->
 
-Save as `config.yaml`:
-
-<!-- dddart-source: docs/quickstarts/configuration/config.yaml -->
-```yaml
-server:
-  host: 127.0.0.1
-  port: 8080
-logging:
-  verbose: false
-allowed_origins:
-  - https://example.com
-```
-<!-- /dddart-source -->
-
-## Run the example
-
-<!-- dddart-source: docs/quickstarts/configuration/commands.sh -->
-```sh
-dart pub get
-dart analyze --fatal-infos
-BOOKING_SERVER_PORT=9090 dart run bin/configuration.dart
-```
-<!-- /dddart-source -->
-
 Run these commands:
 
 <!-- dddart-source: docs/quickstarts/configuration/guide_commands.sh -->
 ```sh
 dart run bin/provider.dart
-```
-<!-- /dddart-source -->
-
-Expected output from `bin/configuration.dart`:
-
-<!-- dddart-source: docs/quickstarts/configuration/expected/configuration.txt -->
-```text
-127.0.0.1
-9090
-false
-[https://example.com]
 ```
 <!-- /dddart-source -->
 
@@ -131,6 +142,4 @@ Expected output from `bin/provider.dart`:
 ```
 <!-- /dddart-source -->
 
-Remove the temporary application directory when finished. See the
-[documentation gate](../../../tool/documentation/README.md) for isolation, CI,
-service boundaries and the separate hosted release checks.
+See the [configuration guide](../../../packages/dddart_config/README.md) for merging, validation, and reloads.

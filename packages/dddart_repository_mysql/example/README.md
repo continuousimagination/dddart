@@ -1,22 +1,22 @@
 # dddart_repository_mysql examples
 
-Start the [disposable MySQL service](../../../docs/quickstarts/mysql/README.md) before running this lane. See the [package guide](../README.md) for its API.
+Start the [disposable MySQL database](../../../docs/quickstarts/mysql/README.md#start-mysql). The settings below connect to that container.
 
-## Run from a checkout
-
-Resolve the workspace, then run this lane from the repository root. It uses
-the [example pubspec](pubspec.yaml) for dependencies and generation.
+From the root of a DDDart checkout, run the following with the [example pubspec](pubspec.yaml).
 
 ```sh
+cd packages/dddart_repository_mysql/example
 dart pub get
-dart tool/validation/validate.dart example dddart_repository_mysql_example --mode=ci
+dart run build_runner build --delete-conflicting-outputs
+export MYSQL_PORT=3307 MYSQL_DATABASE=test_db MYSQL_USER=root MYSQL_PASSWORD=test_password
+dart run basic_crud_example.dart
 ```
 
-## Programs
+## Choose a program
 
 | Program | How it runs | What it shows |
 | --- | --- | --- |
-| [basic_crud_example.dart](basic_crud_example.dart) | Local database | Finite CRUD demonstration backed by the policy-provisioned MySQL database. |
-| [connection_management_example.dart](connection_management_example.dart) | Local database | Finite connection lifecycle demonstration backed by MySQL. |
-| [custom_repository_example.dart](custom_repository_example.dart) | Local database | Finite generated custom repository demonstration backed by MySQL. |
-| [error_handling_example.dart](error_handling_example.dart) | Local database | Finite repository error-mapping demonstration backed by MySQL. |
+| [basic_crud_example.dart](basic_crud_example.dart) | Local database | Persist an order and its line items together. |
+| [connection_management_example.dart](connection_management_example.dart) | Local database | Open and close connections and handle connection failures. |
+| [custom_repository_example.dart](custom_repository_example.dart) | Local database | Find orders by customer or minimum amount. |
+| [error_handling_example.dart](error_handling_example.dart) | Local database | Handle repository exceptions while working with MySQL. |

@@ -1,23 +1,19 @@
 # dddart_webhooks examples
 
-Each program starts a Shelf server. Supply a local sender with the request format and verifier configuration shown in that program. See the [package guide](../README.md) for its API.
+Start the local receiver, then paste its printed command in a second terminal. It uses OpenSSL to sign the same bytes that curl sends. The receiver responds with the processed event type. Stop the server with Ctrl+C.
 
-## Run from a checkout
-
-Resolve the workspace, then run this lane from the repository root. It uses
-the [example pubspec](pubspec.yaml) for dependencies and generation.
+From the root of a DDDart checkout, run the following with the [example pubspec](pubspec.yaml).
 
 ```sh
+cd packages/dddart_webhooks/example
 dart pub get
-dart tool/validation/validate.dart example dddart_webhooks_example --mode=ci
+dart run raw_json_example.dart
 ```
 
-## Programs
+## Choose a program
 
 | Program | How it runs | What it shows |
 | --- | --- | --- |
-| [custom_verifier_example.dart](custom_verifier_example.dart) | Compile only | Long-running webhook server; compile validation avoids binding a shared port. |
-| [form_encoded_example.dart](form_encoded_example.dart) | Compile only | Long-running webhook server; compile validation avoids binding a shared port. |
-| [raw_json_example.dart](raw_json_example.dart) | Compile only | Long-running webhook server; compile validation avoids binding a shared port. |
-
-Compile-only programs need the configuration or running server indicated above.
+| [custom_verifier_example.dart](custom_verifier_example.dart) | Configured integration | Check incoming requests with a provider-specific verifier. |
+| [form_encoded_example.dart](form_encoded_example.dart) | Configured integration | Decode form fields into a typed payload. |
+| [raw_json_example.dart](raw_json_example.dart) | Configured integration | Deserialize a JSON event and dispatch it by type. |

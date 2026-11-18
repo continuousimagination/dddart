@@ -10,20 +10,10 @@ import 'package:http/http.dart' as http;
 /// This class encapsulates the configuration needed to communicate with
 /// a REST API, including the base URL and optional authentication.
 ///
-/// ## Basic Usage (No Authentication)
-///
-/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_rest/README.md).
-///
-/// ## With Authentication
-///
-/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_rest/README.md).
-///
 /// ## Connection Sharing
 ///
 /// Multiple repositories can share the same connection to reuse the
-/// HTTP client and authentication state:
-///
-/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_repository_rest/README.md).
+/// HTTP client and authentication state.
 class RestConnection {
   /// Creates a REST connection.
   ///

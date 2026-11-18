@@ -12,11 +12,11 @@ environment variables or files.
 ## Layer environment variables over YAML
 
 Work through the [configuration quickstart](https://github.com/continuousimagination/dddart/blob/main/docs/quickstarts/configuration/README.md).
-It reads a YAML file and lets an environment value override its database
-host. Put the environment provider ahead of the YAML provider in the list:
+It reads a YAML file and lets an environment value override its server
+port. Put the environment provider ahead of the YAML provider in the list:
 providers are ordered from highest to lowest priority.
 
-With prefix `BOOKING`, `BOOKING_DATABASE_HOST` addresses `database.host`.
+With prefix `BOOKING`, `BOOKING_SERVER_PORT` addresses `server.port`.
 Use a double underscore for an underscore inside a key. Environment values
 are strings; use YAML or a structural provider when you need maps and lists.
 Maps merge by key, lists replace whole lists, and an explicit null masks

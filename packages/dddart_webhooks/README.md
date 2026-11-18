@@ -12,7 +12,6 @@ payload deserialization and handling.
 `WebhookResource<TPayload, TVerification>` reads the raw body, calls the verifier,
 deserializes verified content and invokes the handler. Register its
 `handleRequest` with Shelf Router or `HttpServer.addRoute('POST', ...)`.
-`HttpServer` has no `registerWebhook` method.
 
 Supply a `WebhookVerifier<T>` whose result extends `WebhookVerificationResult`.
 The [custom verifier example](example/custom_verifier_example.dart) contains the
@@ -37,8 +36,4 @@ endpoints. The resource does not supply a deployment, request deduplication or
 provider subscription. Timestamp windows reject stale requests but do not prevent
 repeated delivery within the window; handlers must account for provider retries.
 
-The complete examples cover raw JSON, forms, custom verification and combined
-REST/webhook routing. They are compiled because they run servers and need actual
-senders/configuration. Unit tests exercise request verification and error paths.
-The [support matrix](../../docs/CAPABILITIES.md) and
-[validation commands](../../scripts/README.md) state these boundaries.
+Run the [webhook examples](example/README.md) to send a signed request to a local server and inspect the response.

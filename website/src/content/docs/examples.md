@@ -22,11 +22,8 @@ integration that needs no cloud credentials, try the
 [public leaderboard](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_rest/example/README.md)
 or [HTTP event watch](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_events_distributed/example/README.md).
 
-A finite sample shuts itself down. A local database sample needs the
-disposable service shown in its guide. Some programs are compiled as examples
-of a server or external provider integration: run those only after supplying
-the named environment, service, and credentials. For development checks, see
-[testing from the repository](https://github.com/continuousimagination/dddart/blob/main/scripts/README.md).
+Each package example guide gives a command to try from a checkout. Server and
+provider examples list the service or credentials they need.
 
 ## Troubleshoot a run
 

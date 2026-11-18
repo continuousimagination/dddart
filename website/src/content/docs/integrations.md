@@ -1,50 +1,29 @@
 ---
-title: Connect external services
-description: Receive verified webhooks and add optional live publication to the shared event client.
+title: Receive webhooks
+description: Verify a request, decode its payload, and pass it to a Dart handler.
 section: Connect the pieces
 order: 50
 ---
 
-Keep credentials, transport setup, and provider-specific payloads at the
-application's edge. Convert accepted inputs into domain actions through your
-application service.
+A webhook is a request another service sends to your application. DDDart's
+`WebhookResource` verifies the original request body, decodes the accepted
+payload, and calls your handler. Keep the provider's payload type in this
+handler and call your domain model or application service from there.
 
-## Receive a verified Slack command
+## Try a local sender and receiver
 
-Use the
-[Slack server example](https://github.com/continuousimagination/dddart/blob/main/docs/quickstarts/slack_server/README.md)
-to assemble a Shelf route, `SlackWebhookVerifier`, a form deserializer, and a
-typed handler. Compile locally first. To run it with Slack, supply your
-signing secret and configure Slack to send to your callback URL.
+Run the [JSON webhook example](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_webhooks/example/README.md).
+It prints a shell command that signs a sample `user.created` payload and sends
+it to the loopback server. The response tells you which event was processed.
 
-The signature check uses the original request body before decoding. Keep the
-secret on the server. A timestamp window limits stale replays; handlers must
-account for retries within that window. The
-[Slack package guide](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_webhooks_slack/README.md)
-shows the payload types and error behavior.
+## Receive a Slack command
 
-## Add another webhook provider
+Follow the [Slack server quickstart](https://github.com/continuousimagination/dddart/blob/main/docs/quickstarts/slack_server/README.md)
+to configure a signing secret, register the callback, and handle the command.
+Slack signs the original body and includes a timestamp. A timestamp window
+limits stale replays. If a command changes state, account for retries within
+that window.
 
-Use `WebhookResource` with a verifier and deserializer for that provider.
-Verify what the provider actually signs before trusting any claimed sender
-identity. See the
-[webhook examples](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_webhooks/example/README.md)
-for JSON, forms, and custom verification.
-
-## Add live events with AppSync
-
-Keep the [same event client and watch contract](/dddart/docs/events/). Use an
-`AppSyncEventTransport` for live delivery and give its HTTP control transport
-and AppSync connection access to the current token. The
-[native handler example](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_events_appsync/example/README.md)
-runs without deploying anything. To connect a real app, follow the
-[AppSync deployment guide](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_events_appsync/DEPLOY.md)
-for resource configuration, authorization, smoke testing, and cleanup.
-
-## Keep durable event infrastructure on the server
-
-Multiple processes need a shared history and channel mapping. Use the
-[DynamoDB event store](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_events_dynamodb/README.md)
-on the server. Clients use the event API and keep their own watch checkpoints.
-The history example runs against DynamoDB Local; deploy and verify application
-permissions separately.
+For another sender, choose a verifier for its signing scheme and a deserializer
+for its body format. The [webhook package guide](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_webhooks/README.md)
+describes the response when verification or decoding fails.

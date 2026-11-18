@@ -26,6 +26,29 @@ Copy the [example pubspec](pubspec.yaml.txt) into the application as `pubspec.ya
 
 ## Add the application files
 
+Start with the note the application will store. Save as `lib/note.dart`:
+
+<!-- dddart-source: docs/quickstarts/mysql/lib/note.dart -->
+```dart
+import 'dart:convert';
+
+import 'package:dddart/dddart.dart';
+import 'package:dddart_json/dddart_json.dart';
+import 'package:dddart_serialization/dddart_serialization.dart';
+import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
+
+part 'note.g.dart';
+
+@Serializable()
+@GenerateMysqlRepository(tableName: 'quickstart_notes')
+class Note extends AggregateRoot<UuidValue> {
+  Note({required this.text, UuidValue? id, super.createdAt, super.updatedAt})
+      : super(id: id ?? UuidValue.generate());
+  final String text;
+}
+```
+<!-- /dddart-source -->
+
 Save as `bin/main.dart`:
 
 <!-- dddart-source: docs/quickstarts/mysql/bin/main.dart -->
@@ -60,37 +83,12 @@ Future<void> main() async {
 ```
 <!-- /dddart-source -->
 
-Save as `lib/note.dart`:
-
-<!-- dddart-source: docs/quickstarts/mysql/lib/note.dart -->
-```dart
-import 'dart:convert';
-
-import 'package:dddart/dddart.dart';
-import 'package:dddart_json/dddart_json.dart';
-import 'package:dddart_serialization/dddart_serialization.dart';
-import 'package:dddart_repository_mysql/dddart_repository_mysql.dart';
-
-part 'note.g.dart';
-
-@Serializable()
-@GenerateMysqlRepository(tableName: 'quickstart_notes')
-class Note extends AggregateRoot<UuidValue> {
-  Note({required this.text, UuidValue? id, super.createdAt, super.updatedAt})
-      : super(id: id ?? UuidValue.generate());
-  final String text;
-}
-```
-<!-- /dddart-source -->
-
 ## Run the example
 
 <!-- dddart-source: docs/quickstarts/mysql/commands.sh -->
 ```sh
 dart pub get
-dart run build_runner clean
 dart run build_runner build --delete-conflicting-outputs
-dart analyze --fatal-infos
 dart run bin/main.dart
 ```
 <!-- /dddart-source -->
@@ -103,5 +101,6 @@ hello: persisted
 ```
 <!-- /dddart-source -->
 
-The program finishes and closes its resources. It removes the demo record. Delete the temporary application directory when finished.
-Stop the disposable service with `docker stop dddart-quickstart-mysql`.
+The generated repository writes the note to `quickstart_notes`, reads it by ID,
+and deletes it. Stop the disposable database with `docker stop dddart-quickstart-mysql`.
+To query by a domain field, see the [custom MySQL example](../../../packages/dddart_repository_mysql/example/custom_repository_example.dart).

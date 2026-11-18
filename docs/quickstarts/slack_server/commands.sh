@@ -1,4 +1,3 @@
 dart pub get
-dart analyze --fatal-infos
 mkdir -p build
 dart compile kernel bin/main.dart -o build/server.dill

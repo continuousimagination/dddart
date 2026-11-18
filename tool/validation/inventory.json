@@ -197,49 +197,49 @@
           "path": "conditional_writes.dart",
           "classification": "runnable",
           "action": "run",
-          "reason": "Finite detached revision-read, confirmed conflict and deliberate retry demonstration."
+          "reason": "Handle a stale revision by reloading and reapplying an edit."
         },
         {
           "path": "error_handling_example.dart",
           "classification": "runnable",
           "action": "run",
-          "reason": "Finite in-process domain-event error-handling demonstration."
+          "reason": "Handle a failure in an event listener."
         },
         {
           "path": "event_serialization_example.dart",
           "classification": "runnable",
           "action": "run",
-          "reason": "Finite manual domain-event serialization demonstration."
+          "reason": "Serialize and reconstruct a domain event by hand."
         },
         {
           "path": "events_example.dart",
           "classification": "runnable",
           "action": "run",
-          "reason": "Finite in-process domain-event demonstration."
+          "reason": "Raise an event and subscribe to its type."
         },
         {
           "path": "logging_console.dart",
           "classification": "runnable",
           "action": "run",
-          "reason": "Finite console logging demonstration."
+          "reason": "Send framework logs to the console."
         },
         {
           "path": "logging_file.dart",
           "classification": "runnable",
           "action": "run",
-          "reason": "Finite logging demonstration isolated in a system temporary directory."
+          "reason": "Write log records to a temporary file."
         },
         {
           "path": "logging_hierarchical.dart",
           "classification": "runnable",
           "action": "run",
-          "reason": "Finite hierarchical logging demonstration."
+          "reason": "Choose different log levels for individual components."
         },
         {
           "path": "event_publication.dart",
           "classification": "runnable",
           "action": "run",
-          "reason": "Finite assertions for captured pending events, rejection and accepted retry."
+          "reason": "Keep rejected events pending and acknowledge a successful retry."
         }
       ],
       "sourceOverrides": [],
@@ -269,31 +269,31 @@
           "path": "basic_usage.dart",
           "classification": "runnable",
           "action": "run",
-          "reason": "Finite script-relative YAML configuration demonstration."
+          "reason": "Read YAML settings with environment overrides."
         },
         {
           "path": "reload_example.dart",
           "classification": "runnable",
           "action": "run",
-          "reason": "Finite reload demonstration using a system temporary file."
+          "reason": "Edit a settings file and reload the running configuration."
         },
         {
           "path": "section_access.dart",
           "classification": "runnable",
           "action": "run",
-          "reason": "Finite section-access demonstration."
+          "reason": "Read a whole section of nested settings."
         },
         {
           "path": "underscore_demo.dart",
           "classification": "runnable",
           "action": "run",
-          "reason": "Finite environment-key mapping demonstration."
+          "reason": "Map environment variable names to nested keys and literal underscores."
         },
         {
           "path": "validation_example.dart",
           "classification": "runnable",
           "action": "run",
-          "reason": "Finite configuration-validation demonstration."
+          "reason": "Check required settings at startup."
         }
       ],
       "sourceOverrides": [],
@@ -335,13 +335,13 @@
           "path": "enum_example_runner.dart",
           "classification": "runnable",
           "action": "run",
-          "reason": "Finite generated enum round-trip demonstration."
+          "reason": "Preserve enum values through a JSON round trip."
         },
         {
           "path": "serialization_example.dart",
           "classification": "runnable",
           "action": "run",
-          "reason": "Finite generated aggregate serialization demonstration."
+          "reason": "Generate JSON for an order and change how fields are named."
         }
       ],
       "sourceOverrides": [],
@@ -371,7 +371,7 @@
           "path": "cli_tool_example.dart",
           "classification": "runnable",
           "action": "compile",
-          "reason": "Requires a separately configured authenticated dddart_rest server; validation compiles it without accessing credentials or the network."
+          "reason": "Log in with device flow, store credentials and call a user API."
         }
       ],
       "sourceOverrides": [],
@@ -406,43 +406,43 @@
           "path": "authorization_example.dart",
           "classification": "runnable",
           "action": "compile",
-          "reason": "Long-running HTTP server; compile validation avoids binding a shared port."
+          "reason": "Restrict access by resource ownership."
         },
         {
           "path": "custom_routes_example.dart",
           "classification": "runnable",
           "action": "compile",
-          "reason": "Long-running HTTP server; compile validation avoids binding a shared port."
+          "reason": "Serve custom Shelf routes alongside CRUD routes."
         },
         {
           "path": "etag_concurrency_example.dart",
           "classification": "runnable",
           "action": "run",
-          "reason": "Self-contained HTTP concurrency regression uses an ephemeral loopback port and closes its server."
+          "reason": "Detect a stale update when two HTTP clients edit the same record."
         },
         {
           "path": "main.dart",
           "classification": "runnable",
           "action": "compile",
-          "reason": "Long-running HTTP server; compile validation avoids binding a shared port."
+          "reason": "Serve an aggregate through CRUD endpoints."
         },
         {
           "path": "oauth_auth_example.dart",
           "classification": "illustrative",
           "action": "compile",
-          "reason": "Requires user-supplied OAuth/OIDC configuration and tokens."
+          "reason": "Validate tokens with your OAuth/OIDC provider."
         },
         {
           "path": "public_leaderboard_example.dart",
           "classification": "runnable",
           "action": "run",
-          "reason": "Finite local HTTP demonstration of public leaderboard reads, protected writes, scoped private documents and unconfigured public CRUD; no external credentials."
+          "reason": "Allow anonymous reads and authorize writes on the same leaderboard."
         },
         {
           "path": "self_hosted_auth_example.dart",
           "classification": "runnable",
           "action": "compile",
-          "reason": "Long-running authenticated HTTP server; compile validation avoids binding a shared port."
+          "reason": "Run a device-flow server with in-memory credentials."
         }
       ],
       "sourceOverrides": [],
@@ -485,25 +485,25 @@
           "path": "authentication_example.dart",
           "classification": "runnable",
           "action": "compile",
-          "reason": "Requires a separately running authenticated REST server."
+          "reason": "Supply an access token to a protected API."
         },
         {
           "path": "basic_crud_example.dart",
           "classification": "runnable",
           "action": "compile",
-          "reason": "Requires the documented REST server fixture on localhost."
+          "reason": "Save, fetch and delete a user through HTTP."
         },
         {
           "path": "custom_repository_example.dart",
           "classification": "runnable",
           "action": "compile",
-          "reason": "Requires custom query routes on a separately running REST server."
+          "reason": "Find products by category or price through server-side query routes."
         },
         {
           "path": "error_handling_example.dart",
           "classification": "runnable",
           "action": "compile",
-          "reason": "Requires a separately running REST server to exercise transport failures."
+          "reason": "Handle missing resources and connection failures in an HTTP client."
         }
       ],
       "sourceOverrides": [],
@@ -546,19 +546,19 @@
           "path": "basic_crud_example.dart",
           "classification": "runnable",
           "action": "run",
-          "reason": "Finite in-memory SQLite CRUD demonstration."
+          "reason": "Save, reload, update and delete a user in SQLite."
         },
         {
           "path": "complex_aggregate_example.dart",
           "classification": "runnable",
           "action": "run",
-          "reason": "Round-trips an order with entity items and embedded values in memory."
+          "reason": "Round-trip an order with child entities and embedded values."
         },
         {
           "path": "custom_repository_example.dart",
           "classification": "runnable",
           "action": "run",
-          "reason": "Finite in-memory SQLite custom repository demonstration."
+          "reason": "Add application queries such as finding active users."
         }
       ],
       "sourceOverrides": [],
@@ -603,25 +603,25 @@
           "path": "basic_crud_example.dart",
           "classification": "runnable",
           "action": "service",
-          "reason": "Finite CRUD demonstration backed by the policy-provisioned MySQL database."
+          "reason": "Persist an order and its line items together."
         },
         {
           "path": "connection_management_example.dart",
           "classification": "runnable",
           "action": "service",
-          "reason": "Finite connection lifecycle demonstration backed by MySQL."
+          "reason": "Open and close connections and handle connection failures."
         },
         {
           "path": "custom_repository_example.dart",
           "classification": "runnable",
           "action": "service",
-          "reason": "Finite generated custom repository demonstration backed by MySQL."
+          "reason": "Find orders by customer or minimum amount."
         },
         {
           "path": "error_handling_example.dart",
           "classification": "runnable",
           "action": "service",
-          "reason": "Finite repository error-mapping demonstration backed by MySQL."
+          "reason": "Handle repository exceptions while working with MySQL."
         }
       ],
       "sourceOverrides": [],
@@ -665,31 +665,31 @@
           "path": "basic_crud_example.dart",
           "classification": "runnable",
           "action": "service",
-          "reason": "Finite CRUD demonstration backed by the policy-provisioned MongoDB service."
+          "reason": "Store and retrieve a user as a MongoDB document."
         },
         {
           "path": "config_integration_example.dart",
           "classification": "runnable",
           "action": "service",
-          "reason": "Finite configuration integration backed by MongoDB."
+          "reason": "Build a MongoDB connection from application settings."
         },
         {
           "path": "custom_interface_example.dart",
           "classification": "runnable",
           "action": "service",
-          "reason": "Finite generated custom repository demonstration backed by MongoDB."
+          "reason": "Find users by email or last name."
         },
         {
           "path": "error_handling_example.dart",
           "classification": "runnable",
           "action": "service",
-          "reason": "Finite repository error-mapping demonstration backed by MongoDB."
+          "reason": "Handle missing documents and other repository errors."
         },
         {
           "path": "repository_swapping_example.dart",
           "classification": "runnable",
           "action": "service",
-          "reason": "Finite repository swapping demonstration backed by MongoDB."
+          "reason": "Swap the repository used by the same application code."
         }
       ],
       "sourceOverrides": [],
@@ -732,31 +732,31 @@
           "path": "basic_crud_example.dart",
           "classification": "runnable",
           "action": "service",
-          "reason": "Finite CRUD demonstration backed by DynamoDB Local."
+          "reason": "Store, fetch and delete a user by ID."
         },
         {
           "path": "custom_interface_example.dart",
           "classification": "runnable",
           "action": "service",
-          "reason": "Finite generated custom repository demonstration backed by DynamoDB Local."
+          "reason": "Query users by email or last name with secondary indexes."
         },
         {
           "path": "error_handling_example.dart",
           "classification": "runnable",
           "action": "service",
-          "reason": "Finite repository error-mapping demonstration backed by DynamoDB Local."
+          "reason": "Handle a repository lookup failure."
         },
         {
           "path": "local_development_example.dart",
           "classification": "runnable",
           "action": "service",
-          "reason": "Finite DynamoDB Local development demonstration."
+          "reason": "Connect to a local instance and exercise the generated repository."
         },
         {
           "path": "table_creation_example.dart",
           "classification": "runnable",
           "action": "service",
-          "reason": "Finite DynamoDB Local table creation demonstration."
+          "reason": "Create local tables and inspect the generated AWS CLI and CloudFormation definitions."
         }
       ],
       "sourceOverrides": [],
@@ -787,19 +787,19 @@
           "path": "custom_verifier_example.dart",
           "classification": "runnable",
           "action": "compile",
-          "reason": "Long-running webhook server; compile validation avoids binding a shared port."
+          "reason": "Check incoming requests with a provider-specific verifier."
         },
         {
           "path": "form_encoded_example.dart",
           "classification": "runnable",
           "action": "compile",
-          "reason": "Long-running webhook server; compile validation avoids binding a shared port."
+          "reason": "Decode form fields into a typed payload."
         },
         {
           "path": "raw_json_example.dart",
           "classification": "runnable",
           "action": "compile",
-          "reason": "Long-running webhook server; compile validation avoids binding a shared port."
+          "reason": "Deserialize a JSON event and dispatch it by type."
         }
       ],
       "sourceOverrides": [],
@@ -833,13 +833,13 @@
           "path": "interactive_message_example.dart",
           "classification": "runnable",
           "action": "compile",
-          "reason": "Requires Slack signing secrets, interactive requests, and a public callback URL."
+          "reason": "Handle interactive Slack messages at `/slack/interactive`."
         },
         {
           "path": "slash_command_example.dart",
           "classification": "runnable",
           "action": "compile",
-          "reason": "Requires Slack signing secrets, slash-command requests, and a public callback URL."
+          "reason": "Verify a slash command and send a response at `/slack/commands`."
         }
       ],
       "sourceOverrides": [],
@@ -874,13 +874,13 @@
           "path": "custom_stored_event_json_example.dart",
           "classification": "runnable",
           "action": "run",
-          "reason": "Round-trips a custom StoredEvent subtype with generated JSON."
+          "reason": "Round-trip a custom stored event with generated JSON."
         },
         {
           "path": "http_polling.dart",
           "classification": "runnable",
           "action": "run",
-          "reason": "Finite real HTTP publish/watch example using shared interfaces, local history and explicit fixture credentials; no AppSync or AWS dependency."
+          "reason": "Publish and receive an aggregate event through the HTTP polling transport."
         }
       ],
       "sourceOverrides": [
@@ -926,7 +926,7 @@
           "path": "history.dart",
           "classification": "runnable",
           "action": "service",
-          "reason": "Finite history and rotation against an isolated DynamoDB Local table."
+          "reason": "Recover an event after a checkpoint and rotate its channel."
         }
       ],
       "sourceOverrides": [],
@@ -968,19 +968,19 @@
           "path": "native_invocation.dart",
           "classification": "runnable",
           "action": "run",
-          "reason": "Finite native invocation with explicit local test authentication."
+          "reason": "Authorize a local caller and subscribe to its channel."
         },
         {
           "path": "lambda.dart",
           "classification": "runnable",
           "action": "compile",
-          "reason": "Complete custom runtime, requiring explicit AWS deployment."
+          "reason": "Run the event handlers inside a deployed Lambda runtime."
         },
         {
           "path": "aws_smoke.dart",
           "classification": "runnable",
           "action": "compile",
-          "reason": "Explicit opt-in smoke against existing AWS resources."
+          "reason": "Exercise publication and subscription against your deployed AWS resources."
         }
       ],
       "sourceOverrides": [],

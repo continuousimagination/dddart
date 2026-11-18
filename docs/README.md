@@ -2,14 +2,13 @@
 
 ## Start here
 
-- [Run your first example](quickstarts/core/README.md): model, save, and publish
-  a domain event in a small Dart application.
-- [Install from Git](GIT_INSTALLATION.md): add DDDart to an existing Dart or
-  Flutter application.
-- [Find an example](QUICKSTARTS.md): choose a complete application or an
-  integration sample.
-- [Read the online guide](https://continuousimagination.github.io/dddart/):
-  learn how the pieces fit together.
+If you're new to DDDart, [place an order in a small Dart app](quickstarts/core/README.md).
+You’ll enforce a rule, save the order, and see a listener react. The
+[online learning guide](https://continuousimagination.github.io/dddart/docs/getting-started/)
+walks through the same program.
+
+If you already have a Dart or Flutter app, [add DDDart from Git](GIT_INSTALLATION.md).
+When you need working code for a particular task, use the [example catalog](QUICKSTARTS.md).
 
 ## Build an application
 

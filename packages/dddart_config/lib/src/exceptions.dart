@@ -31,8 +31,6 @@ class ConfigException implements Exception {
 ///
 /// This exception indicates that the application attempted to access
 /// a required configuration value that does not exist.
-///
-/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_config/README.md).
 class MissingConfigException extends ConfigException {
   /// Creates an exception for a missing required configuration key.
   ///
@@ -45,8 +43,6 @@ class MissingConfigException extends ConfigException {
 ///
 /// This exception occurs when type conversion fails, such as attempting
 /// to parse a non-numeric string as an integer.
-///
-/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_config/README.md).
 class TypeConversionException extends ConfigException {
   /// Creates an exception for a type conversion failure.
   ///
@@ -71,8 +67,6 @@ class TypeConversionException extends ConfigException {
 /// This exception collects all validation failures that occurred during
 /// configuration validation, allowing the application to report all
 /// issues at once rather than failing on the first error.
-///
-/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_config/README.md).
 class ValidationException extends ConfigException {
   /// Creates an exception with a list of validation failures.
   ///
@@ -89,8 +83,6 @@ class ValidationException extends ConfigException {
 ///
 /// This exception indicates file system errors (file not found, permission
 /// denied) or parsing errors (invalid YAML syntax).
-///
-/// See the [complete examples and setup](https://github.com/continuousimagination/dddart/blob/main/packages/dddart_config/README.md).
 class FileAccessException extends ConfigException {
   /// Creates an exception for file access or parsing errors.
   ///

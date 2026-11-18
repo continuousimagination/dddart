@@ -31,13 +31,14 @@ check_sources() {
   def same($a;$b): ($a|sort) == ($b|sort);
   def relative: test("^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\\\]+$");
   def git_refs: [scan("(?m)^ +ref: (.+)$")|.[0]]|unique;
-  def sample_table:
-    ["| Program | How it runs | What it shows |", "| --- | --- | --- |"] +
+  def sample_listing:
+    if (.entrypoints|length) == 1 then .entrypoints[0] |
+      "[" + .path + "](" + .path + ") — " + .reason
+    else ["| Program | How it runs | What it shows |", "| --- | --- | --- |"] +
     [.entrypoints[] |
-      ({run:"Local run", compile:"Compile only", service:"Local database"}[.action] //
-        error("Retired/unvalidated sample is still inventoried")) as $description |
+      {run:"Local run", compile:"Configured integration", service:"Local database"}[.action] as $description |
       "| [" + .path + "](" + .path + ") | " + $description + " | " +
-      (.reason|gsub("\\|";"\\|")|gsub("\n";" ")) + " |"] | join("\n");
+      (.reason|gsub("\\|";"\\|")|gsub("\n";" ")) + " |"] | join("\n") end;
   (content("docs/quickstarts/core/pubspec.yaml.txt")|git_refs) as $refs |
   require(($refs|length) == 1 and ($refs[0]|test("^[0-9a-f]{40}$"));
           "The core example pubspec must pin one full Git revision") |
@@ -62,12 +63,10 @@ check_sources() {
             $w.name + ": Git dependencies must match the core example pubspec's revision") |
     ([$w.commandsFiles[] as $f | content($base+$f)|split("\n")[]|command_args]) as $commands |
     require(any($commands[]; . == ["dart","pub","get"]); $w.name + ": missing documented command dart pub get") |
-    require(any($commands[]; . == ["dart","analyze","--fatal-infos"]); $w.name + ": missing documented analysis") |
     require(($w.generation|not) or ($pubspec|test("(?m)^  build_runner:")); $w.name + ": pubspec must declare build_runner") |
     require(($w.generation|not) or
-      (any($commands[]; . == ["dart","run","build_runner","clean"]) and
-       any($commands[]; . == ["dart","run","build_runner","build","--delete-conflicting-outputs"]));
-      $w.name + ": missing clean generation commands") |
+      any($commands[]; . == ["dart","run","build_runner","build","--delete-conflicting-outputs"]);
+      $w.name + ": missing generation command") |
     require(same([$commands[]|select(length == 3 and .[:2] == ["dart","run"])|.[2]]; [$w.runs[].path]);
             $w.name + ": run commands and expected-output inventory disagree") |
     require(same([$commands[]|select(.[:2] == ["dart","compile"])|.[3]]; $w.compile // []);
@@ -81,9 +80,13 @@ check_sources() {
   require(all($owners|keys[]; $db[.] != null); "Missing canonical workflow/sample input") |
   reduce $inventory.examples[] as $e (.;
     content($e.path + "/README.md") as $guide |
-    require(($guide|contains($e|sample_table)); $e.path + "/README.md: sample coverage table differs from shared inventory") |
-    require(($guide|contains("dart tool/validation/validate.dart example "+$e.name+" --mode=ci"));
-            $e.path + "/README.md: missing exact sample validation command")) |
+    require(all($e.entrypoints[]; .action == "run" or .action == "compile" or .action == "service");
+            $e.path + ": retired or unvalidated sample is still inventoried") |
+    require(($guide|contains($e|sample_listing)); $e.path + "/README.md: sample listing differs from shared inventory") |
+    require(($guide|contains("cd "+$e.path+"\ndart pub get\n")) and
+            any($e.entrypoints[]; .path as $program |
+              any($guide|split("\n")[]; . == ("dart run "+$program) or startswith("dart run "+$program+" ")));
+            $e.path + "/README.md: show how to run an inventoried program from its example directory")) |
   # Homepage code imports the same whole files the quickstart gate executes.
   content("website/src/pages/index.astro") as $home |
   ([$home | scan("import (\\w+) from \u0027([^\u0027]+\\.dart)\\?raw\u0027;") |
@@ -272,6 +275,7 @@ run_workflow() (
       fi
     done < "$base/$path"
   done < <(jq -r '.commandsFiles[]' "$workflow")
+  run_command "$app" "$label" 180 dart analyze --fatal-infos
   # Only handwritten consumer inputs are examined; each owning part must be generated.
   while IFS= read -r path; do
     while IFS= read -r part; do

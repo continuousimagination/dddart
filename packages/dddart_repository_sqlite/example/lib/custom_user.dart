@@ -9,6 +9,7 @@ import 'package:dddart_repository_sqlite/dddart_repository_sqlite.dart';
 import 'package:dddart_serialization/dddart_serialization.dart';
 
 part 'custom_user.g.dart';
+part 'custom_user_repository_impl.dart';
 
 /// User aggregate with email and active status.
 @Serializable()
@@ -44,15 +45,6 @@ class CustomUser extends AggregateRoot<UuidValue> {
 /// Custom repository interface with domain-specific query methods.
 abstract interface class CustomUserRepository
     implements Repository<CustomUser, UuidValue> {
-  /// Finds all active users.
-  Future<List<CustomUser>> findActiveUsers();
-
-  /// Finds users by email pattern.
-  Future<List<CustomUser>> findByEmailPattern(String pattern);
-
-  /// Counts total users.
-  Future<int> countUsers();
-
-  /// Finds users registered after a specific date.
-  Future<List<CustomUser>> findRegisteredAfter(DateTime date);
+  /// Finds the first active users in name order.
+  Future<List<CustomUser>> findActiveUsers({int limit = 20});
 }
