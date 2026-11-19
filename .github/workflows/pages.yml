@@ -7,17 +7,24 @@ on:
       - 'website/**'
       - '**/*.md'
       - 'docs/quickstarts/**'
+      - 'packages/*/example/**/*.dart'
+      - 'packages/*/example/pubspec.yaml'
+      - 'tool/validation/inventory.json'
       - 'tool/documentation/surfaces.json'
       - 'tool/documentation/common.sh'
+      - 'tool/documentation/validate.sh'
       - '.github/workflows/pages.yml'
   pull_request:
-    branches: [main]
     paths:
       - 'website/**'
       - '**/*.md'
       - 'docs/quickstarts/**'
+      - 'packages/*/example/**/*.dart'
+      - 'packages/*/example/pubspec.yaml'
+      - 'tool/validation/inventory.json'
       - 'tool/documentation/surfaces.json'
       - 'tool/documentation/common.sh'
+      - 'tool/documentation/validate.sh'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
@@ -36,6 +43,7 @@ jobs:
       pages: read
     env:
       ASTRO_TELEMETRY_DISABLED: '1'
+      DDDART_SOURCE_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
     defaults:
       run:
         working-directory: website

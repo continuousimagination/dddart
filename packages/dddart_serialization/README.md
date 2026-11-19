@@ -28,7 +28,7 @@ serialization or enforce domain encapsulation at runtime.
 stock codec; each application identity needs an explicit JSON and canonical-key
 codec registered under a stable type key. Share the registry with generated
 serializers and repositories. The complete
-[native identity example](../../docs/quickstarts/json/bin/identity.dart) shows
+[native identity example](../../docs/quickstarts/json/README.md#give-custom-identities-a-codec) shows
 the ID, codec, and canonical key round trip. The
 [generated event test](../dddart_json/test/domain_event_roundtrip_test.dart)
 shows a registry supplied to a generated serializer.

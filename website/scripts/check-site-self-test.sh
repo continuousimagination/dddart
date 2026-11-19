@@ -69,10 +69,10 @@ fresh
 change_html 'sub("</body>";"<a href=\"https://github.com/continuousimagination/dddart/blob/main/missing.dart\">bad</a></body>")'
 reject 'missing repository source'
 fresh
-sed 's@/edit/main/docs/quickstarts/core/README.md@/edit/main/README.md@' \
+sed 's@/docs/quickstarts/core/README.md@/README.md@' \
   "$WORK/site/dist/docs/getting-started/index.html" > "$WORK/changed"
 mv "$WORK/changed" "$WORK/site/dist/docs/getting-started/index.html"
-reject 'Published pages must link to their canonical edit sources'
+reject 'Published guides must link to their source revision'
 fresh
 change_search '.[1].url = .[0].url'
 reject 'Search index has duplicate URLs'

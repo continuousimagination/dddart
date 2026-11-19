@@ -10,4 +10,6 @@ dart pub get
 dart run history.dart
 ```
 
-[history.dart](history.dart) — Recover an event after a checkpoint and rotate its channel.
+| Program | How it runs | What it shows |
+| --- | --- | --- |
+| [history.dart](history.dart) | Local database | Recover an event after a checkpoint and rotate its channel. |

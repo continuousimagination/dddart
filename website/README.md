@@ -24,19 +24,40 @@ examples still work.
 ## Edit a guide
 
 Open [the repository documentation index](../docs/README.md) to review a
-guide, or use **Improve this page** on the published site. Both lead to the
-same Markdown file. Its first heading supplies the title and its first
+guide, or use **View source on GitHub** on the published site. Both lead to the
+same Markdown file. The GitHub link opens the file at the revision used for the
+build. In a pull request, the Pages workflow supplies its head commit.
+
+The first heading supplies the title and its first
 paragraph supplies the search description. Write ordinary relative links to
 other guides, sections, examples, and source files. Astro resolves them from
 the Markdown file's directory when building the site.
 
 Register a new document in the [documentation inventory](../tool/documentation/surfaces.json).
 Current Markdown documents get a page and a full-text search entry. The
-[navigation map](src/lib/navigation.json) assigns the twelve featured guides
-their public URLs, sidebar labels, and reading order. Other documents get
-URLs derived from their repository paths. The
-[documentation contributor guide](../tool/documentation/README.md) explains
+[navigation map](src/lib/navigation.json) groups the 13 sidebar links and sets
+their labels and reading order. Each link uses an existing documentation URL.
+Document URLs follow the repository paths, with
+[explicit routes](src/lib/route-overrides.json) for established shorter URLs.
+The [documentation contributor guide](../tool/documentation/README.md) explains
 how to include and check runnable examples.
+
+## Browse example source
+
+Each tracked, handwritten Dart file in a package example project gets a source
+page and a search entry. Follow a filename from an example README, then click
+an import or part directive to read another published file. The project file
+list also includes supporting files that have no incoming imports. Entrypoint
+descriptions on the source pages and in search come from the **What it shows**
+cell in the package example README. Edit that cell to update all three views.
+The [example inventory](../tool/validation/inventory.json) supplies the run modes.
+Example project pubspecs also open on the site. The
+[quickstart workflows](../docs/quickstarts/workflows.json) supply each quickstart's
+application files and filenames, so a link to a `pubspec.yaml.txt` template opens
+a copyable `pubspec.yaml` listing. Edit inline quickstart examples in their
+Markdown guides. Astro and the quickstart tests use the same extractor, and
+**View source on GitHub** opens the owning guide at the snippet. Edit standalone
+package examples in their Dart files.
 
 ## Publish
 

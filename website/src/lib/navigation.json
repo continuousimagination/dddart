@@ -1,70 +1,62 @@
 {
   "Start here": [
     {
-      "slug": "getting-started",
-      "label": "Getting started",
-      "source": "docs/quickstarts/core/README.md"
+      "slug": "philosophy",
+      "label": "Why DDDart"
     },
     {
-      "slug": "philosophy",
-      "label": "Why DDDart",
-      "source": "docs/guides/philosophy.md"
+      "slug": "getting-started",
+      "label": "Build your first model"
+    },
+    {
+      "slug": "reference/git_installation",
+      "label": "Add DDDart to an existing app"
     }
   ],
-  "Build your domain": [
+  "Model a domain": [
     {
       "slug": "modeling",
-      "label": "Model a domain",
-      "source": "docs/guides/modeling.md"
+      "label": "Entities and value objects"
     },
     {
+      "slug": "packages/dddart/identity_guide",
+      "label": "Typed identities"
+    },
+    {
+      "slug": "packages/dddart/domain_events_guide",
+      "label": "Domain events"
+    }
+  ],
+  "Build an application": [
+    {
       "slug": "contracts",
-      "label": "Share contracts",
-      "source": "docs/guides/contracts.md"
+      "label": "Share contracts"
+    },
+    {
+      "slug": "repositories",
+      "label": "Choose a repository"
     },
     {
       "slug": "serialization",
-      "label": "Generate JSON",
-      "source": "docs/quickstarts/json/README.md"
-    }
-  ],
-  "Connect the pieces": [
-    {
-      "slug": "repositories",
-      "label": "Choose a repository",
-      "source": "docs/guides/repositories.md"
+      "label": "Generate JSON"
     },
     {
       "slug": "http",
-      "label": "Build an HTTP API",
-      "source": "docs/quickstarts/rest/README.md"
-    },
-    {
-      "slug": "events",
-      "label": "Publish and watch events",
-      "source": "docs/DISTRIBUTED_EVENTS.md"
-    },
-    {
-      "slug": "configuration",
-      "label": "Layer configuration",
-      "source": "docs/quickstarts/configuration/README.md"
-    },
-    {
-      "slug": "integrations",
-      "label": "Receive webhooks",
-      "source": "packages/dddart_webhooks/README.md"
+      "label": "Expose an HTTP API"
     }
   ],
-  "Reference": [
-    {
-      "slug": "packages",
-      "label": "Choose packages",
-      "source": "docs/CAPABILITIES.md"
-    },
+  "Examples and reference": [
     {
       "slug": "examples",
-      "label": "Find an example",
-      "source": "docs/QUICKSTARTS.md"
+      "label": "Browse examples"
+    },
+    {
+      "slug": "packages",
+      "label": "Choose packages and adapters"
+    },
+    {
+      "slug": "reference/public_api",
+      "label": "Supported public API"
     }
   ]
 }

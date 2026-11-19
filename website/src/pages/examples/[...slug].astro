@@ -1,0 +1,55 @@
+---
+import { Code } from 'astro:components';
+import type { ComponentProps } from 'astro/types';
+import Base from '../../layouts/Base.astro';
+import { readExampleListings } from '../../lib/documents';
+import { exampleFiles, importedExample, readExample, sourceLink } from '../../lib/example-files';
+import { publishedRoutes } from '../../lib/repository-docs';
+import { doc } from '../../lib/site';
+
+export async function getStaticPaths() {
+  return (await readExampleListings()).map(file => ({ params: { slug: file.slug }, props: { file } }));
+}
+
+const { file } = Astro.props;
+const guide = publishedRoutes.get(file.projectPath + '/README.md')!;
+const siblings = exampleFiles.filter(sibling => sibling.projectPath === file.projectPath);
+const transformers: ComponentProps<typeof Code>['transformers'] = [{
+  preprocess(code) {
+    this.options.includeExplanation = true;
+    this.options.mergeWhitespaces = false;
+    return code;
+  },
+  span(node, _line, _column, _lineNode, token) {
+    // Shiki's Dart grammar distinguishes directive strings from comments and literals in code.
+    const inDirective = token.explanation?.some(part =>
+      part.scopes.some(scope => scope.scopeName === 'meta.declaration.dart'));
+    if (!inDirective) return;
+    const literal = /^r?(['"])([^'"]+\.dart)\1$/.exec(token.content);
+    const href = literal && importedExample(file.source, literal[2]);
+    if (href) {
+      node.tagName = 'a';
+      node.properties.href = href;
+    }
+  },
+}];
+---
+<Base title={file.projectLabel + ' / ' + file.name} description={file.description}>
+  <main id="main-content" class="example-source prose">
+    <a href={doc(guide)}>← {file.projectLabel}</a>
+    <h1>{file.name}</h1>
+    <p>{file.description}</p>
+    <details>
+      <summary>Browse files in this example project ({siblings.length})</summary>
+      <ul>{siblings.map(item => <li><a href={item.url} aria-current={item.source === file.source ? 'page' : undefined}>{item.name}</a></li>)}</ul>
+    </details>
+    <Code code={readExample(file)} lang={file.language} theme="github-dark" transformers={file.language === 'dart' ? transformers : []} />
+    <div class="doc-edit"><a href={sourceLink(file)}>View source on GitHub ↗</a></div>
+  </main>
+</Base>
+<style>
+  .example-source { max-width: 68rem; margin: auto; padding: 3rem clamp(1.25rem, 5vw, 4rem); }
+  .example-source h1 { margin-top: 1rem; }
+  .example-source summary { cursor: pointer; }
+  .example-source :global(pre a) { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+</style>

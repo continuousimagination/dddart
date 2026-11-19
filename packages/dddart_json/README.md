@@ -34,7 +34,7 @@ misbehaving codec's output can be encoded as a JSON string.
 Generated serializers expose a constructor using the stock UUID registry and
 `withIdentityCodecs` for application identity kinds. Register the concrete codec
 once per injected registry and share it throughout the model graph. The
-[identity program](../../docs/quickstarts/json/bin/identity.dart) includes a
+[identity program](../../docs/quickstarts/json/README.md#give-custom-identities-a-codec) includes a
 complete native ID/codec and round trip. Static helpers accept an explicit registry
 when needed; no global identity registration is used.
 

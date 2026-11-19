@@ -63,4 +63,4 @@ Await `Configuration.reload()` to reload its providers. The
 `ConfigProvider.lookup` and `reload` for custom providers; `lookup('')` must expose
 the whole root tree so merging and ancestor masking are consistent. The base
 provides scalar convenience access. See the
-[standalone provider example](../../docs/quickstarts/configuration/bin/provider.dart).
+[standalone provider example](../../docs/quickstarts/configuration/README.md#supply-a-custom-provider).

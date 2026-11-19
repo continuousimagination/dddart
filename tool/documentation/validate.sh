@@ -20,25 +20,39 @@ collect_sources() {
   load_sources "$ROOT" "$WORK/sources.txt" "$WORK/sources.json"
 }
 
+# Key each fenced block by the filename it supplies to the quickstart.
+# The website uses this same extractor for listings, source links and search.
+extract_snippets() {
+  local sources=$1
+  jq --slurpfile surfaces "$ROOT/tool/documentation/surfaces.json" "$DOC_JQ "'
+    reduce (to_entries[] | select($surfaces[0].documents[.key] == "current" and (.key|endswith(".md")))) as $doc ({};
+      ($doc.value|gsub("\r\n";"\n")) as $text |
+      [$text|match(source_pattern; "g")] as $blocks |
+      require(([$text|scan("(?m)^<!-- dddart-source:")]|length) == ($blocks|length) and
+              ([$text|scan("(?m)^<!-- /dddart-source")]|length) == ($blocks|length);
+              $doc.key + ": malformed or unclosed quickstart snippet") |
+      reduce $blocks[] as $block (.;
+        ($block.captures|map({key:.name,value:.string})|from_entries) as $s |
+        require(($s.source|startswith("docs/quickstarts/") and (normalize_path == .) and (contains("\\")|not));
+                $doc.key + ": invalid quickstart snippet path " + $s.source) |
+        require(.[$s.source] == null; "Duplicate quickstart snippet: " + $s.source) |
+        .[$s.source] = {document:$doc.key, line:(($text[:$block.offset]|split("\n")|length) + 2), text:$s.body}))' "$sources"
+}
+
 check_sources() {
   collect_sources
+  extract_snippets "$WORK/sources.json" > "$WORK/snippets.json"
   local check_filter
   IFS= read -r -d '' check_filter <<'JQ' || true
-  $sources[0] as $db | $files[0] as $files | $metadata[0] as $meta |
+  $snippets[0] as $snippets |
+  ($sources[0] + ($snippets | map_values(.text))) as $db | $files[0] as $files | $metadata[0] as $meta |
   $inventory[0] as $inventory | $surfaces[0].documents as $surfaces |
   ($inventory.packages | map({key:.name,value:.}) | from_entries) as $packages |
   def content($path): $db[$path] // error("Missing canonical input: " + $path);
   def same($a;$b): ($a|sort) == ($b|sort);
   def relative: test("^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\\\]+$");
   def git_refs: [scan("(?m)^ +ref: (.+)$")|.[0]]|unique;
-  def sample_listing:
-    if (.entrypoints|length) == 1 then .entrypoints[0] |
-      "[" + .path + "](" + .path + ") — " + .reason
-    else ["| Program | How it runs | What it shows |", "| --- | --- | --- |"] +
-    [.entrypoints[] |
-      {run:"Local run", compile:"Configured integration", service:"Local database"}[.action] as $description |
-      "| [" + .path + "](" + .path + ") | " + $description + " | " +
-      (.reason|gsub("\\|";"\\|")|gsub("\n";" ")) + " |"] | join("\n") end;
+  reduce ($snippets|keys[]) as $path (.; require($sources[0][$path] == null; "Quickstart snippet also exists as a repository file: " + $path)) |
   (content("docs/quickstarts/core/pubspec.yaml.txt")|git_refs) as $refs |
   require(($refs|length) == 1 and ($refs[0]|test("^[0-9a-f]{40}$"));
           "The core example pubspec must pin one full Git revision") |
@@ -54,7 +68,7 @@ check_sources() {
             any($w.files[]; .destination == "pubspec.yaml"); $w.name + ": duplicate destination or missing pubspec") |
     require(all($w.files[]; (.source|relative) and (.destination|relative) and (.source|endswith(".g.dart")|not));
             $w.name + ": invalid fixture path/generated input") |
-    require(same([$files[]|select(startswith($base) and endswith(".dart"))|ltrimstr($base)];
+    require(same([$db|keys[]|select(startswith($base) and endswith(".dart"))|ltrimstr($base)];
                  [$w.files[].source|select(endswith(".dart"))]); $w.name + ": unclassified/missing canonical Dart input") |
     (content($base + "pubspec.yaml.txt")) as $pubspec |
     require(any(content($base + "README.md")|links[]; . == "pubspec.yaml.txt");
@@ -82,18 +96,19 @@ check_sources() {
     content($e.path + "/README.md") as $guide |
     require(all($e.entrypoints[]; .action == "run" or .action == "compile" or .action == "service");
             $e.path + ": retired or unvalidated sample is still inventoried") |
-    require(($guide|contains($e|sample_listing)); $e.path + "/README.md: sample listing differs from shared inventory") |
+    ($guide|links) as $links |
+    require(all($e.entrypoints[]; .path as $path | $links|index($path) != null);
+            $e.path + "/README.md: missing program link from example inventory") |
     require(($guide|contains("cd "+$e.path+"\ndart pub get\n")) and
             any($e.entrypoints[]; .path as $program |
               any($guide|split("\n")[]; . == ("dart run "+$program) or startswith("dart run "+$program+" ")));
             $e.path + "/README.md: show how to run an inventoried program from its example directory")) |
-  # Homepage code imports the same whole files the quickstart gate executes.
+  # Each homepage tab displays a tested quickstart file.
   content("website/src/pages/index.astro") as $home |
-  ([$home | scan("import (\\w+) from \u0027([^\u0027]+\\.dart)\\?raw\u0027;") |
-    {key:.[0],value:(("website/src/pages/"+.[1])|normalize_path)}] | from_entries) as $imports |
-  ([$home|scan("\\bcode:[ \\t]*([^,}\\n]+)")|.[0]]|map(trim)) as $used |
-  require(($used|length)>0 and all($used[]; $imports[.] != null); "Homepage Dart code must use canonical raw source imports") |
-  require(all($used[]; $owners[$imports[.]] != null); "Homepage Dart import lacks a checked workflow/sample owner") |
+  ([$home|scan("\\bcode: ([^,}\\n]+)")|.[0]|trim]) as $used |
+  require(($used|length)>0 and all($used[]; test("^readQuickstart\\(\u0027[^\u0027]+\u0027\\)$")); "Homepage Dart code must read a quickstart snippet") |
+  require(all($used[]; split("\u0027")[1] as $path | $snippets[$path] != null and $owners[$path] != null);
+          "Homepage Dart source lacks a checked workflow") |
   require(same([$files[]|select(test("\\.(md|mdx|rst)$"))]; $surfaces|keys);
           "Documentation surface inventory differs") |
   reduce ($surfaces|to_entries[]) as $entry (.;
@@ -105,7 +120,7 @@ check_sources() {
   [$db|to_entries[] |
     select(($surfaces[.key] == "current") or
       ((.key|test("^packages/.*\\.dart$")) and (.key|test("/(lib|example)/")))) |
-    .key as $path | {path:$path,text:(.value|doc_text($path))}] as $documents |
+    .key as $path | {path:$path,text:(.value|doc_text($path)|gsub("\r\n";"\n"))}] as $documents |
   reduce $documents[] as $doc ({inclusions:[],links:[],documents:($documents|length)};
     require(($doc.text|without_fences|test("(?i)(?:^|[^\\w.])(?:Dart(?: SDK)?|Node(?:\\.js)?|Bash|jq)[ \\t]+[`*]*v?[0-9]+(?:\\.[0-9]+)*")|not);
             $doc.path + ": keep tool and SDK versions in manifests, not documentation") |
@@ -119,8 +134,7 @@ check_sources() {
             $doc.path + ": malformed or unclosed source inclusion") |
     reduce $included[] as $inc (.;
       require($owners[$inc.source] != null; $doc.path + ": included source lacks a checked workflow: " + $inc.source) |
-      require($inc.body == (content($inc.source)|sub("[[:space:]]+$";""));
-              $doc.path + ": stale inclusion of " + $inc.source + "; run documentation sync") |
+      require($snippets[$inc.source].document == $doc.path; $doc.path + ": missing owning Markdown snippet") |
       .inclusions += [$inc.source]) |
     require(([$doc.text|gsub(source_pattern;"")|matches(fence_pattern)[]|
                select((.language|ascii_downcase) == "dart")]|length) == 0;
@@ -145,7 +159,7 @@ check_sources() {
   . + {workflows:($meta.workflows|length),examples:($inventory.examples|length),revision:$revision}
 JQ
   jq -n --slurpfile sources "$WORK/sources.json" --slurpfile files "$WORK/files.json" \
-    --slurpfile metadata "$METADATA" --slurpfile inventory "$INVENTORY" \
+    --slurpfile snippets "$WORK/snippets.json" --slurpfile metadata "$METADATA" --slurpfile inventory "$INVENTORY" \
     --slurpfile surfaces "$ROOT/tool/documentation/surfaces.json" \
     "$DOC_JQ $check_filter" > "$WORK/checked.json"
   check_links
@@ -178,25 +192,6 @@ check_links() {
       fi;;
     esac
   done < "$WORK/links.tsv"
-}
-
-sync_sources() {
-  collect_sources
-  local path filter
-  IFS= read -r -d '' filter <<'JQ' || true
-  . as $text | reduce (matches(source_pattern)[]) as $inc ($text;
-    if $sources[0][$inc.source] == null then error("Missing inclusion source: "+$inc.source)
-    else ("<!-- dddart-source: "+$inc.source+" -->\n```"+$inc.language+"\n"+$inc.body+"\n```\n<!-- /dddart-source -->") as $old |
-      ("<!-- dddart-source: "+$inc.source+" -->\n```"+$inc.language+"\n"+
-       ($sources[0][$inc.source]|sub("[[:space:]]+$";""))+"\n```\n<!-- /dddart-source -->") as $new |
-      split($old)|join($new) end)
-JQ
-  while IFS= read -r path; do
-    [[ "$path" == *.dart ]] && continue
-    grep -q '<!-- dddart-source:' "$ROOT/$path" || continue
-    jq -jRs --slurpfile sources "$WORK/sources.json" "$DOC_JQ $filter" "$ROOT/$path" > "$WORK/synced"
-    if ! cmp -s "$ROOT/$path" "$WORK/synced"; then cp "$WORK/synced" "$ROOT/$path"; printf 'Refreshed %s\n' "$path"; fi
-  done < "$WORK/sources.txt"
 }
 
 # Command execution is deliberately argv-based. Never eval documentation content.
@@ -237,7 +232,14 @@ stage_packages() {
 
 run_workflow() (
   local workflow=$1 archive_root=$2 source_mode=$3 name base app label path destination command_line expected entrypoint part refs
-  name=$(jq -r .name "$workflow"); base="$ROOT/docs/quickstarts/$name"
+  name=$(jq -r .name "$workflow"); base="$WORK/inputs/$name"
+  # Materialize both Markdown-owned and file-backed inputs, including commands and expected output.
+  while IFS= read -r path; do
+    safe_relative "$path"
+    mkdir -p "$base/$(dirname "$path")"
+    jq -jer --arg key "docs/quickstarts/$name/$path" --slurpfile snippets "$WORK/snippets.json" \
+      '$snippets[0][$key].text // .[$key] // error("Missing quickstart input: " + $key)' "$WORK/sources.json" > "$base/$path"
+  done < <(jq -r '[.files[].source, .commandsFiles[], .runs[].stdoutFile]|unique[]' "$workflow")
   app=$(mktemp -d "${TMPDIR:-/tmp}/dddart-consumer.XXXXXX")
   trap 'rm -rf "$app"' EXIT
   label="docs/quickstarts/$name ($source_mode)"
@@ -313,10 +315,14 @@ main() {
   case "$source_mode" in local|git);; *) fail 'Source must be local or git';; esac
   case "$service" in all|none|mysql|mongo|dynamodb);; *) fail 'Unknown service kind';; esac
   case "$action" in
-    sync) sync_sources; return;;
-    check) check_sources; return;;
+    snippets)
+      jq -r '.documents | to_entries[] | select(.value == "current" and (.key|endswith(".md"))) | .key' \
+        "$ROOT/tool/documentation/surfaces.json" > "$WORK/markdown.txt"
+      load_sources "$ROOT" "$WORK/markdown.txt" "$WORK/markdown.json"
+      extract_snippets "$WORK/markdown.json"; return;;
+    sync|check) check_sources; return;;
     all|run) check_sources;;
-    *) fail 'Usage: validate.sh check|sync|all|run [workflow] [--source=local|git] [--service-kind=all|none|mysql|mongo|dynamodb]';;
+    *) fail 'Usage: validate.sh check|snippets|all|run [workflow] [--source=local|git] [--service-kind=all|none|mysql|mongo|dynamodb]';;
   esac
   TIMEOUT=$(timeout_tool); need dart; need tar
   # Do not inherit hook Git state or the caller's example-specific settings.

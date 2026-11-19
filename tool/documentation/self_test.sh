@@ -21,8 +21,8 @@ expect_failure() {
 replace() {
   local path=$1 before=$2 after=$3
   jq -jRs --arg before "$before" --arg after "$after" '
-    index($before) as $i | if $i == null then error("Replacement target missing")
-    else .[:$i] + $after + .[($i+($before|length)):] end' "$CASE/$path" > "$WORK/changed"
+    split($before) | if length < 2 then error("Replacement target missing")
+    else .[0] + $after + (.[1:] | join($before)) end' "$CASE/$path" > "$WORK/changed"
   mv "$WORK/changed" "$CASE/$path"
 }
 fresh() { rm -rf "$WORK/case"; cp -R "$WORK/baseline" "$WORK/case"; CASE="$WORK/case"; }
@@ -101,8 +101,12 @@ fresh
 printf '\n[Missing](https://github.com/continuousimagination/dddart/blob/main/docs/README.md#gone)\n' >> "$CASE/README.md"
 check_failure 'broken local anchor' 'broken repository URL anchors fail'
 fresh
-replace tool/validation/inventory.json 'Handle a stale revision' 'Ignore a stale revision'
-check_failure 'sample listing differs' 'sample execution claims cannot drift'
+replace packages/dddart/example/README.md 'Handle a stale revision' 'Recover from a stale revision'
+gate check > "$WORK/result" 2>&1
+pass 'example descriptions can be proofread in the README alone'
+fresh
+replace packages/dddart/example/README.md '(conditional_writes.dart)' '(missing_example.dart)'
+check_failure 'missing program link' 'example guides must link to every inventoried program'
 fresh
 replace packages/dddart/example/README.md 'dart run events_example.dart' 'dart run missing.dart'
 check_failure 'show how to run an inventoried program' 'sample guides launch an existing entrypoint'
@@ -110,7 +114,7 @@ fresh
 replace packages/dddart/CHANGELOG.md '> Historical record; it may describe retired APIs. For current usage, start at' 'Removed notice'
 check_failure 'historical document lacks' 'historical exemptions require a visible notice'
 fresh
-replace website/src/pages/index.astro 'code: modelExample' 'code: `MissingType value;`'
+replace website/src/pages/index.astro "code: readQuickstart('docs/quickstarts/core/bin/main.dart')" 'code: `MissingType value;`'
 check_failure 'Homepage Dart code' 'homepage cannot embed unchecked source'
 for fence in '~~~' '````'; do
   fresh
@@ -119,11 +123,22 @@ for fence in '~~~' '````'; do
 done
 pass 'tilde and longer fences cannot bypass source checking'
 fresh
-replace docs/quickstarts/json/README.md "guestName: 'Sam'" "guestName: 'Stale'"
-check_failure 'json/README.md: stale inclusion' 'changed published code fails'
+replace docs/quickstarts/json/README.md "guestName: 'Sam'" "guestName: 'Revised'"
+gate snippets | jq -e '.["docs/quickstarts/json/bin/main.dart"].text | contains("Revised")' >/dev/null
+pass 'editing the guide changes the extracted program'
+fresh
+mkdir -p "$CASE/docs/quickstarts/sqlite/lib"
+touch "$CASE/docs/quickstarts/sqlite/lib/note.dart"
+check_failure 'also exists as a repository file' 'committed copies of snippets are rejected'
+fresh
+cat "$CASE/docs/quickstarts/sqlite/README.md" >> "$CASE/docs/quickstarts/json/README.md"
+check_failure 'Duplicate quickstart snippet' 'a path cannot have two Markdown owners'
+fresh
+replace docs/quickstarts/sqlite/README.md '<!-- /dddart-source -->' '<!-- missing end -->'
+check_failure 'malformed or unclosed' 'an incomplete snippet cannot consume the following block'
 fresh
 replace docs/quickstarts/core/README.md 'dart pub get' 'dart pub missing'
-check_failure 'core/README.md: stale inclusion' 'changed published commands fail'
+check_failure 'missing documented command dart pub get' 'required commands are checked after extraction'
 fresh
 printf "\nexport 'src/unreviewed.dart';\n" >> "$CASE/packages/dddart_json/lib/dddart_json.dart"
 check_failure 'public exports differ' 'new public exports require review'
@@ -133,11 +148,9 @@ gate check > "$WORK/result" 2>&1
 pass 'comment-only export mentions preserve the inventory'
 fresh
 replace docs/quickstarts/json/pubspec.yaml.txt $'  build_runner: ^2.4.0\n' ''
-gate sync > "$WORK/result" 2>&1
 check_failure 'pubspec must declare build_runner' 'missing builder fails before execution'
 fresh
-replace docs/quickstarts/slack_server/commands.sh $'dart compile kernel bin/main.dart -o build/server.dill\n' ''
-gate sync > "$WORK/result" 2>&1
+replace docs/quickstarts/slack_server/README.md $'dart compile kernel bin/main.dart -o build/server.dill\n' ''
 check_failure 'slack_server: compile commands' 'compile-only examples cannot lose compilation'
 
 if [[ "$MODE" != --static ]]; then
@@ -157,26 +170,20 @@ if [[ "$MODE" != --static ]]; then
   export DDDART_DOC_ARCHIVES="$WORK/archives"
   export TMPDIR="$WORK/tmp"
   fresh
-  replace docs/quickstarts/json/lib/reservation.dart 'package:dddart/dddart.dart' 'package:missing_domain/missing.dart'
-  gate sync > "$WORK/result" 2>&1
+  replace docs/quickstarts/json/README.md 'package:dddart/dddart.dart' 'package:missing_domain/missing.dart'
   expect_failure 'command dart run build_runner build' gate run json
   grep -Fq 'lib/reservation.dart' "$WORK/result"
   pass 'broken import fails real fresh generation'
   fresh
-  replace docs/quickstarts/json/bin/main.dart 'SeatCount(value: 2)' 'SeatCount(seats: 2)'
-  gate sync > "$WORK/result" 2>&1
-  expect_failure 'command dart analyze' gate run json
-  grep -Fq 'seats' "$WORK/result"
-  pass 'broken constructor fails real analysis'
+  replace docs/quickstarts/json/README.md 'SeatCount(value: 2)' 'SeatCount(seats: 2)'
+  expect_failure "No named parameter with the name 'seats'" gate run json
+  pass 'broken constructor in Markdown fails compilation'
   fresh
-  replace docs/quickstarts/json/lib/reservation.dart "part 'reservation.g.dart';" "part 'missing.g.dart';"
-  gate sync > "$WORK/result" 2>&1
-  expect_failure 'command dart analyze' gate run json
-  grep -Fq 'missing.g.dart' "$WORK/result"
+  replace docs/quickstarts/json/README.md "part 'reservation.g.dart';" "part 'missing.g.dart';"
+  expect_failure 'missing.g.dart' gate run json
   pass 'wrong owning part fails with fresh outputs'
   fresh
-  replace docs/quickstarts/json/expected/main.txt $'Sam\n' $'Incorrect\n'
-  gate sync > "$WORK/result" 2>&1
+  replace docs/quickstarts/json/README.md $'\nSam\n' $'\nIncorrect\n'
   expect_failure 'bin/main.dart expected stdout' gate run json
   pass 'wrong runtime output fails after successful compilation'
   [[ -z "$(find "$WORK/tmp" -mindepth 1 -maxdepth 1 -name 'dddart-*' -print)" ]] || fail 'Failed consumers left temporary directories'
