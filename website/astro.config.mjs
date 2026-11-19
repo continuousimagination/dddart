@@ -4,19 +4,18 @@ import { fileURLToPath } from 'node:url';
 import { satteri } from '@astrojs/markdown-satteri';
 import { defineConfig } from 'astro/config';
 import { publishedRoutes } from './src/lib/repository-docs';
-import { base, doc, repo } from './src/lib/site';
-
-const root = fileURLToPath(new URL('../', import.meta.url));
+import { exampleUrl } from './src/lib/example-files';
+import { githubSource, repositoryRoot } from './src/lib/repository';
+import { base, doc } from './src/lib/site';
 
 function repositoryLink(href, fileURL) {
   if (!href || /^(?:[a-z][\w+.-]*:|[/#?])/i.test(href)) return href;
   const target = new URL(href, fileURL);
-  const source = relative(root, fileURLToPath(target)).split('\\').join('/');
+  const source = relative(repositoryRoot, fileURLToPath(target)).split('\\').join('/');
   if (source === '..' || source.startsWith('../')) throw new Error(`Link outside repository: ${href} in ${fileURL}`);
   const isDirectory = statSync(target).isDirectory();
   const slug = publishedRoutes.get(isDirectory ? posix.join(source, 'README.md') : source);
-  const encoded = source.split('/').map(encodeURIComponent).join('/');
-  const url = slug ? doc(slug) : `${repo}/${isDirectory ? 'tree' : 'blob'}/main/${encoded}`;
+  const url = slug ? doc(slug) : exampleUrl(source) ?? githubSource(source, isDirectory ? 'tree' : 'blob');
   return url + target.search + target.hash;
 }
 

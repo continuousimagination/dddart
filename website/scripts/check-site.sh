@@ -9,6 +9,8 @@ REPO=$(cd "${DDDART_SITE_REPO_ROOT:-$SITE/..}" && pwd)
 DIST="$SITE/dist"
 ORIGIN=https://continuousimagination.github.io
 BASE=/dddart/
+REVISION=${DDDART_SOURCE_REVISION:-$(git -C "$REPO" rev-parse HEAD)}
+SOURCE_PREFIX="https://github.com/continuousimagination/dddart/blob/$REVISION/"
 WORK=$(mktemp -d "${TMPDIR:-/tmp}/dddart-site-check.XXXXXX")
 trap 'rm -rf "$WORK"' EXIT
 trap 'exit 130' INT
@@ -32,16 +34,16 @@ while IFS= read -r path; do
   xpath "$path" 'string(//title)' > "$WORK/title"
   xpath "$path" 'string(//meta[@name="description"]/@content)' > "$WORK/description"
   xpath "$path" 'string(//link[@rel="canonical"]/@href)' > "$WORK/canonical"
-  xpath "$path" 'string(//div[@class="doc-edit"]/a/@href)' > "$WORK/edit"
+  xpath "$path" 'string(//div[@class="doc-edit"]/a/@href)' > "$WORK/source"
   xpath "$path" 'count(//h1)' > "$WORK/headings"
   jq -n --arg path "$relative" --arg public "$public" \
     --rawfile ids "$WORK/ids" --rawfile references "$WORK/references" \
     --rawfile title "$WORK/title" --rawfile description "$WORK/description" \
-    --rawfile edit "$WORK/edit" --rawfile canonical "$WORK/canonical" --rawfile headings "$WORK/headings" \
+    --rawfile source "$WORK/source" --rawfile canonical "$WORK/canonical" --rawfile headings "$WORK/headings" \
     "$DOC_JQ "'
     def attributes: [scan("=\"([^\"]*)\"")|.[0]|html_decode];
     {path:$path, public:$public, ids:($ids|attributes), references:($references|attributes),
-     title:($title|trim), description:($description|trim), canonical:($canonical|trim), edit:($edit|trim), h1:($headings|trim|tonumber)}'
+     title:($title|trim), description:($description|trim), canonical:($canonical|trim), source:($source|trim), h1:($headings|trim|tonumber)}'
 done < "$WORK/pages.txt" | jq -s '.' > "$WORK/pages.json"
 
 jq -e --arg origin "$ORIGIN" "$DOC_JQ "'
@@ -88,22 +90,24 @@ done < "$WORK/links.tsv"
 
 jq '[.documents | to_entries[] | select(.value == "current" and (.key|endswith(".md"))) | .key] | sort' \
   "$REPO/tool/documentation/surfaces.json" > "$WORK/published.json"
+git -C "$REPO" ls-files -- 'packages/*/example/*.dart' | jq -Rn '[inputs | select(endswith(".g.dart")|not)] | sort' > "$WORK/example-files.json"
 doc_count=$(jq length "$WORK/published.json")
-jq -e --arg base "$BASE" --slurpfile published "$WORK/published.json" \
-  --slurpfile nav "$REPO/website/src/lib/navigation.json" "$DOC_JQ "'
-  "https://github.com/continuousimagination/dddart/edit/main/" as $edit |
-  map(select(.public|startswith($base + "docs/"))) as $docs |
-  require(([$docs[].edit | ltrimstr($edit)] | sort) == $published[0]; "Published pages must link to their canonical edit sources") |
+example_count=$(jq length "$WORK/example-files.json")
+jq -e --arg base "$BASE" --arg prefix "$SOURCE_PREFIX" --slurpfile published "$WORK/published.json" \
+  --slurpfile examples "$WORK/example-files.json" --slurpfile nav "$REPO/website/src/lib/navigation.json" "$DOC_JQ "'
+  def sources($group): [ .[] | select(.public|startswith($base + $group + "/")) | .source ] | sort;
+  require(sources("docs") == ($published[0]|map($prefix + .)); "Published guides must link to their source revision") |
+  require(sources("examples") == ($examples[0]|map($prefix + .)); "Example pages must link to their source revision") |
   reduce ($nav[0][][]) as $guide (.;
-    require(any($docs[]; .public == ($base + "docs/" + $guide.slug + "/") and .edit == ($edit + $guide.source));
-            "Missing featured guide or incorrect edit source: " + $guide.slug))' "$WORK/pages.json" >/dev/null
-jq -e --argjson count "$doc_count" --arg base "$BASE" --slurpfile pages "$WORK/pages.json" "$DOC_JQ "'
+    require(any(.[]; .public == ($base + "docs/" + $guide.slug + "/") and .source == ($prefix + $guide.source));
+            "Missing featured guide or incorrect source: " + $guide.slug))' "$WORK/pages.json" >/dev/null
+jq -e --argjson count "$((doc_count + example_count))" --arg base "$BASE" --slurpfile pages "$WORK/pages.json" "$DOC_JQ "'
   require(length == $count; "Search index and source-document counts differ") |
   require(length == (map(.url)|unique|length); "Search index has duplicate URLs") |
   reduce .[] as $entry (true;
     require(all(["title","description","section","url","text"][]; ($entry[.]//""|length)>0); "Incomplete search entry") |
-    require(($entry.url|startswith($base + "docs/")); "Search URL escapes Pages subpath") |
+    require(($entry.url | startswith($base + "docs/") or startswith($base + "examples/")); "Search URL escapes Pages subpath") |
     ($entry.url|ltrimstr($base)|rtrimstr("/")) as $relative |
     require(any($pages[0][]; .path == ($relative+"/index.html")); "Search points to missing page: "+$entry.url))' "$DIST/search-index.json" >/dev/null
-printf 'Checked %s HTML pages, %s links/assets, and %s searchable guides. All checks passed.\n' \
-  "$(jq length "$WORK/pages.json")" "$reference_count" "$doc_count"
+printf 'Checked %s HTML pages, %s links/assets, %s searchable guides and %s example files. All checks passed.\n' \
+  "$(jq length "$WORK/pages.json")" "$reference_count" "$doc_count" "$example_count"

@@ -2,7 +2,8 @@
 import { getCollection } from 'astro:content';
 import Base from '../../layouts/Base.astro';
 import DocsNav from '../../components/DocsNav.astro';
-import { doc, repo } from '../../lib/site';
+import { githubSource } from '../../lib/repository';
+import { doc } from '../../lib/site';
 import { guides, publishedRoutes } from '../../lib/repository-docs';
 import { readDocument } from '../../lib/documents';
 export async function getStaticPaths() {
@@ -22,7 +23,7 @@ const next = current >= 0 ? guides[current + 1] : undefined;
       <details class="mobile-doc-nav"><summary>Browse documentation</summary><DocsNav current={slug} /></details>
       <p class="eyebrow">{section}</p>
       <article class="prose"><Content /></article>
-      <div class="doc-edit"><a href={`${repo}/edit/main/${entry.id}`}>Improve this page ↗</a></div>
+      <div class="doc-edit"><a href={githubSource(entry.id)}>View source on GitHub ↗</a></div>
       {(previous || next) && <nav class="doc-pagination" aria-label="Next and previous pages">{previous ? <a href={doc(previous.slug)}><span>← Previous</span>{previous.label}</a> : <div />}{next && <a href={doc(next.slug)}><span>Next →</span>{next.label}</a>}</nav>}
     </main>
     <aside class="docs-toc"><nav aria-label="On this page"><p class="sidebar-label">ON THIS PAGE</p><ul>{headings.filter(h => h.depth === 2).map(h => <li><a href={`#${h.slug}`}>{h.text}</a></li>)}</ul></nav></aside>

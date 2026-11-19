@@ -13,7 +13,7 @@ tool settings in their manifests. Link to those files from the guides.
 - Register new Markdown, MDX, or RST documents in
   [surfaces.json](surfaces.json). Release notes use the historical category;
   user and contributor guides use the current category. Astro publishes the
-  current Markdown directly. Each page’s **Improve this page** link opens the
+  current Markdown directly. Each page’s **View source on GitHub** link opens the
   same source file for review.
 - Use a link to a complete program if the reader needs setup, multiple files,
   or an external service. For inline Dart, put the complete checked file

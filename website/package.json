@@ -6,7 +6,7 @@
     "dev": "astro dev --host 127.0.0.1",
     "build": "astro build",
     "preview": "astro preview --host 127.0.0.1",
-    "check": "npm run build && bash scripts/check-site.sh && bash scripts/check-site-self-test.sh"
+    "check": "npm run build && bash scripts/check-site.sh && node scripts/check-example-pages.mjs && bash scripts/check-site-self-test.sh"
   },
   "engines": {
     "node": ">=24.15.0"

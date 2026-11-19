@@ -24,8 +24,11 @@ examples still work.
 ## Edit a guide
 
 Open [the repository documentation index](../docs/README.md) to review a
-guide, or use **Improve this page** on the published site. Both lead to the
-same Markdown file. Its first heading supplies the title and its first
+guide, or use **View source on GitHub** on the published site. Both lead to the
+same Markdown file. The GitHub link opens the file at the revision used for the
+build. In a pull request, the Pages workflow supplies its head commit.
+
+The first heading supplies the title and its first
 paragraph supplies the search description. Write ordinary relative links to
 other guides, sections, examples, and source files. Astro resolves them from
 the Markdown file's directory when building the site.
@@ -37,6 +40,15 @@ their public URLs, sidebar labels, and reading order. Other documents get
 URLs derived from their repository paths. The
 [documentation contributor guide](../tool/documentation/README.md) explains
 how to include and check runnable examples.
+
+## Browse example source
+
+Each tracked, handwritten Dart file in a package example project gets a source
+page and a search entry. Follow a filename from an example README, then click
+an import or part directive to read another published file. The project file
+list also includes supporting files that have no incoming imports. Entrypoint
+descriptions come from the [example inventory](../tool/validation/inventory.json).
+Edit the original Dart files and rebuild to update these pages.
 
 ## Publish
 
