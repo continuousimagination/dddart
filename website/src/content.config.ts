@@ -1,14 +1,14 @@
-import { defineCollection, z } from 'astro:content';
+import { defineCollection } from 'astro:content';
 import { glob } from 'astro/loaders';
-import { sections } from './lib/site';
+import { publishedRoutes } from './lib/repository-docs';
 
 const docs = defineCollection({
-  loader: glob({ pattern: '**/*.md', base: './src/content/docs' }),
-  schema: z.object({
-    title: z.string(),
-    description: z.string(),
-    section: z.enum(sections),
-    order: z.number(),
+  loader: glob({
+    base: '../',
+    // Links also depend on the routes of other documents. Render against the current map.
+    deferRender: true,
+    pattern: [...publishedRoutes.keys()],
+    generateId: ({ entry }) => entry,
   }),
 });
 

@@ -61,6 +61,8 @@ allowed_origins:
 ```
 <!-- /dddart-source -->
 
+<a id="layer-environment-variables-over-yaml"></a>
+
 ## Run the example
 
 <!-- dddart-source: docs/quickstarts/configuration/commands.sh -->
@@ -84,6 +86,15 @@ false
 The YAML file sets the port to `8080`. The command supplies `9090` through the
 first provider, so the second line changes. Run `dart run bin/configuration.dart`
 without the environment override to see the YAML default.
+
+## Validate before starting services
+
+Use `ConfigRequirement` to check types and allowed values before constructing
+services. The [validation example](../../../packages/dddart_config/example/validation_example.dart)
+checks settings without logging their values. After a reload, apply changed
+settings to running services explicitly.
+
+<a id="supply-a-custom-provider"></a>
 
 ## Optional: supply settings from memory
 

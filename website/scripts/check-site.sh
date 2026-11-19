@@ -32,15 +32,16 @@ while IFS= read -r path; do
   xpath "$path" 'string(//title)' > "$WORK/title"
   xpath "$path" 'string(//meta[@name="description"]/@content)' > "$WORK/description"
   xpath "$path" 'string(//link[@rel="canonical"]/@href)' > "$WORK/canonical"
+  xpath "$path" 'string(//div[@class="doc-edit"]/a/@href)' > "$WORK/edit"
   xpath "$path" 'count(//h1)' > "$WORK/headings"
   jq -n --arg path "$relative" --arg public "$public" \
     --rawfile ids "$WORK/ids" --rawfile references "$WORK/references" \
     --rawfile title "$WORK/title" --rawfile description "$WORK/description" \
-    --rawfile canonical "$WORK/canonical" --rawfile headings "$WORK/headings" \
+    --rawfile edit "$WORK/edit" --rawfile canonical "$WORK/canonical" --rawfile headings "$WORK/headings" \
     "$DOC_JQ "'
     def attributes: [scan("=\"([^\"]*)\"")|.[0]|html_decode];
     {path:$path, public:$public, ids:($ids|attributes), references:($references|attributes),
-     title:($title|trim), description:($description|trim), canonical:($canonical|trim), h1:($headings|trim|tonumber)}'
+     title:($title|trim), description:($description|trim), canonical:($canonical|trim), edit:($edit|trim), h1:($headings|trim|tonumber)}'
 done < "$WORK/pages.txt" | jq -s '.' > "$WORK/pages.json"
 
 jq -e --arg origin "$ORIGIN" "$DOC_JQ "'
@@ -50,7 +51,9 @@ jq -e --arg origin "$ORIGIN" "$DOC_JQ "'
     require($page.canonical == ($origin+$page.public); $page.path+": incorrect canonical URL") |
     require(($page.ids|length) == ($page.ids|unique|length); $page.path+": duplicate id"))' "$WORK/pages.json" >/dev/null
 
-jq -r '.[] as $page | $page.references[] | [$page.path,$page.public,.]|@tsv' "$WORK/pages.json" > "$WORK/links.tsv"
+# A site-absolute link has the same destination from every page.
+jq -r '[.[] as $page | $page.references[] | [$page.path,$page.public,.]] |
+  unique_by(if (.[2]|test("^(/|[a-zA-Z][a-zA-Z0-9+.-]*:)")) then .[2] else . end)[] | @tsv' "$WORK/pages.json" > "$WORK/links.tsv"
 reference_count=0
 while IFS=$'\t' read -r page public reference; do
   reference_count=$((reference_count + 1))
@@ -83,13 +86,23 @@ while IFS=$'\t' read -r page public reference; do
   fi
 done < "$WORK/links.tsv"
 
-doc_count=$(find "$SITE/src/content/docs" -maxdepth 1 -type f -name '*.md' | wc -l | tr -d ' ')
+jq '[.documents | to_entries[] | select(.value == "current" and (.key|endswith(".md"))) | .key] | sort' \
+  "$REPO/tool/documentation/surfaces.json" > "$WORK/published.json"
+doc_count=$(jq length "$WORK/published.json")
+jq -e --arg base "$BASE" --slurpfile published "$WORK/published.json" \
+  --slurpfile nav "$REPO/website/src/lib/navigation.json" "$DOC_JQ "'
+  "https://github.com/continuousimagination/dddart/edit/main/" as $edit |
+  map(select(.public|startswith($base + "docs/"))) as $docs |
+  require(([$docs[].edit | ltrimstr($edit)] | sort) == $published[0]; "Published pages must link to their canonical edit sources") |
+  reduce ($nav[0][][]) as $guide (.;
+    require(any($docs[]; .public == ($base + "docs/" + $guide.slug + "/") and .edit == ($edit + $guide.source));
+            "Missing featured guide or incorrect edit source: " + $guide.slug))' "$WORK/pages.json" >/dev/null
 jq -e --argjson count "$doc_count" --arg base "$BASE" --slurpfile pages "$WORK/pages.json" "$DOC_JQ "'
   require(length == $count; "Search index and source-document counts differ") |
   require(length == (map(.url)|unique|length); "Search index has duplicate URLs") |
   reduce .[] as $entry (true;
     require(all(["title","description","section","url","text"][]; ($entry[.]//""|length)>0); "Incomplete search entry") |
-    require(($entry.url|startswith($base)); "Search URL escapes Pages subpath") |
+    require(($entry.url|startswith($base + "docs/")); "Search URL escapes Pages subpath") |
     ($entry.url|ltrimstr($base)|rtrimstr("/")) as $relative |
     require(any($pages[0][]; .path == ($relative+"/index.html")); "Search points to missing page: "+$entry.url))' "$DIST/search-index.json" >/dev/null
 printf 'Checked %s HTML pages, %s links/assets, and %s searchable guides. All checks passed.\n' \

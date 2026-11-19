@@ -94,6 +94,8 @@ Future<void> main() async {
 ```
 <!-- /dddart-source -->
 
+<a id="run-a-public-server-and-client"></a>
+
 ## Run the example
 
 <!-- dddart-source: docs/quickstarts/rest/commands.sh -->
@@ -112,5 +114,32 @@ Expected output:
 ```
 <!-- /dddart-source -->
 
-Both requests read the same note without a token. To allow anonymous reads and
+Both requests read the same note without a token. To share an existing
+listener, compose `HttpServer.buildHandler()` into that host.
+
+## Public and protected operations
+
+To allow anonymous reads and
 protect writes on the same resource, run the [public leaderboard example](../../../packages/dddart_rest/example/README.md).
+
+For collection queries, apply the authorized scope to rows and counts before
+paging. The [REST policy guide](../../../packages/dddart_rest/README.md#optional-access-policies)
+covers revision checks and authorization for writes.
+
+## Prevent lost updates
+
+Use versioned reads and explicit conditional calls when one writer must
+detect another's change. A strong ETag carries the stored revision. A stale
+condition needs a reload and an application decision about whether to reapply
+the update. Ordinary `save` uses unconditional PUT where the resource allows
+it. The [conditional writes guide](../../CONDITIONAL_WRITES.md)
+describes the required storage capability and how to handle an unknown result.
+
+## Authentication providers and platforms
+
+On the server, choose a credential verifier and resource policies. On the
+client, supply a token provider only for calls that need authentication. The
+[REST client guide](../../../packages/dddart_rest_client/README.md)
+describes device flow, Cognito/OIDC callbacks, and credential storage. Supply
+storage and callback handling appropriate to your browser or mobile
+application.

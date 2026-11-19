@@ -36,4 +36,16 @@ endpoints. The resource does not supply a deployment, request deduplication or
 provider subscription. Timestamp windows reject stale requests but do not prevent
 repeated delivery within the window; handlers must account for provider retries.
 
-Run the [webhook examples](example/README.md) to send a signed request to a local server and inspect the response.
+## Try a local sender and receiver
+
+Run the [JSON webhook example](example/README.md).
+It prints a shell command that signs a sample `user.created` payload and sends
+it to the loopback server. The response tells you which event was processed.
+
+## Receive a Slack command
+
+Follow the [Slack server quickstart](../../docs/quickstarts/slack_server/README.md)
+to configure a signing secret, register the callback, and handle the command.
+Slack signs the original body and includes a timestamp. A timestamp window
+limits stale replays. If a command changes state, account for retries within
+that window.

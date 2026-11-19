@@ -5,14 +5,18 @@ on:
     branches: [main]
     paths:
       - 'website/**'
+      - '**/*.md'
       - 'docs/quickstarts/**'
+      - 'tool/documentation/surfaces.json'
       - 'tool/documentation/common.sh'
       - '.github/workflows/pages.yml'
   pull_request:
     branches: [main]
     paths:
       - 'website/**'
+      - '**/*.md'
       - 'docs/quickstarts/**'
+      - 'tool/documentation/surfaces.json'
       - 'tool/documentation/common.sh'
       - '.github/workflows/pages.yml'
   workflow_dispatch:

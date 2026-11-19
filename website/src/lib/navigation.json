@@ -1,0 +1,70 @@
+{
+  "Start here": [
+    {
+      "slug": "getting-started",
+      "label": "Getting started",
+      "source": "docs/quickstarts/core/README.md"
+    },
+    {
+      "slug": "philosophy",
+      "label": "Why DDDart",
+      "source": "docs/guides/philosophy.md"
+    }
+  ],
+  "Build your domain": [
+    {
+      "slug": "modeling",
+      "label": "Model a domain",
+      "source": "docs/guides/modeling.md"
+    },
+    {
+      "slug": "contracts",
+      "label": "Share contracts",
+      "source": "docs/guides/contracts.md"
+    },
+    {
+      "slug": "serialization",
+      "label": "Generate JSON",
+      "source": "docs/quickstarts/json/README.md"
+    }
+  ],
+  "Connect the pieces": [
+    {
+      "slug": "repositories",
+      "label": "Choose a repository",
+      "source": "docs/guides/repositories.md"
+    },
+    {
+      "slug": "http",
+      "label": "Build an HTTP API",
+      "source": "docs/quickstarts/rest/README.md"
+    },
+    {
+      "slug": "events",
+      "label": "Publish and watch events",
+      "source": "docs/DISTRIBUTED_EVENTS.md"
+    },
+    {
+      "slug": "configuration",
+      "label": "Layer configuration",
+      "source": "docs/quickstarts/configuration/README.md"
+    },
+    {
+      "slug": "integrations",
+      "label": "Receive webhooks",
+      "source": "packages/dddart_webhooks/README.md"
+    }
+  ],
+  "Reference": [
+    {
+      "slug": "packages",
+      "label": "Choose packages",
+      "source": "docs/CAPABILITIES.md"
+    },
+    {
+      "slug": "examples",
+      "label": "Find an example",
+      "source": "docs/QUICKSTARTS.md"
+    }
+  ]
+}

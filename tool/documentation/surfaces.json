@@ -10,6 +10,10 @@
     "docs/QUICKSTARTS.md": "current",
     "docs/README.md": "current",
     "docs/SERIALIZATION.md": "current",
+    "docs/guides/contracts.md": "current",
+    "docs/guides/modeling.md": "current",
+    "docs/guides/philosophy.md": "current",
+    "docs/guides/repositories.md": "current",
     "docs/quickstarts/configuration/README.md": "current",
     "docs/quickstarts/core/README.md": "current",
     "docs/quickstarts/dynamodb/README.md": "current",
@@ -75,18 +79,6 @@
     "packages/dddart_webhooks_slack/example/README.md": "current",
     "scripts/README.md": "current",
     "tool/documentation/README.md": "current",
-    "website/README.md": "current",
-    "website/src/content/docs/configuration.md": "current",
-    "website/src/content/docs/contracts.md": "current",
-    "website/src/content/docs/events.md": "current",
-    "website/src/content/docs/examples.md": "current",
-    "website/src/content/docs/getting-started.md": "current",
-    "website/src/content/docs/http.md": "current",
-    "website/src/content/docs/integrations.md": "current",
-    "website/src/content/docs/modeling.md": "current",
-    "website/src/content/docs/packages.md": "current",
-    "website/src/content/docs/philosophy.md": "current",
-    "website/src/content/docs/repositories.md": "current",
-    "website/src/content/docs/serialization.md": "current"
+    "website/README.md": "current"
   }
 }

@@ -7,6 +7,13 @@ runs end to end on loopback. The [AppSync adapter](../packages/dddart_events_app
 adds live delivery using the same client and publisher interfaces. Neither
 transport is required for the [local event bus](../packages/dddart/DOMAIN_EVENTS_GUIDE.md).
 
+## Deliver locally
+
+The [order quickstart](quickstarts/core/README.md) publishes through an
+in-process event bus after saving. Subscribe before publishing and close the
+bus at shutdown. The [local event guide](../packages/dddart/DOMAIN_EVENTS_GUIDE.md)
+explains how to keep rejected or later occurrences pending.
+
 ## Prepare the event contract
 
 - Identify a stream with an `AggregateReference<I>`: a stable aggregate kind
@@ -36,7 +43,13 @@ and validation failures are not. A timeout bounds waiting; it does not prove
 the server stopped. Failed publication after a successful save leaves the
 occurrence pending. Persistence and publication do not form an atomic outbox.
 
+<a id="recover-and-handle-duplicates"></a>
+
+<a id="watch-an-aggregate-remotely"></a>
+
 ## Watch and resume
+
+Run the [loopback HTTP example](../packages/dddart_events_distributed/example/README.md) to watch an aggregate locally.
 
 1. Open a watch for the aggregate's logical reference. A fresh watch starts
    at the current history head. Inspect its status after `ready` for denial
@@ -87,7 +100,12 @@ process. Use shared [DynamoDB history](../packages/dddart_events_dynamodb/README
 for durable history across processes or short-lived handlers. When publishing
 on the server, await the service or repository call before returning. A retry
 may re-invoke event processing even when the store deduplicates the durable
-record. The [AppSync deployment guide](../packages/dddart_events_appsync/DEPLOY.md)
+record.
+
+## Add live delivery with AppSync
+
+Supply an `AppSyncEventTransport` to the same aggregate client for live messages.
+Retained history still provides catch-up. The [AppSync deployment guide](../packages/dddart_events_appsync/DEPLOY.md)
 covers the optional live relay and native handlers.
 
 ## Event identity migration

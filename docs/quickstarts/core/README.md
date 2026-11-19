@@ -14,7 +14,10 @@ cd dddart_core_quickstart
 mkdir -p bin
 ```
 
-Copy the [example pubspec](pubspec.yaml.txt) into the application as `pubspec.yaml`.
+Copy the [example pubspec](pubspec.yaml.txt) into the application as `pubspec.yaml`. For an existing application, see the
+[Git installation guide](../../GIT_INSTALLATION.md).
+
+<a id="model-and-run-an-order"></a>
 
 ## Model and publish an order
 
@@ -87,16 +90,21 @@ Sam: order placed = true
 
 The listener receives the ID of the saved order. That is how it knows which
 order to load. The program subscribes before placing the order because the
-local bus only delivers events to active listeners.
+local bus only delivers events to active listeners. Publishing after the save
+means a failed save cannot announce a successful order.
 
 Try adding a second `order.place();` immediately after the first. Run the
 program again. The order throws `StateError` before anything is saved.
 Remove the extra call to restore the successful run.
 
+<a id="choose-your-next-step"></a>
+
 ## Where to go next
 
 - To put a rule on a value, such as a positive seat count, follow
-  [Model a domain](https://continuousimagination.github.io/dddart/docs/modeling/) using this same application.
+  [Model a domain](../../guides/modeling.md) using this same application.
+- To send the model across a boundary, follow the [JSON quickstart](../json/README.md).
+- To choose storage for your runtime, read the [repository guide](../../guides/repositories.md).
 - To keep data after the program exits, try the [SQLite quickstart](../sqlite/README.md).
 - For the reasoning behind capture, save, publish, and acknowledge, read the
   [domain event guide](../../../packages/dddart/DOMAIN_EVENTS_GUIDE.md).

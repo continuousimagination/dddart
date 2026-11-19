@@ -1,16 +1,11 @@
----
-title: Share contracts
-description: Reuse the same application service with an in-memory, native, server, or HTTP repository.
-section: Build your domain
-order: 20
----
+# Share contracts
 
 Let an application service say what it needs through a constructor. The
 application entrypoint chooses a repository that can provide it.
 
 ## Put the repository in the constructor
 
-In the application from [Getting started](/dddart/docs/getting-started/),
+In the application from [Getting started](../quickstarts/core/README.md),
 save this file as `bin/contracts.dart` and run `dart run bin/contracts.dart`:
 
 <!-- dddart-source: docs/quickstarts/core/bin/contracts.dart -->
@@ -74,5 +69,5 @@ the browser and server share models.
 | A browser | An HTTP or native IndexedDB repository with browser-appropriate login and storage |
 
 Share domain code where it makes sense. The server still applies access rules
-and validates state changes. Use the [adapter guide](/dddart/docs/repositories/)
+and validates state changes. Use the [adapter guide](repositories.md)
 to choose storage and check its transaction and query guarantees.

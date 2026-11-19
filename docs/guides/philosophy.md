@@ -1,9 +1,4 @@
----
-title: Why DDDart
-description: Keep the language people use to describe a product visible in the software.
-section: Start here
-order: 20
----
+# Why DDDart
 
 When people say “confirm a reservation,” the code should tell them what
 confirmation means. Give the action a name, make its rules explicit, and write
@@ -29,5 +24,5 @@ Start with a model and a test. Add a generator, database, API, or notification
 transport when the application needs one. The same Dart model can run in
 tests, on a server, or in a client if its dependencies fit that runtime.
 
-[Build your first model](/dddart/docs/getting-started/) or
-[read about sharing contracts](/dddart/docs/contracts/).
+[Build your first model](../quickstarts/core/README.md) or
+[read about sharing contracts](contracts.md).

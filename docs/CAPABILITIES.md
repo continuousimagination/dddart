@@ -4,6 +4,8 @@ Start with `dddart` for the model. Add a serializer, repository, or transport
 when the application's boundary needs it. Keep platform dependencies in that
 boundary so the model can also run in a client or in tests.
 
+<a id="start-with-the-problem-you-need-to-solve"></a>
+
 ## Model data and configure the application
 
 | Package | Use it for | Requirements and limits |
@@ -41,6 +43,8 @@ transactions, and backend consistency vary.
 | dddart_events_dynamodb | [Durable event history and channel mapping](../packages/dddart_events_dynamodb/README.md) | Server-side DynamoDB access; provision storage separately |
 | dddart_webhooks | [Typed webhook receivers](../packages/dddart_webhooks/README.md) | Shelf server; applications supply their verifier and handlers |
 | dddart_webhooks_slack | [Slack command and signature handling](../packages/dddart_webhooks_slack/README.md) | Server-side Slack signing secret and access to the request body |
+
+## Look up supported imports
 
 See the [public API reference](PUBLIC_API.md) for supported imports and the
 [examples](QUICKSTARTS.md) for runnable setup. A supported composition still needs
