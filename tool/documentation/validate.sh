@@ -52,14 +52,6 @@ check_sources() {
   def same($a;$b): ($a|sort) == ($b|sort);
   def relative: test("^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\\\]+$");
   def git_refs: [scan("(?m)^ +ref: (.+)$")|.[0]]|unique;
-  def sample_listing:
-    if (.entrypoints|length) == 1 then .entrypoints[0] |
-      "[" + .path + "](" + .path + ") — " + .reason
-    else ["| Program | How it runs | What it shows |", "| --- | --- | --- |"] +
-    [.entrypoints[] |
-      {run:"Local run", compile:"Configured integration", service:"Local database"}[.action] as $description |
-      "| [" + .path + "](" + .path + ") | " + $description + " | " +
-      (.reason|gsub("\\|";"\\|")|gsub("\n";" ")) + " |"] | join("\n") end;
   reduce ($snippets|keys[]) as $path (.; require($sources[0][$path] == null; "Quickstart snippet also exists as a repository file: " + $path)) |
   (content("docs/quickstarts/core/pubspec.yaml.txt")|git_refs) as $refs |
   require(($refs|length) == 1 and ($refs[0]|test("^[0-9a-f]{40}$"));
@@ -104,7 +96,9 @@ check_sources() {
     content($e.path + "/README.md") as $guide |
     require(all($e.entrypoints[]; .action == "run" or .action == "compile" or .action == "service");
             $e.path + ": retired or unvalidated sample is still inventoried") |
-    require(($guide|contains($e|sample_listing)); $e.path + "/README.md: sample listing differs from shared inventory") |
+    ($guide|links) as $links |
+    require(all($e.entrypoints[]; .path as $path | $links|index($path) != null);
+            $e.path + "/README.md: missing program link from example inventory") |
     require(($guide|contains("cd "+$e.path+"\ndart pub get\n")) and
             any($e.entrypoints[]; .path as $program |
               any($guide|split("\n")[]; . == ("dart run "+$program) or startswith("dart run "+$program+" ")));

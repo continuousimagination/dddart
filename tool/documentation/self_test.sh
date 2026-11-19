@@ -101,8 +101,12 @@ fresh
 printf '\n[Missing](https://github.com/continuousimagination/dddart/blob/main/docs/README.md#gone)\n' >> "$CASE/README.md"
 check_failure 'broken local anchor' 'broken repository URL anchors fail'
 fresh
-replace tool/validation/inventory.json 'Handle a stale revision' 'Ignore a stale revision'
-check_failure 'sample listing differs' 'sample execution claims cannot drift'
+replace packages/dddart/example/README.md 'Handle a stale revision' 'Recover from a stale revision'
+gate check > "$WORK/result" 2>&1
+pass 'example descriptions can be proofread in the README alone'
+fresh
+replace packages/dddart/example/README.md '(conditional_writes.dart)' '(missing_example.dart)'
+check_failure 'missing program link' 'example guides must link to every inventoried program'
 fresh
 replace packages/dddart/example/README.md 'dart run events_example.dart' 'dart run missing.dart'
 check_failure 'show how to run an inventoried program' 'sample guides launch an existing entrypoint'

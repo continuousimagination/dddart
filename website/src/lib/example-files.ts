@@ -6,7 +6,8 @@ import inventory from '../../../tool/validation/inventory.json';
 import { git, githubSource, repositoryRoot } from './repository';
 import { base } from './site';
 
-const projects = new Map(inventory.examples.map(project => [project.path, project]));
+export const packageExamples = inventory.examples;
+const projects = new Map(packageExamples.map(project => [project.path, project]));
 const packageLibraries = new Map(inventory.examples.map(project => [project.name, project.path + '/lib']));
 const snippets: Record<string, { document: string; line: number; text: string }> = JSON.parse(
   execFileSync('bash', ['tool/documentation/validate.sh', 'snippets'], { cwd: repositoryRoot, encoding: 'utf8' })
@@ -44,10 +45,9 @@ function packageFile(source: string) {
   if (!project) throw new Error(`Example project missing from the validation inventory: ${projectPath}`);
   const name = source.slice(projectPath.length + 1);
   const packageName = projectPath.split('/')[1];
-  const entry = project.entrypoints.find(entry => entry.path === name);
   const projectLabel = packageName + ' examples';
   const description = name === 'pubspec.yaml' ? `Package configuration for the ${projectLabel}.`
-    : entry?.reason ?? `Supporting source for the ${projectLabel}.`;
+    : `Supporting source for the ${projectLabel}.`;
   return exampleFile({ source, name, projectPath, projectLabel, route: packageName, description });
 }
 

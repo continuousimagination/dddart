@@ -26,7 +26,8 @@ tool settings in their manifests. Link to those files from the guides.
 - Record how each sample runs in the
   [shared validation inventory](../validation/inventory.json). Its example
   README starts with a command to run one program from the checkout. Describe
-  what readers can do with each example and any service it needs. Keep CI
+  each program in its README table. Astro reuses that description on the source
+  page and in search. The inventory records how the program is tested. Keep CI
   instructions in the contributor guides. Put
   standalone file names, commands, required services, and expected output in
   [workflows.json](../../docs/quickstarts/workflows.json).

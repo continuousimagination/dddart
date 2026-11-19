@@ -2,12 +2,13 @@
 import { Code } from 'astro:components';
 import type { ComponentProps } from 'astro/types';
 import Base from '../../layouts/Base.astro';
+import { readExampleListings } from '../../lib/documents';
 import { exampleFiles, importedExample, readExample, sourceLink } from '../../lib/example-files';
 import { publishedRoutes } from '../../lib/repository-docs';
 import { doc } from '../../lib/site';
 
-export function getStaticPaths() {
-  return exampleFiles.map(file => ({ params: { slug: file.slug }, props: { file } }));
+export async function getStaticPaths() {
+  return (await readExampleListings()).map(file => ({ params: { slug: file.slug }, props: { file } }));
 }
 
 const { file } = Astro.props;

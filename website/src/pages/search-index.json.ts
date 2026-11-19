@@ -1,6 +1,6 @@
 import { getCollection } from 'astro:content';
-import { readDocument } from '../lib/documents';
-import { exampleFiles, readExample } from '../lib/example-files';
+import { readDocument, readExampleListings } from '../lib/documents';
+import { readExample } from '../lib/example-files';
 import { guides } from '../lib/repository-docs';
 import { doc } from '../lib/site';
 
@@ -11,7 +11,7 @@ export async function GET() {
     const label = guides.find(guide => guide.slug === slug)?.label ?? title;
     return { title: label, description, section, url: doc(slug), text: entry.body };
   }));
-  const sources = exampleFiles.map(file => ({
+  const sources = (await readExampleListings()).map(file => ({
     title: file.name, description: file.description, section: file.projectLabel,
     url: file.url, text: readExample(file),
   }));

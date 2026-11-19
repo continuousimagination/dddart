@@ -105,7 +105,7 @@ final class ExampleEntrypointPolicy {
     required this.path,
     required this.classification,
     required this.action,
-    required this.reason,
+    this.reason,
   });
 
   factory ExampleEntrypointPolicy.fromJson(Map<String, Object?> json) {
@@ -113,14 +113,16 @@ final class ExampleEntrypointPolicy {
       path: _requiredString(json, 'path'),
       classification: _requiredString(json, 'classification'),
       action: _requiredString(json, 'action'),
-      reason: _requiredString(json, 'reason'),
+      reason: json['action'] == 'excluded' || json.containsKey('reason')
+          ? _requiredString(json, 'reason')
+          : null,
     );
   }
 
   final String path;
   final String classification;
   final String action;
-  final String reason;
+  final String? reason;
 }
 
 final class ExampleSourcePolicy {

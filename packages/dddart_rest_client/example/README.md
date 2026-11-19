@@ -12,4 +12,6 @@ dart run cli_tool_example.dart help
 
 The `help` command works locally. `login` and the data commands require the configured server.
 
-[cli_tool_example.dart](cli_tool_example.dart) — Log in with device flow, store credentials and call a user API.
+| Program | How it runs | What it shows |
+| --- | --- | --- |
+| [cli_tool_example.dart](cli_tool_example.dart) | Configured integration | Log in with device flow, store credentials and call a user API. |

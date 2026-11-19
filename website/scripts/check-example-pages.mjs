@@ -110,7 +110,22 @@ for (const project of projects) {
   checkPubspecLink(links, guide, project.path + '/pubspec.yaml');
   for (const entry of project.entrypoints) {
     const source = project.path + '/' + entry.path;
-    assert.ok(links.includes(pages.get(source)), `Example guide must link to the source page: ${source}`);
+    const url = pages.get(source);
+    assert.ok(links.includes(url), `Example guide must link to the source page: ${source}`);
+    const description = xpath(guide, `normalize-space(//article//tr[td[1]//a[@href="${url}"]]/td[3])`).trim();
+    assert.ok(description, `Missing program description in ${guide}: ${source}`);
+    assert.equal(index.get(url).description, description, `Search summary for ${source}`);
+    assert.equal(xpath(url, 'normalize-space(//main/p[1])').trim(), description, `Page summary for ${source}`);
   }
 }
+// Search also finds orphan pages. Check readers can reach every indexed page by following links.
+const origin = 'https://continuousimagination.github.io';
+const reachable = new Set(['/dddart/']);
+for (const page of reachable) {
+  for (const href of hrefs(page, '//a/@href')) {
+    const target = new URL(href, origin + page);
+    if (target.origin === origin && index.has(target.pathname)) reachable.add(target.pathname);
+  }
+}
+assert.deepEqual([...index.keys()].filter(url => !reachable.has(url)), [], 'Pages unreachable from the homepage');
 console.log(`Verified ${pages.size} complete example sources, ${workflows.length + projects.length} guide pubspec links, search text and ${linkedDirectives} local directives.`);

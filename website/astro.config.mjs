@@ -22,12 +22,22 @@ function repositoryLink(href, fileURL) {
 const repositoryMarkdown = {
   name: 'repository-markdown',
   element: {
-    filter: ['a', 'p'],
+    filter: ['a', 'p', 'tr'],
     visit(node, ctx) {
       if (node.tagName === 'a' && typeof node.properties.href === 'string') {
         ctx.setProperty(node, 'href', repositoryLink(node.properties.href, ctx.fileURL));
       } else if (node.tagName === 'p') {
         ctx.data.astro.frontmatter.description ??= ctx.textContent(node).replace(/\s+/g, ' ').trim();
+      } else if (node.tagName === 'tr' && /\/packages\/[^/]+\/example\/README\.md$/.test(ctx.fileURL.pathname)) {
+        const cells = node.children.filter(child => child.tagName === 'td');
+        const link = cells[0]?.children.find(child => child.tagName === 'a');
+        if (cells.length !== 3 || !link) return;
+        const url = repositoryLink(link.properties.href, ctx.fileURL);
+        if (!url.startsWith(base + 'examples/')) return;
+        const programs = ctx.data.astro.frontmatter.programs ??= {};
+        if (Object.hasOwn(programs, url)) throw new Error(`Duplicate example row: ${url}`);
+        const cellText = cell => ctx.textContent(cell).replace(/\s+/g, ' ').trim();
+        programs[url] = { mode: cellText(cells[1]), description: cellText(cells[2]) };
       }
     },
   },

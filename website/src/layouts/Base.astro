@@ -39,7 +39,7 @@ const canonical = new URL(Astro.url.pathname.replace(/\/404\/$/, '/404.html'), A
     </header>
     <slot />
     <footer class="site-footer">
-      <div class="footer-inner"><Brand /><div class="footer-links"><a href={doc('philosophy')}>Why dddart</a><a href={doc('examples')}>Examples</a><a href={`${repo}/blob/main/packages/dddart/LICENSE`}>MIT license</a><a href={repo}>GitHub ↗</a></div></div>
+      <div class="footer-inner"><Brand /><div class="footer-links"><a href={doc('project')}>Project overview</a><a href={doc('philosophy')}>Why dddart</a><a href={doc('examples')}>Examples</a><a href={`${repo}/blob/main/packages/dddart/LICENSE`}>MIT license</a><a href={repo}>GitHub ↗</a></div></div>
     </footer>
     <dialog class="search-dialog" aria-label="Search documentation" data-search-index={`${base}search-index.json`}>
       <form method="dialog"><label class="sr-only" for="docs-search">Search documentation</label><input id="docs-search" type="search" placeholder="Search guides, concepts, and packages…" autocomplete="off" /><button aria-label="Close search">Esc</button></form>

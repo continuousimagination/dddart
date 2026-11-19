@@ -47,7 +47,9 @@ Each tracked, handwritten Dart file in a package example project gets a source
 page and a search entry. Follow a filename from an example README, then click
 an import or part directive to read another published file. The project file
 list also includes supporting files that have no incoming imports. Entrypoint
-descriptions come from the [example inventory](../tool/validation/inventory.json).
+descriptions on the source pages and in search come from the **What it shows**
+cell in the package example README. Edit that cell to update all three views.
+The [example inventory](../tool/validation/inventory.json) supplies the run modes.
 Example project pubspecs also open on the site. The
 [quickstart workflows](../docs/quickstarts/workflows.json) supply each quickstart's
 application files and filenames, so a link to a `pubspec.yaml.txt` template opens

@@ -196,50 +196,42 @@
         {
           "path": "conditional_writes.dart",
           "classification": "runnable",
-          "action": "run",
-          "reason": "Handle a stale revision by reloading and reapplying an edit."
+          "action": "run"
         },
         {
           "path": "error_handling_example.dart",
           "classification": "runnable",
-          "action": "run",
-          "reason": "Handle a failure in an event listener."
+          "action": "run"
         },
         {
           "path": "event_serialization_example.dart",
           "classification": "runnable",
-          "action": "run",
-          "reason": "Serialize and reconstruct a domain event by hand."
+          "action": "run"
         },
         {
           "path": "events_example.dart",
           "classification": "runnable",
-          "action": "run",
-          "reason": "Raise an event and subscribe to its type."
+          "action": "run"
         },
         {
           "path": "logging_console.dart",
           "classification": "runnable",
-          "action": "run",
-          "reason": "Send framework logs to the console."
+          "action": "run"
         },
         {
           "path": "logging_file.dart",
           "classification": "runnable",
-          "action": "run",
-          "reason": "Write log records to a temporary file."
+          "action": "run"
         },
         {
           "path": "logging_hierarchical.dart",
           "classification": "runnable",
-          "action": "run",
-          "reason": "Choose different log levels for individual components."
+          "action": "run"
         },
         {
           "path": "event_publication.dart",
           "classification": "runnable",
-          "action": "run",
-          "reason": "Keep rejected events pending and acknowledge a successful retry."
+          "action": "run"
         }
       ],
       "sourceOverrides": [],
@@ -268,32 +260,27 @@
         {
           "path": "basic_usage.dart",
           "classification": "runnable",
-          "action": "run",
-          "reason": "Read YAML settings with environment overrides."
+          "action": "run"
         },
         {
           "path": "reload_example.dart",
           "classification": "runnable",
-          "action": "run",
-          "reason": "Edit a settings file and reload the running configuration."
+          "action": "run"
         },
         {
           "path": "section_access.dart",
           "classification": "runnable",
-          "action": "run",
-          "reason": "Read a whole section of nested settings."
+          "action": "run"
         },
         {
           "path": "underscore_demo.dart",
           "classification": "runnable",
-          "action": "run",
-          "reason": "Map environment variable names to nested keys and literal underscores."
+          "action": "run"
         },
         {
           "path": "validation_example.dart",
           "classification": "runnable",
-          "action": "run",
-          "reason": "Check required settings at startup."
+          "action": "run"
         }
       ],
       "sourceOverrides": [],
@@ -334,14 +321,12 @@
         {
           "path": "enum_example_runner.dart",
           "classification": "runnable",
-          "action": "run",
-          "reason": "Preserve enum values through a JSON round trip."
+          "action": "run"
         },
         {
           "path": "serialization_example.dart",
           "classification": "runnable",
-          "action": "run",
-          "reason": "Generate JSON for an order and change how fields are named."
+          "action": "run"
         }
       ],
       "sourceOverrides": [],
@@ -370,8 +355,7 @@
         {
           "path": "cli_tool_example.dart",
           "classification": "runnable",
-          "action": "compile",
-          "reason": "Log in with device flow, store credentials and call a user API."
+          "action": "compile"
         }
       ],
       "sourceOverrides": [],
@@ -405,44 +389,37 @@
         {
           "path": "authorization_example.dart",
           "classification": "runnable",
-          "action": "compile",
-          "reason": "Restrict access by resource ownership."
+          "action": "compile"
         },
         {
           "path": "custom_routes_example.dart",
           "classification": "runnable",
-          "action": "compile",
-          "reason": "Serve custom Shelf routes alongside CRUD routes."
+          "action": "compile"
         },
         {
           "path": "etag_concurrency_example.dart",
           "classification": "runnable",
-          "action": "run",
-          "reason": "Detect a stale update when two HTTP clients edit the same record."
+          "action": "run"
         },
         {
           "path": "main.dart",
           "classification": "runnable",
-          "action": "compile",
-          "reason": "Serve an aggregate through CRUD endpoints."
+          "action": "compile"
         },
         {
           "path": "oauth_auth_example.dart",
           "classification": "illustrative",
-          "action": "compile",
-          "reason": "Validate tokens with your OAuth/OIDC provider."
+          "action": "compile"
         },
         {
           "path": "public_leaderboard_example.dart",
           "classification": "runnable",
-          "action": "run",
-          "reason": "Allow anonymous reads and authorize writes on the same leaderboard."
+          "action": "run"
         },
         {
           "path": "self_hosted_auth_example.dart",
           "classification": "runnable",
-          "action": "compile",
-          "reason": "Run a device-flow server with in-memory credentials."
+          "action": "compile"
         }
       ],
       "sourceOverrides": [],
@@ -484,26 +461,22 @@
         {
           "path": "authentication_example.dart",
           "classification": "runnable",
-          "action": "compile",
-          "reason": "Supply an access token to a protected API."
+          "action": "compile"
         },
         {
           "path": "basic_crud_example.dart",
           "classification": "runnable",
-          "action": "compile",
-          "reason": "Save, fetch and delete a user through HTTP."
+          "action": "compile"
         },
         {
           "path": "custom_repository_example.dart",
           "classification": "runnable",
-          "action": "compile",
-          "reason": "Find products by category or price through server-side query routes."
+          "action": "compile"
         },
         {
           "path": "error_handling_example.dart",
           "classification": "runnable",
-          "action": "compile",
-          "reason": "Handle missing resources and connection failures in an HTTP client."
+          "action": "compile"
         }
       ],
       "sourceOverrides": [],
@@ -545,20 +518,17 @@
         {
           "path": "basic_crud_example.dart",
           "classification": "runnable",
-          "action": "run",
-          "reason": "Save, reload, update and delete a user in SQLite."
+          "action": "run"
         },
         {
           "path": "complex_aggregate_example.dart",
           "classification": "runnable",
-          "action": "run",
-          "reason": "Round-trip an order with child entities and embedded values."
+          "action": "run"
         },
         {
           "path": "custom_repository_example.dart",
           "classification": "runnable",
-          "action": "run",
-          "reason": "Add application queries such as finding active users."
+          "action": "run"
         }
       ],
       "sourceOverrides": [],
@@ -602,26 +572,22 @@
         {
           "path": "basic_crud_example.dart",
           "classification": "runnable",
-          "action": "service",
-          "reason": "Persist an order and its line items together."
+          "action": "service"
         },
         {
           "path": "connection_management_example.dart",
           "classification": "runnable",
-          "action": "service",
-          "reason": "Open and close connections and handle connection failures."
+          "action": "service"
         },
         {
           "path": "custom_repository_example.dart",
           "classification": "runnable",
-          "action": "service",
-          "reason": "Find orders by customer or minimum amount."
+          "action": "service"
         },
         {
           "path": "error_handling_example.dart",
           "classification": "runnable",
-          "action": "service",
-          "reason": "Handle repository exceptions while working with MySQL."
+          "action": "service"
         }
       ],
       "sourceOverrides": [],
@@ -664,32 +630,27 @@
         {
           "path": "basic_crud_example.dart",
           "classification": "runnable",
-          "action": "service",
-          "reason": "Store and retrieve a user as a MongoDB document."
+          "action": "service"
         },
         {
           "path": "config_integration_example.dart",
           "classification": "runnable",
-          "action": "service",
-          "reason": "Build a MongoDB connection from application settings."
+          "action": "service"
         },
         {
           "path": "custom_interface_example.dart",
           "classification": "runnable",
-          "action": "service",
-          "reason": "Find users by email or last name."
+          "action": "service"
         },
         {
           "path": "error_handling_example.dart",
           "classification": "runnable",
-          "action": "service",
-          "reason": "Handle missing documents and other repository errors."
+          "action": "service"
         },
         {
           "path": "repository_swapping_example.dart",
           "classification": "runnable",
-          "action": "service",
-          "reason": "Swap the repository used by the same application code."
+          "action": "service"
         }
       ],
       "sourceOverrides": [],
@@ -731,32 +692,27 @@
         {
           "path": "basic_crud_example.dart",
           "classification": "runnable",
-          "action": "service",
-          "reason": "Store, fetch and delete a user by ID."
+          "action": "service"
         },
         {
           "path": "custom_interface_example.dart",
           "classification": "runnable",
-          "action": "service",
-          "reason": "Query users by email or last name with secondary indexes."
+          "action": "service"
         },
         {
           "path": "error_handling_example.dart",
           "classification": "runnable",
-          "action": "service",
-          "reason": "Handle a repository lookup failure."
+          "action": "service"
         },
         {
           "path": "local_development_example.dart",
           "classification": "runnable",
-          "action": "service",
-          "reason": "Connect to a local instance and exercise the generated repository."
+          "action": "service"
         },
         {
           "path": "table_creation_example.dart",
           "classification": "runnable",
-          "action": "service",
-          "reason": "Create local tables and inspect the generated AWS CLI and CloudFormation definitions."
+          "action": "service"
         }
       ],
       "sourceOverrides": [],
@@ -786,20 +742,17 @@
         {
           "path": "custom_verifier_example.dart",
           "classification": "runnable",
-          "action": "compile",
-          "reason": "Check incoming requests with a provider-specific verifier."
+          "action": "compile"
         },
         {
           "path": "form_encoded_example.dart",
           "classification": "runnable",
-          "action": "compile",
-          "reason": "Decode form fields into a typed payload."
+          "action": "compile"
         },
         {
           "path": "raw_json_example.dart",
           "classification": "runnable",
-          "action": "compile",
-          "reason": "Deserialize a JSON event and dispatch it by type."
+          "action": "compile"
         }
       ],
       "sourceOverrides": [],
@@ -832,14 +785,12 @@
         {
           "path": "interactive_message_example.dart",
           "classification": "runnable",
-          "action": "compile",
-          "reason": "Handle interactive Slack messages at `/slack/interactive`."
+          "action": "compile"
         },
         {
           "path": "slash_command_example.dart",
           "classification": "runnable",
-          "action": "compile",
-          "reason": "Verify a slash command and send a response at `/slack/commands`."
+          "action": "compile"
         }
       ],
       "sourceOverrides": [],
@@ -873,14 +824,12 @@
         {
           "path": "custom_stored_event_json_example.dart",
           "classification": "runnable",
-          "action": "run",
-          "reason": "Round-trip a custom stored event with generated JSON."
+          "action": "run"
         },
         {
           "path": "http_polling.dart",
           "classification": "runnable",
-          "action": "run",
-          "reason": "Publish and receive an aggregate event through the HTTP polling transport."
+          "action": "run"
         }
       ],
       "sourceOverrides": [
@@ -925,8 +874,7 @@
         {
           "path": "history.dart",
           "classification": "runnable",
-          "action": "service",
-          "reason": "Recover an event after a checkpoint and rotate its channel."
+          "action": "service"
         }
       ],
       "sourceOverrides": [],
@@ -967,20 +915,17 @@
         {
           "path": "native_invocation.dart",
           "classification": "runnable",
-          "action": "run",
-          "reason": "Authorize a local caller and subscribe to its channel."
+          "action": "run"
         },
         {
           "path": "lambda.dart",
           "classification": "runnable",
-          "action": "compile",
-          "reason": "Run the event handlers inside a deployed Lambda runtime."
+          "action": "compile"
         },
         {
           "path": "aws_smoke.dart",
           "classification": "runnable",
-          "action": "compile",
-          "reason": "Exercise publication and subscription against your deployed AWS resources."
+          "action": "compile"
         }
       ],
       "sourceOverrides": [],
