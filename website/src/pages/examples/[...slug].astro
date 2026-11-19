@@ -34,16 +34,16 @@ const transformers: ComponentProps<typeof Code>['transformers'] = [{
   },
 }];
 ---
-<Base title={file.packageName + ' / ' + file.name} description={file.description}>
+<Base title={file.projectLabel + ' / ' + file.name} description={file.description}>
   <main id="main-content" class="example-source prose">
-    <a href={doc(guide)}>← {file.packageName} examples</a>
+    <a href={doc(guide)}>← {file.projectLabel}</a>
     <h1>{file.name}</h1>
     <p>{file.description}</p>
     <details>
       <summary>Browse files in this example project ({siblings.length})</summary>
       <ul>{siblings.map(item => <li><a href={item.url} aria-current={item.source === file.source ? 'page' : undefined}>{item.name}</a></li>)}</ul>
     </details>
-    <Code code={readExample(file)} lang="dart" theme="github-dark" transformers={transformers} />
+    <Code code={readExample(file)} lang={file.language} theme="github-dark" transformers={file.language === 'dart' ? transformers : []} />
     <div class="doc-edit"><a href={githubSource(file.source)}>View source on GitHub ↗</a></div>
   </main>
 </Base>

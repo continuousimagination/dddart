@@ -48,7 +48,11 @@ page and a search entry. Follow a filename from an example README, then click
 an import or part directive to read another published file. The project file
 list also includes supporting files that have no incoming imports. Entrypoint
 descriptions come from the [example inventory](../tool/validation/inventory.json).
-Edit the original Dart files and rebuild to update these pages.
+Example project pubspecs also open on the site. The
+[quickstart workflows](../docs/quickstarts/workflows.json) supply each quickstart's
+application files and filenames, so a link to a `pubspec.yaml.txt` template opens
+a copyable `pubspec.yaml` listing. Edit the original files and rebuild to update
+these pages.
 
 ## Publish
 

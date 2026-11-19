@@ -12,7 +12,7 @@ export async function GET() {
     return { title: label, description, section, url: doc(slug), text: entry.body };
   }));
   const sources = exampleFiles.map(file => ({
-    title: file.name, description: file.description, section: file.packageName + ' examples',
+    title: file.name, description: file.description, section: file.projectLabel,
     url: file.url, text: readExample(file),
   }));
   return Response.json([...index, ...sources]);

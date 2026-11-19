@@ -93,7 +93,11 @@ done < "$WORK/links.tsv"
 
 jq '[.documents | to_entries[] | select(.value == "current" and (.key|endswith(".md"))) | .key] | sort' \
   "$REPO/tool/documentation/surfaces.json" > "$WORK/published.json"
-git -C "$REPO" ls-files -- 'packages/*/example/*.dart' | jq -Rn '[inputs | select(endswith(".g.dart")|not)] | sort' > "$WORK/example-files.json"
+git -C "$REPO" ls-files -- 'packages/*/example/*.dart' 'packages/*/example/pubspec.yaml' |
+  jq -Rn --slurpfile spec "$REPO/docs/quickstarts/workflows.json" '[
+    (inputs | select(endswith(".g.dart")|not)),
+    ($spec[0].workflows[] | "docs/quickstarts/" + .name + "/" + .files[].source)
+  ] | sort' > "$WORK/example-files.json"
 doc_count=$(jq length "$WORK/published.json")
 example_count=$(jq length "$WORK/example-files.json")
 jq -e --arg base "$BASE" --arg prefix "$SOURCE_PREFIX" --slurpfile published "$WORK/published.json" \

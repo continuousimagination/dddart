@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join, posix } from 'node:path';
+import quickstarts from '../../../docs/quickstarts/workflows.json';
 import inventory from '../../../tool/validation/inventory.json';
 import { git, repositoryRoot } from './repository';
 import { base } from './site';
@@ -7,23 +8,51 @@ import { base } from './site';
 const projects = new Map(inventory.examples.map(project => [project.path, project]));
 const packageLibraries = new Map(inventory.examples.map(project => [project.name, project.path + '/lib']));
 
-function describeFile(source: string) {
+type SourceListing = {
+  source: string;
+  name: string;
+  projectPath: string;
+  projectLabel: string;
+  route: string;
+  description: string;
+};
+
+function exampleFile({ route, ...file }: SourceListing) {
+  const { name } = file;
+  const slug = route + '/' + name.replace(/\.dart$/, '');
+  const language = name.endsWith('.dart') ? 'dart' : name.endsWith('.yaml') ? 'yaml' : 'text';
+  return { ...file, slug, language, url: `${base}examples/${slug}/` } as const;
+}
+
+function packageFile(source: string) {
   const projectPath = source.split('/').slice(0, 3).join('/');
   const project = projects.get(projectPath);
   if (!project) throw new Error(`Example project missing from the validation inventory: ${projectPath}`);
   const name = source.slice(projectPath.length + 1);
   const packageName = projectPath.split('/')[1];
-  const slug = packageName + '/' + name.slice(0, -'.dart'.length);
   const entry = project.entrypoints.find(entry => entry.path === name);
-  const description = entry?.reason ?? `Supporting source for the ${packageName} examples.`;
-  return { source, name, projectPath, packageName, slug, description, url: `${base}examples/${slug}/` };
+  const projectLabel = packageName + ' examples';
+  const description = name === 'pubspec.yaml' ? `Package configuration for the ${projectLabel}.`
+    : entry?.reason ?? `Supporting source for the ${projectLabel}.`;
+  return exampleFile({ source, name, projectPath, projectLabel, route: packageName, description });
 }
 
-export type ExampleFile = ReturnType<typeof describeFile>;
+export type ExampleFile = ReturnType<typeof exampleFile>;
 
 // The checkout can also contain generated or ignored Dart files from running examples.
-export const exampleFiles = git('ls-files', '-z', '--', 'packages/*/example/*.dart')
-  .split('\0').filter(source => source && !source.endsWith('.g.dart')).map(describeFile);
+const packageFiles = git('ls-files', '-z', '--', 'packages/*/example/*.dart', 'packages/*/example/pubspec.yaml')
+  .split('\0').filter(source => source && !source.endsWith('.g.dart')).map(packageFile);
+const quickstartFiles = quickstarts.workflows.flatMap(workflow => {
+  const route = 'quickstarts/' + workflow.name;
+  const projectPath = 'docs/' + route;
+  const projectLabel = workflow.name.replaceAll('_', ' ') + ' quickstart';
+  return workflow.files.map(({ source, destination }) => exampleFile({
+    source: projectPath + '/' + source, name: destination, projectPath, projectLabel, route,
+    description: `Save this file as ${destination} when following the ${projectLabel}.`,
+  }));
+});
+export const exampleFiles = [...packageFiles, ...quickstartFiles];
+if (new Set(exampleFiles.map(file => file.slug)).size !== exampleFiles.length) throw new Error('Duplicate example URL');
 const bySource = new Map(exampleFiles.map(file => [file.source, file]));
 for (const project of projects.values()) {
   for (const entry of project.entrypoints) {
