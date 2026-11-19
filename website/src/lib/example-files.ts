@@ -1,12 +1,26 @@
+import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join, posix } from 'node:path';
 import quickstarts from '../../../docs/quickstarts/workflows.json';
 import inventory from '../../../tool/validation/inventory.json';
-import { git, repositoryRoot } from './repository';
+import { git, githubSource, repositoryRoot } from './repository';
 import { base } from './site';
 
 const projects = new Map(inventory.examples.map(project => [project.path, project]));
 const packageLibraries = new Map(inventory.examples.map(project => [project.name, project.path + '/lib']));
+const snippets: Record<string, { document: string; line: number; text: string }> = JSON.parse(
+  execFileSync('bash', ['tool/documentation/validate.sh', 'snippets'], { cwd: repositoryRoot, encoding: 'utf8' })
+);
+
+export function readQuickstart(source: string) {
+  if (!Object.hasOwn(snippets, source)) throw new Error(`Missing quickstart snippet: ${source}`);
+  return snippets[source].text;
+}
+
+export function sourceLink(file: ExampleFile) {
+  const snippet = snippets[file.source];
+  return snippet ? githubSource(snippet.document) + '?plain=1#L' + snippet.line : githubSource(file.source);
+}
 
 type SourceListing = {
   source: string;
@@ -66,7 +80,7 @@ export function exampleUrl(source: string) {
 }
 
 export function readExample(file: ExampleFile) {
-  return readFileSync(join(repositoryRoot, file.source), 'utf8');
+  return snippets[file.source]?.text ?? readFileSync(join(repositoryRoot, file.source), 'utf8');
 }
 
 export function importedExample(source: string, uri: string) {

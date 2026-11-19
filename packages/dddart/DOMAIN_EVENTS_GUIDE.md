@@ -16,8 +16,8 @@ Replace `DomainEvent<I>` with `DomainEvent<I, UuidValue>` for existing UUID even
 A constructor that previously forwarded optional `super.eventId` can instead take
 `UuidValue? eventId` and pass `eventId: eventId ?? UuidValue.generate()` to `super`.
 Alternatively, require `super.eventId` and let callers supply it. There is no UUID
-convenience base class. The [reservation example](../../docs/quickstarts/core/bin/modeling.dart)
-shows generation in a concrete constructor; the [typed identity example](../../docs/quickstarts/core/bin/identity.dart)
+convenience base class. The [reservation example](../../docs/guides/modeling.md#confirm-a-reservation)
+shows generation in a concrete constructor; the [typed identity example](IDENTITY_GUIDE.md#use-a-scoped-identity)
 shows an imported occurrence with a required source-scoped ID.
 
 `AggregateRoot<A>` retains one type parameter and collects

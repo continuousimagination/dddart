@@ -36,6 +36,18 @@ const repositoryMarkdown = {
 export default defineConfig({
   site: 'https://continuousimagination.github.io',
   base,
+  integrations: [{
+    name: 'quickstart-sources',
+    hooks: {
+      'astro:config:setup': ({ addWatchFile, command }) => {
+        if (command === 'dev') {
+          for (const path of [...publishedRoutes.keys(), 'tool/documentation/validate.sh', 'tool/documentation/common.sh']) {
+            addWatchFile(new URL('../' + path, import.meta.url));
+          }
+        }
+      },
+    },
+  }],
   markdown: {
     processor: satteri({ hastPlugins: [repositoryMarkdown] }),
     shikiConfig: { theme: 'github-dark' },

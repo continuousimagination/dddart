@@ -3,14 +3,12 @@ import { Code } from 'astro:components';
 import Base from '../layouts/Base.astro';
 import { doc } from '../lib/site';
 import '../styles/home.css';
-import modelExample from '../../../docs/quickstarts/core/bin/main.dart?raw';
-import repositoryExample from '../../../docs/quickstarts/core/bin/repository.dart?raw';
-import serviceExample from '../../../docs/quickstarts/core/bin/contracts.dart?raw';
+import { readQuickstart } from '../lib/example-files';
 
 const examples = [
-  { id: 'order', title: 'Place an order', file: 'main.dart', guide: 'getting-started', link: 'Run the order example', code: modelExample },
-  { id: 'repository', title: 'Store a note', file: 'repository.dart', guide: 'repositories', link: 'Run the repository example', code: repositoryExample },
-  { id: 'service', title: 'Confirm a reservation', file: 'contracts.dart', guide: 'contracts', link: 'Run the service example', code: serviceExample },
+  { id: 'order', title: 'Place an order', file: 'main.dart', guide: 'getting-started', link: 'Run the order example', code: readQuickstart('docs/quickstarts/core/bin/main.dart') },
+  { id: 'repository', title: 'Store a note', file: 'repository.dart', guide: 'repositories', link: 'Run the repository example', code: readQuickstart('docs/quickstarts/core/bin/repository.dart') },
+  { id: 'service', title: 'Confirm a reservation', file: 'contracts.dart', guide: 'contracts', link: 'Run the service example', code: readQuickstart('docs/quickstarts/core/bin/contracts.dart') },
 ];
 const guides = [
   { slug: 'modeling', title: 'Model a business rule', text: 'Give a reservation a valid seat count and control when it can be confirmed.' },

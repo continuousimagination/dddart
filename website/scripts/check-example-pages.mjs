@@ -11,6 +11,7 @@ const json = url => JSON.parse(readFileSync(url, 'utf8'));
 const index = new Map(json(new URL('search-index.json', dist)).map(entry => [entry.url, entry]));
 const projects = json(new URL('tool/validation/inventory.json', root)).examples;
 const workflows = json(new URL('docs/quickstarts/workflows.json', root)).workflows;
+const snippets = JSON.parse(execFileSync('bash', ['tool/documentation/validate.sh', 'snippets'], { cwd: root, encoding: 'utf8' }));
 const featured = Object.values(json(new URL('website/src/lib/navigation.json', root))).flat();
 const libraries = new Map(projects.map(project => [project.name, project.path + '/lib']));
 const tracked = execFileSync('git', ['ls-files', '-z', '--', 'packages/*/example/*.dart', 'packages/*/example/pubspec.yaml'], {
@@ -46,7 +47,19 @@ function hrefs(url, expression) {
 
 let linkedDirectives = 0;
 for (const [source, url] of pages) {
-  const code = readFileSync(new URL(source, root), 'utf8');
+  const snippet = snippets[source];
+  let code;
+  if (snippet) {
+    const lines = readFileSync(new URL(snippet.document, root), 'utf8').replaceAll('\r\n', '\n').split('\n');
+    const start = snippet.line - 1;
+    assert.equal(lines[start - 2], `<!-- dddart-source: ${source} -->`);
+    const end = lines.indexOf('```', start);
+    assert.equal(lines[end + 1], '<!-- /dddart-source -->');
+    code = lines.slice(start, end).join('\n') + '\n';
+    assert.ok(xpath(url, 'string(//div[@class="doc-edit"]/a/@href)').trim().endsWith('/' + snippet.document + '?plain=1#L' + snippet.line));
+  } else {
+    code = readFileSync(new URL(source, root), 'utf8');
+  }
   assert.equal(index.get(url)?.text, code, `Search must index the complete file: ${source}`);
   const extension = posix.extname(source.replace(/\.txt$/, ''));
   const language = { '.dart': 'dart', '.yaml': 'yaml' }[extension] ?? 'text';
@@ -69,6 +82,11 @@ for (const [source, url] of pages) {
       linkedDirectives++;
     }
   }
+}
+
+for (const [panel, file] of Object.entries({ order: 'main', repository: 'repository', service: 'contracts' })) {
+  const code = xpath('/dddart/', `string(//*[@id="panel-${panel}"]//pre/code)`);
+  assert.equal(code.trimEnd(), snippets[`docs/quickstarts/core/bin/${file}.dart`].text.trimEnd(), `Homepage ${panel} tab`);
 }
 
 function guideUrl(projectPath) {

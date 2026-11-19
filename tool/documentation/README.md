@@ -15,11 +15,14 @@ tool settings in their manifests. Link to those files from the guides.
   user and contributor guides use the current category. Astro publishes the
   current Markdown directly. Each page’s **View source on GitHub** link opens the
   same source file for review.
-- Use a link to a complete program if the reader needs setup, multiple files,
-  or an external service. For inline Dart, put the complete checked file
-  between `<!-- dddart-source: repository/relative/path -->` and
-  `<!-- /dddart-source -->` around the fenced block. Commands and expected
-  output can use the same format.
+- Edit a quickstart's code in the fenced block where readers see it. The opening
+  marker names the file to create, for example
+  `<!-- dddart-source: docs/quickstarts/sqlite/lib/note.dart -->`.
+  Follow the closing fence with `<!-- /dddart-source -->`. Each marked path has
+  one owning guide. The test runner extracts the block into a temporary file,
+  and Astro reads the same block for its source page. Configuration, commands
+  and expected output can use the same format. Linked pubspecs and standalone
+  package examples are ordinary files.
 - Record how each sample runs in the
   [shared validation inventory](../validation/inventory.json). Its example
   README starts with a command to run one program from the checkout. Describe
@@ -33,13 +36,11 @@ tool settings in their manifests. Link to those files from the guides.
 Run from the repository root:
 
 ```sh
-bash tool/documentation/validate.sh sync
 bash tool/documentation/validate.sh check
 bash tool/documentation/self_test.sh --static
 ```
 
-Use `sync` after editing an included source file. The fast check compares
-inclusions to their sources, validates document links and anchors, checks
+The fast check validates snippet ownership, document links and anchors, checks
 sample tables and the homepage examples, and compares public exports and
 package listings with their sources. It also rejects copied dependency
 constraints and tool version instructions. For website routes and search, see

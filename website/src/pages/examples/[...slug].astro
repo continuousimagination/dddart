@@ -2,8 +2,7 @@
 import { Code } from 'astro:components';
 import type { ComponentProps } from 'astro/types';
 import Base from '../../layouts/Base.astro';
-import { exampleFiles, importedExample, readExample } from '../../lib/example-files';
-import { githubSource } from '../../lib/repository';
+import { exampleFiles, importedExample, readExample, sourceLink } from '../../lib/example-files';
 import { publishedRoutes } from '../../lib/repository-docs';
 import { doc } from '../../lib/site';
 
@@ -44,7 +43,7 @@ const transformers: ComponentProps<typeof Code>['transformers'] = [{
       <ul>{siblings.map(item => <li><a href={item.url} aria-current={item.source === file.source ? 'page' : undefined}>{item.name}</a></li>)}</ul>
     </details>
     <Code code={readExample(file)} lang={file.language} theme="github-dark" transformers={file.language === 'dart' ? transformers : []} />
-    <div class="doc-edit"><a href={githubSource(file.source)}>View source on GitHub ↗</a></div>
+    <div class="doc-edit"><a href={sourceLink(file)}>View source on GitHub ↗</a></div>
   </main>
 </Base>
 <style>

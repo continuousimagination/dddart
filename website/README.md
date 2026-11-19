@@ -51,8 +51,10 @@ descriptions come from the [example inventory](../tool/validation/inventory.json
 Example project pubspecs also open on the site. The
 [quickstart workflows](../docs/quickstarts/workflows.json) supply each quickstart's
 application files and filenames, so a link to a `pubspec.yaml.txt` template opens
-a copyable `pubspec.yaml` listing. Edit the original files and rebuild to update
-these pages.
+a copyable `pubspec.yaml` listing. Edit inline quickstart examples in their
+Markdown guides. Astro and the quickstart tests use the same extractor, and
+**View source on GitHub** opens the owning guide at the snippet. Edit standalone
+package examples in their Dart files.
 
 ## Publish
 

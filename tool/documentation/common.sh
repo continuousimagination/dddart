@@ -60,7 +60,7 @@ def doc_text($path):
   else . end;
 def fence_pattern: "(?ms)^(?<fence>`{3,}|~{3,})(?<language>[\\w-]*)[^\\n]*\\n(?<body>.*?)^\\k<fence>[ \\t]*$";
 def without_fences: gsub(fence_pattern; "");
-def source_pattern: "(?s)<!-- dddart-source: (?<source>[^>\\n]+) -->\\n```(?<language>\\w+)\\n(?<body>.*?)\\n```\\n<!-- /dddart-source -->";
+def source_pattern: "(?ms)^<!-- dddart-source: (?<source>[^>\\n]+) -->\\n```(?<language>\\w+)\\n(?<body>(?:(?!^(?:```[ \\t]*$|<!-- /?dddart-source)).)*?)^```\\n<!-- /dddart-source -->$";
 def matches($pattern): [match($pattern; "g") | .captures | map({key:.name,value:.string}) | from_entries];
 def anchors:
   . as $text |
