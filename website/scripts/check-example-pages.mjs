@@ -28,7 +28,7 @@ function xpath(url, expression) {
       encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
     });
   } catch (error) {
-    if (error.status === 10) return ''; // Empty XPath node set
+    if (/^XPath set is empty$/m.test(error.stderr)) return '';
     throw error;
   }
 }

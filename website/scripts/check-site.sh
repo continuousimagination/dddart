@@ -20,8 +20,11 @@ trap 'exit 143' TERM
 xpath() {
   local result=0
   xmllint --html --nonet --nowarning --xpath "$2" "$1" 2> "$WORK/xml-errors" || result=$?
-  # libxml2 uses 10 for a valid, empty node-set.
-  if [[ $result != 0 && $result != 10 ]]; then cat "$WORK/xml-errors" >&2; fail "Cannot parse HTML: $1"; fi
+  # libxml2 versions use different exit codes for an empty node set.
+  if [[ $result != 0 ]] && ! grep -Fxq 'XPath set is empty' "$WORK/xml-errors"; then
+    cat "$WORK/xml-errors" >&2
+    fail "Cannot parse HTML: $1"
+  fi
 }
 
 find "$DIST" -type f -name '*.html' | LC_ALL=C sort > "$WORK/pages.txt"
