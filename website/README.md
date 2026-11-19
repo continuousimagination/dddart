@@ -23,16 +23,20 @@ examples still work.
 
 ## Edit a guide
 
-Guides are in [src/content/docs](src/content/docs/). Use the title as the
-navigation label; frontmatter also declares a description, section, and
-order. The layout supplies the page title, so start body headings at h2.
-Use site links rooted at `/dddart/`.
+Open [the repository documentation index](../docs/README.md) to review a
+guide, or use **Improve this page** on the published site. Both lead to the
+same Markdown file. Its first heading supplies the title and its first
+paragraph supplies the search description. Write ordinary relative links to
+other guides, sections, examples, and source files. Astro resolves them from
+the Markdown file's directory when building the site.
 
-Keep the site focused on how to use DDDart. Link to the repository's
-[complete quickstarts](../docs/QUICKSTARTS.md) for setup and to package guides
-for adapter-specific details. Publish inline Dart through the checked source
-inclusion format. The [core example pubspec](../docs/quickstarts/core/pubspec.yaml.txt)
-supplies the Git revision for the standalone workflows.
+Register a new document in the [documentation inventory](../tool/documentation/surfaces.json).
+Current Markdown documents get a page and a full-text search entry. The
+[navigation map](src/lib/navigation.json) assigns the twelve featured guides
+their public URLs, sidebar labels, and reading order. Other documents get
+URLs derived from their repository paths. The
+[documentation contributor guide](../tool/documentation/README.md) explains
+how to include and check runnable examples.
 
 ## Publish
 

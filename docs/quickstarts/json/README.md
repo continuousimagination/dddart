@@ -63,6 +63,8 @@ class SeatCount extends Value {
 ```
 <!-- /dddart-source -->
 
+<a id="generate-and-use-a-serializer"></a>
+
 ## Generate and run
 
 Save this file as `bin/main.dart`:
@@ -114,11 +116,14 @@ object and its string methods when sending a complete message.
 
 ## Adapt the wire format
 
+<a id="control-naming-and-nulls"></a>
+
 <details>
 <summary>Use snake_case keys or include null fields</summary>
 
 Save this file as `bin/configuration.dart`. It uses the generated reservation
-serializer above to show naming and null behavior:
+serializer above to show naming and null behavior. A per-call config replaces the constructor
+config, which replaces the annotation defaults. Nested serializers receive the effective config:
 
 <!-- dddart-source: docs/quickstarts/json/bin/configuration.dart -->
 ```dart
@@ -165,11 +170,14 @@ Sam
 
 </details>
 
+<a id="give-custom-identities-a-codec"></a>
+
 <details>
 <summary>Represent an ID made of more than one field</summary>
 
 Save this file as `bin/identity.dart`. It registers a scoped ID codec,
-round-trips the canonical key, and shows the tagged JSON type:
+round-trips the canonical key, and shows the tagged JSON type. Supply the same registry to each serializer,
+repository, and event registry that uses that identity:
 
 <!-- dddart-source: docs/quickstarts/json/bin/identity.dart -->
 ```dart

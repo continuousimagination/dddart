@@ -1,9 +1,4 @@
----
-title: Model a domain
-description: Make a rule explicit with a value, a typed identity, an aggregate action, and an event.
-section: Build your domain
-order: 10
----
+# Model a domain
 
 Start with something people who use the product can recognize: confirming
 a reservation. An aggregate owns the rule that the action can happen only
@@ -12,7 +7,7 @@ count.
 
 ## Confirm a reservation
 
-Start with the application from [Getting started](/dddart/docs/getting-started/).
+Start with the application from [Getting started](../quickstarts/core/README.md).
 Save this file as `bin/modeling.dart`, then run `dart run bin/modeling.dart`:
 
 <!-- dddart-source: docs/quickstarts/core/bin/modeling.dart -->
@@ -112,12 +107,12 @@ other aggregates by ID when they have their own lifecycles.
 
 Construct a reservation and call `confirm()` twice. The first call records
 the event; the second rejects the action. That test needs neither a serializer
-nor a database. See [shared contracts](/dddart/docs/contracts/) for the next
+nor a database. See [shared contracts](contracts.md) for the next
 step: loading and saving the model through an application service.
 
 ## When an ID already exists
 
 A reservation can generate a UUID. An issue imported from a tracker may already
 have a number that only makes sense in its own repository. In that case, model
-both the repository and number as its identity. The [typed identity example](https://github.com/continuousimagination/dddart/blob/main/packages/dddart/IDENTITY_GUIDE.md#use-a-scoped-identity)
+both the repository and number as its identity. The [typed identity example](../../packages/dddart/IDENTITY_GUIDE.md#use-a-scoped-identity)
 shows how two independently constructed IDs can look up the same issue.

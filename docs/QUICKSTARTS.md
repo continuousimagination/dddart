@@ -4,6 +4,8 @@ Start with a standalone application. Follow the linked guide in a fresh
 directory outside the DDDart checkout. The guide links to the example
 `pubspec.yaml` template and shows what to run and what output to expect.
 
+## Start with a complete application
+
 | Goal | Example | What you need |
 | --- | --- | --- |
 | Model an aggregate and publish a local event | [Core](quickstarts/core/README.md) | Dart |
@@ -15,6 +17,8 @@ directory outside the DDDart checkout. The guide links to the example
 | Store aggregates in DynamoDB | [DynamoDB Local](quickstarts/dynamodb/README.md) | DynamoDB Local; no AWS account |
 | Serve and fetch public resources over HTTP | [REST](quickstarts/rest/README.md) | Native Dart; no login or token |
 | Receive a verified Slack command | [Slack server](quickstarts/slack_server/README.md) | Compile locally; configure a signing secret and Slack sender to run |
+
+<a id="explore-a-package-sample"></a>
 
 ## Explore a specific integration
 
@@ -32,3 +36,12 @@ compile each one and what it needs.
 | Receive events from other webhook senders | [Webhook examples](../packages/dddart_webhooks/example/README.md) |
 
 For platform requirements and other integrations, use the [package and adapter guide](CAPABILITIES.md).
+
+## Troubleshoot a run
+
+| Symptom | Check |
+| --- | --- |
+| Pub cannot find a DDDart package | Use the linked example pubspec or follow [Git installation](GIT_INSTALLATION.md) |
+| A generated library or type is missing | Run the quickstart's build step from the package owning the model |
+| A browser build includes native IO | Move the native adapter to the server or choose a [browser-compatible composition](guides/contracts.md) |
+| An external sample cannot connect | Review its service, address, credentials, and provider setup |
