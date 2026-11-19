@@ -102,14 +102,14 @@ bash "$REPO/tool/documentation/validate.sh" snippets > "$WORK/snippets.json"
 doc_count=$(jq length "$WORK/published.json")
 example_count=$(jq length "$WORK/example-files.json")
 jq -e --arg base "$BASE" --arg prefix "$SOURCE_PREFIX" --slurpfile published "$WORK/published.json" \
-  --slurpfile examples "$WORK/example-files.json" --slurpfile snippets "$WORK/snippets.json" --slurpfile nav "$REPO/website/src/lib/navigation.json" "$DOC_JQ "'
+  --slurpfile examples "$WORK/example-files.json" --slurpfile snippets "$WORK/snippets.json" --slurpfile overrides "$REPO/website/src/lib/route-overrides.json" "$DOC_JQ "'
   def sources($group): [ .[] | select(.public|startswith($base + $group + "/")) | .source ] | sort;
   require(sources("docs") == ($published[0]|map($prefix + .)); "Published guides must link to their source revision") |
   require(sources("examples") == ($examples[0]|map(. as $path | $snippets[0][$path] |
     $prefix + (if . then .document + "?plain=1#L" + (.line|tostring) else $path end))|sort); "Example pages must link to their source revision") |
-  reduce ($nav[0][][]) as $guide (.;
-    require(any(.[]; .public == ($base + "docs/" + $guide.slug + "/") and .source == ($prefix + $guide.source));
-            "Missing featured guide or incorrect source: " + $guide.slug))' "$WORK/pages.json" >/dev/null
+  reduce ($overrides[0]|to_entries[]) as $route (.;
+    require(any(.[]; .public == ($base + "docs/" + $route.value + "/") and .source == ($prefix + $route.key));
+            "Missing documentation URL or incorrect source: " + $route.value))' "$WORK/pages.json" >/dev/null
 jq -e --argjson count "$((doc_count + example_count))" --arg base "$BASE" --slurpfile pages "$WORK/pages.json" "$DOC_JQ "'
   require(length == $count; "Search index and source-document counts differ") |
   require(length == (map(.url)|unique|length); "Search index has duplicate URLs") |

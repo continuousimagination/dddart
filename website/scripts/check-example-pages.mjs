@@ -12,7 +12,7 @@ const index = new Map(json(new URL('search-index.json', dist)).map(entry => [ent
 const projects = json(new URL('tool/validation/inventory.json', root)).examples;
 const workflows = json(new URL('docs/quickstarts/workflows.json', root)).workflows;
 const snippets = JSON.parse(execFileSync('bash', ['tool/documentation/validate.sh', 'snippets'], { cwd: root, encoding: 'utf8' }));
-const featured = Object.values(json(new URL('website/src/lib/navigation.json', root))).flat();
+const routeOverrides = json(new URL('website/src/lib/route-overrides.json', root));
 const libraries = new Map(projects.map(project => [project.name, project.path + '/lib']));
 const tracked = execFileSync('git', ['ls-files', '-z', '--', 'packages/*/example/*.dart', 'packages/*/example/pubspec.yaml'], {
   cwd: root, encoding: 'utf8',
@@ -90,8 +90,8 @@ for (const [panel, file] of Object.entries({ order: 'main', repository: 'reposit
 }
 
 function guideUrl(projectPath) {
-  const featuredGuide = featured.find(guide => guide.source === projectPath + '/README.md');
-  return '/dddart/docs/' + (featuredGuide?.slug ?? projectPath.toLowerCase().replace(/^docs\//, 'reference/')) + '/';
+  const slug = routeOverrides[projectPath + '/README.md'] ?? projectPath.toLowerCase().replace(/^docs\//, 'reference/');
+  return '/dddart/docs/' + slug + '/';
 }
 
 function checkPubspecLink(links, guide, source) {

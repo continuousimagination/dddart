@@ -1,0 +1,16 @@
+{
+  "README.md": "project",
+  "docs/CAPABILITIES.md": "packages",
+  "docs/DISTRIBUTED_EVENTS.md": "events",
+  "docs/QUICKSTARTS.md": "examples",
+  "docs/README.md": "overview",
+  "docs/guides/contracts.md": "contracts",
+  "docs/guides/modeling.md": "modeling",
+  "docs/guides/philosophy.md": "philosophy",
+  "docs/guides/repositories.md": "repositories",
+  "docs/quickstarts/configuration/README.md": "configuration",
+  "docs/quickstarts/core/README.md": "getting-started",
+  "docs/quickstarts/json/README.md": "serialization",
+  "docs/quickstarts/rest/README.md": "http",
+  "packages/dddart_webhooks/README.md": "integrations"
+}

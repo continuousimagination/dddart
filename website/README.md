@@ -35,10 +35,11 @@ the Markdown file's directory when building the site.
 
 Register a new document in the [documentation inventory](../tool/documentation/surfaces.json).
 Current Markdown documents get a page and a full-text search entry. The
-[navigation map](src/lib/navigation.json) assigns the twelve featured guides
-their public URLs, sidebar labels, and reading order. Other documents get
-URLs derived from their repository paths. The
-[documentation contributor guide](../tool/documentation/README.md) explains
+[navigation map](src/lib/navigation.json) groups the 13 sidebar links and sets
+their labels and reading order. Each link uses an existing documentation URL.
+Document URLs follow the repository paths, with
+[explicit routes](src/lib/route-overrides.json) for established shorter URLs.
+The [documentation contributor guide](../tool/documentation/README.md) explains
 how to include and check runnable examples.
 
 ## Browse example source
